@@ -8,12 +8,18 @@
 **/playwright-report/
 **/test-results/
 **/audits/
+**/out/
+**/data/
+**/draco/
+**/audio/
+
 
 # Tool and bundler caches
 **/.cache/
 **/.parcel-cache/
 **/.turbo/
 **/.vite/
+**/song/
 
 # Font assets
 **/font/
