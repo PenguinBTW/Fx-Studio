@@ -9,6 +9,7 @@ import { DEFAULT_POST, Post, SHOULDER_GLSL, type PostParams } from './post';
 import { Hud, MetricReadout, PDoom, type Caption } from './hud';
 import { LineBatch } from './lines';
 import type { Frame, Scene, SceneClass, SceneCtx, PostOverrides } from './scene';
+import { resolveTransitionAt, transitionProgress, type Transition, type TransitionAPI, type TransitionEntry } from './transition';
 import { loadFonts } from './type';
 import { loadStrokeFonts } from './stroke';
 
@@ -63,6 +64,12 @@ export class Engine {
   loaded = new Map<string, Loaded>();
   private rts = [makeRT(), makeRT(), makeRT()];
   private mixRT = makeRT(W, H, { depthBuffer: false });
+  /** Standalone transition windows (assigned by boot from makeTransitions). */
+  transitions: TransitionEntry[] = [];
+  private transRTs = [makeRT(), makeRT()];
+  private transScratch = [makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT()];
+  private transScratchIdx = 0;
+  private transLoaded = new Map<string, { entry: TransitionEntry; trans: Transition | null; error?: string }>();
   // motion-blur sub-frame sums (float: up to hundreds of sub-frames), their average, and the error estimate
   private sumRT = makeRT(W, H, { depthBuffer: false, type: THREE.FloatType });
   private newRT = makeRT(W, H, { depthBuffer: false, type: THREE.FloatType });
@@ -185,6 +192,7 @@ export class Engine {
     this.hud = new Hud(readout, captions);
     const entries = only ? this.timeline.filter(only) : this.timeline;
     await Promise.all(entries.map((e) => this.loadEntry(e)));
+    await Promise.all(this.transitions.map((t) => this.loadTransition(t)));
   }
 
   private async loadEntry(e: TimelineEntry) {
@@ -202,6 +210,45 @@ export class Engine {
     }
   }
 
+  private async loadTransition(t: TransitionEntry) {
+    const rec = { entry: t, trans: null as Transition | null, error: undefined as string | undefined };
+    this.transLoaded.set(t.id, rec);
+    try {
+      const mod = await t.load();
+      rec.trans = new mod.default({ renderer: this.renderer, comp: this.comp, W, H });
+    } catch (err) {
+      rec.error = String((err as Error)?.stack ?? err);
+      this.errors.push(`[transition ${t.id}] ${rec.error}`);
+      console.error(`transition ${t.id} failed`, err);
+    }
+  }
+
+  /** Re-render an entry scene at time t into an engine-managed scratch target. */
+  private sampleScene(id: string, t: number, dt: number, tin = 1, tout = 0): THREE.Texture {
+    const entry = this.timeline.find((e) => e.id === id);
+    const rec = entry && this.loaded.get(entry.id);
+    const rt = this.transScratch[this.transScratchIdx % this.transScratch.length]!;
+    this.transScratchIdx++;
+    if (!entry || !rec?.scene) {
+      clearRT(this.renderer, rt, [0.25, 0.0, 0.0]);
+      return rt.texture;
+    }
+    const fObj = this.frameFor(entry, t, dt, false, false, null, tin, tout);
+    try {
+      rec.scene.render(fObj, rt);
+      const s = rec.scene as unknown as { probe?: (f: Frame) => unknown };
+      if (typeof s.probe === 'function') {
+        const pr = s.probe(fObj);
+        if (pr && typeof pr === 'object') this.lastSceneProbe = { ...(this.lastSceneProbe || {}), ...(pr as Record<string, number>) };
+      }
+    } catch (err) {
+      console.error(`scene ${entry.id} render error (sampled)`, err);
+      clearRT(this.renderer, rt, [0.25, 0.0, 0.0]);
+    }
+    rec.lastT = t;
+    return rt.texture;
+  }
+
   /** Hot-swap a scene module (used by Vite HMR in preview). */
   async reload(id: string) {
     const e = this.timeline.find((x) => x.id === id);
@@ -212,7 +259,9 @@ export class Engine {
   }
 
   get duration() {
-    return this.driver?.duration ?? (this.timeline.length > 0 ? this.timeline[this.timeline.length - 1]!.end : 5.0);
+    const tlEnd = this.timeline.length > 0 ? this.timeline[this.timeline.length - 1]!.end : 0;
+    const drDur = this.driver?.duration ?? 0;
+    return Math.max(tlEnd, drDur) || 5.0;
   }
 
   private frameFor(e: TimelineEntry, t: number, dt: number, seeked: boolean, preroll: boolean, under: THREE.Texture | null, tin: number, tout: number): Frame {
@@ -299,7 +348,8 @@ export class Engine {
           for (let k = n; k < 3 * n; k++) sub(k, u[k]!, this.newRT, dt / (3 * n));
           const err = this.sampleError(n) / 2;
           this.lastErrors.push(err);
-          this.comp.draw(r, this.newRT.texture, this.sumRT, { mode: 'add', opacity: 1, premult: false });
+          this.accum.u.src!.value = this.newRT.texture;
+          this.accum.render(r, this.sumRT);
           n *= 3;
           if (err < samples.tol) break;
         }
@@ -354,6 +404,57 @@ export class Engine {
    * Render and composite all scenes active at t into an HDR texture (no post). `dt` is the step handed to
    * scenes (the frame step, or the sub-frame spacing); `seeked` says time jumped before this call.
    */
+  /**
+   * Render a standalone transition window: both participants into scratch
+   * targets, then the transition block owns the seam. Returns null when a
+   * participant or the transition itself failed to load (caller falls back
+   * to the default crossfade path). Throws loudly on stateful
+   * participants — transitions cannot drive integrated state.
+   */
+  private renderTransition(tr: TransitionEntry, t: number, dt: number, seeked: boolean): { outTex: THREE.Texture; post: PostParams; probe: Record<string, number> | null } | null {
+    const trec = this.transLoaded.get(tr.id);
+    const aE = this.timeline.find((e) => e.id === tr.from);
+    const bE = this.timeline.find((e) => e.id === tr.to);
+    const aR = aE ? this.loaded.get(aE.id) : undefined;
+    const bR = bE ? this.loaded.get(bE.id) : undefined;
+    const aS = aR?.scene;
+    const bS = bR?.scene;
+    if (!trec?.trans || !aE || !bE || !aR || !bR || !aS || !bS) return null;
+    if (aS.stateful || bS.stateful) {
+      const bad = aS.stateful ? aE.id : bE.id;
+      throw new Error(`transition '${tr.id}' needs stateless scenes; '${bad}' is stateful (transitions cannot drive integrated state)`);
+    }
+    let probe: Record<string, number> | null = null;
+    const u0 = transitionProgress(tr, t);
+    // Truthful overlap signals so overlay text ducks (DSL wrapper applies
+    // overlayTextDuck): the outgoing side exits across the window, the
+    // incoming side enters across it. Scenes stay pure — 3D is untouched.
+    const renderSide = (entry: TimelineEntry, scene: Scene, rec: { lastT: number }, rt: THREE.WebGLRenderTarget, tin: number, tout: number): PostOverrides | void => {
+      const sideSeeked = seeked || rec.lastT < 0 || Math.abs(t - rec.lastT) > 0.25;
+      const fObj = this.frameFor(entry, t, sideSeeked ? 0 : dt, sideSeeked, false, null, tin, tout);
+      const ov = scene.render(fObj, rt);
+      const s = scene as unknown as { probe?: (f: Frame) => unknown };
+      if (typeof s.probe === 'function') {
+        const pr = s.probe(fObj);
+        if (pr && typeof pr === 'object') probe = { ...(probe || {}), ...(pr as Record<string, number>) };
+      }
+      rec.lastT = t;
+      return ov;
+    };
+    let post: PostParams = { ...DEFAULT_POST };
+    const ovA = renderSide(aE, aS, aR, this.transRTs[0]!, 1, u0);
+    const ovB = renderSide(bE, bS, bR, this.transRTs[1]!, u0, 0);
+    post = { ...post, ...(aE.post ?? {}), ...(bE.post ?? {}), ...(ovA ?? {}), ...(ovB ?? {}) };
+    const u = u0;
+    // Off-path samples inherit their side's signals so re-driven scenes duck
+    // the same way as their window render (chase samples the incoming side).
+    const api: TransitionAPI = { u, from: tr.from, to: tr.to, sampleScene: (id, tt) => this.sampleScene(id, tt, dt, id === tr.to ? u : 1, id === tr.from ? u : 0) };
+    const fTrans = this.frameFor(bE, t, dt, seeked, false, null, 1, 0);
+    const ovT = trec.trans.render(fTrans, this.mixRT, this.transRTs[0]!.texture, this.transRTs[1]!.texture, api);
+    post = { ...post, ...(ovT ?? {}) };
+    return { outTex: this.mixRT.texture, post, probe };
+  }
+
   private composite(t: number, dt: number, seeked: boolean): { outTex: THREE.Texture; post: PostParams } {
     const r = this.renderer;
 
@@ -363,6 +464,17 @@ export class Engine {
     let outTex: THREE.Texture | null = null;
 
     let sceneProbeData: Record<string, number> | null = null;
+
+    // Standalone transition window: a dedicated block owns the seam so scenes stay pure.
+    const activeTransition = resolveTransitionAt(this.transitions, t);
+    if (activeTransition) {
+      const rendered = this.renderTransition(activeTransition, t, dt, seeked);
+      if (rendered) {
+        this.lastSceneProbe = rendered.probe;
+        return { outTex: rendered.outTex, post: rendered.post };
+      }
+      // Missing/broken participant or loader: fall through to the default path.
+    }
     active.forEach((e, idx) => {
       const rec = this.loaded.get(e.id);
       const rt = this.rts[idx % this.rts.length]!;

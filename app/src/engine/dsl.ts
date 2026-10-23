@@ -18,6 +18,8 @@ import { motion, MotionBus } from './motion';
 import { Layer2D, W, H } from './gl';
 import { getDesignTokens, type DesignTokens } from './tokens';
 import { LIN, rgba } from './palette';
+import { overlayTextDuck } from './transition';
+import { GLTFManager, GLTFInstance, type GLTFLoadOptions } from './gltf';
 
 export interface SceneContextOptions {
   rigMode?: CameraMode;
@@ -38,6 +40,11 @@ export class SceneContext {
   readonly layer2d: Layer2D;
   readonly motion: MotionBus = motion;
 
+  /** Standard 3D scene container for Three.js meshes, lights, and GLTF models */
+  readonly scene3D = new THREE.Scene();
+  /** Instantiated GLTF models cataloged by ID */
+  readonly models = new Map<string, GLTFInstance>();
+
   // Cached typography nodes
   private textNodes = new Map<string, KineticText>();
   // Cached layout nodes
@@ -45,6 +52,21 @@ export class SceneContext {
 
   // Current frame state during render pass
   currentFrame: Frame | null = null;
+
+  /**
+   * Engine-driven overlay duck (0..1), derived from the frame's tin/tout by
+   * the scene wrapper before user render code runs. Multiplies overlay text
+   * (renderText) and vector cards so outgoing overlays exit fast and incoming
+   * ones enter late across transition seams. Read-only for scenes: raw canvas
+   * draws that bypass renderText/card should multiply their text alphas by
+   * this value (3D content ignores it).
+   */
+  overlayDuck = 1;
+
+  /** Set by the engine wrapper only (see DeclarativeScene.render). */
+  setOverlayDuck(d: number): void {
+    this.overlayDuck = Number.isFinite(d) ? Math.min(1, Math.max(0, d)) : 1;
+  }
 
   constructor(sceneCtx: SceneCtx, opts?: SceneContextOptions) {
     this.sceneCtx = sceneCtx;
@@ -91,6 +113,22 @@ export class SceneContext {
   }
 
   /**
+   * Asynchronously load and instantiate a GLTF/GLB model into this scene context.
+   */
+  async loadModel(id: string, url: string, opts?: GLTFLoadOptions): Promise<GLTFInstance> {
+    const inst = await GLTFManager.instantiate(url, opts);
+    this.models.set(id, inst);
+    return inst;
+  }
+
+  /**
+   * Retrieve a loaded GLTF model instance by ID.
+   */
+  getModel(id: string): GLTFInstance | undefined {
+    return this.models.get(id);
+  }
+
+  /**
    * Declare or retrieve a KineticText node, automatically registering into SceneGraph
    */
   text(id: string, content: string, opts?: KineticTextOptions & { role?: EntityRole }): KineticText {
@@ -130,11 +168,22 @@ export class SceneContext {
   renderText(id: string, c2d: CanvasRenderingContext2D, t: number, x: number, y: number, staggerStates?: any[]): void {
     const kt = this.textNodes.get(id);
     if (!kt) return;
-    kt.render(c2d, t, x, y, staggerStates);
+    if (this.overlayDuck < 0.999) {
+      c2d.save();
+      c2d.globalAlpha *= this.overlayDuck;
+      kt.render(c2d, t, x, y, staggerStates);
+      c2d.restore();
+    } else {
+      kt.render(c2d, t, x, y, staggerStates);
+    }
     const bounds = kt.getScreenBounds(x, y);
     const meta = this.sceneGraph.get(id);
     if (meta) {
       meta.screenBounds = bounds;
+      // Telemetry must see the alpha the canvas actually drew (duck included):
+      // the motion probe reads meta.opacity, and an unducked value flags
+      // phantom collisions for text that rendered invisibly.
+      meta.opacity = kt.baseAlpha * this.overlayDuck;
     }
   }
 
@@ -175,7 +224,7 @@ export class SceneContext {
     role?: EntityRole;
     opacity?: number;
   }): void {
-    const opacity = opts.opacity ?? 1.0;
+    const opacity = (opts.opacity ?? 1.0) * this.overlayDuck;
     if (opacity <= 0.001) {
       const meta = this.sceneGraph.get(id);
       if (meta) meta.opacity = 0;
@@ -184,7 +233,10 @@ export class SceneContext {
 
     if (opts.shadow) {
       const sBlur = opts.shadow.blur ?? 16;
-      const sCol = opts.shadow.color ?? [0, 0, 0, 0.4 * opacity];
+      // Copy (never mutate the caller's array) and fold the card opacity in
+      // so ducked/fading cards don't leave a floating shadow behind.
+      const raw = opts.shadow.color ?? [0, 0, 0, 0.4];
+      const sCol: [number, number, number, number] = [raw[0], raw[1], raw[2], raw[3] * opacity];
       const sOff = opts.shadow.offset ?? [0, 6];
       this.sdf.shadow(opts.x, opts.y, opts.w, opts.h, sBlur, sCol, sOff);
     }
@@ -269,10 +321,21 @@ export class SceneContext {
 
   /**
    * Flush GPU vector batches and 2D canvas layers into out target.
-   * NOTE: 2D-only (lines/sdf/layer2d). Particles are NOT flushed here —
-   * use the compositor path for particles (flush needs cam+t; kept 2D-only by design).
+   * NOTE: Automatically renders 3D meshes/models in scene3D, then 3D lines,
+   * SDF quads, and 2D typography layers into out.
    */
-  flush(out: THREE.WebGLRenderTarget): void {
+  flush(out: THREE.WebGLRenderTarget, clear = false): void {
+    if (clear) {
+      this.renderer.setRenderTarget(out);
+      this.renderer.clear(true, true, true);
+    }
+
+    // 0. Render 3D Scene if meshes / GLTF models / lights are present
+    if (this.scene3D.children.length > 0) {
+      this.renderer.setRenderTarget(out);
+      this.renderer.render(this.scene3D, this.threeCam);
+    }
+
     // 1. Flush 3D lines if any were queued
     if (this.lines.count > 0) {
       this.lines.render(this.renderer, out, this.threeCam);
@@ -295,6 +358,11 @@ export class SceneContext {
   }
 
   dispose(): void {
+    for (const model of this.models.values()) {
+      model.dispose();
+    }
+    this.models.clear();
+    this.scene3D.clear();
     this.particles.dispose();
     this.lines.dispose();
     this.sdf.dispose();
@@ -313,6 +381,8 @@ export interface DeclarativeSceneDef {
   particleCapacity?: number;
   lineCapacity?: number;
   sdfCapacity?: number;
+  /** Declarative GLTF/GLB models preloaded and instantiated before setup() */
+  models?: Record<string, string | ({ url: string } & GLTFLoadOptions)>;
   /** Asynchronous preloading phase (assets, textures, fonts) */
   preload?: (ctx: SceneCtx) => Promise<void>;
   /** One-time setup phase (configuring rig flight paths, particle emitters) */
@@ -355,12 +425,21 @@ export function defineScene(def: DeclarativeSceneDef): SceneClass {
         sdfCapacity: def.sdfCapacity,
       });
 
-      // 3. User preloading phase
+      // 3. Automated GLTF models preloading & instancing
+      if (def.models) {
+        for (const [id, config] of Object.entries(def.models)) {
+          const url = typeof config === 'string' ? config : config.url;
+          const opts = typeof config === 'object' ? config : undefined;
+          await this.sc.loadModel(id, url, opts);
+        }
+      }
+
+      // 4. User preloading phase
       if (def.preload) {
         await def.preload(this.ctx);
       }
 
-      // 4. User setup phase
+      // 5. User setup phase
       if (def.setup) {
         await def.setup(this.sc);
       }
@@ -370,11 +449,37 @@ export function defineScene(def: DeclarativeSceneDef): SceneClass {
     override render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides | void {
       if (!this.setupDone) return;
       this.sc.currentFrame = f;
+      // Overlay ducking from the entry overlap signals (1 outside overlaps):
+      // outgoing overlays exit fast, incoming ones enter late, so transition
+      // seams never show text mush. Scenes stay pure — no transition code here.
+      this.sc.setOverlayDuck(overlayTextDuck(f.tin, f.tout));
 
       // Closed-form evaluation
       const overrides = def.render(this.sc, f, out);
 
       return overrides;
+    }
+
+    /**
+     * God-view blueprint hook (duck-typed by tooling): pure rig-path pose at
+     * song time. Uses the raw path (no smoothing state), so it is safe to
+     * call at arbitrary times; returns null before setup.
+     */
+    evaluateCamera(songT: number): { p: [number, number, number]; F: [number, number, number] } | null {
+      if (!this.setupDone) return null;
+      const span = Math.max(1e-3, this.ctx.end - this.ctx.start);
+      const u = Math.min(1, Math.max(0, (songT - this.ctx.start) / span));
+      // NOTE: evalPath mutates rig position/target/roll/lens, but the next
+      // updateCamera() re-derives all of them and smoothing state is
+      // untouched, so blueprint sampling has no effect on rendering.
+      this.sc.rig.evalPath(u);
+      const pos = this.sc.rig.position;
+      const tgt = this.sc.rig.target;
+      const dx = tgt[0] - pos[0];
+      const dy = tgt[1] - pos[1];
+      const dz = tgt[2] - pos[2];
+      const len = Math.hypot(dx, dy, dz) || 1.0;
+      return { p: [...pos] as [number, number, number], F: [dx / len, dy / len, dz / len] };
     }
 
     override dispose(): void {

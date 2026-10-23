@@ -254,6 +254,7 @@ export class SDFBatch {
       transparent: true,
       depthWrite: false,
       depthTest: false,
+      side: THREE.DoubleSide,
       blending: THREE.CustomBlending,
       blendEquation: THREE.AddEquation,
       blendSrc: THREE.OneFactor,

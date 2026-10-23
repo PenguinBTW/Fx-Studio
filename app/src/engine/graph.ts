@@ -33,8 +33,6 @@ uniform sampler2D matte;
 uniform int matteMode; // 0=alpha, 1=inv-alpha, 2=luma, 3=inv-luma
 uniform float opacity;
 
-in vec2 vUv;
-out vec4 fragColor;
 
 float luma(vec3 c) {
   return dot(c, vec3(0.2126, 0.7152, 0.0722));
@@ -77,8 +75,6 @@ export class CompositorGraph {
     uniform sampler2D over;
     uniform int mode; // 0=normal, 1=add, 2=screen, 3=multiply
     uniform float opacity;
-    in vec2 vUv;
-    out vec4 fragColor;
 
     void main() {
       vec4 b = texture(base, vUv);

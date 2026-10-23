@@ -95,6 +95,11 @@ export class KineticText {
     return this;
   }
 
+  /** Base (unducked) style alpha — the DSL multiplies the transition duck on top for telemetry. */
+  get baseAlpha(): number {
+    return this.style.alpha;
+  }
+
   getScreenBounds(x = this.anchorPos[0], y = this.anchorPos[1]): [number, number, number, number] {
     const effFontSize = this.style.fontSize * (this.is3DAnchored ? this.depthScale : 1.0);
     const lineH = effFontSize * this.style.lineHeight;
@@ -315,30 +320,50 @@ export class KineticText {
     }
 
     if (staggerStates && staggerStates.length > 0) {
-      // Staggered Unit Rendering (NOTE: units share anchor x; per-unit advances need
-      // measureText layout — future work. Scale is applied; x/width remain 0.)
-      for (const st of staggerStates) {
-        if (st.alpha <= 0.001) continue;
-        ctx.save();
-        ctx.globalAlpha *= st.alpha * this.style.alpha;
-        const unitY = y + st.offsetY;
-        if (st.scale !== 1.0) {
-          ctx.translate(x, unitY);
-          ctx.scale(st.scale, st.scale);
-          ctx.translate(-x, -unitY);
-        }
+      // Staggered unit rendering with measureText layout: each unit advances
+      // by its own width (+ letter-spacing, which measureText includes), so
+      // units never superimpose. Alignment is resolved manually around x,
+      // then per-unit draws use left alignment to avoid double application.
+      // (measureText runs while ctx.letterSpacing is still set, so advances
+      // already include tracking; drawing then resets it to '0px'.)
+      const advances = staggerStates.map((s) => ctx.measureText(s.text).width);
+      const totalW = advances.reduce((a, b) => a + b, 0);
+      let cursorX = x;
+      if (this.style.align === 'center') cursorX = x - totalW / 2;
+      else if (this.style.align === 'right') cursorX = x - totalW;
+      const prevAlign = ctx.textAlign;
+      const prevLS = (ctx as unknown as { letterSpacing?: string }).letterSpacing;
+      ctx.textAlign = 'left';
+      (ctx as unknown as { letterSpacing?: string }).letterSpacing = '0px';
+      for (let si = 0; si < staggerStates.length; si++) {
+        const st = staggerStates[si]!;
+        const w = advances[si]!;
+        if (st.alpha > 0.001) {
+          ctx.save();
+          ctx.globalAlpha *= st.alpha * this.style.alpha;
+          const unitY = y + st.offsetY;
+          const unitCx = cursorX + w / 2;
+          if (st.scale !== 1.0) {
+            ctx.translate(unitCx, unitY);
+            ctx.scale(st.scale, st.scale);
+            ctx.translate(-unitCx, -unitY);
+          }
 
-        if (this.halo) {
-          ctx.strokeStyle = this.halo.haloColor;
-          ctx.lineWidth = this.halo.strokePx * 2;
-          ctx.lineJoin = 'round';
-          ctx.strokeText(st.text, x, unitY);
-        }
+          if (this.halo) {
+            ctx.strokeStyle = this.halo.haloColor;
+            ctx.lineWidth = this.halo.strokePx * 2;
+            ctx.lineJoin = 'round';
+            ctx.strokeText(st.text, cursorX, unitY);
+          }
 
-        ctx.fillStyle = this.style.color;
-        ctx.fillText(st.text, x, unitY);
-        ctx.restore();
+          ctx.fillStyle = this.style.color;
+          ctx.fillText(st.text, cursorX, unitY);
+          ctx.restore();
+        }
+        cursorX += w;
       }
+      ctx.textAlign = prevAlign;
+      (ctx as unknown as { letterSpacing?: string }).letterSpacing = prevLS;
     } else {
       // Standard Multi-line Rendering
       // 1. Draw Knockout Halo Under-stroke (if enabled)
