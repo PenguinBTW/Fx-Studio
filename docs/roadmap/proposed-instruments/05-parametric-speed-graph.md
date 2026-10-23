@@ -1,5 +1,11 @@
 # Instrument 05: Parametric Motion Curve & Speed Graph Inspector (`curves`)
 
+**Status**: Proposed Architecture Specification (Roadmap)  
+**Target Command**: `bun scripts/render.ts curves` or `bun scripts/curves.ts`  
+**Planned Artifacts**: `curve_speedgraph.png`, `curves_summary.json`  
+
+---
+
 ## 1. Overview & Objective
 
 The **Parametric Motion Curve & Speed Graph Inspector** is an isolated mathematical diagnostic tool that plots the value curve and physical kinematic derivatives (speed $v(t) = |y'(t)|$ and acceleration $a(t) = y''(t)$) of any animated scene property—position, scale, rotation, opacity, camera FOV, spring values, or custom shader parameters.
@@ -59,61 +65,36 @@ Peak┌────────────────────────�
 ## 4. Technical CLI Interface
 
 ```bash
-# Inspect UI card scale spring curve across 2.0s to 2.8s
-bun scripts/curves.ts --scene modal_reveal --prop card_scale --from 2.00 --to 2.80 --out ../out/visual/card_curve
-
-# Inspect camera FOV transition across a commercial shot
-bun scripts/curves.ts --scene product_hero --prop camera_fov --from 4.00 --to 5.50
-
-# Inspect opacity crossfade easing
-bun scripts/curves.ts --scene title_intro --prop title_opacity --from 0.50 --to 1.20
+bun scripts/curves.ts --scene <scene-id> --property <prop-path> \
+  --from <start-s> --to <end-s> [--samples 200] [--out <out-dir>]
 ```
 
-### Options
-* `--scene <name>`: Target scene or plate ID.
-* `--prop <name>`: Target animated property identifier (`position.y`, `scale`, `rotation.z`, `opacity`, `fov`).
-* `--from <seconds> --to <seconds>`: Inspection time window.
-* `--samples <integer>`: Sub-frame sampling count (default: `120`, range: `60–600`).
-* `--out <path>`: Output directory for PNG chart and telemetry JSON.
+| Flag | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `--scene <id>` | string | Required | Target scene or plate ID to inspect. |
+| `--property <path>`| string | `camera.position.z` | Property path or curve expression to sample. |
+| `--from <seconds>` | float | `0.0` | Start of time window in seconds. |
+| `--to <seconds>` | float | `4.0` | End of time window in seconds. |
+| `--samples <n>` | integer | `200` | Sampling resolution across time window. |
+| `--out <dir>` | path | `out/visual/curves`| Output directory for chart and telemetry JSON. |
 
 ---
 
-## 5. Quantitative Telemetry (`curves_summary.json`)
+## 5. Machine-Readable Telemetry Schema (`curves_summary.json`)
 
 ```json
 {
-  "scene": "modal_reveal",
-  "property": "card_scale",
-  "window_s": [2.00, 2.80],
-  "duration_s": 0.80,
-  "peak_speed_units_per_s": 4.82,
-  "arrival_speed_units_per_s": 0.02,
-  "arrival_impact_pct": 0.4,
-  "continuity_class": "C2_continuous",
-  "tangent_breaks_count": 0,
-  "overshoot_pct": 8.4,
-  "damping_ratio_zeta": 0.72,
-  "settle_time_s": 0.48,
-  "status": "smooth_spring_settle"
+  "scene": "modal_sheet",
+  "property": "card.position.y",
+  "from": 2.0,
+  "to": 2.8,
+  "peak_velocity": 4.82,
+  "arrival_velocity": 0.02,
+  "arrival_impact_ratio": 0.004,
+  "has_arrival_shock": false,
+  "tangent_discontinuities": [],
+  "inflection_count": 1,
+  "is_c2_continuous": true,
+  "damping_ratio_zeta": 0.85
 }
-```
-
----
-
-## 6. Autonomous Agent Iteration Workflow
-
-```
-[ Agent parses curves_summary.json ]
-                │
-                ├─► arrival_speed_units_per_s > 0.5
-                │   • Diagnosis: Element slams into rest abruptly without deceleration.
-                │   • Action: Adjust cubic-bezier ease-out shoulder or increase spring damping.
-                │
-                ├─► tangent_breaks_count > 0
-                │   • Diagnosis: Discontinuous C0 tangent break between keyframe segments.
-                │   • Action: Unify piecewise segments into a continuous Hermite spline or single MotionBus curve.
-                │
-                └─► damping_ratio_zeta < 0.5 (Excessive ringing)
-                    • Diagnosis: Spring oscillates violently past settle point.
-                    • Action: Increase damping parameter in MotionBus.spring(t, { damping: 0.8 }).
 ```
