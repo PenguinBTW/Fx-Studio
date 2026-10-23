@@ -1,0 +1,11 @@
+{
+  "project": "city_room_portal",
+  "entries": [
+    {
+      "scene": "city_room_portal/city_room_scene",
+      "id": "city_to_room_continuum",
+      "start": 0.0,
+      "end": 36.0
+    }
+  ]
+}

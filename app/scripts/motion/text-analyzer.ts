@@ -29,6 +29,25 @@ export interface WordSyncMetric {
   match: 'word' | 'line' | 'none';
 }
 
+/**
+ * Same-element dedupe: identical normalized text drawn twice in one frame is
+ * one visual element, not a collision — coincident identical glyphs reinforce
+ * rather than mush. This covers multi-pass draws (fill + knockout halo +
+ * stroke, near-coincident boxes) AND cross-path duplicates (the canvas hook
+ * and the SceneGraph direct path report the same draw with slightly different
+ * boxes: centres ~5px apart, heights up to ~1.7x apart). Gate: overlap > 10%
+ * with centres < 40px apart. Genuinely distinct same-string placements (tickers
+ * crossing, adjacent labels) sit further apart and are still flagged.
+ * Empty-after-normalization strings (bare punctuation) never match.
+ */
+export function isSameElementPair(A: TextProbeRecord, B: TextProbeRecord, overlapPct: number): boolean {
+  if (overlapPct <= 10) return false;
+  const a = normalizeText(A.text);
+  if (a.length === 0 || a !== normalizeText(B.text)) return false;
+  const dx = A.cx - B.cx, dy = A.cy - B.cy;
+  return dx * dx + dy * dy < 40 * 40;
+}
+
 export interface CollisionItem {
   pair: string;
   t0: number;
@@ -347,6 +366,9 @@ export function analyzeTextProbes(
           const overlapPct = (interArea / smallerArea) * 100;
 
           if (overlapPct > CONFIG.text_collision_max_overlap_pct) {
+            // Same visual element in multiple draw passes (fill/halo/stroke):
+            // not a legibility defect, skip before pairing.
+            if (isSameElementPair(A, B, overlapPct)) continue;
             const sortedTexts = [A.text, B.text].sort();
             const pairName = `"${sortedTexts[0]}" ∩ "${sortedTexts[1]}"`;
             const clipPct = Math.max(

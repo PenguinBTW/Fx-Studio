@@ -1,0 +1,38 @@
+{
+  "project": "demo",
+  "entries": [
+    {
+      "scene": "demo/ignition",
+      "id": "ignite",
+      "start": 0,
+      "end": 8.0,
+      "caption": { "fig": "01", "text": "PARTICLE ERUPTION", "dur": 4.0 }
+    },
+    {
+      "scene": "demo/lattice",
+      "id": "lattice",
+      "start": 6.5,
+      "end": 14.5,
+      "caption": { "fig": "02", "text": "PARAMETRIC LATTICE", "dur": 4.0 }
+    },
+    {
+      "scene": "demo/kinetic",
+      "id": "kinetic",
+      "start": 13.0,
+      "end": 20.0,
+      "caption": { "fig": "03", "text": "KINETIC TYPOGRAPHY", "dur": 4.0 }
+    },
+    {
+      "scene": "demo/finale",
+      "id": "finale",
+      "start": 18.5,
+      "end": 26.0,
+      "caption": { "fig": "04", "text": "FULL SYSTEM BURN", "dur": 4.0 }
+    }
+  ],
+  "transitions": [
+    { "id": "t-chase", "transition": "chase", "from": "ignite", "to": "lattice", "at": 6.5, "dur": 1.5 },
+    { "id": "t-push", "transition": "push", "from": "lattice", "to": "kinetic", "at": 13.0, "dur": 1.5 },
+    { "id": "t-dissolve", "transition": "dissolve", "from": "kinetic", "to": "finale", "at": 18.5, "dur": 1.5 }
+  ]
+}

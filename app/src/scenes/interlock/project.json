@@ -1,0 +1,11 @@
+{
+  "project": "interlock",
+  "entries": [
+    {
+      "scene": "interlock/interlock",
+      "id": "the_interlock",
+      "start": 0.0,
+      "end": 72.0
+    }
+  ]
+}

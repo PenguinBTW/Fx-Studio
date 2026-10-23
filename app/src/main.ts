@@ -2,11 +2,12 @@
 import { Engine, type AdaptiveSampling } from './engine/engine';
 import { PW, PH, SCALE } from './engine/gl';
 import { BRIDGE_VERSION, type EngineBridge, type TextProbeRecord } from './engine/bridge';
-import { makeTimeline } from './timeline';
+import { makeTimeline, makeTransitions } from './timeline';
 
 const params = new URLSearchParams(location.search);
 const EXPORT = params.has('export');
 const ONLY = params.get('only'); // comma-separated scene ids to load (faster stills)
+const PROJECT = params.get('project'); // project folder in scenes/ (falls back to active.json pointer)
 const FROM = params.get('t') ? parseFloat(params.get('t')!) : (params.get('from') ? parseFloat(params.get('from')!) : null);
 
 const canvas = document.getElementById('c') as HTMLCanvasElement;
@@ -14,12 +15,13 @@ const canvas = document.getElementById('c') as HTMLCanvasElement;
 canvas.width = PW;
 canvas.height = PH;
 
-const engine = new Engine(canvas, makeTimeline);
+const engine = new Engine(canvas, (ly, au, driver) => makeTimeline(ly, au, driver, PROJECT));
 
 let TIMELINE: typeof engine.timeline = [];
 
 async function boot() {
   const onlySet = ONLY ? new Set(ONLY.split(',')) : null;
+  engine.transitions = makeTransitions(PROJECT);
   await engine.init(onlySet ? (e) => onlySet.has(e.id) || (Boolean(e.file) && onlySet.has(e.file!)) : undefined);
   TIMELINE = engine.timeline;
   if (EXPORT) setupExport();
@@ -306,7 +308,7 @@ function setupPlayer() {
   if (import.meta.hot) {
     import.meta.hot.on('vite:afterUpdate', (payload: any) => {
       for (const u of payload.updates ?? []) {
-        const m = /scenes\/([\w-]+)\.ts/.exec(u.path ?? '');
+        const m = /scenes\/(.+)\.ts/.exec(u.path ?? '');
         if (m) for (const e of TIMELINE) if (e.id === m[1] || (e as any).file === m[1]) engine.reload(e.id);
       }
     });

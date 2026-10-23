@@ -1,0 +1,11 @@
+{
+  "project": "expanding_circle",
+  "entries": [
+    {
+      "scene": "expanding_circle/expanding_circle_scene",
+      "id": "expanding_circle_continuum",
+      "start": 0.0,
+      "end": 28.0
+    }
+  ]
+}

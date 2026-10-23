@@ -152,7 +152,7 @@ export const FLAG_RULES: Record<string, RuleMetadata> = {
     class: 'blocking',
     tier: 'tier_a_objective',
     description: 'Two text bounding boxes (alpha > 0.15 each) overlap by > 2% of the smaller box',
-    limits: 'Screen-space 2D bounding boxes without Z-buffer; pairs with >= 2.5x scale disparity or micro-text (< 0.4%) are excluded as 3D parallax.',
+    limits: 'Screen-space 2D bounding boxes without Z-buffer; pairs with >= 2.5x scale disparity or micro-text (< 0.4%) are excluded as 3D parallax; identical text overlapping > 10% with centres < 40px apart is one element reported twice (multi-pass / dual probe paths), not a collision.',
   },
   F05: {
     rule: 'F05',

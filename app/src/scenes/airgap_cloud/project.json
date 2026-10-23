@@ -1,0 +1,11 @@
+{
+  "project": "airgap_cloud",
+  "entries": [
+    {
+      "scene": "airgap_cloud/airgap_scene",
+      "id": "the_airgap_cathedral",
+      "start": 0.0,
+      "end": 60.0
+    }
+  ]
+}

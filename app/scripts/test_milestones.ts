@@ -9,6 +9,9 @@ const testScripts = [
   'test_visual_and_telemetry.ts',
   'test_bugfixes.ts',
   'test_multiscene.ts',
+  'test_project_transitions.ts',
+  'test_demo_gemini.ts',
+  'test_advanced_demo.ts',
 ];
 
 console.log('================================================================');

@@ -1,0 +1,94 @@
+{
+  "project": "advanced_demo",
+  "entries": [
+    {
+      "scene": "advanced_demo/titanium_reveal",
+      "id": "titanium_reveal",
+      "start": 0.0,
+      "end": 32.0,
+      "caption": { "fig": "01", "text": "PRECISION TITANIUM HARDWARE", "dur": 6.0 }
+    },
+    {
+      "scene": "advanced_demo/swiss_constructivism",
+      "id": "swiss_constructivism",
+      "start": 30.0,
+      "end": 62.0,
+      "caption": { "fig": "02", "text": "SWISS CONSTRUCTIVIST EDITORIAL", "dur": 6.0 }
+    },
+    {
+      "scene": "advanced_demo/abyssal_bioluminescence",
+      "id": "abyssal_bioluminescence",
+      "start": 60.0,
+      "end": 92.0,
+      "caption": { "fig": "03", "text": "ABYSSAL BIOLUMINESCENCE", "dur": 6.0 }
+    },
+    {
+      "scene": "advanced_demo/spatial_glass_os",
+      "id": "spatial_glass_os",
+      "start": 90.0,
+      "end": 122.0,
+      "caption": { "fig": "04", "text": "SPATIAL COMPUTING GLASS OS", "dur": 6.0 }
+    },
+    {
+      "scene": "advanced_demo/retro_phosphor_crt",
+      "id": "retro_phosphor_crt",
+      "start": 120.0,
+      "end": 152.0,
+      "caption": { "fig": "05", "text": "RETRO PHOSPHOR CRT TERMINAL", "dur": 6.0 }
+    },
+    {
+      "scene": "advanced_demo/haute_horlogerie",
+      "id": "haute_horlogerie",
+      "start": 150.0,
+      "end": 182.0,
+      "caption": { "fig": "06", "text": "HAUTE HORLOGERIE TOURBILLON", "dur": 6.0 }
+    },
+    {
+      "scene": "advanced_demo/clinical_nanotech",
+      "id": "clinical_nanotech",
+      "start": 180.0,
+      "end": 212.0,
+      "caption": { "fig": "07", "text": "CLINICAL NANOTECH SYNTHESIS", "dur": 6.0 }
+    },
+    {
+      "scene": "advanced_demo/hyperbolic_manifold",
+      "id": "hyperbolic_manifold",
+      "start": 210.0,
+      "end": 242.0,
+      "caption": { "fig": "08", "text": "6D CALABI-YAU MANIFOLD", "dur": 6.0 }
+    },
+    {
+      "scene": "advanced_demo/synthwave_highway",
+      "id": "synthwave_highway",
+      "start": 240.0,
+      "end": 272.0,
+      "caption": { "fig": "09", "text": "SYNTHWAVE CYBER HIGHWAY", "dur": 6.0 }
+    },
+    {
+      "scene": "advanced_demo/stellar_reactor",
+      "id": "stellar_reactor",
+      "start": 270.0,
+      "end": 302.0,
+      "caption": { "fig": "10", "text": "STELLAR DYSON SWARM REACTOR", "dur": 6.0 }
+    },
+    {
+      "scene": "advanced_demo/hyperdrive_finale",
+      "id": "hyperdrive_finale",
+      "start": 300.0,
+      "end": 330.0,
+      "caption": { "fig": "11", "text": "ALCUBIERRE WARP & RESOLVE", "dur": 6.0 }
+    }
+  ],
+  "transitions": [
+    { "id": "t-push-01", "transition": "push", "from": "titanium_reveal", "to": "swiss_constructivism", "at": 30.0, "dur": 2.0 },
+    { "id": "t-iris-02", "transition": "iris", "from": "swiss_constructivism", "to": "abyssal_bioluminescence", "at": 60.0, "dur": 2.0 },
+    { "id": "t-warp-03", "transition": "warp", "from": "abyssal_bioluminescence", "to": "spatial_glass_os", "at": 90.0, "dur": 2.0 },
+    { "id": "t-shutter-04", "transition": "shutter", "from": "spatial_glass_os", "to": "retro_phosphor_crt", "at": 120.0, "dur": 2.0 },
+    { "id": "t-iris-05", "transition": "iris", "from": "retro_phosphor_crt", "to": "haute_horlogerie", "at": 150.0, "dur": 2.0 },
+    { "id": "t-push-06", "transition": "push", "from": "haute_horlogerie", "to": "clinical_nanotech", "at": 180.0, "dur": 2.0 },
+    { "id": "t-warp-07", "transition": "warp", "from": "clinical_nanotech", "to": "hyperbolic_manifold", "at": 210.0, "dur": 2.0 },
+    { "id": "t-shutter-08", "transition": "shutter", "from": "hyperbolic_manifold", "to": "synthwave_highway", "at": 240.0, "dur": 2.0 },
+    { "id": "t-chase-09", "transition": "chase", "from": "synthwave_highway", "to": "stellar_reactor", "at": 270.0, "dur": 2.0 },
+    { "id": "t-warp-10", "transition": "warp", "from": "stellar_reactor", "to": "hyperdrive_finale", "at": 300.0, "dur": 2.0 }
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "project": "music_video",
+  "entries": [
+    {
+      "scene": "music_video/act1_vault_blueprint",
+      "id": "act1_vault_blueprint",
+      "start": 0.0,
+      "end": 19.31
+    },
+    {
+      "scene": "music_video/act2_speedometer",
+      "id": "act2_speedometer",
+      "start": 18.31,
+      "end": 34.05
+    },
+    {
+      "scene": "music_video/act3_cash_breach",
+      "id": "act3_cash_breach",
+      "start": 33.05,
+      "end": 50.96
+    },
+    {
+      "scene": "music_video/act4_cockpit_highway",
+      "id": "act4_cockpit_highway",
+      "start": 49.96,
+      "end": 67.63
+    },
+    {
+      "scene": "music_video/act5_bridge_chase",
+      "id": "act5_bridge_chase",
+      "start": 66.63,
+      "end": 97.61
+    },
+    {
+      "scene": "music_video/act6_sunrise_leap",
+      "id": "act6_sunrise_leap",
+      "start": 96.61,
+      "end": 125.0
+    }
+  ],
+  "transitions": [
+    {
+      "id": "t1-dial-morph",
+      "transition": "portal_dive",
+      "from": "act1_vault_blueprint",
+      "to": "act2_speedometer",
+      "at": 18.81,
+      "dur": 0.5
+    },
+    {
+      "id": "t2-speedo-shatter",
+      "transition": "dissolve",
+      "from": "act2_speedometer",
+      "to": "act3_cash_breach",
+      "at": 33.55,
+      "dur": 0.25
+    },
+    {
+      "id": "t3-siren-tilt",
+      "transition": "dissolve",
+      "from": "act3_cash_breach",
+      "to": "act4_cockpit_highway",
+      "at": 50.46,
+      "dur": 0.25
+    },
+    {
+      "id": "t4-ramp-pullout",
+      "transition": "dissolve",
+      "from": "act4_cockpit_highway",
+      "to": "act5_bridge_chase",
+      "at": 67.13,
+      "dur": 0.25
+    },
+    {
+      "id": "t5-saltflat-impact",
+      "transition": "dissolve",
+      "from": "act5_bridge_chase",
+      "to": "act6_sunrise_leap",
+      "at": 97.11,
+      "dur": 0.25
+    }
+  ]
+}

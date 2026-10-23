@@ -1,0 +1,46 @@
+{
+  "project": "demo_gemini",
+  "entries": [
+    {
+      "scene": "demo_gemini/singularity",
+      "id": "singularity",
+      "start": 0.0,
+      "end": 9.0,
+      "caption": { "fig": "01", "text": "QUANTUM ACCRETION SINGULARITY", "dur": 4.5 }
+    },
+    {
+      "scene": "demo_gemini/tesseract",
+      "id": "tesseract",
+      "start": 7.5,
+      "end": 16.5,
+      "caption": { "fig": "02", "text": "HYPERDIMENSIONAL TESSERACT", "dur": 4.5 }
+    },
+    {
+      "scene": "demo_gemini/vector_lab",
+      "id": "vector_lab",
+      "start": 15.0,
+      "end": 23.5,
+      "caption": { "fig": "03", "text": "SWISS KINETIC VECTOR LAB", "dur": 4.5 }
+    },
+    {
+      "scene": "demo_gemini/metropolis",
+      "id": "metropolis",
+      "start": 22.0,
+      "end": 31.0,
+      "caption": { "fig": "04", "text": "NEO-GRID METROPOLIS CANYON", "dur": 4.5 }
+    },
+    {
+      "scene": "demo_gemini/supernova",
+      "id": "supernova",
+      "start": 29.5,
+      "end": 38.0,
+      "caption": { "fig": "05", "text": "SUPERCRITICAL FUSION CORE", "dur": 4.5 }
+    }
+  ],
+  "transitions": [
+    { "id": "t-warp-1", "transition": "warp", "from": "singularity", "to": "tesseract", "at": 7.5, "dur": 1.5 },
+    { "id": "t-shutter-1", "transition": "shutter", "from": "tesseract", "to": "vector_lab", "at": 15.0, "dur": 1.5 },
+    { "id": "t-chase-1", "transition": "chase", "from": "vector_lab", "to": "metropolis", "at": 22.0, "dur": 1.5 },
+    { "id": "t-warp-2", "transition": "warp", "from": "metropolis", "to": "supernova", "at": 29.5, "dur": 1.5 }
+  ]
+}

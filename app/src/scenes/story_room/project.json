@@ -1,0 +1,69 @@
+{
+  "project": "story_room",
+  "entries": [
+    {
+      "scene": "story_room/blueprint_study",
+      "id": "blueprint_study",
+      "start": 0.0,
+      "end": 5.0
+    },
+    {
+      "scene": "story_room/solid_room",
+      "id": "solid_room",
+      "start": 4.5,
+      "end": 9.0
+    },
+    {
+      "scene": "story_room/colour_room",
+      "id": "colour_room",
+      "start": 8.5,
+      "end": 13.5
+    },
+    {
+      "scene": "story_room/rapid_flutter",
+      "id": "rapid_flutter",
+      "start": 13.0,
+      "end": 17.0
+    },
+    {
+      "scene": "story_room/scrawly_odyssey",
+      "id": "scrawly_odyssey",
+      "start": 16.0,
+      "end": 77.0
+    }
+  ],
+  "transitions": [
+    {
+      "id": "t-elastic-pop",
+      "transition": "elastic_pop",
+      "from": "blueprint_study",
+      "to": "solid_room",
+      "at": 4.5,
+      "dur": 0.5
+    },
+    {
+      "id": "t-solid-to-colour",
+      "transition": "dissolve",
+      "from": "solid_room",
+      "to": "colour_room",
+      "at": 8.5,
+      "dur": 0.5
+    },
+    {
+      "id": "t-flying-tome",
+      "transition": "flying_tome",
+      "from": "colour_room",
+      "to": "rapid_flutter",
+      "at": 13.0,
+      "dur": 0.5
+    },
+    {
+      "id": "t-fiber-dive",
+      "transition": "fiber_dive",
+      "from": "rapid_flutter",
+      "to": "scrawly_odyssey",
+      "at": 16.0,
+      "dur": 1.0
+    }
+  ]
+}

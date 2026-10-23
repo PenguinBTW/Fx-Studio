@@ -1,0 +1,11 @@
+{
+  "project": "dot_odyssey",
+  "entries": [
+    {
+      "scene": "dot_odyssey/dot_odyssey_scene",
+      "id": "chroma_the_dot_odyssey",
+      "start": 0.0,
+      "end": 180.0
+    }
+  ]
+}

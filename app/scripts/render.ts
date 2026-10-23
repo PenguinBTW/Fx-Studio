@@ -146,7 +146,8 @@ async function openPage(url: string) {
     }
     only = Array.from(expanded).join(',');
   }
-  await page.goto(`${url}/?export=1${only ? `&only=${only}` : ''}${SCALE !== 1 ? `&scale=${SCALE}` : ''}`);
+  const project = opt('project');
+  await page.goto(`${url}/?export=1${only ? `&only=${only}` : ''}${project ? `&project=${project}` : ''}${SCALE !== 1 ? `&scale=${SCALE}` : ''}`);
   await page.waitForFunction(() => (window as any).__motion?.ready || (window as any).__pdoom?.ready || (window as any).__motion?.error || (window as any).__pdoom?.error, null, { timeout: 120000 });
   const bridgeVer = await page.evaluate(() => (window as any).__motion?.version || (window as any).__pdoom?.version);
   const err = await page.evaluate(() => (window as any).__motion?.error || (window as any).__pdoom?.error);

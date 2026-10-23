@@ -1,0 +1,16 @@
+{
+  "project": "default",
+  "entries": [
+    {
+      "scene": "default/demo",
+      "id": "demo-a",
+      "start": 0,
+      "end": 3.0,
+      "caption": { "fig": "01", "text": "AGENTIC PROCEDURAL MOTION ENGINE", "dur": 4.0 }
+    },
+    { "scene": "default/demo", "id": "demo-b", "start": 2.0, "end": 5.0 }
+  ],
+  "transitions": [
+    { "id": "wipe-1", "transition": "push", "from": "demo-a", "to": "demo-b", "at": 2.0, "dur": 1.0 }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "project": "insane_scenes_demo",
+  "entries": [
+    {
+      "scene": "insane_scenes_demo/kerr_ergosphere",
+      "id": "kerr_ergosphere",
+      "start": 0.0,
+      "end": 12.0,
+      "caption": { "fig": "01", "text": "THE KERR ERGOSPHERE & 4D POLYCHORON", "dur": 4.0 }
+    },
+    {
+      "scene": "insane_scenes_demo/photonic_cavity",
+      "id": "photonic_cavity",
+      "start": 10.0,
+      "end": 22.0,
+      "caption": { "fig": "02", "text": "THE RESONANT PHOTONIC CAVITY & PEREGRINE BREATHER", "dur": 4.0 }
+    }
+  ],
+  "transitions": [
+    {
+      "id": "t-topological-01",
+      "transition": "topological_tear",
+      "from": "kerr_ergosphere",
+      "to": "photonic_cavity",
+      "at": 10.0,
+      "dur": 2.0
+    }
+  ]
+}

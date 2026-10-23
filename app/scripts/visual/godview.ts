@@ -98,15 +98,28 @@ export async function runGodView(page: Page, argv: string[] = []): Promise<void>
         }
       }
       let usedSynthetic = !activeSceneObj;
+      // Prefer the scene whose entry window contains each sample so
+      // multi-scene timelines hydrate per-segment instead of stretching
+      // the first scene's path across the whole range.
+      const pickScene = (tt: number): any => {
+        if (loaded) {
+          for (const [__, entry] of loaded.entries()) {
+            if (entry.scene && typeof entry.scene.evaluateCamera === 'function'
+              && entry.entry && tt >= entry.entry.start && tt < entry.entry.end) return entry.scene;
+          }
+        }
+        return activeSceneObj;
+      };
 
       for (let i = 0; i < N; i++) {
         const t = t0 + (i / Math.max(1, N - 1)) * (t1 - t0);
         let x = 0, y = 1.2, z = 0;
         let fx = 0, fy = 0, fz = 1;
 
-        if (activeSceneObj && typeof activeSceneObj.evaluateCamera === 'function') {
+        const sampler = pickScene(t) || activeSceneObj;
+        if (sampler && typeof sampler.evaluateCamera === 'function') {
           try {
-            const cam = activeSceneObj.evaluateCamera(t, 0);
+            const cam = sampler.evaluateCamera(t, 0);
             if (cam && cam.p) {
               x = cam.p[0]; y = cam.p[1]; z = cam.p[2];
               if (cam.F) { fx = cam.F[0]; fy = cam.F[1]; fz = cam.F[2]; }
@@ -116,6 +129,7 @@ export async function runGodView(page: Page, argv: string[] = []): Promise<void>
           // Fallback analytical corridor curve (generic template, NOT measured —
           // only used when live __motion camera unavailable; labeled as such in output).
           const u = (t - t0) / Math.max(0.1, t1 - t0);
+          usedSynthetic = true;
           z = -2.2 + u * u * 48.0;
           x = Math.sin(u * Math.PI * 2) * 0.4;
           y = 1.2 + Math.cos(u * Math.PI) * 0.1;
