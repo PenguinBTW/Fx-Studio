@@ -77,6 +77,7 @@ export const HEX = {
   bronzeDark: '#68502A',
   wallWainscot: '#4E2F1A',
   wallPlaster: '#3E3A36',
+  vacuumTubeOrange: '#FF8833',
   ambientDustMote: '#FFE0A3',
   woodMahogany: '#38180C',
   brassPolished: '#F0C850',

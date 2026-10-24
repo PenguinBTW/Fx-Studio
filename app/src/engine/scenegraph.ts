@@ -31,6 +31,7 @@ export interface CollisionEvent {
   overlapArea: number;
   overlapPctA: number;
   overlapPctB: number;
+  iou?: number;
 }
 
 export class SceneGraph {
@@ -82,6 +83,7 @@ export class SceneGraph {
       e.worldPos = pos;
 
       // If entity has local bounds, project 8 corners of the bounding box
+      const isLocal = !e.worldBounds;
       const wb = e.worldBounds ?? [
         0, 0, 0,
         e.node.size[0], e.node.size[1], e.node.size[2],
@@ -102,7 +104,7 @@ export class SceneGraph {
       let anyVisible = false, anyClipped = false;
 
       for (const c of corners) {
-        const v = new THREE.Vector3(c[0], c[1], c[2]).applyMatrix4(worldMat);
+        const v = isLocal ? new THREE.Vector3(c[0], c[1], c[2]).applyMatrix4(worldMat) : new THREE.Vector3(c[0], c[1], c[2]);
         const proj = ViewportSpace.worldToScreen([v.x, v.y, v.z], cam, w, h);
         if (proj) {
           anyVisible = true;
@@ -153,6 +155,8 @@ export class SceneGraph {
           const overlapArea = (ix1 - ix0) * (iy1 - iy0);
           const areaA = Math.max(1, (boxA[2] - boxA[0]) * (boxA[3] - boxA[1]));
           const areaB = Math.max(1, (boxB[2] - boxB[0]) * (boxB[3] - boxB[1]));
+          const unionArea = areaA + areaB - overlapArea;
+          const iou = unionArea > 0 ? (overlapArea / unionArea) : 0;
 
           collisions.push({
             entityA: a.id,
@@ -160,6 +164,7 @@ export class SceneGraph {
             overlapArea,
             overlapPctA: (overlapArea / areaA) * 100,
             overlapPctB: (overlapArea / areaB) * 100,
+            iou,
           });
         }
       }

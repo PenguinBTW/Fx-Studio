@@ -25,6 +25,7 @@ export default class Chase implements Transition {
     const { renderer, comp } = this.ctx;
     comp.draw(renderer, a, out, { mode: 'replace' });
     if (u > 0) comp.draw(renderer, bEarly, out, { mode: 'normal', opacity: u });
+    renderer.resetState();
     return;
   }
 }

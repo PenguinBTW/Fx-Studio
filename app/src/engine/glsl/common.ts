@@ -35,7 +35,7 @@ vec2 rgss(int k) { return k == 0 ? vec2(0.125, -0.375) : k == 1 ? vec2(0.375, 0.
 
 float sat(float x) { return clamp(x, 0.0, 1.0); }
 vec3 sat(vec3 x) { return clamp(x, 0.0, 1.0); }
-float remap(float x, float a, float b, float c, float d) { return c + (d - c) * sat((x - a) / (b - a)); }
+float remap(float x, float a, float b, float c, float d) { float denom = abs(b - a) < 1e-6 ? (b >= a ? 1e-6 : -1e-6) : (b - a); return c + (d - c) * sat((x - a) / denom); }
 mat2 rot2(float a) { float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 float luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
 
@@ -98,13 +98,13 @@ vec2 curl2(vec2 p, float t) {
 // ---- 2D SDFs ----
 float sdCircle(vec2 p, float r) { return length(p) - r; }
 float sdBox(vec2 p, vec2 b) { vec2 d = abs(p) - b; return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0); }
-float sdSegment(vec2 p, vec2 a, vec2 b) { vec2 pa = p - a, ba = b - a; float h = sat(dot(pa, ba) / dot(ba, ba)); return length(pa - ba * h); }
+float sdSegment(vec2 p, vec2 a, vec2 b) { vec2 pa = p - a, ba = b - a; float dba = dot(ba, ba); float h = dba < 1e-9 ? 0.0 : sat(dot(pa, ba) / dba); return length(pa - ba * h); }
 // ---- 3D SDFs ----
 float sdSphere(vec3 p, float r) { return length(p) - r; }
 float sdBox3(vec3 p, vec3 b) { vec3 q = abs(p) - b; return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0); }
-float sdCapsule(vec3 p, vec3 a, vec3 b, float r) { vec3 pa = p - a, ba = b - a; float h = sat(dot(pa, ba) / dot(ba, ba)); return length(pa - ba * h) - r; }
+float sdCapsule(vec3 p, vec3 a, vec3 b, float r) { vec3 pa = p - a, ba = b - a; float dba = dot(ba, ba); float h = dba < 1e-9 ? 0.0 : sat(dot(pa, ba) / dba); return length(pa - ba * h) - r; }
 float sdTorus(vec3 p, vec2 t) { vec2 q = vec2(length(p.xz) - t.x, p.y); return length(q) - t.y; }
-float smin(float a, float b, float k) { float h = sat(0.5 + 0.5 * (b - a) / k); return mix(b, a, h) - k * h * (1.0 - h); }
+float smin(float a, float b, float k) { if (k <= 1e-6) return min(a, b); float h = sat(0.5 + 0.5 * (b - a) / k); return mix(b, a, h) - k * h * (1.0 - h); }
 float smax(float a, float b, float k) { return -smin(-a, -b, k); }
 
 // Output scale > 1: lines whose width comes from the pixel footprint (fwidth, "N-px hairlines") would get
@@ -130,9 +130,9 @@ ${SCALE === 1 ? `float rampLine(float d, float hw, float aa) { return sat((hw - 
   return _boxLine(d, hw >= 0.5 * aL ? hw : e * e / (2.0 * aL), 0.5 * aa);
 }`}
 /** Anti-aliased coverage of a distance field (d<0 inside) using screen derivatives. */
-float aaFill(float d) { float w = fwidth(d); return 1.0 - smoothstep(-w, w, d); }
+float aaFill(float d) { float w = max(fwidth(d), 1e-5); return 1.0 - smoothstep(-w, w, d); }
 /** Anti-aliased stroke of width wd around the zero set of d. */
-${SCALE === 1 ? `float aaStroke(float d, float wd) { float w = fwidth(d); return 1.0 - smoothstep(wd * 0.5 - w, wd * 0.5 + w, abs(d)); }` : `float aaStroke(float d, float wd) { float w = fwidth(d); return _boxLine(abs(d), _inkHalfWidth(wd * 0.5 - w * PX_SCALE, wd * 0.5 + w * PX_SCALE, 1e9), w); }`}
+${SCALE === 1 ? `float aaStroke(float d, float wd) { float w = max(fwidth(d), 1e-5); return 1.0 - smoothstep(wd * 0.5 - w, wd * 0.5 + w, abs(d)); }` : `float aaStroke(float d, float wd) { float w = max(fwidth(d), 1e-5); return _boxLine(abs(d), _inkHalfWidth(wd * 0.5 - w * PX_SCALE, wd * 0.5 + w * PX_SCALE, 1e9), w); }`}
 
 /**
  * Engraving hatch: parallel lines along coordinate u (lines at integer u),
@@ -157,7 +157,7 @@ float engrave(vec2 uv, float darkness, float freq, float angle) {
 
 // ---- colour ----
 vec3 toSRGB(vec3 c) { return mix(12.92 * c, 1.055 * pow(max(c, 0.0), vec3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
-vec3 toLinear(vec3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c)); }
+vec3 toLinear(vec3 c) { return mix(max(c, 0.0) / 12.92, pow(max(c + 0.055, 0.0) / 1.055, vec3(2.4)), step(0.04045, c)); }
 /** Signal-orange heat ramp: 0 = ink, 0.5 = signal, 1 = white-hot. */
 vec3 heat(float x) {
   x = sat(x);

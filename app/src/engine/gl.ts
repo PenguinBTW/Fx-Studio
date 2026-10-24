@@ -146,6 +146,11 @@ export class Compositor {
     (p.u.uvXform!.value as THREE.Vector4).set(o.scale?.[0] ?? 1, o.scale?.[1] ?? 1, o.offset?.[0] ?? 0, o.offset?.[1] ?? 0);
     p.u.premult!.value = o.premult ?? o.mode !== 'multiply';
     p.render(renderer, target);
+    renderer.resetState();
+  }
+  dispose() {
+    for (const p of this.passes.values()) p.dispose();
+    this.passes.clear();
   }
 }
 
@@ -156,6 +161,7 @@ export class Compositor {
  * dashes follow the CTM by themselves. getImageData/putImageData still work in backing-store px.
  */
 export function scaleContext2D(c: CanvasRenderingContext2D, s: number) {
+  if (!c || typeof CanvasRenderingContext2D === 'undefined') return c;
   (c as any)._isScaled = (s !== 1);
   if (s === 1) return c;
   const proto = CanvasRenderingContext2D.prototype;
@@ -195,7 +201,19 @@ export class Layer2D {
   texture: THREE.CanvasTexture;
   /** `scale`: backing px per drawing px (default SCALE; pass 1 for a deliberately low-res layer, e.g. a soft glow). */
   constructor(public w = W, public h = H, scale = SCALE) {
-    this.canvas = document.createElement('canvas');
+    const hasDoc = typeof document !== 'undefined' && typeof document.createElement === 'function';
+    this.canvas = hasDoc ? document.createElement('canvas') : ({
+      getContext: () => ({
+        setTransform: () => {},
+        resetTransform: () => {},
+        getTransform: () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }),
+        clearRect: () => {},
+        fillRect: () => {},
+        measureText: () => ({ width: 0 }),
+      }),
+      width: Math.round(w * scale),
+      height: Math.round(h * scale),
+    } as any);
     const lid = `layer_${++layerCounter}`;
     (this.canvas as any)._layerId = lid;
     this.canvas.width = Math.round(w * scale);

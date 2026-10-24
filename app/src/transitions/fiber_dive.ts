@@ -83,6 +83,7 @@ export default class FiberDive implements Transition {
     this.pass.u.time!.value = f.t;
 
     this.pass.render(renderer, out);
+    renderer.resetState();
 
     const peak = Math.sin(u * Math.PI);
     return {
@@ -90,5 +91,9 @@ export default class FiberDive implements Transition {
       ca: 0.8 + peak * 4.0,
       exposure: 1.05,
     };
+  }
+
+  dispose(): void {
+    this.pass.dispose();
   }
 }

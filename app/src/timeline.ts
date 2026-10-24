@@ -6,7 +6,7 @@
 // driven sequences.
 import type { TimelineEntry } from './engine/engine';
 import type { SceneClass } from './engine/scene';
-import type { TransitionClass, TransitionEntry } from './engine/transition';
+import { validateTransition, type TransitionClass, type TransitionEntry } from './engine/transition';
 import {
   buildTimelineEntries,
   buildTransitionEntries,
@@ -57,5 +57,14 @@ export function makeTimeline(
 }
 
 export function makeTransitions(project?: string | null): TransitionEntry[] {
-  return buildTransitionEntries(loadManifest(project), transition);
+  const manifest = loadManifest(project);
+  const trs = buildTransitionEntries(manifest, transition);
+  const entries = buildTimelineEntries(manifest, scene);
+  for (const tr of trs) {
+    const errs = validateTransition(tr, entries);
+    if (errs.length > 0) {
+      console.warn(`[transition ${tr.id}] validation warnings:\n  ` + errs.join('\n  '));
+    }
+  }
+  return trs;
 }

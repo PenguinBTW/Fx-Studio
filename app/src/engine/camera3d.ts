@@ -85,11 +85,14 @@ export interface Affine {
 
 /** Evaluates the active keyframe from a list of shots. */
 export function keyAt(shots: Shot[], t: number): Key {
+  if (shots.length === 0) {
+    return K([0, 1.8, -8.0], [0, 0, 0], 0, 50.0 * (H / 24.0));
+  }
   let i = 0;
   while (i + 1 < shots.length && t >= shots[i + 1]!.t0) i++;
   const s = shots[i]!;
   let k = shotKey(s, t);
-  if (i > 0 && s.snap > 0 && t - s.t0 < s.snap) {
+  if (i > 0 && s.snap > 0 && t >= s.t0 && t - s.t0 < s.snap) {
     k = lerpKey(shotKey(shots[i - 1]!, t), k, ease.outExpo(clamp((t - s.t0) / s.snap, 0, 1)));
   }
   if (s.kick && t >= s.t0) {
@@ -99,7 +102,9 @@ export function keyAt(shots: Shot[], t: number): Key {
 }
 
 function shotKey(s: Shot, t: number): Key {
-  if (s.key) return s.key(t);
+  if (s.key) return { ...s.key(t) };
+  if (!s.a) return K([0, 1.8, -8.0], [0, 0, 0], 0, 50.0 * (H / 24.0));
+  if (!s.b) return { ...s.a };
   const u = clamp((t - s.t0) / Math.max(1e-4, s.t1 - s.t0), 0, 1);
   const k = lerpKey(s.a!, s.b!, (s.e ?? ease.linear)(u));
   if (s.rollSpring) {
@@ -116,7 +121,9 @@ export function camFromKey(k: Key, hit = 0, t = 0, cx = W / 2, cy = H / 2): Cam 
     p = vadd(p, [noise1(t * 37, 11) * 0.05 * hit, noise1(t * 41, 12) * 0.05 * hit, 0]);
     roll += noise1(t * 29, 13) * 0.012 * hit;
   }
-  const Fw = vnorm(vsub(k.tg, p));
+  const toTg = vsub(k.tg, p);
+  const rawLen = Math.hypot(toTg[0], toTg[1], toTg[2]);
+  const Fw: V3 = rawLen < 1e-6 ? [0, 0, 1] : [toTg[0] / rawLen, toTg[1] / rawLen, toTg[2] / rawLen];
   // Singular-safe reference up fallback when looking straight up or down (|Fw.y| > 0.99)
   let upRef: V3 = [0, 1, 0];
   if (Math.abs(Fw[1]) > 0.99) {

@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js';
+import { ViewportSpace } from './viewport';
 
 export interface GLTFLoadOptions {
   /** Optional custom path to Draco decoder libraries */
@@ -205,6 +206,7 @@ export class GLTFInstance {
    */
   center(includeBones = false): this {
     const box = this.getBounds(undefined, includeBones);
+    if (box.isEmpty()) return this;
     const center = box.getCenter(new THREE.Vector3());
     for (const child of this.root.children) {
       child.position.sub(center);
@@ -217,6 +219,7 @@ export class GLTFInstance {
    */
   fitToBox(maxDimension: number, includeBones = false): this {
     const box = this.getBounds(undefined, includeBones);
+    if (box.isEmpty()) return this;
     const size = box.getSize(new THREE.Vector3());
     const maxAxis = Math.max(size.x, size.y, size.z);
     if (maxAxis > 0) {
@@ -250,17 +253,20 @@ export class GLTFInstance {
     ];
 
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    let anyVisible = false;
 
     for (const pt of corners) {
-      pt.project(camera);
-      // NDC [-1..1] to pixel [0..W, 0..H] (origin top-left)
-      const px = (pt.x * 0.5 + 0.5) * viewportWidth;
-      const py = (-pt.y * 0.5 + 0.5) * viewportHeight;
-      if (px < minX) minX = px;
-      if (px > maxX) maxX = px;
-      if (py < minY) minY = py;
-      if (py > maxY) maxY = py;
+      const proj = ViewportSpace.worldToScreen([pt.x, pt.y, pt.z], camera, viewportWidth, viewportHeight);
+      if (proj) {
+        anyVisible = true;
+        if (proj[0] < minX) minX = proj[0];
+        if (proj[0] > maxX) maxX = proj[0];
+        if (proj[1] < minY) minY = proj[1];
+        if (proj[1] > maxY) maxY = proj[1];
+      }
     }
+
+    if (!anyVisible) return [0, 0, 0, 0];
 
     return [
       Math.max(0, Math.floor(minX)),
@@ -297,22 +303,6 @@ export class GLTFInstance {
     if (this.mixer) {
       this.mixer.stopAllAction();
       this.mixer.uncacheRoot(this.root);
-    }
-    for (const mesh of this.meshes) {
-      if (mesh.geometry) mesh.geometry.dispose();
-      if (mesh.material) {
-        const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-        for (const mat of mats) {
-          // Dispose textures attached to material
-          for (const key of Object.keys(mat)) {
-            const val = (mat as any)[key];
-            if (val && typeof val === 'object' && 'isTexture' in val) {
-              val.dispose();
-            }
-          }
-          mat.dispose();
-        }
-      }
     }
     this.root.clear();
     this.meshes.length = 0;
@@ -394,6 +384,7 @@ export class GLTFManager {
         },
         undefined,
         (err) => {
+          this.cache.delete(url);
           console.error(`[gltf] Failed to load model at '${url}':`, err);
           reject(err);
         }

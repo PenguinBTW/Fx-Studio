@@ -15,11 +15,13 @@ import { LineBatch } from './lines';
 import { AnalyticalParticles, type ParticleEmitterOpts } from './particles';
 import { LayoutNode, TransformNode } from './transform';
 import { motion, MotionBus } from './motion';
-import { Layer2D, W, H } from './gl';
+import { Layer2D, W, H, clearRT } from './gl';
 import { getDesignTokens, type DesignTokens } from './tokens';
 import { LIN, rgba } from './palette';
 import { overlayTextDuck } from './transition';
 import { GLTFManager, GLTFInstance, type GLTFLoadOptions } from './gltf';
+import { ProceduralMaterial, type BrushedMetalOpts, type WireframeGlowOpts, type FrostedGlassOpts, type MattePolymerOpts, type EmissivePulseOpts } from './material';
+import { ExtrudedText, type ExtrudedTextOpts } from './text3d';
 
 export interface SceneContextOptions {
   rigMode?: CameraMode;
@@ -44,6 +46,8 @@ export class SceneContext {
   readonly scene3D = new THREE.Scene();
   /** Instantiated GLTF models cataloged by ID */
   readonly models = new Map<string, GLTFInstance>();
+  /** Instantiated 3D extruded text meshes cataloged by ID */
+  readonly text3DNodes = new Map<string, THREE.Group>();
 
   // Cached typography nodes
   private textNodes = new Map<string, KineticText>();
@@ -126,6 +130,88 @@ export class SceneContext {
    */
   getModel(id: string): GLTFInstance | undefined {
     return this.models.get(id);
+  }
+
+  get materials(): typeof ProceduralMaterial {
+    return ProceduralMaterial;
+  }
+
+  /**
+   * Declare or retrieve an extruded 3D geometric mesh text node in scene3D.
+   * Automatically projects 2D screen bounds for telemetry probes and collision detection.
+   */
+  text3D(id: string, content: string, opts?: ExtrudedTextOpts & {
+    role?: EntityRole;
+    position?: [number, number, number];
+    rotation?: [number, number, number];
+    scale?: number;
+    opacity?: number;
+  }): THREE.Group {
+    const existingMeta = this.sceneGraph.get(id);
+    if (existingMeta && existingMeta.text !== content) {
+      const oldGroup = this.text3DNodes.get(id);
+      if (oldGroup) {
+        this.disposeObject(oldGroup);
+        this.scene3D.remove(oldGroup);
+        this.text3DNodes.delete(id);
+      }
+    }
+    let group = this.text3DNodes.get(id);
+    if (!group) {
+      group = ExtrudedText.create(content, opts);
+      if (opts?.position) group.position.set(...opts.position);
+      if (opts?.rotation) group.rotation.set(...opts.rotation);
+      if (opts?.scale !== undefined) group.scale.setScalar(opts.scale);
+      if (opts?.opacity !== undefined) {
+        group.traverse((c) => {
+          if ((c as THREE.Mesh).isMesh) {
+            const rawMat = (c as THREE.Mesh).material;
+            const mats = Array.isArray(rawMat) ? rawMat : [rawMat];
+            for (const m of mats) {
+              if (m) {
+                m.opacity = opts.opacity!;
+                m.transparent = opts.opacity! < 0.999;
+              }
+            }
+          }
+        });
+      }
+      this.scene3D.add(group);
+      this.text3DNodes.set(id, group);
+
+      this.sceneGraph.register({
+        id,
+        type: 'text',
+        role: opts?.role ?? 'headline',
+        opacity: opts?.opacity ?? 1.0,
+        text: content,
+        fontPx: (opts?.size ?? 1.0) * 40,
+        fontFamily: 'Geometric3D',
+        fillStyle: '#FFFFFF',
+      });
+    } else {
+      if (opts?.position) group.position.set(...opts.position);
+      if (opts?.rotation) group.rotation.set(...opts.rotation);
+      if (opts?.scale !== undefined) group.scale.setScalar(opts.scale);
+      const meta = this.sceneGraph.get(id);
+      if (meta && opts?.opacity !== undefined) {
+        meta.opacity = opts.opacity;
+        group.traverse((c) => {
+          if ((c as THREE.Mesh).isMesh) {
+            const m = (c as THREE.Mesh).material as THREE.Material;
+            m.opacity = opts.opacity!;
+            m.transparent = opts.opacity! < 0.999;
+          }
+        });
+      }
+    }
+
+    const bounds = ExtrudedText.getScreenBounds(group, this.threeCam, this.W, this.H);
+    const meta = this.sceneGraph.get(id);
+    if (meta) {
+      meta.screenBounds = bounds;
+    }
+    return group;
   }
 
   /**
@@ -317,6 +403,13 @@ export class SceneContext {
     const cam = this.rig.evalCam(t);
     this.rig.syncToThreeCamera(cam, this.threeCam);
     this.sceneGraph.updateScreenProjections(this.threeCam, this.W, this.H);
+    for (const [id, grp] of this.text3DNodes.entries()) {
+      const bounds = ExtrudedText.getScreenBounds(grp, this.threeCam, this.W, this.H);
+      const meta = this.sceneGraph.get(id);
+      if (meta) {
+        meta.screenBounds = bounds;
+      }
+    }
   }
 
   /**
@@ -357,11 +450,31 @@ export class SceneContext {
     this.renderer.resetState();
   }
 
+  private disposeObject(obj: THREE.Object3D): void {
+    obj.traverse((child) => {
+      const anyChild = child as any;
+      if (anyChild.isMesh || anyChild.isLine || anyChild.isPoints) {
+        anyChild.geometry?.dispose();
+        if (Array.isArray(anyChild.material)) {
+          anyChild.material.forEach((m: THREE.Material) => m?.dispose?.());
+        } else {
+          anyChild.material?.dispose?.();
+        }
+      }
+    });
+  }
+
   dispose(): void {
     for (const model of this.models.values()) {
       model.dispose();
     }
     this.models.clear();
+    for (const grp of this.text3DNodes.values()) {
+      this.disposeObject(grp);
+      this.scene3D.remove(grp);
+    }
+    this.text3DNodes.clear();
+    this.disposeObject(this.scene3D);
     this.scene3D.clear();
     this.particles.dispose();
     this.lines.dispose();
@@ -447,7 +560,10 @@ export function defineScene(def: DeclarativeSceneDef): SceneClass {
     }
 
     override render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides | void {
-      if (!this.setupDone) return;
+      if (!this.setupDone) {
+        clearRT(this.ctx.renderer, out, [0, 0, 0]);
+        return;
+      }
       this.sc.currentFrame = f;
       // Overlay ducking from the entry overlap signals (1 outside overlaps):
       // outgoing overlays exit fast, incoming ones enter late, so transition
@@ -489,3 +605,6 @@ export function defineScene(def: DeclarativeSceneDef): SceneClass {
     }
   };
 }
+
+export { ProceduralMaterial, type BrushedMetalOpts, type WireframeGlowOpts, type FrostedGlassOpts, type MattePolymerOpts, type EmissivePulseOpts } from './material';
+export { ExtrudedText, type ExtrudedTextOpts } from './text3d';

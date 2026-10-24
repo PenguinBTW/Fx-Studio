@@ -27,8 +27,8 @@ export class ClockDriver implements TimelineDriver {
   readonly bpm: number;
 
   constructor(duration = 10.0, bpm = 120) {
-    this.duration = Math.max(0.1, duration);
-    this.bpm = bpm;
+    this.duration = Math.max(0.001, duration);
+    this.bpm = Math.max(1, bpm);
   }
 
   evaluate(t: number): DriverSample {
@@ -63,7 +63,7 @@ export class AudioDriver implements TimelineDriver {
 
   constructor(audioData?: any, fallbackDuration = 30.0) {
     this.audioData = audioData;
-    this.duration = audioData?.duration ?? fallbackDuration;
+    this.duration = Math.max(0.001, audioData?.duration ?? fallbackDuration);
   }
 
   evaluate(t: number): DriverSample {
@@ -86,7 +86,7 @@ export class AudioDriver implements TimelineDriver {
             : typeof this.audioData.env === 'function'
               ? this.audioData.env('rms', clampedT)
               : typeof this.audioData.sample === 'function'
-                ? this.audioData.sample(clampedT).rms ?? 0
+                ? this.audioData.sample(clampedT)?.rms ?? 0
                 : 0,
         },
       };
@@ -121,10 +121,10 @@ export class SpeechDriver implements TimelineDriver {
   readonly duration: number;
   readonly cues: SpeechCue[];
 
-  constructor(cues: SpeechCue[], duration?: number) {
-    this.cues = [...cues].sort((a, b) => a.start - b.start);
+  constructor(cues: SpeechCue[] = [], duration?: number) {
+    this.cues = Array.isArray(cues) ? [...cues].sort((a, b) => a.start - b.start) : [];
     const lastCueEnd = this.cues.length > 0 ? this.cues[this.cues.length - 1]!.end : 10.0;
-    this.duration = duration ?? Math.max(10.0, lastCueEnd + 1.0);
+    this.duration = Math.max(0.001, duration ?? Math.max(10.0, lastCueEnd + 1.0));
   }
 
   evaluate(t: number): DriverSample {

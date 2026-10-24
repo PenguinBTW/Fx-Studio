@@ -3,6 +3,10 @@
 
 **For commercial Licensing beyond these thresholds email *vio@penguinbtw.com***
 
+> ### 📢 Latest Releases & Changelog
+> * **[v0.6.1 Bug Fix Report](./docs/changelog/v0.6.1-bug-fix-report.md)**: Engine-wide stability and correctness patch. Resolves 24 critical bugs across core rendering loops (mixRT ping-pong feedback fix), WebGL state isolation (`renderer.resetState()`), linear alpha premultiplication, GLTF shared-cache protection, ODE spring math, and FFmpeg pipeline mapping.
+> * **[v0.6.0 Release Record](./docs/changelog/v0.6.0-release-record.md)**: Major feature release adding procedural PBR shader materials (Ward brushed metal, wireframe glow, frosted glass), 3D extruded kinetic typography with chamfered bevels, optical Depth of Field (DoF), and volumetric god-rays.
+
 ---
 
 A production-grade, agent-accessible boilerplate and diagnostic inspection toolkit for procedural 60 fps WebGL/Canvas2D motion design across **any domain**—commercial product reveals, UI/UX interaction showcases, kinetic typography sequences, procedural data visualizations, brand identity resolves, and audiovisual productions.
@@ -22,6 +26,7 @@ The complete documentation suite for **f(x) Studio** is consolidated and categor
 | [**CLI & Export**](./docs/cli/render-cli-reference.md) | Headless rendering CLI reference, video export, GPU acceleration, and automated test runners. | • [Render CLI Reference](./docs/cli/render-cli-reference.md)<br>• [Video Export Pipeline](./docs/cli/video-export-pipeline.md)<br>• [Testing & Verification](./docs/cli/testing-and-verification.md) |
 | [**Projects**](./docs/projects/project-system.md) | Multi-project workspace architecture, manifest specifications, and developer workflow. | • [Project System & Manifests](./docs/projects/project-system.md) |
 | [**Roadmap**](./docs/roadmap/v0.5.0-roadmap-review.md) | Architectural audit record, v0.5.0 milestones, and proposed diagnostic instruments (05–09). | • [v0.5.0 Execution Record](./docs/roadmap/v0.5.0-roadmap-review.md)<br>• [Proposed Instruments (05–09)](./docs/roadmap/proposed-instruments/README.md) |
+| [**Changelog**](./docs/changelog/v0.6.1-bug-fix-report.md) | Historical release notes, feature execution records, and stability bug fix audit reports. | • [v0.6.1 Bug Fix Report](./docs/changelog/v0.6.1-bug-fix-report.md)<br>• [v0.6.0 Release Record](./docs/changelog/v0.6.0-release-record.md) |
 
 ---
 
@@ -52,7 +57,7 @@ All visual tools are implemented modularly in `app/scripts/visual/`, keeping `re
 
 ---
 
-## 4. Universal Procedural Motion Engine (v0.5.0)
+## 4. Universal Procedural Motion Engine (v0.6.1)
 
 The core engine in [`app/src/engine/`](./app/src/engine/) is a decoupled, domain-agnostic motion graphics platform. Complete architectural specifications, API signatures, and authoring guides are detailed in [**`docs/architecture/engine-overview.md`**](./docs/architecture/engine-overview.md).
 
@@ -72,7 +77,10 @@ app/src/engine/
 ├── export.ts       # Module 9: Multi-Format Delivery & Headless Export (ExportPipeline)
 ├── tokens.ts       # Module 10: Pluggable Brand Design Token System (DesignTokens)
 ├── heal.ts         # Module 11: Directorial Self-Correction Contract (AgentHeal)
-└── gltf.ts         # Module 13: Universal GLTF / GLB 3D Asset Engine (GLTFManager)
+├── gltf.ts         # Module 13: Universal GLTF / GLB 3D Asset Engine (GLTFManager)
+├── material.ts     # Module 14: Procedural PBR Shader Materials (ProceduralMaterial)
+├── text3d.ts       # Module 15: 3D Extruded Kinetic Typography (ExtrudedText)
+└── post.ts         # Module 16: Cinematic Optical Post-Processing Pipeline (Post)
 ```
 
 ### Core Engine Capabilities
@@ -84,6 +92,10 @@ app/src/engine/
 * **Scoped Compositor Graph (`CompositorGraph`)**: Multi-layer compositing engine with dual-texture alpha/luma track mattes and blend modes (`normal`, `add`, `screen`, `multiply`).
 * **Multi-Format Delivery Pipeline (`ExportPipeline`)**: Automated export presets for transparent Alpha WebM (VP9 + alpha), Apple ProRes 4444 (10-bit + alpha), ProRes 422 HQ, H.264 MP4, and lossless PNG sequences.
 * **Autonomous Self-Healing (`AgentHeal`)**: Translates diagnostic signals from the visual instruments directly into machine-actionable repair directives emitted into `findings.json`.
+* **Procedural PBR Materials (`ProceduralMaterial`)**: Code-only mathematical shader materials without texture maps—anisotropic Ward brushed titanium with micro-grooves, single-pass barycentric wireframe glow via `fwidth()`, frosted optical conduit glass with internal luminescence, dark polymer absorption, and closed-form traveling emissive pulse tracks.
+* **3D Extruded Kinetic Typography (`ExtrudedText`)**: Clean geometric vector letterforms extruded with chamfered bevels, dynamic lighting, drop shadows, and automatic 2D screen bounding box projection synced to `window.__motion.textProbes`.
+* **Cinematic Optical Post-Processing (`Post`)**: Optical Depth of Field (Bokeh Disc kernel), Volumetric Atmospheric Light Scatter (God Rays), and 4 specialized color grading profiles (`industrial`, `warm_editorial`, `monochrome_blueprint`, `infrared`).
+* **Camera Trajectory Ribbon (`CameraRig.createDebugRibbon`)**: 3D spline flight ribbon visualizing camera trajectory for god-view diagnostics.
 
 ---
 
@@ -146,6 +158,7 @@ Agentic motion design toolset/
 │       └── motion/                   # Calibrated telemetry engine (F01–F16)
 │
 ├── docs/                             # Complete categorized documentation hub
+│   ├── changelog/                    # Release records & stability bug fix reports (v0.6.0, v0.6.1)
 │   ├── architecture/                 # Engine architecture & GL compositor pipeline
 │   ├── diagnostics/                  # 4 Operational visual diagnostic instruments
 │   ├── telemetry/                    # 60fps telemetry engine & F01–F16 rules

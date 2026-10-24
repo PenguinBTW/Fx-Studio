@@ -1,4 +1,4 @@
-# f(x) Studio Documentation Hub (v0.5.0)
+# f(x) Studio Documentation Hub (v0.6.1)
 
 Welcome to the central documentation hub for **f(x) Studio** (also referred to as the **Agentic Motion Design Toolset**).
 
@@ -10,9 +10,13 @@ This library provides comprehensive architectural specifications, developer auth
 
 ```
 docs/
+├── changelog/                        # Release records & stability bug fix reports
+│   ├── v0.6.1-bug-fix-report.md      # v0.6.1 stability & engine audit report (24 fixes)
+│   └── v0.6.0-release-record.md      # v0.6.0 execution record (Materials, 3D Text, Optics)
+│
 ├── architecture/                     # Core engine runtime & low-level GL pipeline
 │   ├── engine-overview.md            # High-level architecture, dataflow & execution lifecycle
-│   ├── modules-reference.md          # Complete API reference & buffer layouts for 12 core engine modules
+│   ├── modules-reference.md          # Complete API reference & buffer layouts for universal engine modules (v0.6.1)
 │   ├── gl-compositor-pipeline.md     # HalfFloat HDR targets, resetState(), FSPass, post-processing
 │   └── transitions-system.md         # Bespoke transition architecture, sampleScene, overlayTextDuck
 │
@@ -62,7 +66,7 @@ docs/
 
 ### A. Engine Architecture
 * [**Engine Overview & Core Invariants**](architecture/engine-overview.md): System architecture, Mermaid dataflow diagram, core invariants ($f(t)$, WebGL state cache, HalfFloat HDR linear targets, zero-allocation render loop), and execution lifecycle stages.
-* [**Modules Reference & API Signatures**](architecture/modules-reference.md): Full TypeScript signatures, buffer layouts, and usage examples for all 12 core engine modules (`rig.ts`, `transform.ts`, `text.ts`, `sdf.ts`, `motion.ts`, `particles.ts`, `graph.ts`, `scenegraph.ts`, `export.ts`, `tokens.ts`, `heal.ts`, `dsl.ts`, and `lines.ts`).
+* [**Modules Reference & API Signatures**](architecture/modules-reference.md): Full TypeScript signatures, buffer layouts, and usage examples for all universal engine modules (v0.6.0) (`rig.ts`, `transform.ts`, `text.ts`, `sdf.ts`, `motion.ts`, `particles.ts`, `graph.ts`, `scenegraph.ts`, `export.ts`, `tokens.ts`, `heal.ts`, `dsl.ts`, and `lines.ts`).
 * [**GL Compositor & Post-Processing Pipeline**](architecture/gl-compositor-pipeline.md): HalfFloat HDR linear render targets (`makeRT`), WebGL state cache preservation (`renderer.resetState()`), full-screen passes (`FSPass`), and optical post-processing (`post.ts`: bloom, halation, chromatic aberration, grain, trauma shake).
 * [**Bespoke Transitions Engine & Continuity Architecture**](architecture/transitions-system.md): Philosophy of bespoke motivated transitions over canned wipes, the three paradigms (standalone blocks, scene-internal handoffs, utility fallbacks), object-level choreography via `sampleScene`, the `overlayTextDuck(tin, tout)` broadcast contract, authoring tutorial, and seam stitch auditing.
 
@@ -95,6 +99,10 @@ docs/
 ### F. Project Architecture & Manifests
 * [**Multi-Project Workspace & Manifest Architecture**](projects/project-system.md): Multi-project directory structure, `active.json` pointer, `project.json` manifest specification, scene entries, transition declarations, hot module reloading (HMR) isolation, interactive preview player hotkeys, and step-by-step project creation tutorial.
 
-### G. Roadmap & Future Diagnostics
-* [**Engine Architecture Review & Execution Record**](roadmap/v0.5.0-roadmap-review.md): Complete architectural review and 4-milestone execution record for v0.5.0.
+### G. Changelog & Releases
+* [**v0.6.1 Bug Fix & Engine Audit Report**](changelog/v0.6.1-bug-fix-report.md): Complete architectural audit and stability report detailing 24 bug fixes across core rendering loops, WebGL state cache isolation, alpha premultiplication, GLTF caching, ODE springs, and FFmpeg pipeline mapping.
+* [**v0.6.0 Execution Record & Release Notes**](changelog/v0.6.0-release-record.md): Complete release notes for engine v0.6.0 (Procedural Materials, 3D Kinetic Typography, Optical DoF & Volumetrics).
+
+### H. Roadmap & Future Diagnostics
+* [**Engine Architecture Review & Execution Record (v0.5.0)**](roadmap/v0.5.0-roadmap-review.md): Complete architectural review and 4-milestone execution record for v0.5.0.
 * [**Proposed Visual Diagnostic Instruments (Roadmap 05–09)**](roadmap/proposed-instruments/README.md): Design specifications and problem statements for proposed instruments 05–09 (Parametric Speed Graph, Gaze Saliency Heatmap, Dynamic Contrast & Legibility, Choreography Gantt & Stagger, and Multi-Aspect Responsive Framing).

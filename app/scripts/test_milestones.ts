@@ -12,10 +12,12 @@ const testScripts = [
   'test_project_transitions.ts',
   'test_demo_gemini.ts',
   'test_advanced_demo.ts',
+  'test_v060_features.ts',
+  'test_math_rig_audit.ts',
 ];
 
 console.log('================================================================');
-console.log('     UNIVERSAL AGENTIC MOTION GRAPHICS SUITE: ALL TESTS (v0.5.0)');
+console.log('     UNIVERSAL AGENTIC MOTION GRAPHICS SUITE: ALL TESTS (v0.6.1)');
 console.log('================================================================\n');
 
 let totalPassed = 0;

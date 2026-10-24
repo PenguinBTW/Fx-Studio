@@ -269,7 +269,8 @@ export class KineticText {
     const effFontSize = this.style.fontSize * (this.is3DAnchored ? this.depthScale : 1.0);
     const lineH = effFontSize * this.style.lineHeight;
     const maxLen = this.lines.length > 0 ? Math.max(0, ...this.lines.map((l) => l.length)) : 0;
-    const approxW = maxLen * effFontSize * 0.55;
+    const ls = typeof this.style.letterSpacing === 'number' ? this.style.letterSpacing : parseFloat(String(this.style.letterSpacing)) || 0;
+    const approxW = maxLen > 0 ? maxLen * (effFontSize * 0.55 + ls) : 0;
     const approxH = this.lines.length * lineH;
 
     let minX = screenX;
@@ -368,6 +369,7 @@ export class KineticText {
       // Standard Multi-line Rendering
       // 1. Draw Knockout Halo Under-stroke (if enabled)
       if (this.halo) {
+        ctx.globalAlpha = this.style.alpha;
         ctx.strokeStyle = this.halo.haloColor;
         ctx.lineWidth = this.halo.strokePx * 2;
         ctx.lineJoin = 'round';

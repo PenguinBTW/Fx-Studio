@@ -45,6 +45,7 @@ export interface Transition {
     b: THREE.Texture,
     api: TransitionAPI,
   ): PostOverrides | void;
+  dispose?: () => void;
 }
 
 export type TransitionClass = new (ctx: TransitionCtx) => Transition;

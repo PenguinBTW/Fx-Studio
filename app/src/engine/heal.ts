@@ -46,7 +46,8 @@ export class AgentHeal {
    * Translate raw telemetry violations and instrument metrics into machine-actionable directives
    */
   static analyzeSignal(sig: DiagnosticSignal, index = 1): DiagnosticFinding {
-    const findingId = `${sig.rule.toUpperCase()}-${String(index).padStart(3, '0')}`;
+    const ruleStr = String(sig?.rule ?? 'UNKNOWN');
+    const findingId = `${ruleStr.toUpperCase()}-${String(index).padStart(3, '0')}`;
     const targetFile = sig.context?.target_file ?? 'src/scenes/hero.ts';
 
     switch (sig.rule) {

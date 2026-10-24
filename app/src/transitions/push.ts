@@ -19,6 +19,7 @@ export default class Push implements Transition {
     const { renderer, comp } = this.ctx;
     comp.draw(renderer, a, out, { mode: 'replace', offset: [u, 0] });
     comp.draw(renderer, b, out, { mode: 'normal', offset: [-(1 - u), 0] });
+    renderer.resetState();
     return;
   }
 }

@@ -28,7 +28,8 @@ export class MetricReadout {
     const base = prev.v + (cur.v - prev.v) * k;
     const next = this.steps[i + 1];
     // slow creep toward next target value
-    const creep = next ? (next.v - cur.v) * 0.2 * smoothstep(cur.t + 1, next.t, t) : 0;
+    const creepStart = next ? Math.min(cur.t + 1, next.t - 0.001) : cur.t + 1;
+    const creep = next && next.t > cur.t ? (next.v - cur.v) * 0.2 * smoothstep(creepStart, next.t, t) : 0;
     const jitter = noise1(t * 3.1, 7) * 0.004 * (1 - k * 0.5);
     return clamp(base + creep + jitter, 0, 1);
   }

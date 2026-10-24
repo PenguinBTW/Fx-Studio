@@ -16,12 +16,14 @@ vec3 shoulder(vec3 x) {
 export interface PostParams {
   exposure: number;
   bloom: number; // bloom strength
+  bloomIntensity?: number; // Ergonomic alias for bloom
   bloomThreshold: number; // linear luminance where bloom starts
   bloomKnee: number; // soft knee width
   bloomRadius: number; // 0..1 upsample spread
   halation: number; // red-orange film halation around highlights
   ca: number; // chromatic aberration in px at the frame edge
   grain: number; // grain amplitude (sRGB units), ~0.04-0.1
+  filmGrain?: number; // Ergonomic alias for grain
   vignette: number; // 0..1
   hud: number; // HUD opacity multiplier (crop marks, readout)
   /** 0..1: the crop-mark frame (1 = in place, 0 = flown out past the edges). */
@@ -43,6 +45,21 @@ export interface PostParams {
   pdoomText?: string; // Backwards-compatible alias
   /** 0..1 glitch the HUD readout. */
   hudCorruption?: number;
+
+  // Optical Depth of Field & Bokeh
+  dof?: number; // 0 = off, 1 = full
+  focusDist?: number; // Distance of sharp focal plane [0..1]
+  focalRange?: number; // Depth of in-focus window [0..1] (default 0.15)
+  dofRadius?: number; // Blur radius in px (default 4.0)
+
+  // Volumetric Atmospheric Light Scatter / God Rays
+  volumetric?: number; // 0 = off, 1 = maximum atmospheric haze
+  volumetricLightPos?: [number, number]; // Normalized screen pos [x, y], default [0.5, 0.2]
+  volumetricDecay?: number; // Falloff per step, default 0.94
+
+  // Cinematic Color Grading
+  grade?: 'none' | 'industrial' | 'warm_editorial' | 'monochrome_blueprint' | 'infrared';
+  colorTint?: [number, number, number]; // [r, g, b] global color bias
 }
 
 export const DEFAULT_POST: PostParams = {
@@ -66,6 +83,15 @@ export const DEFAULT_POST: PostParams = {
   shake: [0, 0],
   zoom: 1,
   invert: 0,
+  dof: 0,
+  focusDist: 0.5,
+  focalRange: 0.15,
+  dofRadius: 4.0,
+  volumetric: 0,
+  volumetricLightPos: [0.5, 0.2],
+  volumetricDecay: 0.94,
+  grade: 'none',
+  colorTint: [1, 1, 1],
 };
 
 const MIPS = 7;
@@ -132,9 +158,14 @@ ${SCALE === 1 ? `        c += texture(src, vUv + texel * vec2(-1, -1)).rgb; c +=
       uniform float exposure, bloom, halation, ca, grain, vignette, hud, fade, flash, time, zoom, invert;
       uniform bool transparent;
       uniform vec2 shake; uniform vec2 res;
+      uniform float dof, focusDist, focalRange, dofRadius;
+      uniform float volumetric, volumetricDecay;
+      uniform vec2 volumetricLightPos;
+      uniform int grade;
+      uniform vec3 colorTint;
       ${SHOULDER_GLSL}
       void main() {
-        vec2 uv = (vUv - 0.5) / zoom + 0.5 - shake / res;
+        vec2 uv = (vUv - 0.5) / max(zoom, 1e-4) + 0.5 - shake / res;
         vec2 dc = uv - 0.5;
         float r2 = dot(dc * vec2(res.x / res.y, 1.0), dc * vec2(res.x / res.y, 1.0));
         vec2 off = dc * r2 * ca / res.x * 4.0;
@@ -152,6 +183,57 @@ ${SCALE === 1 ? `        c += texture(src, vUv + texel * vec2(-1, -1)).rgb; c +=
         col += bl * bloom;
         col += vec3(1.0, 0.18, 0.04) * luma(ha) * halation;
         col *= exposure;
+
+        // Optical Depth of Field (DoF Bokeh Disc)
+        if (dof > 0.005) {
+          float coc = clamp((abs(length(uv - vec2(0.5)) - focusDist) - focalRange) / max(focalRange, 0.01), 0.0, 1.0) * dofRadius * dof;
+          if (coc > 0.15) {
+            vec2 dofTexel = (1.0 / res) * coc;
+            vec3 dofAccum = col * 0.28;
+            vec4 t1 = texture(src, uv + dofTexel * vec2(0.0, 1.2));
+            vec4 t2 = texture(src, uv - dofTexel * vec2(0.0, 1.2));
+            vec4 t3 = texture(src, uv + dofTexel * vec2(1.2, 0.0));
+            vec4 t4 = texture(src, uv - dofTexel * vec2(1.2, 0.0));
+            dofAccum += (t1.rgb / max(t1.a, 1e-4)) * exposure * 0.18;
+            dofAccum += (t2.rgb / max(t2.a, 1e-4)) * exposure * 0.18;
+            dofAccum += (t3.rgb / max(t3.a, 1e-4)) * exposure * 0.18;
+            dofAccum += (t4.rgb / max(t4.a, 1e-4)) * exposure * 0.18;
+            col = mix(col, dofAccum, min(1.0, coc / 1.5));
+          }
+        }
+
+        // Volumetric Light Scattering (Atmospheric God Rays)
+        if (volumetric > 0.005) {
+          vec2 deltaRay = (uv - volumetricLightPos) * (1.0 / 10.0) * 0.5;
+          vec2 curRayUv = uv;
+          float falloff = 1.0;
+          vec3 scatter = vec3(0.0);
+          for (int s = 0; s < 10; s++) {
+            curRayUv -= deltaRay;
+            vec3 sCol = texture(src, curRayUv).rgb;
+            float sLum = sat(luma(sCol) - 0.7);
+            scatter += sCol * sLum * falloff;
+            falloff *= volumetricDecay;
+          }
+          col += scatter * (volumetric * 0.35);
+        }
+
+        // Cinematic Color Grading & Tone Split
+        if (grade == 1) { // industrial
+          col = mix(col, vec3(dot(col, vec3(0.3, 0.59, 0.11))), 0.22);
+          col = pow(max(vec3(0.0), col), vec3(1.12));
+          col *= vec3(0.96, 0.98, 1.02);
+        } else if (grade == 2) { // warm_editorial
+          col += vec3(0.03, 0.02, 0.01) * sat(1.0 - luma(col));
+          col *= vec3(1.05, 1.0, 0.93);
+        } else if (grade == 3) { // monochrome_blueprint
+          float lVal = sat(luma(col));
+          col = mix(vec3(0.02, 0.04, 0.08), vec3(0.91, 0.93, 0.95), lVal);
+        } else if (grade == 4) { // infrared
+          float lVal = sat(luma(col));
+          col = mix(vec3(0.0, 0.05, 0.2), vec3(1.0, 0.18, 0.1), lVal);
+        }
+        col *= colorTint;
         // HUD is composited in linear space before the shoulder so it gets grain & vignette too
         vec4 h = texture(hudTex, vUv);
         col = mix(col, h.rgb / max(h.a, 1e-4), h.a * hud);
@@ -163,11 +245,18 @@ ${SCALE === 1 ? `        c += texture(src, vUv + texel * vec2(-1, -1)).rgb; c +=
         float vAmt = transparent ? (vignette * srcAlpha) : vignette;
         col *= mix(1.0, v, vAmt);
         col *= (1.0 - fade);
-        vec3 s = toSRGB(sat(col));
-        // Compute composite alpha factoring HUD and bloom luminosity
+        // Compute composite alpha factoring HUD, bloom, volumetric luminosity
         float hudA = h.a * hud;
         float bloomA = clamp(luma(bl * bloom) * 0.5, 0.0, 1.0);
-        float finalAlpha = clamp(srcAlpha + hudA * (1.0 - srcAlpha) + bloomA * (1.0 - srcAlpha), 0.0, 1.0);
+        float volA = (volumetric > 0.005) ? clamp(volumetric * 0.35, 0.0, 1.0) : 0.0;
+        float finalAlpha = clamp(srcAlpha + hudA * (1.0 - srcAlpha) + bloomA * (1.0 - srcAlpha) + volA * (1.0 - srcAlpha), 0.0, 1.0);
+
+        vec3 colLinear = sat(col);
+        if (transparent) {
+          colLinear *= finalAlpha;
+        }
+        vec3 s = toSRGB(colLinear);
+
         // film grain: two scales, stronger in mid-tones
 ${SCALE === 1 ? `        float g1 = hash12(gl_FragCoord.xy + fract(time * 13.37) * 1000.0) - 0.5;
         float g2 = hash12(floor(gl_FragCoord.xy / 2.0) + fract(time * 7.13) * 1000.0) - 0.5;` : `        // output scale > 1: the fine grain is per physical px with its amplitude raised by PX_SCALE so its
@@ -180,7 +269,7 @@ ${SCALE === 1 ? `        float g1 = hash12(gl_FragCoord.xy + fract(time * 13.37)
         s += (g1 * 0.6 + g2 * 0.4) * amt * grainScale;
         s += ((hash12(gl_FragCoord.xy * 1.37 + time) - 0.5) / 255.0) * grainScale; // dither
         if (transparent) {
-          fragColor = vec4(sat(s) * finalAlpha, finalAlpha);
+          fragColor = vec4(sat(s), finalAlpha);
         } else {
           fragColor = vec4(sat(s), 1.0);
         }
@@ -189,33 +278,41 @@ ${SCALE === 1 ? `        float g1 = hash12(gl_FragCoord.xy + fract(time * 13.37)
       exposure: { value: 1 }, bloom: { value: 0.5 }, halation: { value: 0.2 }, ca: { value: 1 }, grain: { value: 0.05 },
       vignette: { value: 0.3 }, hud: { value: 1 }, fade: { value: 0 }, flash: { value: 0 }, time: { value: 0 },
       zoom: { value: 1 }, invert: { value: 0 }, transparent: { value: false }, shake: { value: new THREE.Vector2() }, res: { value: new THREE.Vector2(W, H) },
+      dof: { value: 0 }, focusDist: { value: 0.5 }, focalRange: { value: 0.15 }, dofRadius: { value: 4.0 },
+      volumetric: { value: 0 }, volumetricDecay: { value: 0.94 }, volumetricLightPos: { value: new THREE.Vector2(0.5, 0.2) },
+      grade: { value: 0 }, colorTint: { value: new THREE.Vector3(1, 1, 1) },
     });
   }
 
   /** Apply the chain: src (HDR linear) -> out (sRGB 8-bit target or screen). */
   render(renderer: THREE.WebGLRenderer, src: THREE.Texture, hud: THREE.Texture, out: THREE.WebGLRenderTarget | null, p: PostParams, time: number) {
-    // bloom pyramid
-    this.prefilter.u.src!.value = src;
-    (this.prefilter.u.texel!.value as THREE.Vector2).set(1 / W, 1 / H);
-    this.prefilter.u.threshold!.value = p.bloomThreshold;
-    this.prefilter.u.knee!.value = p.bloomKnee;
-    this.prefilter.render(renderer, this.mips[0]!);
-    for (let i = 1; i < MIPS; i++) {
-      const s = this.mips[i - 1]!;
-      this.down.u.src!.value = s.texture;
-      (this.down.u.texel!.value as THREE.Vector2).set(1 / s.width, 1 / s.height);
-      this.down.render(renderer, this.mips[i]!);
-    }
-    // upsample: ups[i] = mips[i] + up(ups[i+1])
-    let prevTex = this.mips[MIPS - 1]!.texture;
-    for (let i = MIPS - 2; i >= 0; i--) {
-      const small = i === MIPS - 2 ? this.mips[MIPS - 1]! : this.ups[i + 1]!;
-      this.up.u.src!.value = prevTex;
-      this.up.u.prev!.value = this.mips[i]!.texture;
-      (this.up.u.texel!.value as THREE.Vector2).set(1 / small.width, 1 / small.height);
-      this.up.u.radius!.value = 0.5 + p.bloomRadius;
-      this.up.render(renderer, this.ups[i]!);
-      prevTex = this.ups[i]!.texture;
+    const bloomVal = p.bloomIntensity !== undefined ? p.bloomIntensity : p.bloom;
+    const runBloom = bloomVal > 0.001 || p.halation > 0.001;
+
+    if (runBloom) {
+      // bloom pyramid
+      this.prefilter.u.src!.value = src;
+      (this.prefilter.u.texel!.value as THREE.Vector2).set(1 / W, 1 / H);
+      this.prefilter.u.threshold!.value = p.bloomThreshold;
+      this.prefilter.u.knee!.value = p.bloomKnee;
+      this.prefilter.render(renderer, this.mips[0]!);
+      for (let i = 1; i < MIPS; i++) {
+        const s = this.mips[i - 1]!;
+        this.down.u.src!.value = s.texture;
+        (this.down.u.texel!.value as THREE.Vector2).set(1 / s.width, 1 / s.height);
+        this.down.render(renderer, this.mips[i]!);
+      }
+      // upsample: ups[i] = mips[i] + up(ups[i+1])
+      let prevTex = this.mips[MIPS - 1]!.texture;
+      for (let i = MIPS - 2; i >= 0; i--) {
+        const small = i === MIPS - 2 ? this.mips[MIPS - 1]! : this.ups[i + 1]!;
+        this.up.u.src!.value = prevTex;
+        this.up.u.prev!.value = this.mips[i]!.texture;
+        (this.up.u.texel!.value as THREE.Vector2).set(1 / small.width, 1 / small.height);
+        this.up.u.radius!.value = 0.5 + p.bloomRadius;
+        this.up.render(renderer, this.ups[i]!);
+        prevTex = this.ups[i]!.texture;
+      }
     }
     const f = this.final.u;
     f.src!.value = src;
@@ -223,10 +320,11 @@ ${SCALE === 1 ? `        float g1 = hash12(gl_FragCoord.xy + fract(time * 13.37)
     f.haloTex!.value = this.ups[3]!.texture;
     f.hudTex!.value = hud;
     f.exposure!.value = p.exposure;
-    f.bloom!.value = p.bloom / 3; // pyramid sums ~MIPS levels; normalize
-    f.halation!.value = p.halation;
+    f.bloom!.value = runBloom ? (bloomVal / 3) : 0; // pyramid sums ~MIPS levels; normalize
+    f.halation!.value = runBloom ? p.halation : 0;
     f.ca!.value = p.ca;
-    f.grain!.value = p.grain;
+    const grainVal = p.filmGrain !== undefined ? p.filmGrain : p.grain;
+    f.grain!.value = grainVal;
     f.vignette!.value = p.vignette;
     f.hud!.value = p.hud;
     f.fade!.value = p.fade;
@@ -238,6 +336,37 @@ ${SCALE === 1 ? `        float g1 = hash12(gl_FragCoord.xy + fract(time * 13.37)
     const sx = Array.isArray(p.shake) ? (p.shake[0] ?? 0) : (typeof p.shake === 'number' ? (p.shake as number) : 0);
     const sy = Array.isArray(p.shake) ? (p.shake[1] ?? 0) : 0;
     (f.shake!.value as THREE.Vector2).set(sx, sy);
+
+    f.dof!.value = p.dof ?? 0;
+    f.focusDist!.value = p.focusDist ?? 0.5;
+    f.focalRange!.value = p.focalRange ?? 0.15;
+    f.dofRadius!.value = p.dofRadius ?? 4.0;
+    f.volumetric!.value = p.volumetric ?? 0;
+    const vlx = p.volumetricLightPos ? p.volumetricLightPos[0] : 0.5;
+    const vly = p.volumetricLightPos ? p.volumetricLightPos[1] : 0.2;
+    (f.volumetricLightPos!.value as THREE.Vector2).set(vlx, vly);
+    f.volumetricDecay!.value = p.volumetricDecay ?? 0.94;
+
+    let gradeIdx = 0;
+    if (p.grade === 'industrial') gradeIdx = 1;
+    else if (p.grade === 'warm_editorial') gradeIdx = 2;
+    else if (p.grade === 'monochrome_blueprint') gradeIdx = 3;
+    else if (p.grade === 'infrared') gradeIdx = 4;
+    f.grade!.value = gradeIdx;
+
+    const ct = p.colorTint ?? [1, 1, 1];
+    (f.colorTint!.value as THREE.Vector3).set(ct[0], ct[1], ct[2]);
+
     this.final.render(renderer, out);
+    renderer.resetState();
+  }
+
+  dispose() {
+    for (const rt of this.mips) rt.dispose();
+    for (const rt of this.ups) rt.dispose();
+    this.prefilter.dispose();
+    this.down.dispose();
+    this.up.dispose();
+    this.final.dispose();
   }
 }

@@ -72,8 +72,9 @@ export class ViewportSpace {
     v.applyMatrix4(cam.matrixWorldInverse);
 
     // Check view-space depth against camera near plane (Three.js camera looks down -Z)
-    const near = (cam as THREE.PerspectiveCamera).near ?? 0.05;
-    if (-v.z < near) return null;
+    const isOrtho = cam instanceof THREE.OrthographicCamera;
+    const near = isOrtho ? (cam as THREE.OrthographicCamera).near : ((cam as THREE.PerspectiveCamera).near ?? 0.05);
+    if (!isOrtho && -v.z < near) return null;
 
     const viewZ = -v.z;
     v.applyMatrix4(cam.projectionMatrix);

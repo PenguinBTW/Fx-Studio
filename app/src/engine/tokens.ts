@@ -67,7 +67,7 @@ let activeTokens: DesignTokens = { ...DefaultTokens };
 
 export function setDesignTokens(tokens: Partial<Omit<DesignTokens, 'palette' | 'typography'>> & { palette?: Partial<DesignTokens['palette']>; typography?: Partial<DesignTokens['typography']> }) {
   // Validate hex to avoid NaN uniforms; fall back + warn.
-  const isHex = (v?: string) => typeof v === 'string' && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(v);
+  const isHex = (v?: string) => typeof v === 'string' && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(v);
   if (tokens.palette) {
     for (const [k, v] of Object.entries(tokens.palette)) {
       if (v !== undefined && !isHex(v)) console.warn(`[tokens] Invalid hex for '${k}': '${v}' — keeping previous value.`);
@@ -109,6 +109,16 @@ export function tokenToRgba(key: string, a = 1): string {
   const rawHex = activeTokens.palette[key] ?? (key.startsWith('#') ? key : '#FFFFFF');
   let hex = rawHex.replace('#', '');
   if (/^[0-9a-fA-F]{3}$/.test(hex)) hex = hex.split('').map((c) => c + c).join('');
+  else if (/^[0-9a-fA-F]{4}$/.test(hex)) hex = hex.split('').map((c) => c + c).join('');
+  if (hex.length === 8) {
+    const n = parseInt(hex, 16);
+    if (!Number.isFinite(n)) return `rgba(255,255,255,${a})`;
+    const r = (n >>> 24) & 255;
+    const g = (n >>> 16) & 255;
+    const b = (n >>> 8) & 255;
+    const alpha = Number((((n & 255) / 255) * a).toFixed(3));
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
   let n = parseInt(hex, 16);
   if (!Number.isFinite(n)) n = 0xffffff;
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;

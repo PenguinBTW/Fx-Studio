@@ -60,7 +60,9 @@ export const springStep = (t: number, freq = 4, damping = 0.35) => {
   if (damping >= 1) {
     return 1 - Math.exp(-w * t) * (1 + w * t);
   }
-  return 1 - Math.exp(-damping * w * t) * Math.cos(w * Math.sqrt(Math.max(0, 1 - damping * damping)) * t);
+  const s = Math.sqrt(Math.max(0, 1 - damping * damping));
+  const wd = w * s;
+  return 1 - Math.exp(-damping * w * t) * (Math.cos(wd * t) + (damping / Math.max(1e-4, s)) * Math.sin(wd * t));
 };
 
 /** Exponential decay pulse after an event at time `t0` (1 at t0, fades with half-life `hl`). */
@@ -170,9 +172,11 @@ export function pointAtLength(pts: V2[], L: Float32Array, s: number): { x: numbe
 
 /** Linear-space color from hex (for GL uniforms; applies sRGB->linear). Expands 3-digit shorthand. */
 export function hexToLinear(hex: string): [number, number, number] {
-  let h = hex.replace('#', '');
+  let h = hex.replace('#', '').trim();
   if (/^[0-9a-fA-F]{3}$/.test(h)) h = h.split('').map((c) => c + c).join('');
+  if (h.length >= 8) h = h.slice(0, 6);
   const n = parseInt(h, 16);
+  if (Number.isNaN(n)) return [0, 0, 0];
   const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {
     const s = v / 255;
     return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);

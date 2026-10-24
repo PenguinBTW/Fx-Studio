@@ -79,6 +79,7 @@ export default class FlyingTome implements Transition {
     this.pass.u.time!.value = f.t;
 
     this.pass.render(renderer, out);
+    renderer.resetState();
 
     // Dynamic optical post kick at landing impact
     const impactEnv = Math.exp(-Math.pow((u - 0.88) * 12.0, 2.0));
@@ -87,5 +88,9 @@ export default class FlyingTome implements Transition {
       ca: 1.0 + impactEnv * 5.0,
       exposure: 1.1 + impactEnv * 0.1,
     };
+  }
+
+  dispose(): void {
+    this.pass.dispose();
   }
 }

@@ -53,29 +53,37 @@ export function buildTimelineEntries(
   manifest: ProjectManifest,
   loadScene: (file: string) => TimelineEntry['load'],
 ): TimelineEntry[] {
-  return manifest.entries.map((e, i) => ({
-    id: e.id ?? `${manifest.project}-e${i + 1}`,
-    file: e.scene,
-    load: loadScene(e.scene),
-    start: e.start,
-    end: e.end,
-    ...(e.caption ? { caption: e.caption } : {}),
-    ...(e.post ? { post: e.post } : {}),
-    ...(e.params ? { params: e.params } : {}),
-    ...(e.maxSamples !== undefined ? { maxSamples: e.maxSamples } : {}),
-  }));
+  return manifest.entries.map((e, i) => {
+    const sceneNorm = e.scene.replace(/\\/g, '/');
+    return {
+      id: e.id ?? `${manifest.project}-e${i + 1}`,
+      file: sceneNorm,
+      load: loadScene(sceneNorm),
+      start: e.start,
+      end: e.end,
+      ...(e.caption ? { caption: e.caption } : {}),
+      ...(e.post ? { post: e.post } : {}),
+      ...(e.params ? { params: e.params } : {}),
+      ...(e.maxSamples !== undefined ? { maxSamples: e.maxSamples } : {}),
+    };
+  });
 }
 
 export function buildTransitionEntries(
   manifest: ProjectManifest,
   loadTransition: (name: string) => TransitionEntry['load'],
 ): TransitionEntry[] {
-  return (manifest.transitions ?? []).map((t, i) => ({
-    id: t.id ?? `${manifest.project}-t${i + 1}`,
-    from: t.from,
-    to: t.to,
-    start: t.at,
-    end: t.at + t.dur,
-    load: loadTransition(t.transition),
-  }));
+  return (manifest.transitions ?? []).map((t, i) => {
+    const fromNorm = t.from.replace(/\\/g, '/');
+    const toNorm = t.to.replace(/\\/g, '/');
+    const transNorm = t.transition.replace(/\\/g, '/');
+    return {
+      id: t.id ?? `${manifest.project}-t${i + 1}`,
+      from: fromNorm,
+      to: toNorm,
+      start: t.at,
+      end: t.at + t.dur,
+      load: loadTransition(transNorm),
+    };
+  });
 }

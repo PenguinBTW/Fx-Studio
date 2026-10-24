@@ -247,8 +247,12 @@ async function video(page: Page, from: number, to: number, fps: number, out: str
     websocket: {
       maxPayloadLength: Math.max(64 * 1024 * 1024, OW * OH * 4 + 1024),
       async message(ws, msg) {
-        ff.stdin.write(msg as Uint8Array);
-        await ff.stdin.flush();
+        try {
+          ff.stdin.write(msg as Uint8Array);
+          await ff.stdin.flush();
+        } catch (err) {
+          console.error(`[render] ffmpeg pipe write error:`, err);
+        }
         frames++;
         ws.send(String(frames)); // ack: the page keeps at most a few frames ahead of ffmpeg (bounded memory at 4K)
         if (frames % 60 === 0 || frames === total) {
@@ -270,6 +274,7 @@ async function video(page: Page, from: number, to: number, fps: number, out: str
     try { ff.stdin.end(); } catch {}
   }
   await ff.exited;
+  if (ff.exitCode !== 0) throw new Error(`ffmpeg process exited with code ${ff.exitCode}`);
   server.stop();
   console.log(`\nwrote ${out} (${frames} frames in ${((performance.now() - t0) / 1000).toFixed(1)}s)`);
   console.log(`sub-frames per frame (count:frames): ${hist(used)}`);

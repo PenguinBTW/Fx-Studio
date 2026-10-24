@@ -26,11 +26,11 @@ export class Lyrics {
   constructor(j: { lines: Omit<Line, 'words'> & { words: Omit<Word, 'line' | 'index' | 'gi'>[] }[] | any[] }) {
     // display text gets curly apostrophes and quotes (the data keeps the typed ones); mono UI
     // text that wants them straight uses plain()
-    this.lines = (j.lines as any[]).map((l, li) => ({
+    this.lines = ((j?.lines as any[]) ?? []).map((l, li) => ({
       ...l,
       i: li,
-      text: smart(l.text),
-      words: (l.words as any[]).map((w, wi) => ({ ...w, w: smart(w.w), line: li, index: wi, gi: 0 })),
+      text: smart(l.text ?? ''),
+      words: ((l.words as any[]) ?? []).map((w, wi) => ({ ...w, w: smart(w.w ?? ''), line: li, index: wi, gi: 0 })),
     }));
     this.words = this.lines.flatMap((l) => l.words);
     this.words.forEach((w, i) => (w.gi = i));
@@ -79,7 +79,7 @@ export class Lyrics {
     return l;
   }
   wordAt(t: number): Word | null {
-    return this.words.find((w) => t >= w.start && t < w.end) ?? null;
+    return this.words.find((w) => t >= w.start && (w.end > w.start ? t < w.end : t <= w.end)) ?? null;
   }
   lastWord(t: number): Word | null {
     let best: Word | null = null;

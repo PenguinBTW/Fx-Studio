@@ -143,7 +143,7 @@ export default class ChromaticBloom extends Scene {
     const chalkColor = new THREE.Color(0xf1f5f9);
 
     for (const rec of this.meshes) {
-      const popT0 = 4.5 + rec.def.delayOffset * 0.8;
+      const popT0 = 4.5 + (rec.def.delayOffset ?? rec.def.popDelay ?? 0) * 0.8;
       const tau = t - popT0;
       const { sy, sxz, alpha } = StoryRoomGeometry.evalPop(tau);
 
@@ -155,7 +155,7 @@ export default class ChromaticBloom extends Scene {
       rec.mesh.visible = alpha > 0.001;
 
       // Chromatic Bloom wave across t = 6.0s..9.0s
-      const bloomT0 = 6.0 + rec.def.delayOffset * 1.4;
+      const bloomT0 = 6.0 + (rec.def.delayOffset ?? rec.def.popDelay ?? 0) * 1.4;
       const uBloom = Math.min(1.0, Math.max(0.0, (t - bloomT0) / 1.5));
       const easeBloom = uBloom * uBloom * (3 - 2 * uBloom);
 

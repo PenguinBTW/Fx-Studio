@@ -63,11 +63,15 @@ export class Engine {
   comp = new Compositor();
   loaded = new Map<string, Loaded>();
   private rts = [makeRT(), makeRT(), makeRT()];
-  private mixRT = makeRT(W, H, { depthBuffer: false });
+  private mixRTs = [makeRT(W, H, { depthBuffer: false }), makeRT(W, H, { depthBuffer: false })];
+  private mixIdx = 0;
+  get mixRT() {
+    return this.mixRTs[this.mixIdx % this.mixRTs.length]!;
+  }
   /** Standalone transition windows (assigned by boot from makeTransitions). */
   transitions: TransitionEntry[] = [];
   private transRTs = [makeRT(), makeRT()];
-  private transScratch = [makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT()];
+  private transScratch = [makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT()];
   private transScratchIdx = 0;
   private transLoaded = new Map<string, { entry: TransitionEntry; trans: Transition | null; error?: string }>();
   // motion-blur sub-frame sums (float: up to hundreds of sub-frames), their average, and the error estimate
@@ -225,7 +229,7 @@ export class Engine {
 
   /** Re-render an entry scene at time t into an engine-managed scratch target. */
   private sampleScene(id: string, t: number, dt: number, tin = 1, tout = 0): THREE.Texture {
-    const entry = this.timeline.find((e) => e.id === id);
+    const entry = this.timeline.find((e) => e.id === id || e.file === id);
     const rec = entry && this.loaded.get(entry.id);
     const rt = this.transScratch[this.transScratchIdx % this.transScratch.length]!;
     this.transScratchIdx++;
@@ -245,7 +249,6 @@ export class Engine {
       console.error(`scene ${entry.id} render error (sampled)`, err);
       clearRT(this.renderer, rt, [0.25, 0.0, 0.0]);
     }
-    rec.lastT = t;
     return rt.texture;
   }
 
@@ -267,7 +270,7 @@ export class Engine {
   private frameFor(e: TimelineEntry, t: number, dt: number, seeked: boolean, preroll: boolean, under: THREE.Texture | null, tin: number, tout: number): Frame {
     const beat = this.audio.beatAt(t), bar = this.audio.barAt(t);
     return {
-      t, dt, lt: t - e.start, p: e.end > e.start ? (t - e.start) / (e.end - e.start) : 0, start: e.start, end: e.end, seeked, preroll,
+      t, dt, lt: t - e.start, p: e.end > e.start ? Math.min(1, Math.max(0, (t - e.start) / (e.end - e.start))) : 0, start: e.start, end: e.end, seeked, preroll,
       beat, bar, beatPhase: beat - Math.floor(beat), barPhase: bar - Math.floor(bar),
       a: this.audio.sample(t), under, tin, tout,
     };
@@ -336,9 +339,9 @@ export class Engine {
         n = samples;
         for (let k = 0; k < n; k++) sub(k, (k + 0.5) / n - 0.5, this.sumRT, dt / n);
       } else {
-        const lg3 = (x: number) => Math.log(x / 4) / Math.log(3);
-        const cappedMax = Math.min(maxAdaptive, 972);
-        const lo = Math.max(0, Math.round(lg3(samples.min))), hi = Math.max(lo, Math.floor(lg3(cappedMax) + 1e-9));
+        const lg3 = (x: number) => Math.log(Math.max(1, x) / 4) / Math.log(3);
+        const cappedMax = Math.max(4, Math.min(maxAdaptive, 972));
+        const lo = Math.max(0, Math.round(lg3(Math.max(4, samples.min)))), hi = Math.max(lo, Math.floor(lg3(cappedMax) + 1e-9));
         const u = ternaryOffsets(hi);
         n = 4 * 3 ** lo;
         this.lastErrors = [];
@@ -413,8 +416,8 @@ export class Engine {
    */
   private renderTransition(tr: TransitionEntry, t: number, dt: number, seeked: boolean): { outTex: THREE.Texture; post: PostParams; probe: Record<string, number> | null } | null {
     const trec = this.transLoaded.get(tr.id);
-    const aE = this.timeline.find((e) => e.id === tr.from);
-    const bE = this.timeline.find((e) => e.id === tr.to);
+    const aE = this.timeline.find((e) => e.id === tr.from || e.file === tr.from);
+    const bE = this.timeline.find((e) => e.id === tr.to || e.file === tr.to);
     const aR = aE ? this.loaded.get(aE.id) : undefined;
     const bR = bE ? this.loaded.get(bE.id) : undefined;
     const aS = aR?.scene;
@@ -448,11 +451,13 @@ export class Engine {
     const u = u0;
     // Off-path samples inherit their side's signals so re-driven scenes duck
     // the same way as their window render (chase samples the incoming side).
-    const api: TransitionAPI = { u, from: tr.from, to: tr.to, sampleScene: (id, tt) => this.sampleScene(id, tt, dt, id === tr.to ? u : 1, id === tr.from ? u : 0) };
-    const fTrans = this.frameFor(bE, t, dt, seeked, false, null, 1, 0);
-    const ovT = trec.trans.render(fTrans, this.mixRT, this.transRTs[0]!.texture, this.transRTs[1]!.texture, api);
+    const api: TransitionAPI = { u, from: tr.from, to: tr.to, sampleScene: (id, tt) => this.sampleScene(id, tt, seeked ? 0 : dt, (id === tr.to || id === bE.file) ? u : 1, (id === tr.from || id === aE.file) ? u : 0) };
+    const fTrans = this.frameFor(bE, t, seeked ? 0 : dt, seeked, false, null, 1, 0);
+    const targetMix = this.mixRTs[this.mixIdx % 2]!;
+    this.mixIdx++;
+    const ovT = trec.trans.render(fTrans, targetMix, this.transRTs[0]!.texture, this.transRTs[1]!.texture, api);
     post = { ...post, ...(ovT ?? {}) };
-    return { outTex: this.mixRT.texture, post, probe };
+    return { outTex: targetMix.texture, post, probe };
   }
 
   private composite(t: number, dt: number, seeked: boolean): { outTex: THREE.Texture; post: PostParams } {
@@ -515,11 +520,13 @@ export class Engine {
       post = { ...post, ...(e.post ?? {}), ...(ov ?? {}) };
       if (idx > 0 && !s.handlesTransition && under) {
         // default: crossfade from the previous scene over the overlap
+        const targetMix = this.mixRTs[this.mixIdx % 2]!;
+        this.mixIdx++;
         this.xfade.u.a!.value = under;
         this.xfade.u.b!.value = rt.texture;
         this.xfade.u.k!.value = tin;
-        this.xfade.render(r, this.mixRT);
-        outTex = this.mixRT.texture;
+        this.xfade.render(r, targetMix);
+        outTex = targetMix.texture;
       } else outTex = rt.texture;
       under = outTex;
     });
@@ -544,5 +551,30 @@ export class Engine {
     const out = buf ?? new Uint8Array(PW * PH * 4);
     await this.renderer.readRenderTargetPixelsAsync(this.finalRT, 0, 0, PW, PH, out);
     return out;
+  }
+
+  dispose() {
+    this.rts.forEach((rt) => rt.dispose());
+    this.mixRTs.forEach((rt) => rt.dispose());
+    this.transRTs.forEach((rt) => rt.dispose());
+    this.transScratch.forEach((rt) => rt.dispose());
+    this.sumRT.dispose();
+    this.newRT.dispose();
+    this.avgRT.dispose();
+    this.errRT.dispose();
+    this.maxRT.dispose();
+    this.finalRT.dispose();
+    this.blit.dispose();
+    this.xfade.dispose();
+    this.accum.dispose();
+    this.errPass.dispose();
+    this.maxPass.dispose();
+    this.post?.dispose?.();
+    for (const rec of this.loaded.values()) {
+      rec.scene?.dispose?.();
+    }
+    for (const rec of this.transLoaded.values()) {
+      rec.trans?.dispose?.();
+    }
   }
 }

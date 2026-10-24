@@ -44,8 +44,9 @@ export default class MirrorShatter implements Transition {
         }
 
         vec2 fromCenter = cellCenter - vec2(0.5);
-        float explodeDist = length(fromCenter) + 0.1;
-        vec2 explodeDir = normalize(fromCenter);
+        float fcLen = length(fromCenter);
+        float explodeDist = fcLen + 0.1;
+        vec2 explodeDir = fcLen > 1e-4 ? fromCenter / fcLen : vec2(0.0, 1.0);
 
         float crackGap = smoothstep(0.0, 0.7, progress) * 0.25;
         bool isCrack = m_dist < crackGap || progress > 0.82;

@@ -111,17 +111,17 @@ export default class AnamorphicLensDeconstruction implements Transition {
   render(
     f: Frame,
     out: THREE.WebGLRenderTarget,
-    _a: THREE.Texture,
-    _b: THREE.Texture,
+    a: THREE.Texture,
+    b: THREE.Texture,
     api: TransitionAPI,
   ): PostOverrides | void {
     const { renderer } = this.ctx;
     const u = Math.min(1.0, Math.max(0.0, api.u));
     const t = f.t;
 
-    // 1. Sample current Outgoing Scene 1 and Incoming Scene 2
-    const texA = api.sampleScene(api.from, t);
-    const texB = api.sampleScene(api.to, t);
+    // 1. Use pre-rendered textures for Scene A and Scene B at current frame
+    const texA = a;
+    const texB = b;
 
     // 2. Optical Breathing Dynamics (Smooth spring ODE settle)
     let bloom = 0.22;
@@ -151,6 +151,7 @@ export default class AnamorphicLensDeconstruction implements Transition {
     this.pass.u.u!.value = u;
     this.pass.u.time!.value = t;
     this.pass.render(renderer, out);
+    renderer.resetState();
 
     // 4. Return Directorial Post-Processing Overrides
     return {

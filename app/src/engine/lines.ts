@@ -135,6 +135,7 @@ export class LineBatch {
 
   /** Upload and draw into target (does not clear). For 3D pass the camera. */
   render(renderer: THREE.WebGLRenderer, target: THREE.WebGLRenderTarget | null, camera?: THREE.Camera, widthScale = 1) {
+    if (this.count === 0) return;
     LineBatch.frameSegs += this.count;
     for (const at of this.attrs) { at.needsUpdate = true; at.addUpdateRange(0, this.count * at.itemSize); }
     this.geo.instanceCount = this.count;
@@ -147,6 +148,10 @@ export class LineBatch {
     renderer.render(this.scene, camera ?? this.cam2D);
     renderer.resetState();
     for (const at of this.attrs) at.clearUpdateRanges();
+  }
+
+  flush(renderer: THREE.WebGLRenderer, target: THREE.WebGLRenderTarget | null, camera?: THREE.Camera, widthScale = 1) {
+    this.render(renderer, target, camera, widthScale);
   }
 
   dispose(): void {

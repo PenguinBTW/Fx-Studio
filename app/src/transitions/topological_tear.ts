@@ -291,6 +291,7 @@ export default class TopologicalTear implements Transition {
     this.pass2.u.u!.value = u;
     this.pass2.u.time!.value = t;
     this.pass2.render(renderer, out);
+    renderer.resetState();
 
     // -------------------------------------------------------------------------
     // 4. Dynamic Optical Pipeline Hijack (PostOverrides)

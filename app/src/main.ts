@@ -204,6 +204,28 @@ function setupExport() {
 
 // ------------------------------------------------------------------ preview player
 function setupPlayer() {
+  const previewBridge: EngineBridge = {
+    version: BRIDGE_VERSION,
+    engine,
+    duration: engine.duration,
+    scale: SCALE,
+    width: PW,
+    height: PH,
+    errors: engine.errors,
+    probe: false,
+    recordText: true,
+    textProbes: [],
+    currentFrameIdx: 0,
+    currentTime: 0,
+    timeline: TIMELINE.map(({ id, start, end }) => ({ id, start, end })),
+    still: (t: number, samples: number | AdaptiveSampling = 1, shutter = 0.5) => engine.render(t, 1 / 60, true, samples, shutter),
+    png: async () => '',
+    stream: () => Promise.reject(new Error('stream is only available in ?export=1 mode')),
+    ready: true,
+  };
+  window.__motion = previewBridge;
+  window.__pdoom = previewBridge;
+
   const audioSrc = params.get('audio') || (engine.audio && !engine.audio.isDummy && engine.audio.duration > 0 ? 'audio/track.mp3' : null);
   const audio = audioSrc ? new Audio(audioSrc) : null;
   if (audio) audio.preload = 'auto';

@@ -272,6 +272,10 @@ export class SDFBatch {
     this.count = 0;
   }
 
+  drawRect(x: number, y: number, w: number, h: number, opts: SDFRectOpts = {}): this {
+    return this.rect(x, y, w, h, opts);
+  }
+
   /**
    * Draw an analytic rounded rectangle with optional stroke and glow
    */
@@ -359,6 +363,10 @@ export class SDFBatch {
     this.strokeArr[idx * 4 + 2] = 0;
     this.strokeArr[idx * 4 + 3] = 0;
     return this;
+  }
+
+  drawRing(cx: number, cy: number, radius: number, thickness: number, trim: [number, number] = [0, 1], color: [number, number, number, number] = [1, 1, 1, 1], glow = 1.0): this {
+    return this.ring(cx, cy, radius, thickness, trim, color, glow);
   }
 
   /**

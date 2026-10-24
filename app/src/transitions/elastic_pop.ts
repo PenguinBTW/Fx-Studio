@@ -83,6 +83,7 @@ export default class ElasticPop implements Transition {
     this.pass.u.time!.value = f.t;
 
     this.pass.render(renderer, out);
+    renderer.resetState();
 
     const peak = Math.sin(u * Math.PI);
     return {
@@ -90,5 +91,9 @@ export default class ElasticPop implements Transition {
       ca: 1.0 + peak * 6.0,
       exposure: 1.1 + peak * 0.15,
     };
+  }
+
+  dispose(): void {
+    this.pass.dispose();
   }
 }

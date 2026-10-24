@@ -107,6 +107,7 @@ export interface PropDef {
   roughness: number;
   metalness: number;
   popDelay: number; // Seconds offset into pop wave
+  delayOffset?: number;
 }
 
 // Builds the rich, detailed 3D room props with genuine architectural geometry

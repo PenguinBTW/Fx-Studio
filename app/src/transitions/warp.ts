@@ -41,6 +41,7 @@ export default class Warp implements Transition {
         opacity: Math.min(1, u * 1.2),
       });
     }
+    renderer.resetState();
 
     // Dynamic optical post kick peaking mid-seam
     const peak = Math.sin(u * Math.PI);

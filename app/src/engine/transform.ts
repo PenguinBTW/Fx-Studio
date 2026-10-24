@@ -173,6 +173,14 @@ export class LayoutNode extends TransformNode {
   pin?: ViewportPin;
   margin: LayoutMargin = { top: 40, right: 40, bottom: 40, left: 40 };
 
+  get marginPx(): [number, number] {
+    return [this.margin.left ?? 40, this.margin.top ?? 40];
+  }
+  set marginPx(val: [number, number]) {
+    this.margin = { left: val[0], right: val[0], top: val[1], bottom: val[1] };
+    this.markDirty();
+  }
+
   // 3D Anchor State
   isPinned3D = false;
   pinnedWorldPos?: V3;
@@ -204,7 +212,7 @@ export class LayoutNode extends TransformNode {
   /**
    * Pins a 2D screen element to a 3D vertex in world space with depth scaling
    */
-  pinToWorldVertex(worldPos: V3, cam: THREE.Camera, opts: { screenOffset?: [number, number]; minScale?: number; maxScale?: number; occlusionCull?: boolean } = {}): this {
+  pinToWorldVertex(worldPos: V3, cam: THREE.Camera, opts: { screenOffset?: [number, number]; minScale?: number; maxScale?: number; occlusionCull?: boolean; refDepth?: number } = {}): this {
     const proj = ViewportSpace.worldToScreen(worldPos, cam);
     if (!proj) {
       this.isPinned3D = false;
@@ -229,7 +237,7 @@ export class LayoutNode extends TransformNode {
 
     const isOrtho = cam instanceof THREE.OrthographicCamera;
     const depthZ = Math.max(0.1, proj[2]);
-    let dScale = isOrtho ? 1.0 : (5.0 / depthZ);
+    let dScale = isOrtho ? 1.0 : ((opts.refDepth ?? 5.0) / depthZ);
     if (opts.minScale) dScale = Math.max(opts.minScale, dScale);
     if (opts.maxScale) dScale = Math.min(opts.maxScale, dScale);
     this.depthScale = dScale;

@@ -117,7 +117,9 @@ export class ExportPipeline {
     if (!Number.isFinite(w) || w < 320 || w > 7680) errors.push(`Invalid width ${opts.width} (320–7680)`);
     if (!Number.isFinite(h) || h < 240 || h > 4320) errors.push(`Invalid height ${opts.height} (240–4320)`);
     if (!Number.isFinite(fps) || fps < 15 || fps > 120) errors.push(`Invalid fps ${opts.fps} (15–120)`);
-    if (!Number.isFinite(smp) || smp < 1 || smp > 324) errors.push(`Invalid samples ${smp} (1–324)`);
+    if (smp !== 'auto' && typeof smp !== 'object') {
+      if (!Number.isFinite(smp) || smp < 1 || smp > 324) errors.push(`Invalid samples ${smp} (1–324 or 'auto')`);
+    }
     for (const p of [opts.outPath, (opts as any).audioTrack]) {
       // Shell metachars always rejected. `..` allowed (README documents ../out/);
       // traversal safety is enforced at the CLI layer via resolveOut (ROOT join).
@@ -190,7 +192,9 @@ export class ExportPipeline {
 
     // Audio encoding options
     if (opts.audioTrack) {
-      args.push('-c:a', 'aac', '-b:a', '320k', '-shortest');
+      args.push('-map', '0:v:0', '-map', '1:a:0?', '-c:a', 'aac', '-b:a', '320k', '-shortest');
+    } else {
+      args.push('-map', '0:v:0');
     }
 
     args.push(opts.outPath);

@@ -17,6 +17,7 @@ export default class Dissolve implements Transition {
     const { renderer, comp } = this.ctx;
     comp.draw(renderer, a, out, { mode: 'replace' });
     if (api.u > 0) comp.draw(renderer, b, out, { mode: 'normal', opacity: Math.min(1, api.u) });
+    renderer.resetState();
     return;
   }
 }

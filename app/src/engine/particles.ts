@@ -101,7 +101,7 @@ void main() {
 
   float radialAlpha = smoothstep(1.0, 0.1, d);
   // Smooth sine fade over particle lifetime
-  float lifeFade = sin(vLifeNorm * 3.14159265);
+  float lifeFade = sin(clamp(vLifeNorm, 0.0, 1.0) * 3.14159265);
 
   float finalAlpha = radialAlpha * lifeFade * vColor.a;
   if (finalAlpha <= 0.001) discard;
@@ -189,6 +189,8 @@ export class AnalyticalParticles {
   clear(): void {
     this.count = 0;
     this.geo.instanceCount = 0;
+    this.geo.boundingSphere = null;
+    this.geo.boundingBox = null;
     this.emitterIds.clear();
     this.emitterIndex = 0;
   }

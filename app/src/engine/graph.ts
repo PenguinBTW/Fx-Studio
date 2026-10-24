@@ -33,11 +33,6 @@ uniform sampler2D matte;
 uniform int matteMode; // 0=alpha, 1=inv-alpha, 2=luma, 3=inv-luma
 uniform float opacity;
 
-
-float luma(vec3 c) {
-  return dot(c, vec3(0.2126, 0.7152, 0.0722));
-}
-
 void main() {
   vec4 s = texture(src, vUv);
   vec4 m = texture(matte, vUv);
@@ -111,8 +106,6 @@ export class CompositorGraph {
 
   clear(): void {
     this.layers = [];
-    for (const rt of this.layerRTs.values()) rt.dispose();
-    this.layerRTs.clear();
   }
 
   private getRT(name: string, depth = false): THREE.WebGLRenderTarget {
@@ -134,6 +127,9 @@ export class CompositorGraph {
     // NOTE: l.post (ScopedPostOpts) is accepted but not yet implemented — scoped
     // post isolation is a no-op in v0.5. Do not rely on per-layer post.
     // Preserve transparent-black clear for alpha delivery (WebM-alpha / ProRes4444).
+    const origClearColor = new THREE.Color();
+    const origClearAlpha = renderer.getClearAlpha ? renderer.getClearAlpha() : 1;
+    if (renderer.getClearColor) renderer.getClearColor(origClearColor);
 
     // 1. Render all base layers into their allocated targets
     for (const l of this.layers) {
@@ -168,10 +164,11 @@ export class CompositorGraph {
       if (l.matte) {
         const matteRT = this.layerRTs.get(l.matte.source);
         if (matteRT) {
+          const m = String(l.matte.mode).toLowerCase().replace(/_/g, '-');
           let mMode = 0;
-          if (l.matte.mode === 'inv-alpha') mMode = 1;
-          else if (l.matte.mode === 'luma') mMode = 2;
-          else if (l.matte.mode === 'inv-luma') mMode = 3;
+          if (m === 'inv-alpha' || m === 'invalpha') mMode = 1;
+          else if (m === 'luma' || m === 'lumamatte' || m === 'luma-matte') mMode = 2;
+          else if (m === 'inv-luma' || m === 'invluma' || m === 'inv-luma-matte') mMode = 3;
 
           this.mattePass.u.src!.value = layerRT.texture;
           this.mattePass.u.matte!.value = matteRT.texture;
@@ -204,6 +201,9 @@ export class CompositorGraph {
       nextAccum = tmp;
     }
 
+    if (typeof (renderer as any).setClearColor === "function") {
+      (renderer as any).setClearColor(origClearColor, origClearAlpha);
+    }
     renderer.resetState();
   }
 

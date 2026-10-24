@@ -1,6 +1,6 @@
 # f(x) Studio: Universal Procedural Motion Engine Architecture
 
-**Platform Version**: v0.5.0  
+**Platform Version**: v0.6.1  
 **License**: PolyForm Small Business License 1.0.0 ([`LICENSE.md`](../../LICENSE.MD))  
 **Core Codebase**: [`app/src/engine/`](../../app/src/engine/)  
 

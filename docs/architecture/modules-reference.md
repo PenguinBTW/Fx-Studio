@@ -1,6 +1,6 @@
-# Core Engine Modules Reference (12 Universal Modules)
+# Core Engine Modules Reference (Universal Engine Modules v0.6.1)
 
-**Platform Version**: v0.5.0  
+**Platform Version**: v0.6.1  
 **Implementation Directory**: [`app/src/engine/`](../../app/src/engine/)  
 
 ---
@@ -24,6 +24,9 @@ app/src/engine/
 ├── tokens.ts       # Module 10: Pluggable Brand Design Token System (DesignTokens)
 ├── heal.ts         # Module 11: Directorial Self-Correction Contract (AgentHeal)
 ├── gltf.ts         # Module 13: Universal GLTF / GLB 3D Asset Loading & Instancing (GLTFManager)
+├── material.ts     # Module 14: Procedural PBR Shader Materials (ProceduralMaterial)
+├── text3d.ts       # Module 15: 3D Extruded Kinetic Typography (ExtrudedText)
+├── post.ts         # Module 16: Cinematic Optical Post-Processing Pipeline (Post)
 ├── lines.ts        # Supporting: High-Throughput GPU Capsule Line Batching (LineBatch)
 ├── viewport.ts     # Supporting: Viewport Space Matrix & Coordinate Bridges (ViewportSpace)
 ├── post.ts         # Supporting: Alpha-Preserving HDR Optical Post-Processing
@@ -58,6 +61,7 @@ export interface CameraWaypoint {
 export class CameraRig {
   mode: 'perspective' | 'isometric' | 'orthographic';
   position: [number, number, number];
+  createDebugRibbon(scene?: THREE.Scene, samples?: number): THREE.Line | null;
   target: [number, number, number];
   roll: number;
   focalLengthMm: number;

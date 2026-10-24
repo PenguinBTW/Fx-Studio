@@ -158,8 +158,13 @@ function pairKern(f: SFont, a: string, b: string): number {
   const hit = f.kern.get(key);
   if (hit !== undefined) return hit;
   if (!f.target) {
-    const mean = (ps: string[]) => { const v = ps.map((p) => approach(f, p[0]!, p[1]!) ?? 0); return v.reduce((x, y) => x + y, 0) / v.length; };
-    f.target = { lc: mean(['nn', 'oo', 'no', 'on']), uc: mean(['HH', 'OO', 'HO', 'OH']) };
+    const mean = (ps: string[]) => {
+      const v = ps.map((p) => approach(f, p[0]!, p[1]!)).filter((x): x is number => x !== null);
+      return v.length > 0 ? v.reduce((x, y) => x + y, 0) / v.length : 0;
+    };
+    const lcMean = mean(['nn', 'oo', 'no', 'on']);
+    const ucMean = mean(['HH', 'OO', 'HO', 'OH']);
+    f.target = { lc: lcMean || ucMean || (0.1 * f.upm), uc: ucMean || lcMean || (0.1 * f.upm) };
   }
   const m = approach(f, a, b);
   let k = 0;
@@ -204,7 +209,7 @@ function parseSvgFont(txt: string): SFont {
     glyphs,
     missingAdv: defAdv,
     base: H.y0, xTop: X.y1, capTop: H.y1,
-    yLo, dy: (yHi - yLo) / ROWS,
+    yLo, dy: Math.max(1e-4, (yHi - yLo) / ROWS),
     prof: new Map(), kern: new Map(), target: null,
   };
 }
@@ -247,8 +252,11 @@ export interface StrokeText {
  * `kern` is false (default: on, except for the connected scripts).
  */
 export function strokeText(text: string, fontName: StrokeFontName = 'script', size = 100, tracking = 0, kern = !SCRIPTS.has(fontName)): StrokeText {
-  const f = fonts.get(fontName);
-  if (!f) throw new Error(`stroke font not loaded: ${fontName}`);
+  let f = fonts.get(fontName);
+  if (!f) {
+    f = fonts.values().next().value;
+    if (!f) throw new Error(`stroke font not loaded: ${fontName} (no stroke fonts available)`);
+  }
   const s = size / f.upm;
   const strokes: V2[][] = [];
   const charOf: number[] = [];

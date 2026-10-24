@@ -78,7 +78,8 @@ export class CameraRig {
    * Register a deterministic trauma impulse at timestamp t0 (decays exponentially)
    */
   addTrauma(amount: number, t0 = 0, decay = 1.5): this {
-    this.impulses.push({ t0, intensity: amount, decay });
+    if (amount <= 0) return this;
+    this.impulses.push({ t0, intensity: amount, decay: Math.max(1e-4, decay) });
     return this;
   }
 
@@ -99,10 +100,30 @@ export class CameraRig {
    * Build smooth centripetal Catmull-Rom flight path with constant arc-length velocity
    */
   setPath(waypoints: CameraWaypoint[]): this {
-    this.waypoints = waypoints;
-    if (waypoints.length >= 2) {
-      const posPoints = waypoints.map((w) => new THREE.Vector3(w.pos[0], w.pos[1], w.pos[2]));
-      const targetPoints = waypoints.map((w) => new THREE.Vector3(w.target[0], w.target[1], w.target[2]));
+    if (waypoints.length === 0) {
+      this.waypoints = [];
+      this.splinePos = null;
+      this.splineTarget = null;
+      return this;
+    }
+    // Sort waypoints by normalized time t to guarantee monotonic arc-length spline
+    this.waypoints = [...waypoints].sort((a, b) => a.t - b.t);
+    if (this.waypoints.length === 1) {
+      this.splinePos = null;
+      this.splineTarget = null;
+      this.position = [...this.waypoints[0].pos];
+      this.target = [...this.waypoints[0].target];
+      if (this.waypoints[0].roll !== undefined) this.roll = this.waypoints[0].roll;
+      if (this.waypoints[0].focalLength !== undefined) {
+        const fl = this.waypoints[0].focalLength;
+        if (fl < 300) this.setLensMm(fl);
+        else this.setFocalLengthPx(fl);
+      }
+      return this;
+    }
+    if (this.waypoints.length >= 2) {
+      const posPoints = this.waypoints.map((w) => new THREE.Vector3(w.pos[0], w.pos[1], w.pos[2]));
+      const targetPoints = this.waypoints.map((w) => new THREE.Vector3(w.target[0], w.target[1], w.target[2]));
       this.splinePos = new THREE.CatmullRomCurve3(posPoints, false, 'centripetal', 0.5);
       this.splineTarget = new THREE.CatmullRomCurve3(targetPoints, false, 'centripetal', 0.5);
     }
@@ -114,6 +135,17 @@ export class CameraRig {
    */
   evalPath(u: number): this {
     const p = clamp(u, 0, 1);
+    if (this.waypoints.length === 1) {
+      this.position = [...this.waypoints[0].pos];
+      this.target = [...this.waypoints[0].target];
+      if (this.waypoints[0].roll !== undefined) this.roll = this.waypoints[0].roll;
+      if (this.waypoints[0].focalLength !== undefined) {
+        const fl = this.waypoints[0].focalLength;
+        if (fl < 300) this.setLensMm(fl);
+        else this.setFocalLengthPx(fl);
+      }
+      return this;
+    }
     if (this.splinePos && this.splineTarget) {
       const pos = this.splinePos.getPointAt(p);
       const tgt = this.splineTarget.getPointAt(p);
@@ -246,6 +278,33 @@ export class CameraRig {
       threeCam.matrixWorld.copy(viewMatrix).invert();
       threeCam.matrixAutoUpdate = false;
       threeCam.updateProjectionMatrix();
+    } else {
+      console.warn(`[rig] syncToThreeCamera mismatch: mode '${this.mode}' incompatible with ${threeCam.constructor.name}`);
     }
+  }
+  /**
+   * Generates a 3D flight trajectory ribbon/line visualizing the camera path for god-view debugging.
+   */
+  createDebugRibbon(scene?: THREE.Scene, samples = 100): THREE.Line | null {
+    if (!this.splinePos) return null;
+    const count = Math.max(2, samples);
+    const points: THREE.Vector3[] = [];
+    for (let i = 0; i <= count; i++) {
+      const u = i / count;
+      const pt = this.splinePos.getPointAt(u);
+      points.push(pt);
+    }
+    const geom = new THREE.BufferGeometry().setFromPoints(points);
+    const mat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.8 });
+    const line = new THREE.Line(geom, mat);
+    line.name = 'CameraDebugRibbon';
+    line.userData.dispose = () => {
+      geom.dispose();
+      mat.dispose();
+    };
+    if (scene) {
+      scene.add(line);
+    }
+    return line;
   }
 }

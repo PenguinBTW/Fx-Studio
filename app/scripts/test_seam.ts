@@ -5,25 +5,28 @@ const canvas = { getContext: () => ({ fillRect: () => {}, clearRect: () => {}, f
 const ctx = { W: 1920, H: 1080, canvas } as any;
 const scene = new Act5BridgeChase(ctx);
 await scene.init();
-scene.update(97.11);
-const cam = scene.camera;
-console.log('Cam pos:', cam.position);
+const s = scene as any;
+if (typeof s.update === 'function') s.update(97.11);
+const cam = s.camera || s.threeCam;
+if (cam) console.log('Cam pos:', cam.position);
 const nearObjs: any[] = [];
-scene.threeScene.traverse((obj: any) => {
-  if (obj.isMesh && obj.visible) {
-    const wp = new THREE.Vector3();
-    obj.getWorldPosition(wp);
-    const dist = wp.distanceTo(cam.position);
-    if (dist < 35) {
-      nearObjs.push({
-        name: obj.name || obj.parent?.name || 'mesh',
-        pos: [wp.x, wp.y, wp.z],
-        dist,
-        geo: obj.geometry?.type,
-        mat: obj.material?.name || obj.material?.type
-      });
+if (s.threeScene && cam) {
+  s.threeScene.traverse((obj: any) => {
+    if (obj.isMesh && obj.visible) {
+      const wp = new THREE.Vector3();
+      obj.getWorldPosition(wp);
+      const dist = wp.distanceTo(cam.position);
+      if (dist < 35) {
+        nearObjs.push({
+          name: obj.name || obj.parent?.name || 'mesh',
+          pos: [wp.x, wp.y, wp.z],
+          dist,
+          geo: obj.geometry?.type,
+          mat: obj.material?.name || obj.material?.type
+        });
+      }
     }
-  }
-});
+  });
+}
 nearObjs.sort((a,b) => a.dist - b.dist);
 console.log('Near objects:', JSON.stringify(nearObjs.slice(0, 15), null, 2));
