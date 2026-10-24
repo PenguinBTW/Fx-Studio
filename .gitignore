@@ -9,7 +9,10 @@
 **/test-results/
 **/audits/
 **/out/
+out/
+app/out/
 **/data/
+app/public/data/
 **/draco/
 **/audio/
 
