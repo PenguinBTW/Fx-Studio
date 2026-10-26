@@ -1,5 +1,5 @@
 // THE ANAMORPHIC LENS DECONSTRUCTION
-// Standalone Transition Block for f(x) Studio engine (v0.5.0)
+// Standalone Transition Block for f(x) Studio engine (v0.7.0)
 // Strictly Closed-Form Frame = f(t), Zero UI, Zero HUDs, Pure Photorealism
 
 import * as THREE from 'three';

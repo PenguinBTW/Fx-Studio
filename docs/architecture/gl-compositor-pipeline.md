@@ -1,6 +1,6 @@
 # WebGL Compositor & Post-Processing Pipeline
 
-**Platform Version**: v0.5.0  
+**Platform Version**: v0.7.0  
 **Source Files**: [`app/src/engine/gl.ts`](../../app/src/engine/gl.ts), [`app/src/engine/post.ts`](../../app/src/engine/post.ts), [`app/src/engine/graph.ts`](../../app/src/engine/graph.ts)  
 
 ---

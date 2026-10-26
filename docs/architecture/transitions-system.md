@@ -1,6 +1,6 @@
 # Bespoke Transitions Engine & Spatial Continuity Architecture
 
-**Platform Version**: v0.5.0  
+**Platform Version**: v0.7.0  
 **Implementation Files**: [`app/src/engine/transition.ts`](../../app/src/engine/transition.ts), [`app/src/engine/projects.ts`](../../app/src/engine/projects.ts), [`app/src/transitions/`](../../app/src/transitions/)  
 
 ---

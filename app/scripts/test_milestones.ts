@@ -17,7 +17,7 @@ const testScripts = [
 ];
 
 console.log('================================================================');
-console.log('     UNIVERSAL AGENTIC MOTION GRAPHICS SUITE: ALL TESTS (v0.6.1)');
+console.log('     UNIVERSAL AGENTIC MOTION GRAPHICS SUITE: ALL TESTS (v0.7.0)');
 console.log('================================================================\n');
 
 let totalPassed = 0;
