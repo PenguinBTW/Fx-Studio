@@ -22,10 +22,16 @@ import activePointer from './scenes/active.json';
 // Recursive glob: scenes/<project>/<scene>.ts (and legacy root scenes/<scene>.ts).
 const sceneModules = import.meta.glob<{ default: SceneClass }>('./scenes/**/*.ts');
 const transitionModules = import.meta.glob<{ default: TransitionClass }>('./transitions/*.ts');
-const manifests = import.meta.glob<ProjectManifest>('./scenes/*/project.json', {
+const manifestFiles = import.meta.glob<ProjectManifest>('./scenes/{*,_prereq_demos/*}/project.json', {
   eager: true,
   import: 'default',
 });
+// _prereq_demos/<module>/project.json is addressed as project <module>.
+const manifests: Record<string, ProjectManifest> = {};
+for (const [k, v] of Object.entries(manifestFiles)) {
+  const parts = k.split('/');
+  manifests[parts[2] === '_prereq_demos' ? parts[3]! : parts[2]!] = v;
+}
 
 const scene = (name: string) => () => {
   const m = sceneModules[`./scenes/${name}.ts`];
@@ -38,13 +44,13 @@ const transition = (name: string) => () => {
 };
 
 function loadManifest(project?: string | null): ProjectManifest {
-  const available = Object.keys(manifests).map((k) => k.split('/')[2]!);
+  const available = Object.keys(manifests);
   const want = resolveProjectName({
     urlProject: project,
     pointer: (activePointer as { project?: string } | null)?.project ?? null,
     available,
   });
-  return manifests[`./scenes/${want}/project.json`] as ProjectManifest;
+  return manifests[want]!;
 }
 
 export function makeTimeline(

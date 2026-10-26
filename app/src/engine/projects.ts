@@ -32,6 +32,10 @@ export interface ProjectManifest {
   project: string;
   entries: ManifestEntryDef[];
   transitions?: ManifestTransitionDef[];
+  /** Named picture events (see engine/events.ts); resolved to events.json at render. */
+  events?: import('./events').EventDef[];
+  /** Mix manifest path (relative to this project folder) used by `render.ts video` when --mix is not given. */
+  mix?: string;
 }
 
 /** Selection priority: explicit (?project= / --project) > pointer file > fallback. */

@@ -1,0 +1,7 @@
+{
+  "project": "glyphs",
+  "entries": [
+    { "scene": "_prereq_demos/glyphs/glyphs", "id": "glyphs", "start": 0.0, "end": 4.0 }
+  ],
+  "transitions": []
+}

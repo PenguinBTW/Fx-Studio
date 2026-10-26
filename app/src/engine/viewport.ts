@@ -2,7 +2,8 @@
 // Harmonizes Logical Points (1920x1080), High-DPI Physical Pixels, and Three.js World Space.
 import * as THREE from 'three';
 import { W, H, SCALE } from './gl';
-import type { Cam, V3 } from './camera3d';
+import type { Cam } from './camera3d';
+import type { V3 } from './util';
 
 export class ViewportSpace {
   /** Logical design dimensions (1920 x 1080) */

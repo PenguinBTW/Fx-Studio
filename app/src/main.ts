@@ -3,8 +3,10 @@ import { Engine, type AdaptiveSampling } from './engine/engine';
 import { PW, PH, SCALE } from './engine/gl';
 import { BRIDGE_VERSION, type EngineBridge, type TextProbeRecord } from './engine/bridge';
 import { makeTimeline, makeTransitions } from './timeline';
+import { installFxStats, exposeFxStats } from './engine/fxstats';
 
 const params = new URLSearchParams(location.search);
+installFxStats();
 const EXPORT = params.has('export');
 const ONLY = params.get('only'); // comma-separated scene ids to load (faster stills)
 const PROJECT = params.get('project'); // project folder in scenes/ (falls back to active.json pointer)
@@ -24,7 +26,7 @@ async function boot() {
   engine.transitions = makeTransitions(PROJECT);
   await engine.init(onlySet ? (e) => onlySet.has(e.id) || (Boolean(e.file) && onlySet.has(e.file!)) : undefined);
   TIMELINE = engine.timeline;
-  if (EXPORT) setupExport();
+  if (EXPORT) { exposeFxStats(engine.renderer); setupExport(); }
   else setupPlayer();
 }
 

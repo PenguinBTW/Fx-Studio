@@ -78,6 +78,15 @@ Validates the 60fps motion telemetry engine and rule evaluator:
 - Validates stable content-addressed ID generation (`rule-t0-t1-counter`).
 - Validates reviewer waiver ingestion (`findings.json`).
 
+### 3.5 Automated Transition Seam Checker (P9: `check_seams.ts`)
+Validates seam continuity across all film act transitions (`bun run test:seams`):
+- Evaluates `photonState(t)` at $t - 1/60$, $t$, and $t + 1/60$ for all boundary seams in `ACT_BOUNDS`.
+- Asserts screen position continuity: verify boundary screen position delta $< 1.0$ px jump limit (actual $< 0.0003$ px).
+- Verifies direction vector continuity (unit tangent normalization and boundary angle continuity $\ge 0.99$ dot product).
+- Validates that transitions can safely call `api.sampleScene(id, t)` across a 5.0-second window without state corruption or frame-time blowup ($< 0.1$ ms avg, flat performance).
+- Enforces strict rejection of stateful participants in transition windows.
+- Supports CLI flags: `--act [n]`, `--verbose`, `--json`.
+
 ---
 
 ## 4. Continuous Integration (CI) Review Gate Protocol

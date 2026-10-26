@@ -1,6 +1,6 @@
 {
   "name": "app",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "module": "index.ts",
   "type": "module",
   "private": true,
@@ -8,7 +8,22 @@
     "dev": "vite",
     "build": "vite build",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.scripts.json",
-    "test": "bun scripts/test_milestones.ts"
+    "test": "bun scripts/test_milestones.ts",
+    "test:post": "bun scripts/test_post.ts",
+    "test:noise": "bun scripts/test_noise.ts",
+    "test:particles": "bun scripts/test_particles.ts",
+    "test:spectrum": "bun scripts/test_spectrum.ts",
+    "test:refract": "bun scripts/test_refraction.ts",
+    "test:rig": "bun scripts/test_rig_solvers.ts",
+    "test:text": "bun scripts/test_text_p10.ts",
+    "test:text-lighting": "bun scripts/test_text_lighting.ts",
+    "test:glyphs": "bun scripts/test_glyph_coverage.ts",
+    "test:curvemorph": "bun scripts/test_curvemorph.ts",
+    "test:treewalk": "bun scripts/test_treewalk.ts",
+    "test:dof": "bun scripts/test_depth_dof.ts",
+    "test:ribbons": "bun scripts/test_ribbons.ts",
+    "test:seams": "bun scripts/check_seams.ts",
+    "check:determinism": "bun scripts/check_determinism.ts"
   },
   "devDependencies": {
     "@types/bun": "latest",
@@ -22,6 +37,7 @@
   },
   "dependencies": {
     "opentype.js": "^2.0.0",
+    "polygon-clipping": "^0.15.7",
     "three": "^0.186.0"
   }
 }

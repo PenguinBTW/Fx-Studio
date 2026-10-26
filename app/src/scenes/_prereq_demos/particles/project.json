@@ -1,0 +1,12 @@
+{
+  "project": "particles",
+  "entries": [
+    {
+      "scene": "_prereq_demos/particles/shots",
+      "id": "particles_shots",
+      "start": 0.0,
+      "end": 20.0
+    }
+  ],
+  "transitions": []
+}

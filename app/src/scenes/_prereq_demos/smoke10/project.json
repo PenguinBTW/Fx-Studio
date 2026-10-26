@@ -1,0 +1,169 @@
+﻿{
+    "project":  "smoke10",
+    "entries":  [
+                    {
+                        "scene":  "_prereq_demos/smoke10/smoke_scene",
+                        "id":  "smoke0",
+                        "start":  0,
+                        "end":  27.5,
+                        "params":  {
+                                       "v":  0
+                                   }
+                    },
+                    {
+                        "scene":  "_prereq_demos/smoke10/smoke_scene",
+                        "id":  "smoke1",
+                        "start":  22.5,
+                        "end":  51,
+                        "params":  {
+                                       "v":  1
+                                   }
+                    },
+                    {
+                        "scene":  "_prereq_demos/smoke10/smoke_scene",
+                        "id":  "smoke2",
+                        "start":  49,
+                        "end":  77.5,
+                        "params":  {
+                                       "v":  2
+                                   }
+                    },
+                    {
+                        "scene":  "_prereq_demos/smoke10/smoke_scene",
+                        "id":  "smoke3",
+                        "start":  72.5,
+                        "end":  100.5,
+                        "params":  {
+                                       "v":  3
+                                   }
+                    },
+                    {
+                        "scene":  "_prereq_demos/smoke10/smoke_scene",
+                        "id":  "smoke4",
+                        "start":  99.5,
+                        "end":  125.75,
+                        "params":  {
+                                       "v":  4
+                                   }
+                    },
+                    {
+                        "scene":  "_prereq_demos/smoke10/smoke_scene",
+                        "id":  "smoke5",
+                        "start":  124.25,
+                        "end":  150.5,
+                        "params":  {
+                                       "v":  5
+                                   }
+                    },
+                    {
+                        "scene":  "_prereq_demos/smoke10/smoke_scene",
+                        "id":  "smoke6",
+                        "start":  149.5,
+                        "end":  176.5,
+                        "params":  {
+                                       "v":  6
+                                   }
+                    },
+                    {
+                        "scene":  "_prereq_demos/smoke10/smoke_scene",
+                        "id":  "smoke7",
+                        "start":  173.5,
+                        "end":  200.5,
+                        "params":  {
+                                       "v":  7
+                                   }
+                    },
+                    {
+                        "scene":  "_prereq_demos/smoke10/smoke_scene",
+                        "id":  "smoke8",
+                        "start":  199.5,
+                        "end":  226,
+                        "params":  {
+                                       "v":  8
+                                   }
+                    },
+                    {
+                        "scene":  "_prereq_demos/smoke10/smoke_scene",
+                        "id":  "smoke9",
+                        "start":  224,
+                        "end":  256,
+                        "params":  {
+                                       "v":  9
+                                   }
+                    }
+                ],
+    "transitions":  [
+                        {
+                            "id":  "t1-chase",
+                            "transition":  "chase",
+                            "from":  "smoke0",
+                            "to":  "smoke1",
+                            "at":  22.5,
+                            "dur":  5
+                        },
+                        {
+                            "id":  "t2-dissolve",
+                            "transition":  "dissolve",
+                            "from":  "smoke1",
+                            "to":  "smoke2",
+                            "at":  49,
+                            "dur":  2
+                        },
+                        {
+                            "id":  "t3-topological_tear",
+                            "transition":  "topological_tear",
+                            "from":  "smoke2",
+                            "to":  "smoke3",
+                            "at":  72.5,
+                            "dur":  5
+                        },
+                        {
+                            "id":  "t4-warp",
+                            "transition":  "warp",
+                            "from":  "smoke3",
+                            "to":  "smoke4",
+                            "at":  99.5,
+                            "dur":  1
+                        },
+                        {
+                            "id":  "t5-push",
+                            "transition":  "push",
+                            "from":  "smoke4",
+                            "to":  "smoke5",
+                            "at":  124.25,
+                            "dur":  1.5
+                        },
+                        {
+                            "id":  "t6-iris",
+                            "transition":  "iris",
+                            "from":  "smoke5",
+                            "to":  "smoke6",
+                            "at":  149.5,
+                            "dur":  1
+                        },
+                        {
+                            "id":  "t7-shutter",
+                            "transition":  "shutter",
+                            "from":  "smoke6",
+                            "to":  "smoke7",
+                            "at":  173.5,
+                            "dur":  3
+                        },
+                        {
+                            "id":  "t8-lens_settle",
+                            "transition":  "lens_settle",
+                            "from":  "smoke7",
+                            "to":  "smoke8",
+                            "at":  199.5,
+                            "dur":  1
+                        },
+                        {
+                            "id":  "t9-glyph_fold",
+                            "transition":  "glyph_fold",
+                            "from":  "smoke8",
+                            "to":  "smoke9",
+                            "at":  224,
+                            "dur":  2
+                        }
+                    ]
+}

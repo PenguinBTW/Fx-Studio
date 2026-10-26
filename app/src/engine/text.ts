@@ -3,9 +3,10 @@
 // ink knockout halos, and direct telemetry emission bridge to window.__motion.textProbes.
 import * as THREE from 'three';
 import { ViewportSpace } from './viewport';
-import { type V3 } from './camera3d';
+import { type V3 } from './util';
 import { clamp, ease } from './util';
 import { rgba } from './palette';
+import { odometer, drawOdometer, layoutGlyphs, type OdometerOpts, type OdometerState, type Glyph2D } from './textfx';
 
 export interface TextStyle {
   fontFamily?: string;
@@ -57,6 +58,7 @@ export class KineticText {
   private is3DAnchored = false;
   private isVisible = true;
   private depthScale = 1.0;
+  private odo: OdometerState | null = null;
 
   constructor(text: string, style: TextStyle = {}) {
     this.rawText = text;
@@ -204,6 +206,54 @@ export class KineticText {
     this.rawText = format ? format(value) : value.toFixed(0);
     this.lines = [this.rawText];
     return this;
+  }
+
+  /**
+   * Odometer counter: per-digit rolling state for an (already eased) value; see textfx.odometer.
+   * Replaces the block's text with the counter's current reading so bounds/telemetry stay valid.
+   */
+  odometer(value: number, opts: OdometerOpts = {}): OdometerState {
+    const st = odometer(value, opts);
+    this.rawText = st.text;
+    this.lines = [st.text];
+    this.odo = st;
+    return st;
+  }
+
+  /** Draw the state from the last `odometer()` call as rolling digit strips. */
+  renderOdometer(ctx: CanvasRenderingContext2D, x = this.anchorPos[0], y = this.anchorPos[1]): void {
+    if (!this.odo || !this.isVisible || this.style.alpha <= 0.001) return;
+    const px = this.style.fontSize * (this.is3DAnchored ? this.depthScale : 1.0);
+    ctx.save();
+    ctx.globalAlpha *= this.style.alpha;
+    drawOdometer(ctx, this.odo, x, y, {
+      fontPx: px,
+      font: `${this.style.fontWeight} ${px}px ${this.style.fontFamily}`,
+      color: this.style.color,
+      align: this.style.align,
+      rowHeight: this.style.lineHeight,
+      haloColor: this.halo?.haloColor,
+      haloPx: this.halo?.strokePx,
+    });
+    ctx.restore();
+  }
+
+  /**
+   * Letter-level hook: pixel box and centre (1080p logical space) of every character as `render` would
+   * place it, measured with the real font and tracking. Pass the same x/y/stagger offsets you render with.
+   */
+  glyphs(ctx: CanvasRenderingContext2D, x = this.anchorPos[0], y = this.anchorPos[1]): Glyph2D[] {
+    const px = this.style.fontSize * (this.is3DAnchored ? this.depthScale : 1.0);
+    ctx.save();
+    ctx.font = `${this.style.fontWeight} ${px}px ${this.style.fontFamily}`;
+    const ls = this.style.letterSpacing;
+    ctx.letterSpacing = typeof ls === 'number' ? `${ls}px` : ls || '0px';
+    const tracking = typeof ls === 'number' ? ls : /em\s*$/.test(ls) ? (parseFloat(ls) || 0) * px : parseFloat(ls) || 0;
+    const out = layoutGlyphs(this.lines, (s) => ctx.measureText(s).width, {
+      x, y, fontPx: px, lineHeight: this.style.lineHeight, align: this.style.align, tracking,
+    });
+    ctx.restore();
+    return out;
   }
 
   /**

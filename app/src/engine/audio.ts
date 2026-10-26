@@ -6,10 +6,16 @@ export interface AudioJSON {
   fps: number;
   beats: number[];
   downbeats: number[];
-  sections: { name: string; start: number; end: number }[];
+  sections: { name: string; start: number; end: number; kind?: SectionKind }[];
   features: Record<string, number[]>;
   onsets: Record<string, [number, number][]>;
+  silences?: [number, number][];
+  tempo_map?: TempoSegment[];
+  envelopes?: { fps: number; rms: number[]; centroid: number[] };
 }
+
+export type SectionKind = 'silence' | 'quiet' | 'body' | 'build' | 'peak';
+export interface TempoSegment { start: number; end: number; bpm: number; bar_phase: number; source: 'auto' | 'override' }
 
 export interface AudioSample {
   rms: number; low: number; mid: number; high: number;
@@ -31,10 +37,14 @@ export class AudioData {
   bpm: number;
   beats: number[];
   downbeats: number[];
-  sections: { name: string; start: number; end: number }[];
+  sections: { name: string; start: number; end: number; kind?: SectionKind }[];
   private fps: number;
   private feat: Record<string, Float32Array> = {};
   onsets: Record<string, [number, number][]>;
+  silences: [number, number][];
+  tempoMap: TempoSegment[];
+  private fastFps: number;
+  private fast: { rms: Float32Array; centroid: Float32Array };
 
   isDummy = false;
 
@@ -48,6 +58,27 @@ export class AudioData {
     // envelopes may be nested under `features` or top-level arrays
     for (const k of FEATURES) this.feat[k] = Float32Array.from(j.features?.[k] ?? ((j as any)[k] as number[] | undefined) ?? []);
     this.onsets = j.onsets ?? {};
+    this.silences = j.silences ?? [];
+    this.tempoMap = j.tempo_map ?? [];
+    this.fastFps = j.envelopes?.fps || 60;
+    this.fast = { rms: Float32Array.from(j.envelopes?.rms ?? []), centroid: Float32Array.from(j.envelopes?.centroid ?? []) };
+  }
+
+  /** True when t falls inside a stretch quieter than -60 dB (empty if the analysis has no silences field). */
+  isSilent(t: number): boolean {
+    for (const [a, b] of this.silences) if (t >= a && t < b) return true;
+    return false;
+  }
+
+  /** 60 Hz continuous envelope ('rms' or 'centroid', 0..1), linearly interpolated; 0 when absent. */
+  envFast(name: 'rms' | 'centroid', t: number): number {
+    const a = this.fast[name];
+    if (a.length === 0) return 0;
+    const x = Math.max(0, t * this.fastFps);
+    const i = Math.floor(x);
+    if (i >= a.length - 1) return a[a.length - 1]!;
+    const f = x - i;
+    return a[i]! * (1 - f) + a[i + 1]! * f;
   }
 
   static createDummy(duration = 5.0, bpm = 120): AudioData {

@@ -1,36 +1,44 @@
-# Core Engine Modules Reference (Universal Engine Modules v0.6.1)
+# Core Engine Modules Reference (Universal Engine Modules v0.7.0)
 
-**Platform Version**: v0.6.1  
+**Platform Version**: v0.7.0  
 **Implementation Directory**: [`app/src/engine/`](../../app/src/engine/)  
 
 ---
 
 ## Overview
 
-The **f(x) Studio** engine provides 12 modular, decoupled building blocks. Each module addresses a specific domain in procedural motion design—camera choreography, layout hierarchy, GPU vector primitives, physical solvers, particle simulation, multi-layer compositing, and headless export.
+The **f(x) Studio** engine provides 25 modular, decoupled building blocks. Each module addresses a specific domain in procedural motion design—camera choreography, physical optics, layout hierarchy, GPU vector primitives, physical solvers, particle simulation, multi-layer compositing, kinetic typography, multi-track audio, and headless export.
 
 ```
 app/src/engine/
-├── dsl.ts          # Module 12: Declarative Scene Authoring DSL (defineScene, SceneContext)
-├── rig.ts          # Module 1: Universal Dual-Mode 6-DOF Camera Rig (CameraRig)
-├── transform.ts    # Module 2: Transform Hierarchy & Responsive Layout (TransformNode, LayoutNode)
-├── text.ts         # Module 3: Universal Kinetic Typography Engine (KineticText)
-├── sdf.ts          # Module 4: Analytic GPU Signed Distance Fields (SDFBatch)
-├── motion.ts       # Module 5: Universal Motion Bus & Physical Solvers (MotionBus, motion)
-├── particles.ts    # Module 6: Stateless Analytical GPU Particles (AnalyticalParticles)
-├── graph.ts        # Module 7: Scoped Render Graph & Track Matte Compositor (CompositorGraph)
-├── scenegraph.ts   # Module 8: Semantic Scene Graph & Entity Introspection (SceneGraph)
-├── export.ts       # Module 9: Multi-Format Delivery & Headless Export (ExportPipeline)
-├── tokens.ts       # Module 10: Pluggable Brand Design Token System (DesignTokens)
-├── heal.ts         # Module 11: Directorial Self-Correction Contract (AgentHeal)
-├── gltf.ts         # Module 13: Universal GLTF / GLB 3D Asset Loading & Instancing (GLTFManager)
-├── material.ts     # Module 14: Procedural PBR Shader Materials (ProceduralMaterial)
-├── text3d.ts       # Module 15: 3D Extruded Kinetic Typography (ExtrudedText)
-├── post.ts         # Module 16: Cinematic Optical Post-Processing Pipeline (Post)
-├── lines.ts        # Supporting: High-Throughput GPU Capsule Line Batching (LineBatch)
-├── viewport.ts     # Supporting: Viewport Space Matrix & Coordinate Bridges (ViewportSpace)
-├── post.ts         # Supporting: Alpha-Preserving HDR Optical Post-Processing
-└── driver.ts       # Supporting: Timeline Drivers (ClockDriver, AudioDriver, SpeechDriver)
+├── dsl.ts             # Module 12: Declarative Scene Authoring DSL (defineScene, SceneContext)
+├── rig.ts             # Module 1: Universal Dual-Mode 6-DOF Camera Rig (CameraRig, dollyDistance)
+├── transform.ts       # Module 2: Transform Hierarchy & Responsive Layout (TransformNode, LayoutNode)
+├── text.ts            # Module 3: Universal Kinetic Typography Engine (KineticText)
+├── sdf.ts             # Module 4: Analytic GPU Signed Distance Fields (SDFBatch)
+├── motion.ts          # Module 5: Universal Motion Bus & Physical Solvers (MotionBus, motion)
+├── particles.ts       # Module 6: Stateless Analytical GPU Particles (AnalyticalParticles)
+├── graph.ts           # Module 7: Scoped Render Graph & Track Matte Compositor (CompositorGraph)
+├── scenegraph.ts      # Module 8: Semantic Scene Graph & Entity Introspection (SceneGraph)
+├── export.ts          # Module 9: Multi-Format Delivery & Headless Export (ExportPipeline)
+├── tokens.ts          # Module 10: Pluggable Brand Design Token System (DesignTokens)
+├── heal.ts            # Module 11: Directorial Self-Correction Contract (AgentHeal)
+├── gltf.ts            # Module 13: Universal GLTF / GLB 3D Asset Loading & Instancing (GLTFManager)
+├── material.ts        # Module 14: Procedural PBR Shader Materials (ProceduralMaterial)
+├── text3d.ts          # Module 15: 3D Extruded Kinetic Typography (ExtrudedText)
+├── post.ts            # Module 16: Cinematic Optical Post-Processing Pipeline (Post)
+├── spectrum.ts        # Module 17: Physical Colour Science & CIE 1931 / Blackbody (spectrum.ts)
+├── refract.ts         # Module 18: Cauchy Dispersion, Dielectric Fresnel & Rainbow Caustics (refract.ts)
+├── noise.ts           # Module 19: Analytic Divergence-Free Curl Noise & Voronoi (noise.ts)
+├── particles_large.ts # Module 20: 500k Stateless GPU Instanced Particle Engine (particles_large.ts)
+├── ribbon.ts          # Module 21: Bishop RMF Parallel Transport & Aurora Curtains (ribbon.ts, aurora.ts)
+├── curvemorph.ts      # Module 22: Continuous Curve Morph & Streamline Untangling (curvemorph.ts, treewalk.ts)
+├── raymarch.ts        # Module 23: Multi-Tier Volumetric Raymarcher (raymarch.ts)
+├── text_lighting.ts   # Module 24: In-World 3D Text Scene Lighting & Particle Deflection (text_lighting.ts)
+├── events.ts          # Module 25: Multi-Track Audio Registry, Procedural SFX & Mixdown (mixdown.ts)
+├── lines.ts           # Supporting: High-Throughput GPU Capsule Line Batching (LineBatch)
+├── viewport.ts        # Supporting: Viewport Space Matrix & Coordinate Bridges (ViewportSpace)
+└── driver.ts          # Supporting: Timeline Drivers (ClockDriver, AudioDriver, SpeechDriver)
 ```
 
 ---
@@ -388,3 +396,4 @@ export class GLTFManager {
   static clearCache(): void;
 }
 ```
+

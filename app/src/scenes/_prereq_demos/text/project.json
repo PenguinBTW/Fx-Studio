@@ -1,0 +1,8 @@
+{
+  "project": "text",
+  "entries": [
+    { "scene": "_prereq_demos/text/text_p10", "id": "text_p10", "start": 0.0, "end": 8.0 }
+  ],
+  "transitions": []
+}
+

@@ -1,3 +1,12 @@
+# Internal agent state and milestones
+.agents/
+**/.m*_done
+opencode.json
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
 # Dependencies
 **/node_modules/
 
@@ -38,3 +47,9 @@ Thumbs.db
 # Logs and TypeScript build metadata
 *.log
 *.tsbuildinfo
+
+# API key files
+keys.txt
+*/keys.txt
+testing/keys.txt
+proxy/keys.txt

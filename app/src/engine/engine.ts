@@ -62,7 +62,14 @@ export class Engine {
   post!: Post;
   comp = new Compositor();
   loaded = new Map<string, Loaded>();
-  private rts = [makeRT(), makeRT(), makeRT()];
+  private rts = [
+    makeRT(W, H, { depthTexture: true }),
+    makeRT(W, H, { depthTexture: true }),
+    makeRT(W, H, { depthTexture: true }),
+  ];
+  get sceneRT(): THREE.WebGLRenderTarget {
+    return this.rts[0]!;
+  }
   private mixRTs = [makeRT(W, H, { depthBuffer: false }), makeRT(W, H, { depthBuffer: false })];
   private mixIdx = 0;
   get mixRT() {
@@ -70,7 +77,10 @@ export class Engine {
   }
   /** Standalone transition windows (assigned by boot from makeTransitions). */
   transitions: TransitionEntry[] = [];
-  private transRTs = [makeRT(), makeRT()];
+  private transRTs = [
+    makeRT(W, H, { depthTexture: true }),
+    makeRT(W, H, { depthTexture: true }),
+  ];
   private transScratch = [makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT()];
   private transScratchIdx = 0;
   private transLoaded = new Map<string, { entry: TransitionEntry; trans: Transition | null; error?: string }>();
@@ -298,11 +308,15 @@ export class Engine {
     const seeked = this.lastT < 0 || t < this.lastT - 1e-6 || t - this.lastT > Math.max(0.25, dt * 4);
     this.lastT = t;
     let outTex: THREE.Texture;
+    let depthTex: THREE.Texture | null = null;
     let post: PostParams = { ...DEFAULT_POST };
     let n = 1;
     if (samples === 1) {
       SS_TAP.value = -1;
-      ({ outTex, post } = this.composite(t, dt, seeked));
+      const res = this.composite(t, dt, seeked);
+      outTex = res.outTex;
+      depthTex = res.depthTex;
+      post = res.post;
     } else {
       const adaptive = typeof samples !== 'number';
       let maxAdaptive = adaptive ? samples.max : 0;
@@ -332,7 +346,11 @@ export class Engine {
         this.accum.u.src!.value = res.outTex;
         this.accum.render(r, into);
         const d = Math.abs(u - POST_U);
-        if (d < nearest - 1e-9 || (d < nearest + 1e-9 && u > POST_U)) { nearest = d; post = res.post; }
+        if (d < nearest - 1e-9 || (d < nearest + 1e-9 && u > POST_U)) {
+          nearest = d;
+          post = res.post;
+          depthTex = res.depthTex;
+        }
       };
       clearRT(r, this.sumRT, [0, 0, 0], 0);
       if (!adaptive) {
@@ -374,7 +392,7 @@ export class Engine {
       pdoomOverride: post.metricText ?? post.pdoomText,
       corruption: post.hudCorruption,
     });
-    this.post.render(r, outTex, hudTex, this.finalRT, post, t);
+    this.post.render(r, outTex, hudTex, this.finalRT, post, t, depthTex);
     this.lastPost = post;
     if (toScreen) {
       this.blit.u.src!.value = this.finalRT.texture;
@@ -414,7 +432,7 @@ export class Engine {
    * to the default crossfade path). Throws loudly on stateful
    * participants — transitions cannot drive integrated state.
    */
-  private renderTransition(tr: TransitionEntry, t: number, dt: number, seeked: boolean): { outTex: THREE.Texture; post: PostParams; probe: Record<string, number> | null } | null {
+  private renderTransition(tr: TransitionEntry, t: number, dt: number, seeked: boolean): { outTex: THREE.Texture; depthTex: THREE.Texture | null; post: PostParams; probe: Record<string, number> | null } | null {
     const trec = this.transLoaded.get(tr.id);
     const aE = this.timeline.find((e) => e.id === tr.from || e.file === tr.from);
     const bE = this.timeline.find((e) => e.id === tr.to || e.file === tr.to);
@@ -457,16 +475,17 @@ export class Engine {
     this.mixIdx++;
     const ovT = trec.trans.render(fTrans, targetMix, this.transRTs[0]!.texture, this.transRTs[1]!.texture, api);
     post = { ...post, ...(ovT ?? {}) };
-    return { outTex: targetMix.texture, post, probe };
+    return { outTex: targetMix.texture, depthTex: this.transRTs[1]?.depthTexture ?? this.transRTs[0]?.depthTexture ?? null, post, probe };
   }
 
-  private composite(t: number, dt: number, seeked: boolean): { outTex: THREE.Texture; post: PostParams } {
+  private composite(t: number, dt: number, seeked: boolean): { outTex: THREE.Texture; post: PostParams; depthTex: THREE.Texture | null } {
     const r = this.renderer;
 
     const active = this.timeline.filter((e) => t >= e.start && t < e.end).sort((a, b) => a.start - b.start);
     let post: PostParams = { ...DEFAULT_POST };
     let under: THREE.Texture | null = null;
     let outTex: THREE.Texture | null = null;
+    let depthTex: THREE.Texture | null = null;
 
     let sceneProbeData: Record<string, number> | null = null;
 
@@ -476,7 +495,7 @@ export class Engine {
       const rendered = this.renderTransition(activeTransition, t, dt, seeked);
       if (rendered) {
         this.lastSceneProbe = rendered.probe;
-        return { outTex: rendered.outTex, post: rendered.post };
+        return { outTex: rendered.outTex, post: rendered.post, depthTex: rendered.depthTex };
       }
       // Missing/broken participant or loader: fall through to the default path.
     }
@@ -488,7 +507,7 @@ export class Engine {
       const tout = next ? Math.max(0, (t - next.start) / Math.max(1e-3, e.end - next.start)) : 0;
       if (!rec?.scene) {
         clearRT(r, rt, [0.25, 0.0, 0.0]);
-        under = rt.texture; outTex = rt.texture;
+        under = rt.texture; outTex = rt.texture; depthTex = rt.depthTexture;
         return;
       }
       const s = rec.scene;
@@ -527,13 +546,17 @@ export class Engine {
         this.xfade.u.k!.value = tin;
         this.xfade.render(r, targetMix);
         outTex = targetMix.texture;
-      } else outTex = rt.texture;
+        depthTex = rt.depthTexture;
+      } else {
+        outTex = rt.texture;
+        depthTex = rt.depthTexture;
+      }
       under = outTex;
     });
 
     this.lastSceneProbe = sceneProbeData;
-    if (!outTex) { clearRT(r, this.rts[0]!, [0, 0, 0]); outTex = this.rts[0]!.texture; }
-    return { outTex, post };
+    if (!outTex) { clearRT(r, this.rts[0]!, [0, 0, 0]); outTex = this.rts[0]!.texture; depthTex = this.rts[0]!.depthTexture; }
+    return { outTex, post, depthTex: depthTex ?? this.rts[0]?.depthTexture ?? null };
   }
 
   /** RGBA8 pixels of the last rendered frame (bottom-up rows), PW x PH. */

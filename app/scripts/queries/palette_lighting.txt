@@ -1,0 +1,3 @@
+Q1: What are the primary background and foreground colors present (estimate hex values)?
+Q2: Describe the lighting, contrast, bloom, and glow. Are black levels crushed or washed out?
+Q3: Are there any NaN color artifacts, blown-out clipping highlights, or missing shaders?

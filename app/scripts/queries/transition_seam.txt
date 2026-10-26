@@ -1,0 +1,3 @@
+Q1: Compare Frame A and Frame B. Are there any sudden unintended spatial shifts, shader pops, or camera jump cuts?
+Q2: Does the luminance, color grading, or lighting stay continuous across the seam?
+Q3: Does the outgoing element smoothly hand off or resolve into the incoming element?
