@@ -1,10 +1,10 @@
 // Shared 6-DOF Orthonormal Pinhole Camera Engine & 3D Projector
 // Extracted from Example project/app/src/scenes/room.ts and loss.ts
-import { clamp, lerp, ease, springStep, noise1, TAU } from './util';
+import { clamp, lerp, ease, springStep, noise1, TAU, type V3, type RGB } from './util';
 import { W, H } from './gl';
 
-export type V3 = [number, number, number];
-export type RGB = [number, number, number];
+/** Canonical definitions live in ./util; re-exported for backward compatibility. */
+export type { V3, RGB };
 
 export const vadd = (a: V3, b: V3): V3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
 export const vsub = (a: V3, b: V3): V3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -36,6 +36,7 @@ export const vrot = (v: V3, k: V3, a: number): V3 => {
 };
 
 /** Orthonormal pinhole camera: position, basis (right, up, forward), focal length in px. */
+/** @deprecated Legacy CPU projection camera; use THREE cameras / CameraRig. */
 export interface Cam {
   p: V3;
   R: V3;
@@ -146,6 +147,7 @@ export function camFromKey(k: Key, hit = 0, t = 0, cx = W / 2, cy = H / 2): Cam 
 }
 
 /** Project a 3D world point; returns null if behind near plane (0.05m). */
+/** @deprecated Legacy CPU projection helper. */
 export function proj(c: Cam, X: number, Y: number, Z: number): [number, number] | null {
   const rx = X - c.p[0], ry = Y - c.p[1], rz = Z - c.p[2];
   const z = rx * c.F[0] + ry * c.F[1] + rz * c.F[2];
@@ -161,6 +163,7 @@ export function depth(c: Cam, X: number, Y: number, Z: number): number {
 }
 
 /** Near-clips and projects a line segment into outP[0..3]; outP[4] = mean depth. Returns false if culled. */
+/** @deprecated Legacy CPU projection helper. */
 export function clipSeg(
   c: Cam,
   ax: number, ay: number, az: number,
@@ -191,6 +194,7 @@ export function clipSeg(
 }
 
 /** Computes a 2D affine transform mapping canvas local space (px) onto a world plane at P. */
+/** @deprecated Legacy CPU projection helper. */
 export function planeAffine(
   c: Cam,
   P: V3,
@@ -222,6 +226,7 @@ export function planeAffine(
 }
 
 /** Billboard affine: guarantees upright, left-to-right text facing camera directly. */
+/** @deprecated Legacy CPU projection helper. */
 export function billboardAffine(
   c: Cam,
   P: V3,

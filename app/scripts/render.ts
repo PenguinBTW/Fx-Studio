@@ -5,6 +5,7 @@
 //   plates:  bun scripts/render.ts plates   (renders one representative JPEG per plate into public/plates/ (used by the outro's rewind), times from plates.json or entry midpoints)
 //   perf:    bun scripts/render.ts perf --from 20 --to 25 [--only ids] [--samples 1] [--shutter 0.5]   (avg ms per frame incl. GPU sync and the export's pixel readback)
 //   video:   bun scripts/render.ts video [--from 0] [--to 156.65] [--fps 60] [--crf 16] [--x264 aq-mode=3] [--gpu] [--gpu-encoder h264_amf] [--samples 1] [--shutter 0.5] [--out ../out/motion.mp4] [--noaudio]
+//            --mix mix.json [--foley-out guide.wav] multi-track mixdown (docs/audio/mixdown.md); --events-out events.json writes the resolved event table (docs/audio/events.md)
 //            --gpu enables AMD AMF hardware video encoding (h264_amf, hevc_amf, av1_amf), offloading CPU load;
 //            --samples N averages N sub-frames per frame over shutter×(1/fps): motion blur + temporal AA;
 //            --samples auto picks the count per frame (4, 12, 36, 108 or 324, see Engine.render)
@@ -207,8 +208,33 @@ async function video(page: Page, from: number, to: number, fps: number, out: str
   const crfVal = opt('crf') ? Number(opt('crf')) : (gpuEncode ? 22 : undefined);
   const explicitAudio = opt('audio');
   const defaultAudio = path.join(APP, 'public/audio/audio.mp3');
-  const audio = explicitAudio ? resolveOut(explicitAudio) : (existsSync(defaultAudio) ? defaultAudio : '');
-  const hasAudio = !flag('noaudio') && existsSync(audio);
+  let audio = explicitAudio ? resolveOut(explicitAudio) : (existsSync(defaultAudio) ? defaultAudio : '');
+  let hasAudio = !flag('noaudio') && existsSync(audio);
+  let mixedAudio = false;
+  const mixPath = opt('mix');
+  const eventsOut = opt('events-out');
+  if (eventsOut || (mixPath && !flag('noaudio'))) {
+    const evMod = await import('../src/engine/events');
+    const projName = opt('project') ?? JSON.parse(await Bun.file(path.join(APP, 'src/scenes/active.json')).text()).project;
+    const manifest = await Bun.file(path.join(APP, 'src/scenes', projName, 'project.json')).json();
+    const analysisPath = opt('analysis') ? resolveOut(opt('analysis')) : path.join(APP, 'public/data/audio.json');
+    const analysis = existsSync(analysisPath) ? await Bun.file(analysisPath).json() : null;
+    const registry = new evMod.EventRegistry();
+    try { registry.load(await page.evaluate(() => (globalThis as any).__fxEvents?.dump?.() ?? {})); } catch {}
+    const events = evMod.resolveEvents(manifest, analysis, { fps, registry });
+    const evFile = eventsOut ? resolveOut(eventsOut) : path.join(outDir, 'events.json');
+    await Bun.write(evFile, JSON.stringify({ fps, events }, null, 2));
+    console.log(`wrote ${evFile} (${events.length} events)`);
+    if (mixPath && !flag('noaudio')) {
+      const { mixdown } = await import('./mixdown');
+      const mixWav = path.join(outDir, path.basename(out).replace(/\.[^.]+$/, '') + '.mix.wav');
+      const foley = opt('foley-out');
+      await mixdown({ mix: resolveOut(mixPath), events: { events }, from, to, out: mixWav, foleyOut: foley ? resolveOut(foley) : undefined });
+      audio = mixWav;
+      hasAudio = true;
+      mixedAudio = true;
+    }
+  }
   const exportOpts: ExportVideoOptions = {
     format,
     outPath: out,
@@ -218,6 +244,7 @@ async function video(page: Page, from: number, to: number, fps: number, out: str
     from,
     to,
     audioTrack: hasAudio ? audio : undefined,
+    audioMixed: mixedAudio || undefined,
     transparent: flag('transparent') || format === 'webm-alpha' || format === 'prores-4444',
     gpu: gpuEncode,
     gpuEncoder: (opt('gpu-encoder', 'h264_amf') as any),

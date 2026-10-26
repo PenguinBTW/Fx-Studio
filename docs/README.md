@@ -1,4 +1,4 @@
-# f(x) Studio Documentation Hub (v0.6.1)
+# f(x) Studio Documentation Hub (v0.7.0)
 
 Welcome to the central documentation hub for **f(x) Studio** (also referred to as the **Agentic Motion Design Toolset**).
 
@@ -11,12 +11,13 @@ This library provides comprehensive architectural specifications, developer auth
 ```
 docs/
 ├── changelog/                        # Release records & stability bug fix reports
+│   ├── v0.7.0-release-record.md      # v0.7.0 engine overhaul & physical optics release record
 │   ├── v0.6.1-bug-fix-report.md      # v0.6.1 stability & engine audit report (24 fixes)
 │   └── v0.6.0-release-record.md      # v0.6.0 execution record (Materials, 3D Text, Optics)
 │
 ├── architecture/                     # Core engine runtime & low-level GL pipeline
 │   ├── engine-overview.md            # High-level architecture, dataflow & execution lifecycle
-│   ├── modules-reference.md          # Complete API reference & buffer layouts for universal engine modules (v0.6.1)
+│   ├── modules-reference.md          # Complete API reference & buffer layouts for universal engine modules (v0.7.0)
 │   ├── gl-compositor-pipeline.md     # HalfFloat HDR targets, resetState(), FSPass, post-processing
 │   └── transitions-system.md         # Bespoke transition architecture, sampleScene, overlayTextDuck
 │
@@ -68,7 +69,20 @@ docs/
 * [**Engine Overview & Core Invariants**](architecture/engine-overview.md): System architecture, Mermaid dataflow diagram, core invariants ($f(t)$, WebGL state cache, HalfFloat HDR linear targets, zero-allocation render loop), and execution lifecycle stages.
 * [**Modules Reference & API Signatures**](architecture/modules-reference.md): Full TypeScript signatures, buffer layouts, and usage examples for all universal engine modules (v0.6.0) (`rig.ts`, `transform.ts`, `text.ts`, `sdf.ts`, `motion.ts`, `particles.ts`, `graph.ts`, `scenegraph.ts`, `export.ts`, `tokens.ts`, `heal.ts`, `dsl.ts`, and `lines.ts`).
 * [**GL Compositor & Post-Processing Pipeline**](architecture/gl-compositor-pipeline.md): HalfFloat HDR linear render targets (`makeRT`), WebGL state cache preservation (`renderer.resetState()`), full-screen passes (`FSPass`), and optical post-processing (`post.ts`: bloom, halation, chromatic aberration, grain, trauma shake).
+* [**Post-FX (grade, true black, tone map, photon optics, god-ray tiers)**](engine/post-fx.md): per-frame `grade` API + `gradeMix`, exact-zero `fade`/`level`, `blackPoint`, `toneMap` (legacy/aces/agx + hue-preserving), diffraction-spike optics pass, 10/24/48-step god-rays. Tests: `bun run test:post`.
 * [**Bespoke Transitions Engine & Continuity Architecture**](architecture/transitions-system.md): Philosophy of bespoke motivated transitions over canned wipes, the three paradigms (standalone blocks, scene-internal handoffs, utility fallbacks), object-level choreography via `sampleScene`, the `overlayTextDuck(tin, tout)` broadcast contract, authoring tutorial, and seam stitch auditing.
+
+* [**Spectrum / Colour Science**](engine/spectrum.md): `engine/spectrum.ts` + GLSL mirror: wavelength and blackbody to linear sRGB, equal-energy dispersion samples, Oklab helpers, emission-line constants, `bun run test:spectrum`.
+* [**Refraction & Physical Dispersion**](engine/refract.md): `engine/refract.ts` + GLSL mirror: Cauchy dispersion $n(\lambda) = A + B/\lambda^2$, dielectric Fresnel reflection/transmission, total internal reflection, Descartes spherical droplet caustics (primary/secondary rainbow angles $42.37^\circ / 50.41^\circ$), `bun run test:refract`.
+* [**Large Particles (P5)**](engine/particles-large.md): `engine/particles_large.ts` (`ctx.largeParticles`): stateless closed-form instanced particles up to 500k, analytic trails, press/spiral/fall/star/free field modes via `curlNoise3J`, blackbody/wavelength colour, CoC hooks, `bun run test:particles`.
+* [**Ribbons & Aurora Curtains**](engine/ribbon.md): `engine/ribbon.ts` & `engine/aurora.ts`: Bishop Rotation-Minimizing Frame (RMF) double-reflection parallel transport, in-place GPU buffer updates, quantum atmospheric emission lines (391.4 nm, 557.7 nm, 630.0 nm), `bun run test:ribbons`.
+* [**Curve Morph**](engine/curvemorph.md): `engine/curvemorph.ts`: resample/align polylines (reversal, closed rotation), eased `morph` and multi-curve `tween`, `pathToStreamline` smoothing, min-twist ribbon frames, tree-to-curve and tree-to-tree branch correspondence, `bun run test:curvemorph`.
+* [**Tree Walk & Streamline Untangling**](engine/treewalk.md): `engine/treewalk.ts`: hierarchical branching tree extraction from 3D random walks (`mapWalkToTree`), streamline untangling (`walkToStreamlines`) with $>60\%$ path length reduction and $>90\%$ curvature reduction, `bun run test:treewalk`.
+* [**Camera Rig Solvers**](engine/rig-solvers.md): Pure analytic helpers in `rig.ts`: dolly-zoom (constant apparent size across fov), polar orbit, depth-DoF `focusDistance`, and legacy radial focus radius.
+* [**Text P10a**](engine/text-p10.md): `engine/textfx.ts`: odometer rolling counter, note-synced stroke-plotted reveal with pen glow, letter-level position hooks (2D and extruded), word/char reveal on extruded type, `bun run test:text`.
+* [**In-World Text Lighting & Occlusion**](engine/text-lighting.md): `engine/text_lighting.ts`: depth buffer participation (`depthWrite: true`), physical PBR materials, thin-lens CoC DoF blur, particle eye-depth partitioning, volume-preserving repulsive deflection, `bun run test:text-lighting`.
+* [**Volumetric Raymarching**](engine/raymarch.md): `engine/raymarch.ts`: composable raymarching architecture (`buildMarcher`), multi-tier budgets (preview tier 0 under 33 ms), volumetric emission/scattering, Henyey-Greenstein phase, depth-aware upsampling, `bun scripts/time_raymarch.ts`.
+* [**Noise Library**](engine/noise.md): `engine/glsl/noise.ts` + `engine/noise.ts` (seeded TS mirror): integer-hash simplex with analytic gradient/Hessian, fbm, divergence-free `curlNoise3` with Jacobian, Voronoi F1/F2/cell/ID, interleaved gradient noise jitter, audit of existing noises, `bun run test:noise`.
 
 ### B. Visual Diagnostics (Sight Over Numbers)
 * [**Visual Diagnostics Suite Overview**](diagnostics/overview.md): Philosophy of sight over numbers, four operational instruments, modular architecture, execution turnaround benchmarks, and agent repair decision trees.
@@ -94,15 +108,22 @@ docs/
 ### E. Command-Line Interface & Video Export
 * [**Render CLI Reference (`bun scripts/render.ts`)**](cli/render-cli-reference.md): Complete reference for all subcommands (`stills`, `sheet`, `video`, `perf`, `motion`, `onion`, `godview`, `stitch`, `compare`), global parameters, and defaults.
 * [**Headless Video Export Pipeline & Acceleration**](cli/video-export-pipeline.md): Playwright frame evaluation, streaming rawvideo pipe to `Bun.spawn` FFmpeg, GPU hardware encoding (AMD AMF, NVIDIA NVENC), transparent alpha formats (ProRes 4444, WebM VP9), and sub-frame adaptive supersampling.
-* [**Automated Engine Verification & Test Suites**](cli/testing-and-verification.md): Milestone regression suites (`test_milestone1.ts` through `test_milestone4.ts`), transition sweeps, visual tool tests, and continuous integration testing protocols.
+* [**Long-Timeline Rendering (`docs/cli/long-timeline.md`)**](cli/long-timeline.md): declaring 10+ scenes / 9 transitions, memory smoke test (`smoke_memory.ts`), per-act chunked render + join (`render_chunks.ts`), `--scale 2` (4K) status, measured ms/frame.
+* [**Automated Engine Verification & Test Suites**](cli/testing-and-verification.md): Milestone regression suites (`test_milestone1.ts` through `test_milestone4.ts`), transition sweeps, transition seam checker (`check_seams.ts` / P9), visual tool tests, and continuous integration testing protocols.
 
 ### F. Project Architecture & Manifests
 * [**Multi-Project Workspace & Manifest Architecture**](projects/project-system.md): Multi-project directory structure, `active.json` pointer, `project.json` manifest specification, scene entries, transition declarations, hot module reloading (HMR) isolation, interactive preview player hotkeys, and step-by-step project creation tutorial.
 
 ### G. Changelog & Releases
+* [**v0.7.0 Engine Overhaul & Physical Optics Release Record**](changelog/v0.7.0-release-record.md): Major engine release delivering physical optics (Cauchy dispersion, Descartes caustics, Wyman-Sloan spectrum), Bishop RMF ribbons, divergence-free curl noise, 500k GPU particles, multi-track audio mixdown (-14 LUFS / -1 dBTP), in-world kinetic typography, and automated seam continuity.
 * [**v0.6.1 Bug Fix & Engine Audit Report**](changelog/v0.6.1-bug-fix-report.md): Complete architectural audit and stability report detailing 24 bug fixes across core rendering loops, WebGL state cache isolation, alpha premultiplication, GLTF caching, ODE springs, and FFmpeg pipeline mapping.
 * [**v0.6.0 Execution Record & Release Notes**](changelog/v0.6.0-release-record.md): Complete release notes for engine v0.6.0 (Procedural Materials, 3D Kinetic Typography, Optical DoF & Volumetrics).
 
 ### H. Roadmap & Future Diagnostics
+* [**Claude f(x) Studio Review & Feedback**](feedback/claude_fx_studio_review.md): Autonomous synthesis of Claude's design session experience, tool friction analysis, and architectural recommendations.
 * [**Engine Architecture Review & Execution Record (v0.5.0)**](roadmap/v0.5.0-roadmap-review.md): Complete architectural review and 4-milestone execution record for v0.5.0.
 * [**Proposed Visual Diagnostic Instruments (Roadmap 05–09)**](roadmap/proposed-instruments/README.md): Design specifications and problem statements for proposed instruments 05–09 (Parametric Speed Graph, Gaze Saliency Heatmap, Dynamic Contrast & Legibility, Choreography Gantt & Stagger, and Multi-Aspect Responsive Framing).
+* [**Song Analysis**](audio/song-analysis.md): `scripts/analyze_song.py` usage, tempo map and `tempo_overrides.json` schema, sections, silences, melodic onsets, 60 Hz rms/centroid envelopes.
+* [**SFX Synthesiser**](audio/sfx-synth.md): `bun scripts/sfx/synth.ts` deterministic seeded SFX renderer (48 kHz / 24-bit stereo), recipe library, `sfx_cues.json` format, event-time resolution via `events.json`.
+* [**Event Registry**](audio/events.md): `engine/events.ts` visual event IDs -> times (timeline, transitions, downbeat snap), `events.json` via `render.ts video --events-out`.
+* [**Multi-track Mixdown**](audio/mixdown.md): `render.ts video --mix mix.json` buses, sidechain duck, sample-exact Void Cut gate, two-pass loudnorm, `scripts/verify_audio.py`, `bun scripts/test_mixdown.ts`.

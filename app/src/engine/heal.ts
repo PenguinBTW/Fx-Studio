@@ -1,3 +1,4 @@
+// INTERNAL LEGACY TEST UTILITY: only imported by scripts/test_milestone4.ts; not used by the render pipeline or scenes.
 // Directorial Self-Correction Contract (AgentHeal)
 // Maps signals from diagnostic telemetry and visual instruments (4 implemented, 5 proposed roadmap)
 // into machine-actionable repair directives emitted into findings.json.

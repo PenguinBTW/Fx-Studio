@@ -3,7 +3,7 @@
 // from responsive 2D screen layout (safe-zone pins, title-safe margins, 3D anchor pinning).
 import * as THREE from 'three';
 import { ViewportSpace } from './viewport';
-import { type V3 } from './camera3d';
+import { type V3 } from './util';
 import { W, H } from './gl';
 
 export type ViewportPin =

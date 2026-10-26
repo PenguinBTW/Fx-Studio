@@ -4,8 +4,8 @@
 // singular-safe orthonormal frames, analytical trauma-based procedural shake, and target tracking.
 import * as THREE from 'three';
 import { ViewportSpace } from './viewport';
-import { type V3, type Cam } from './camera3d';
-import { clamp, noise1, TAU } from './util';
+import { type Cam } from './camera3d';
+import { clamp, noise1, TAU, type V3 } from './util';
 import { W, H } from './gl';
 
 export type CameraMode = 'perspective' | 'isometric' | 'orthographic';
@@ -24,8 +24,107 @@ export interface TraumaImpulse {
   decay: number;
 }
 
+export interface DollyZoomResult { position: V3; fov: number; }
+
+const DEG = Math.PI / 180;
+
+/**
+ * Camera distance at which a subject of `widthWorld` spans `screenFraction` of the
+ * frame height for a vertical fov (degrees): d = w / (2 * tan(fov/2) * screenFraction).
+ */
+export function dollyDistance(widthWorld: number, fovDeg: number, screenFraction = 1): number {
+  const safeFov = Math.max(0.01, Math.min(179.99, fovDeg));
+  const safeFrac = Math.max(1e-6, screenFraction);
+  return widthWorld / (2 * Math.tan((safeFov * DEG) / 2) * safeFrac);
+}
+
+/** Pure dolly-zoom: place the camera on the ray `dir` (unit, camera forward) so the subject keeps its screen size at `fovDeg`. */
+export function solveDollyZoom(
+  targetPos: V3, dir: V3, widthWorld: number, fovDeg: number, screenFraction = 1,
+): DollyZoomResult {
+  const d = dollyDistance(widthWorld, fovDeg, screenFraction);
+  return {
+    position: [targetPos[0] - dir[0] * d, targetPos[1] - dir[1] * d, targetPos[2] - dir[2] * d],
+    fov: fovDeg,
+  };
+}
+
+/** Pure dolly-zoom sampler driven by a fov(t) function in degrees. */
+export function dollyZoomAt(
+  targetPos: V3, dir: V3, widthWorld: number, fovOfT: (t: number) => number, t: number, screenFraction = 1,
+): DollyZoomResult {
+  return solveDollyZoom(targetPos, dir, widthWorld, fovOfT(t), screenFraction);
+}
+
+/** Legacy radial autofocus: distance of the projected target from screen centre in the post.ts radial-DoF metric (0 at centre, ~0.57 at the 16:9 corner). */
+export function computeScreenFocusRadius(targetWorldPos: V3, camera: THREE.PerspectiveCamera, aspect: number): number {
+  const v = new THREE.Vector3(targetWorldPos[0], targetWorldPos[1], targetWorldPos[2]).project(camera);
+  return Math.hypot(v.x * 0.5 * aspect, v.y * 0.5);
+}
+
+/**
+ * World distance of `targetPos` along the view axis (what a depth buffer holds), for `depthFocusDist`.
+ * `forward` is the unit view direction; when omitted the Euclidean distance is returned.
+ */
+export function focusDistance(cameraPos: V3, targetPos: V3, forward?: V3): number {
+  const dx = targetPos[0] - cameraPos[0], dy = targetPos[1] - cameraPos[1], dz = targetPos[2] - cameraPos[2];
+  if (!forward) return Math.hypot(dx, dy, dz);
+  return dx * forward[0] + dy * forward[1] + dz * forward[2];
+}
+
+/** Polar orbit position: yaw 0 / pitch 0 sits on +Z of the target; positive pitch raises the camera. */
+export function orbitPosition(targetPos: V3, radius: number, pitchRad: number, yawRad: number): V3 {
+  const cp = Math.cos(pitchRad);
+  return [
+    targetPos[0] + radius * cp * Math.sin(yawRad),
+    targetPos[1] + radius * Math.sin(pitchRad),
+    targetPos[2] + radius * cp * Math.cos(yawRad),
+  ];
+}
+
 export class CameraRig {
   mode: CameraMode = 'perspective';
+
+  static dollyDistance = dollyDistance;
+  static solveDollyZoom = solveDollyZoom;
+  static dollyZoomAt = dollyZoomAt;
+  static computeScreenFocusRadius = computeScreenFocusRadius;
+  static focusDistance = focusDistance;
+  static orbitPosition = orbitPosition;
+
+  /** Unit view direction from position toward target (+Z if coincident). */
+  getForwardVector(): V3 {
+    const dx = this.target[0] - this.position[0];
+    const dy = this.target[1] - this.position[1];
+    const dz = this.target[2] - this.position[2];
+    const len = Math.hypot(dx, dy, dz);
+    return len < 1e-6 ? [0, 0, 1] : [dx / len, dy / len, dz / len];
+  }
+
+  /** Dolly-zoom along the current view direction; also applies position/target/lens to the rig. */
+  dollyZoom(targetPos: V3, widthWorld: number, fovDeg: number, screenFraction = 1): DollyZoomResult {
+    const r = solveDollyZoom(targetPos, this.getForwardVector(), widthWorld, fovDeg, screenFraction);
+    this.position = r.position;
+    this.target = [targetPos[0], targetPos[1], targetPos[2]];
+    this.setFocalLengthPx((H / 2) / Math.tan(fovDeg * DEG / 2));
+    return r;
+  }
+
+  /** Depth-DoF focus distance (world units along the view axis) to a world point. */
+  focusDistance(targetPos: V3): number {
+    return focusDistance(this.position, targetPos, this.getForwardVector());
+  }
+
+  computeScreenFocusRadius(targetWorldPos: V3, camera: THREE.PerspectiveCamera, aspect = W / H): number {
+    return computeScreenFocusRadius(targetWorldPos, camera, aspect);
+  }
+
+  /** Place the camera on a polar orbit around targetPos and aim at it. */
+  orbit(targetPos: V3, radius: number, pitchRad: number, yawRad: number): V3 {
+    this.position = orbitPosition(targetPos, radius, pitchRad, yawRad);
+    this.target = [targetPos[0], targetPos[1], targetPos[2]];
+    return this.position;
+  }
 
   // Active state
   position: V3 = [0, 1.8, -8.0];

@@ -3,7 +3,7 @@
 // directly on the GPU without simulation history or numerical Euler drift.
 // Bit-identical sampling in forward or reverse directions at any sub-frame (1..324 spp).
 import * as THREE from 'three';
-import { type V3 } from './camera3d';
+import { type V3 } from './util';
 
 export interface ParticleEmitterOpts {
   capacity?: number;

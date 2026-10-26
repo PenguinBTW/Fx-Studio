@@ -1,14 +1,16 @@
 {
   "name": "app",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "module": "index.ts",
   "type": "module",
   "private": true,
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.scripts.json",
-    "test": "bun scripts/test_milestones.ts"
+    "typecheck": "tsc --noEmit",
+    "test": "bun scripts/test_milestones.ts",
+    "test:seams": "bun scripts/check_seams.ts",
+    "check:determinism": "bun scripts/check_determinism.ts"
   },
   "devDependencies": {
     "@types/bun": "latest",
@@ -22,6 +24,7 @@
   },
   "dependencies": {
     "opentype.js": "^2.0.0",
+    "polygon-clipping": "^0.15.7",
     "three": "^0.186.0"
   }
 }

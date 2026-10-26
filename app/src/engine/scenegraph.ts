@@ -3,7 +3,7 @@
 // role querying, geometric collision detection, and zero-annotation telemetry synchronization.
 import * as THREE from 'three';
 import { ViewportSpace } from './viewport';
-import { type V3 } from './camera3d';
+import { type V3 } from './util';
 import { TransformNode } from './transform';
 import { W, H } from './gl';
 

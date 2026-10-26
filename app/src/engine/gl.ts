@@ -36,9 +36,11 @@ export function rtScale(rt: THREE.WebGLRenderTarget | null) { return rt ? RT_SCA
  * HDR render target. `w`,`h` are LOGICAL px: the target is allocated at w*SCALE x h*SCALE
  * (pass `pxScale: 1` for data-sized targets whose resolution must not follow the output scale).
  */
-export function makeRT(w = W, h = H, opts: Partial<THREE.RenderTargetOptions> & { pxScale?: number } = {}) {
-  const { pxScale = SCALE, ...o } = opts;
-  const rt = new THREE.WebGLRenderTarget(Math.max(1, Math.round(w * pxScale)), Math.max(1, Math.round(h * pxScale)), {
+export function makeRT(w = W, h = H, opts: Partial<Omit<THREE.RenderTargetOptions, 'depthTexture'>> & { pxScale?: number; depthTexture?: boolean | THREE.DepthTexture } = {}) {
+  const { pxScale = SCALE, depthTexture, ...o } = opts;
+  const width = Math.max(1, Math.round(w * pxScale));
+  const height = Math.max(1, Math.round(h * pxScale));
+  const rt = new THREE.WebGLRenderTarget(width, height, {
     type: THREE.HalfFloatType,
     format: THREE.RGBAFormat,
     minFilter: THREE.LinearFilter,
@@ -46,6 +48,14 @@ export function makeRT(w = W, h = H, opts: Partial<THREE.RenderTargetOptions> & 
     depthBuffer: true,
     ...o,
   });
+  if (depthTexture === true) {
+    const dt = new THREE.DepthTexture(width, height);
+    dt.type = THREE.UnsignedIntType;
+    dt.format = THREE.DepthFormat;
+    rt.depthTexture = dt;
+  } else if (depthTexture instanceof THREE.DepthTexture) {
+    rt.depthTexture = depthTexture;
+  }
   RT_SCALE.set(rt, pxScale);
   return rt;
 }

@@ -75,6 +75,8 @@ export interface ExportVideoOptions {
   from?: number;
   to?: number;
   audioTrack?: string;
+  /** audioTrack is a finished mixdown already windowed to [from,to]: no -ss/-t, explicit pad/trim instead of -shortest. */
+  audioMixed?: boolean;
   transparent?: boolean;
   samples?: number | 'auto';
   shutter?: number;
@@ -151,10 +153,10 @@ export class ExportPipeline {
 
     // Optional audio track input
     if (opts.audioTrack) {
-      if (opts.from !== undefined) {
+      if (opts.from !== undefined && !opts.audioMixed) {
         args.push('-ss', String(opts.from));
       }
-      if (opts.from !== undefined && opts.to !== undefined) {
+      if (opts.from !== undefined && opts.to !== undefined && !opts.audioMixed) {
         args.push('-t', String(opts.to - opts.from));
       }
       args.push('-i', opts.audioTrack);
@@ -191,7 +193,11 @@ export class ExportPipeline {
     }
 
     // Audio encoding options
-    if (opts.audioTrack) {
+    if (opts.audioTrack && opts.audioMixed) {
+      const nFrames = Math.round((opts.to ?? 0) * fps) - Math.round((opts.from ?? 0) * fps);
+      const vdur = (nFrames / fps).toFixed(6);
+      args.push('-map', '0:v:0', '-map', '1:a:0?', '-af', `apad=whole_dur=${vdur},atrim=duration=${vdur}`, '-c:a', 'aac', '-b:a', '320k', '-t', vdur);
+    } else if (opts.audioTrack) {
       args.push('-map', '0:v:0', '-map', '1:a:0?', '-c:a', 'aac', '-b:a', '320k', '-shortest');
     } else {
       args.push('-map', '0:v:0');

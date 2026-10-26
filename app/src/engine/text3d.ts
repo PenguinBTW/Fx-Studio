@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { ViewportSpace } from './viewport';
+import { getGlyph } from './vectorglyphs';
+import { revealProgress, type RevealOpts } from './textfx';
 
 export interface ExtrudedTextOpts {
   size?: number; // Character height in world units (default 1.0)
@@ -8,226 +10,24 @@ export interface ExtrudedTextOpts {
   bevelThickness?: number; // Bevel depth (default 0.03)
   bevelSize?: number; // Bevel outward spread (default 0.02)
   bevelSegments?: number; // Bevel smoothness steps (default 3)
-  letterSpacing?: number; // Extra space between glyphs (default 0.15)
+  letterSpacing?: number; // Extra space between glyphs (default 0.18)
+  fixedAdvance?: boolean; // Legacy fixed 0.85 em advance per glyph instead of per-glyph widths
   material?: THREE.Material | THREE.Material[]; // Custom material(s)
   castShadow?: boolean;
   receiveShadow?: boolean;
 }
 
-/**
- * Procedural Geometric Vector Glyph Path Builder.
- * Generates clean structural neo-grotesque vector paths (0..1 normalized box)
- * with true inner holes for letters like A, B, D, O, P, Q, R, 0, 4, 6, 8, 9.
- */
-function createGlyphShape(char: string): THREE.Shape | THREE.Shape[] | null {
-  const c = char.toUpperCase();
-  if (c === ' ' || c === '\t' || c === '\r' || c === '\n') return null;
+export { VectorGlyphs } from './vectorglyphs';
 
-  const shape = new THREE.Shape();
-
-  switch (c) {
-    case 'I':
-    case '1':
-      shape.moveTo(0.35, 0.0);
-      shape.lineTo(0.65, 0.0);
-      shape.lineTo(0.65, 1.0);
-      shape.lineTo(0.35, 1.0);
-      shape.closePath();
-      return shape;
-
-    case 'L':
-      shape.moveTo(0.15, 0.0);
-      shape.lineTo(0.85, 0.0);
-      shape.lineTo(0.85, 0.22);
-      shape.lineTo(0.40, 0.22);
-      shape.lineTo(0.40, 1.0);
-      shape.lineTo(0.15, 1.0);
-      shape.closePath();
-      return shape;
-
-    case 'T':
-      shape.moveTo(0.38, 0.0);
-      shape.lineTo(0.62, 0.0);
-      shape.lineTo(0.62, 0.78);
-      shape.lineTo(0.90, 0.78);
-      shape.lineTo(0.90, 1.0);
-      shape.lineTo(0.10, 1.0);
-      shape.lineTo(0.10, 0.78);
-      shape.lineTo(0.38, 0.78);
-      shape.closePath();
-      return shape;
-
-    case 'H':
-      shape.moveTo(0.15, 0.0);
-      shape.lineTo(0.38, 0.0);
-      shape.lineTo(0.38, 0.40);
-      shape.lineTo(0.62, 0.40);
-      shape.lineTo(0.62, 0.0);
-      shape.lineTo(0.85, 0.0);
-      shape.lineTo(0.85, 1.0);
-      shape.lineTo(0.62, 1.0);
-      shape.lineTo(0.62, 0.60);
-      shape.lineTo(0.38, 0.60);
-      shape.lineTo(0.38, 1.0);
-      shape.lineTo(0.15, 1.0);
-      shape.closePath();
-      return shape;
-
-    case 'E':
-      shape.moveTo(0.15, 0.0);
-      shape.lineTo(0.85, 0.0);
-      shape.lineTo(0.85, 0.22);
-      shape.lineTo(0.40, 0.22);
-      shape.lineTo(0.40, 0.40);
-      shape.lineTo(0.75, 0.40);
-      shape.lineTo(0.75, 0.60);
-      shape.lineTo(0.40, 0.60);
-      shape.lineTo(0.40, 0.78);
-      shape.lineTo(0.85, 0.78);
-      shape.lineTo(0.85, 1.0);
-      shape.lineTo(0.15, 1.0);
-      shape.closePath();
-      return shape;
-
-    case 'F':
-      shape.moveTo(0.15, 0.0);
-      shape.lineTo(0.40, 0.0);
-      shape.lineTo(0.40, 0.40);
-      shape.lineTo(0.75, 0.40);
-      shape.lineTo(0.75, 0.60);
-      shape.lineTo(0.40, 0.60);
-      shape.lineTo(0.40, 0.78);
-      shape.lineTo(0.85, 0.78);
-      shape.lineTo(0.85, 1.0);
-      shape.lineTo(0.15, 1.0);
-      shape.closePath();
-      return shape;
-
-    case 'C':
-      shape.moveTo(0.85, 0.22);
-      shape.lineTo(0.85, 0.0);
-      shape.lineTo(0.20, 0.0);
-      shape.lineTo(0.20, 1.0);
-      shape.lineTo(0.85, 1.0);
-      shape.lineTo(0.85, 0.78);
-      shape.lineTo(0.45, 0.78);
-      shape.lineTo(0.45, 0.22);
-      shape.closePath();
-      return shape;
-
-    case 'U':
-      shape.moveTo(0.15, 1.0);
-      shape.lineTo(0.15, 0.0);
-      shape.lineTo(0.85, 0.0);
-      shape.lineTo(0.85, 1.0);
-      shape.lineTo(0.60, 1.0);
-      shape.lineTo(0.60, 0.22);
-      shape.lineTo(0.40, 0.22);
-      shape.lineTo(0.40, 1.0);
-      shape.closePath();
-      return shape;
-
-    case 'O':
-    case '0': {
-      shape.moveTo(0.10, 0.0);
-      shape.lineTo(0.90, 0.0);
-      shape.lineTo(0.90, 1.0);
-      shape.lineTo(0.10, 1.0);
-      shape.closePath();
-
-      // Inner Hole
-      const hole = new THREE.Path();
-      hole.moveTo(0.35, 0.22);
-      hole.lineTo(0.65, 0.22);
-      hole.lineTo(0.65, 0.78);
-      hole.lineTo(0.35, 0.78);
-      hole.closePath();
-      shape.holes.push(hole);
-      return shape;
-    }
-
-    case 'A': {
-      shape.moveTo(0.10, 0.0);
-      shape.lineTo(0.32, 0.0);
-      shape.lineTo(0.40, 0.35);
-      shape.lineTo(0.60, 0.35);
-      shape.lineTo(0.68, 0.0);
-      shape.lineTo(0.90, 0.0);
-      shape.lineTo(0.60, 1.0);
-      shape.lineTo(0.40, 1.0);
-      shape.closePath();
-
-      const hole = new THREE.Path();
-      hole.moveTo(0.43, 0.52);
-      hole.lineTo(0.57, 0.52);
-      hole.lineTo(0.50, 0.78);
-      hole.closePath();
-      shape.holes.push(hole);
-      return shape;
-    }
-
-    case 'P': {
-      shape.moveTo(0.15, 0.0);
-      shape.lineTo(0.40, 0.0);
-      shape.lineTo(0.40, 0.45);
-      shape.lineTo(0.85, 0.45);
-      shape.lineTo(0.85, 1.0);
-      shape.lineTo(0.15, 1.0);
-      shape.closePath();
-
-      const hole = new THREE.Path();
-      hole.moveTo(0.40, 0.65);
-      hole.lineTo(0.65, 0.65);
-      hole.lineTo(0.65, 0.82);
-      hole.lineTo(0.40, 0.82);
-      hole.closePath();
-      shape.holes.push(hole);
-      return shape;
-    }
-
-    case '-':
-    case '_':
-      shape.moveTo(0.15, 0.40);
-      shape.lineTo(0.85, 0.40);
-      shape.lineTo(0.85, 0.55);
-      shape.lineTo(0.15, 0.55);
-      shape.closePath();
-      return shape;
-
-    case ':': {
-      shape.moveTo(0.38, 0.20);
-      shape.lineTo(0.62, 0.20);
-      shape.lineTo(0.62, 0.38);
-      shape.lineTo(0.38, 0.38);
-      shape.closePath();
-
-      const dot2 = new THREE.Shape();
-      dot2.moveTo(0.38, 0.62);
-      dot2.lineTo(0.62, 0.62);
-      dot2.lineTo(0.62, 0.80);
-      dot2.lineTo(0.38, 0.80);
-      dot2.closePath();
-      return [shape, dot2];
-    }
-
-    default: {
-      // Robust box-glyph fallback for arbitrary characters
-      shape.moveTo(0.15, 0.0);
-      shape.lineTo(0.85, 0.0);
-      shape.lineTo(0.85, 1.0);
-      shape.lineTo(0.15, 1.0);
-      shape.closePath();
-
-      const hole = new THREE.Path();
-      hole.moveTo(0.38, 0.25);
-      hole.lineTo(0.62, 0.25);
-      hole.lineTo(0.62, 0.75);
-      hole.lineTo(0.38, 0.75);
-      hole.closePath();
-      shape.holes.push(hole);
-      return shape;
-    }
-  }
+export interface ExtrudedGlyph {
+  index: number; // index into the source string
+  char: string;
+  word: number;
+  center: [number, number, number]; // world-space ink box centre
+  min: [number, number, number];
+  max: [number, number, number];
+  radius: number; // half-diagonal of the ink box (bounding sphere for deflection)
+  screen: [number, number, number] | null; // [x, y, viewDepth] in logical px, or null if off-camera
 }
 
 /**
@@ -246,9 +46,12 @@ export class ExtrudedText {
     const bevelSize = opts.bevelSize ?? 0.02;
     const bevelSegments = opts.bevelSegments ?? 3;
     const letterSpacing = opts.letterSpacing ?? 0.18;
+    const fixedAdvance = opts.fixedAdvance ?? false;
 
     const group = new THREE.Group();
     let currentX = 0;
+    let wordIdx = 0;
+    let prevSpace = false;
 
     const defaultMaterial = new THREE.MeshStandardMaterial({
       color: 0xe8e4da,
@@ -261,15 +64,19 @@ export class ExtrudedText {
       const char = text[i]!;
       if (char === ' ' || char === '\t') {
         currentX += size * 0.5;
+        if (!prevSpace) wordIdx++;
+        prevSpace = true;
         continue;
       }
       if (char === '\n' || char === '\r') {
         continue;
       }
 
-      const glyph = createGlyphShape(char);
-      if (glyph) {
-        const shapes = Array.isArray(glyph) ? glyph : [glyph];
+      prevSpace = false;
+      const info = getGlyph(char);
+      const adv = info && !fixedAdvance ? info.advance : 0.85;
+      if (info) {
+        const shapes = info.shapes;
         const geom = new THREE.ExtrudeGeometry(shapes, {
           depth,
           bevelEnabled,
@@ -282,22 +89,81 @@ export class ExtrudedText {
         geom.scale(size, size, size);
 
         const mesh = new THREE.Mesh(geom, material);
-        mesh.position.set(currentX, 0, 0);
+        mesh.position.set(fixedAdvance ? currentX : currentX + size * (adv - (info.x1 - info.x0)) / 2 - size * info.x0, 0, 0);
         mesh.castShadow = opts.castShadow ?? true;
         mesh.receiveShadow = opts.receiveShadow ?? true;
+        mesh.userData.glyph = { index: i, char, word: wordIdx, advance: size * adv };
         group.add(mesh);
       }
 
-      currentX += size * (0.85 + letterSpacing);
+      currentX += size * (adv + letterSpacing);
     }
 
     // Center child meshes horizontally around origin
     const totalWidth = currentX - size * letterSpacing;
     for (const child of group.children) {
       child.position.x -= totalWidth / 2;
+      child.userData.glyph.base = [child.position.x, child.position.y, child.position.z];
     }
 
     return group;
+  }
+
+  /**
+   * Letter-level hook: world position/extent of every glyph (ink box), plus 1080p screen position when a
+   * camera is given. Call after the group's transform and the camera are final for the frame.
+   */
+  static glyphs(group: THREE.Group, cam?: THREE.Camera, viewportW = 1920, viewportH = 1080): ExtrudedGlyph[] {
+    group.updateMatrixWorld(true);
+    const out: ExtrudedGlyph[] = [];
+    const box = new THREE.Box3();
+    const c = new THREE.Vector3(), sz = new THREE.Vector3();
+    for (const child of group.children) {
+      const g = child.userData.glyph as { index: number; char: string; word: number } | undefined;
+      if (!g || !(child as THREE.Mesh).isMesh) continue;
+      box.setFromObject(child);
+      box.getCenter(c);
+      box.getSize(sz);
+      const center: [number, number, number] = [c.x, c.y, c.z];
+      out.push({
+        index: g.index, char: g.char, word: g.word,
+        center,
+        min: [box.min.x, box.min.y, box.min.z],
+        max: [box.max.x, box.max.y, box.max.z],
+        radius: Math.hypot(sz.x, sz.y, sz.z) / 2,
+        screen: cam ? ViewportSpace.worldToScreen(center, cam, viewportW, viewportH) : null,
+      });
+    }
+    return out.sort((a, b) => a.index - b.index);
+  }
+
+  /**
+   * Word-by-word or letter-by-letter reveal driven by time: sets visibility/scale/offset per glyph (and a
+   * cloned-material opacity for 'fade'). Pure function of t; call every frame.
+   */
+  static reveal(group: THREE.Group, t: number, o: RevealOpts & { slideDistance?: number }): void {
+    const meshes = group.children.filter((ch) => ch.userData.glyph) as THREE.Mesh[];
+    const n = o.unit === 'word' ? (meshes.length ? Math.max(...meshes.map((m) => m.userData.glyph.word)) + 1 : 0) : meshes.length;
+    const slide = o.slideDistance ?? 0.4;
+    meshes.forEach((m, k) => {
+      const g = m.userData.glyph;
+      const i = o.unit === 'word' ? g.word : k;
+      const p = revealProgress(t, o, i, n);
+      const motion = o.motion ?? 'fade';
+      m.visible = p > 0;
+      m.position.set(g.base[0], g.base[1] + (motion === 'slide-up' ? (1 - p) * -slide : 0), g.base[2]);
+      m.scale.setScalar(motion === 'scale-pop' ? 0.3 + 0.7 * p : 1);
+      if (motion === 'fade' || motion === 'slide-up') {
+        if (!m.userData.fadeMat) {
+          const src = Array.isArray(m.material) ? m.material[0]! : m.material;
+          const mat = src.clone();
+          mat.transparent = true;
+          m.userData.fadeMat = mat;
+          m.material = mat;
+        }
+        (m.material as THREE.Material).opacity = p;
+      }
+    });
   }
 
   /**

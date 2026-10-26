@@ -13,6 +13,7 @@ import { SDFBatch, type SDFRectOpts } from './sdf';
 import { KineticText, type KineticTextOptions } from './text';
 import { LineBatch } from './lines';
 import { AnalyticalParticles, type ParticleEmitterOpts } from './particles';
+import { LargeParticles } from './particles_large';
 import { LayoutNode, TransformNode } from './transform';
 import { motion, MotionBus } from './motion';
 import { Layer2D, W, H, clearRT } from './gl';
@@ -26,6 +27,7 @@ import { ExtrudedText, type ExtrudedTextOpts } from './text3d';
 export interface SceneContextOptions {
   rigMode?: CameraMode;
   particleCapacity?: number;
+  largeParticleCapacity?: number;
   lineCapacity?: number;
   sdfCapacity?: number;
 }
@@ -36,10 +38,12 @@ export class SceneContext {
   readonly compositor: CompositorGraph;
   readonly rig: CameraRig;
   readonly threeCam: THREE.PerspectiveCamera | THREE.OrthographicCamera;
-  readonly particles: AnalyticalParticles;
-  readonly sdf: SDFBatch;
-  readonly lines: LineBatch;
-  readonly layer2d: Layer2D;
+  private _particles?: AnalyticalParticles;
+  private _largeParticles?: LargeParticles;
+  private _sdf?: SDFBatch;
+  private _lines?: LineBatch;
+  private _layer2d?: Layer2D;
+  private readonly capacities: { particles: number; largeParticles: number; lines: number; sdf: number };
   readonly motion: MotionBus = motion;
 
   /** Standard 3D scene container for Three.js meshes, lights, and GLTF models */
@@ -86,10 +90,31 @@ export class SceneContext {
       this.threeCam = new THREE.OrthographicCamera(-W / 2, W / 2, H / 2, -H / 2, 0.1, 2000);
     }
 
-    this.particles = new AnalyticalParticles(opts?.particleCapacity ?? 1024);
-    this.lines = new LineBatch(opts?.lineCapacity ?? 2048, { screen2D: false, blend: 'normal' });
-    this.sdf = new SDFBatch(opts?.sdfCapacity ?? 2048);
-    this.layer2d = new Layer2D();
+    this.capacities = {
+      particles: opts?.particleCapacity ?? 1024,
+      largeParticles: opts?.largeParticleCapacity ?? 100000,
+      lines: opts?.lineCapacity ?? 2048,
+      sdf: opts?.sdfCapacity ?? 2048,
+    };
+  }
+
+  get particles(): AnalyticalParticles {
+    return (this._particles ??= new AnalyticalParticles(this.capacities.particles));
+  }
+  get largeParticles(): LargeParticles {
+    return (this._largeParticles ??= new LargeParticles(this.capacities.largeParticles));
+  }
+
+  get lines(): LineBatch {
+    return (this._lines ??= new LineBatch(this.capacities.lines, { screen2D: false, blend: 'normal' }));
+  }
+
+  get sdf(): SDFBatch {
+    return (this._sdf ??= new SDFBatch(this.capacities.sdf));
+  }
+
+  get layer2d(): Layer2D {
+    return (this._layer2d ??= new Layer2D());
   }
 
   get renderer(): THREE.WebGLRenderer {
@@ -430,16 +455,18 @@ export class SceneContext {
     }
 
     // 1. Flush 3D lines if any were queued
-    if (this.lines.count > 0) {
-      this.lines.render(this.renderer, out, this.threeCam);
+    if (this._lines && this._lines.count > 0) {
+      this._lines.render(this.renderer, out, this.threeCam);
     }
 
     // 2. Flush SDF quads
-    this.sdf.flush(this.renderer, out);
+    this._sdf?.flush(this.renderer, out);
 
-    // 3. Upload and composite 2D Canvas Layer
-    const layerTex = this.layer2d.upload();
-    this.sceneCtx.comp.draw(this.renderer, layerTex, out, { mode: 'normal', opacity: 1.0 });
+    // 3. Upload and composite 2D Canvas Layer (skipped if never touched: it would be fully transparent)
+    if (this._layer2d) {
+      const layerTex = this._layer2d.upload();
+      this.sceneCtx.comp.draw(this.renderer, layerTex, out, { mode: 'normal', opacity: 1.0 });
+    }
 
     // 4. Telemetry sync
     if (this.currentFrame) {
@@ -476,11 +503,12 @@ export class SceneContext {
     this.text3DNodes.clear();
     this.disposeObject(this.scene3D);
     this.scene3D.clear();
-    this.particles.dispose();
-    this.lines.dispose();
-    this.sdf.dispose();
+    this._particles?.dispose();
+    this._largeParticles?.dispose();
+    this._lines?.dispose();
+    this._sdf?.dispose();
     this.compositor.dispose();
-    this.layer2d.texture.dispose();
+    this._layer2d?.texture.dispose();
     this.sceneGraph.clear();
     this.textNodes.clear();
     this.layoutNodes.clear();
@@ -492,6 +520,7 @@ export interface DeclarativeSceneDef {
   duration?: number;
   rigMode?: CameraMode;
   particleCapacity?: number;
+  largeParticleCapacity?: number;
   lineCapacity?: number;
   sdfCapacity?: number;
   /** Declarative GLTF/GLB models preloaded and instantiated before setup() */
@@ -534,6 +563,7 @@ export function defineScene(def: DeclarativeSceneDef): SceneClass {
       this.sc = new SceneContext(this.ctx, {
         rigMode: def.rigMode,
         particleCapacity: def.particleCapacity,
+        largeParticleCapacity: def.largeParticleCapacity,
         lineCapacity: def.lineCapacity,
         sdfCapacity: def.sdfCapacity,
       });
@@ -608,3 +638,6 @@ export function defineScene(def: DeclarativeSceneDef): SceneClass {
 
 export { ProceduralMaterial, type BrushedMetalOpts, type WireframeGlowOpts, type FrostedGlassOpts, type MattePolymerOpts, type EmissivePulseOpts } from './material';
 export { ExtrudedText, type ExtrudedTextOpts } from './text3d';
+export { InWorldTextHelper, createInWorldText, createInWorldText2D, createTextOcclusionMask, applyInWorldLighting, getTextLayout, computeTextCoC, computeGlyphCoC, deflectPointFromGlyph, computeGlyphDeflectionVector, partitionParticlesByTextDepth } from './text_lighting';
+export type { InWorldLightingOpts, InWorldTextOpts, InWorldText2DOpts, ExtrudedTextLayout, GlyphWorldBounds, ParticleOcclusionPartition, TextOcclusionMaskOpts } from './text_lighting';
+
