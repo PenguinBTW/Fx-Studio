@@ -1,5 +1,5 @@
 // THE 5-TAP TEMPORAL JACOBIAN & TOPOLOGICAL MANIFOLD TEAR
-// Standalone Transition Block for f(x) Studio engine (v0.5.0)
+// Standalone Transition Block for f(x) Studio engine (v0.7.0)
 //
 // 1. Multi-Temporal Optical Flow & Jacobian Estimation via api.sampleScene():
 //    - Queries outgoing Scene 1 at t1 = t - dt and t2 = t + dt.

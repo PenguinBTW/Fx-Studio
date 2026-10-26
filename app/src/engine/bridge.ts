@@ -4,7 +4,7 @@
 
 import type { Engine, TimelineEntry } from './engine';
 
-export const BRIDGE_VERSION = '0.5.0';
+export const BRIDGE_VERSION = '0.7.0';
 
 export interface TextProbeRecord {
   frameIdx: number;

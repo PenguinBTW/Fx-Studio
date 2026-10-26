@@ -1,6 +1,6 @@
 # Multi-Project Workspace & Manifest Architecture
 
-**f(x) Studio v0.5.0** features a modular, multi-project architecture designed to support diverse procedural motion productions within a single unified engine repository.
+**f(x) Studio v0.7.0** features a modular, multi-project architecture designed to support diverse procedural motion productions within a single unified engine repository.
 
 ---
 

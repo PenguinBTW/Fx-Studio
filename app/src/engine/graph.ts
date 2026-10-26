@@ -96,7 +96,7 @@ export class CompositorGraph {
   }
 
   createLayer(name: string, def: Omit<GraphLayerDef, 'name'>): this {
-    if (def.post) console.warn(`[graph] Layer '${name}' post is accepted but scoped-post is not implemented in v0.5 (no-op).`);
+    if (def.post) console.warn(`[graph] Layer '${name}' post is accepted but scoped-post is not implemented in v0.7 (no-op).`);
     if (def.matte && !this.layers.some((l) => l.name === def.matte!.source) && !this.layerRTs.has(def.matte.source)) {
       console.warn(`[graph] Layer '${name}' matte source '${def.matte.source}' not yet registered — falls back to unmatted path.`);
     }
@@ -125,7 +125,7 @@ export class CompositorGraph {
   evaluate(renderer: THREE.WebGLRenderer, finalTarget: THREE.WebGLRenderTarget): void {
     if (this.layers.length === 0) return;
     // NOTE: l.post (ScopedPostOpts) is accepted but not yet implemented — scoped
-    // post isolation is a no-op in v0.5. Do not rely on per-layer post.
+    // post isolation is a no-op in v0.7. Do not rely on per-layer post.
     // Preserve transparent-black clear for alpha delivery (WebM-alpha / ProRes4444).
     const origClearColor = new THREE.Color();
     const origClearAlpha = renderer.getClearAlpha ? renderer.getClearAlpha() : 1;

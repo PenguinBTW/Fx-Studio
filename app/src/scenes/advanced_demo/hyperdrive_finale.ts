@@ -1,7 +1,7 @@
 // 11: HYPERDRIVE FINALE — Relativistic Alcubierre Warp & Ethereal Resolve
 // Spacetime metric contraction, 192 Doppler-shifted relativistic starfield streaks,
 // Alcubierre warp bubble metric rings, violent jump trauma, white-hot optical burst,
-// and stark museum-grade bone-on-void monolith typographic resolve (v0.5.0 · 330.0s).
+// and stark museum-grade bone-on-void monolith typographic resolve (v0.7.0 · 330.0s).
 import * as THREE from 'three';
 import { defineScene, type SceneContext } from '../../engine/dsl';
 import { type Frame } from '../../engine/scene';
@@ -297,8 +297,8 @@ export default defineScene({
       });
       ctx.renderText('res_title', c2d, t, W * 0.5 - 620, H * 0.5 - 110);
 
-      // Universal Versioning Badge (v0.5.0)
-      const verText = ctx.text('res_ver', 'VERSION 0.5.0 · FLAGSHIP PROCEDURAL TECH DEMO', {
+      // Universal Versioning Badge (v0.7.0)
+      const verText = ctx.text('res_ver', 'VERSION 0.7.0 · FLAGSHIP PROCEDURAL TECH DEMO', {
         fontSize: 18, fontWeight: 800, color: `rgba(56, 189, 248, ${0.95 * resAlpha})`, letterSpacing: 6, role: 'callout',
       });
       ctx.renderText('res_ver', c2d, t, W * 0.5 - 280, H * 0.5 - 55);
@@ -340,7 +340,7 @@ export default defineScene({
       c2d.restore();
 
       // Bottom Status Line
-      const footer = ctx.text('res_foot', 'ALL 11 SCENES FULLY PROCEDURAL · REALTIME GPU SYNTHESIS · COMPLETE v0.5.0 FLAGSHIP DEMO', {
+      const footer = ctx.text('res_foot', 'ALL 11 SCENES FULLY PROCEDURAL · REALTIME GPU SYNTHESIS · COMPLETE v0.7.0 FLAGSHIP DEMO', {
         fontSize: 12, fontWeight: 700, color: `rgba(226, 232, 240, ${0.75 * resAlpha})`, letterSpacing: 3, role: 'hud',
       });
       ctx.renderText('res_foot', c2d, t, W * 0.5 - 420, H - fMarginY - 35);

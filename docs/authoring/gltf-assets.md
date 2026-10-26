@@ -1,6 +1,6 @@
 # GLTF & GLB 3D Asset Loading, Instancing & Deterministic Animation
 
-**Platform Version**: v0.5.0+  
+**Platform Version**: v0.7.0+  
 **Implementation Files**: [`app/src/engine/gltf.ts`](../../app/src/engine/gltf.ts), [`app/src/engine/dsl.ts`](../../app/src/engine/dsl.ts)  
 
 ---
