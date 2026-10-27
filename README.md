@@ -5,7 +5,7 @@
 **For commercial licensing beyond these thresholds, email *vio@penguinbtw.com***
 
 > ### 🚀 Latest Release: v0.7.0
-> * **[v0.7.0 Release Record](./docs/changelog/v0.7.0-release-record.md)**: Major engine overhaul delivering physical optics (Wyman-Sloan CIE 1931 spectrum, Cauchy dispersion, Descartes rainbow caustics), thin-lens Circle-of-Confusion DoF, 500k GPU instanced particles, Bishop RMF twist-free ribbons, divergence-free curl noise, streamline untangling, in-world 3D PBR typography with particle deflection, and an EBU R128 broadcast-compliant audio mastering pipeline (-14.8 LUFS / -1.5 dBTP).
+> * **[v0.7.0 Release Record](./docs/changelog/v0.7.0-release-record.md)**: Major engine overhaul delivering physical optics (Wyman-Sloan CIE 1931 spectrum, Cauchy dispersion, Descartes rainbow caustics), thin-lens Circle-of-Confusion DoF, 500k GPU instanced particles, Bishop RMF twist-free ribbons, divergence-free curl noise, streamline untangling, in-world 3D PBR typography with particle deflection, EBU R128 audio mastering pipeline (-14.8 LUFS / -1.5 dBTP), zero-allocation lazy subsystem architecture, engine file splitting, and strict type restoration.
 > * **[Root Changelog](./CHANGELOG.md)**: Full version history across all releases.
 
 ---
