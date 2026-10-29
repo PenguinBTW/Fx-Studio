@@ -81,13 +81,51 @@ export interface ExportVideoOptions {
   samples?: number | 'auto';
   shutter?: number;
   gpu?: boolean;
-  gpuEncoder?: 'h264_amf' | 'hevc_amf' | 'h264_nvenc' | 'hevc_nvenc';
+  gpuEncoder?: 'h264_nvenc' | 'hevc_nvenc' | 'h264_amf' | 'hevc_amf' | 'h264_qsv' | 'hevc_qsv' | 'h264_mf' | 'hevc_mf' | string;
   crf?: number;
   preset?: string;
   x264Params?: string;
 }
 
 export class ExportPipeline {
+  private static cachedGPUEncoder: string | null | undefined = undefined;
+
+  /**
+   * Probes available hardware GPU encoders via FFmpeg in priority order:
+   * h264_nvenc -> h264_amf -> h264_qsv -> h264_mf
+   * Returns the first operational encoder name, or null if no GPU encoder works.
+   */
+  static detectGPUEncoder(): string | null {
+    if (this.cachedGPUEncoder !== undefined) return this.cachedGPUEncoder;
+
+    const candidates = ['h264_nvenc', 'h264_amf', 'h264_qsv', 'h264_mf'];
+    for (const enc of candidates) {
+      try {
+        const bun = (globalThis as any).Bun;
+        if (!bun?.spawnSync) return null;
+        const proc = bun.spawnSync([
+          'ffmpeg',
+          '-y',
+          '-loglevel', 'error',
+          '-f', 'lavfi',
+          '-i', 'nullsrc=s=64x64:d=0.01',
+          '-c:v', enc,
+          '-f', 'null',
+          '-',
+        ]);
+        if (proc.exitCode === 0) {
+          this.cachedGPUEncoder = enc;
+          return enc;
+        }
+      } catch {
+        // FFmpeg not found or spawn error
+      }
+    }
+
+    this.cachedGPUEncoder = null;
+    return null;
+  }
+
   /**
    * Get configuration preset for given format
    */
@@ -168,14 +206,34 @@ export class ExportPipeline {
     // Codec & encoding options
     const effectiveCrf = opts.crf ?? preset.defaultCrf;
     if (opts.gpu && opts.gpuEncoder) {
-      args.push(
-        '-c:v', opts.gpuEncoder,
-        '-quality', 'quality',
-        '-rc', 'cqp',
-        '-qp_i', String(effectiveCrf ?? 20),
-        '-qp_p', String(effectiveCrf ?? 20),
-        '-pix_fmt', preset.pixFmt,
-      );
+      if (opts.gpuEncoder.includes('nvenc')) {
+        args.push(
+          '-c:v', opts.gpuEncoder,
+          '-preset', 'p6',
+          '-cq', String(effectiveCrf ?? 20),
+          '-pix_fmt', preset.pixFmt,
+        );
+      } else if (opts.gpuEncoder.includes('amf')) {
+        args.push(
+          '-c:v', opts.gpuEncoder,
+          '-quality', 'quality',
+          '-rc', 'cqp',
+          '-qp_i', String(effectiveCrf ?? 20),
+          '-qp_p', String(effectiveCrf ?? 20),
+          '-pix_fmt', preset.pixFmt,
+        );
+      } else if (opts.gpuEncoder.includes('qsv')) {
+        args.push(
+          '-c:v', opts.gpuEncoder,
+          '-global_quality', String(effectiveCrf ?? 20),
+          '-pix_fmt', preset.pixFmt,
+        );
+      } else {
+        args.push(
+          '-c:v', opts.gpuEncoder,
+          '-pix_fmt', preset.pixFmt,
+        );
+      }
     } else {
       args.push('-c:v', preset.codec);
       if (effectiveCrf !== undefined) {

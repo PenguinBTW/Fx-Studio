@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { type V3, mulberry32, lerp, v3Lerp } from '../../engine/util';
+import { Scene, type Frame, type SceneCtx, type PostOverrides } from '../../engine/scene';
 
 export interface PhotonState {
   /** 3D world-space position */
@@ -264,4 +265,63 @@ export function photonState(t: number): PhotonState {
  */
 export function photonScreenPosAt(t: number): [number, number] {
   return photonState(t).screenPos;
+}
+
+/**
+ * Default Scene implementation for First Light flagship production.
+ */
+export default class PhotonScene extends Scene {
+  private threeScene: THREE.Scene;
+  private camera: THREE.PerspectiveCamera;
+  private photonMesh: THREE.Mesh;
+  private trailLine: THREE.Line;
+
+  constructor(ctx: SceneCtx) {
+    super(ctx);
+    this.threeScene = new THREE.Scene();
+    this.camera = new THREE.PerspectiveCamera(45, ctx.W / ctx.H, 0.1, 1000);
+
+    const geo = new THREE.SphereGeometry(0.2, 16, 16);
+    const mat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    this.photonMesh = new THREE.Mesh(geo, mat);
+    this.threeScene.add(this.photonMesh);
+
+    const lineGeo = new THREE.BufferGeometry();
+    const positions = new Float32Array(CORE_WALK.length * 3);
+    for (let i = 0; i < CORE_WALK.length; i++) {
+      const p = CORE_WALK[i]!;
+      positions[i * 3] = p[0];
+      positions[i * 3 + 1] = p[1];
+      positions[i * 3 + 2] = p[2];
+    }
+    lineGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const lineMat = new THREE.LineBasicMaterial({ color: 0x4466aa, transparent: true, opacity: 0.4 });
+    this.trailLine = new THREE.Line(lineGeo, lineMat);
+    this.threeScene.add(this.trailLine);
+  }
+
+  render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
+    const s = photonState(f.t);
+    const camSpec = getActCamera(s.act, f.t);
+
+    this.camera.fov = camSpec.fov;
+    this.camera.near = camSpec.near;
+    this.camera.far = camSpec.far;
+    this.camera.position.set(camSpec.pos[0], camSpec.pos[1], camSpec.pos[2]);
+    this.camera.lookAt(camSpec.target[0], camSpec.target[1], camSpec.target[2]);
+    this.camera.updateMatrixWorld();
+
+    this.photonMesh.position.set(s.worldPos[0], s.worldPos[1], s.worldPos[2]);
+
+    const r = this.ctx.renderer;
+    r.setRenderTarget(out);
+    r.clear(true, true, true);
+    r.render(this.threeScene, this.camera);
+    r.resetState();
+
+    return {
+      bloom: 0.8 * s.intensity,
+      exposure: 1.0 + (s.intensity - 1.0) * 0.4,
+    };
+  }
 }

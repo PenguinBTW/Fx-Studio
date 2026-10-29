@@ -163,14 +163,40 @@ async function openPage(url: string) {
 async function stills(page: Page, times: number[], outDir: string) {
   mkdirSync(outDir, { recursive: true });
   const files: string[] = [];
-  for (const t of times) {
-    const k: number = await page.evaluate(([t, s, sh]) => ((window as any).__motion || (window as any).__pdoom).still(t, s, sh), [t, SAMPLES, numOpt('shutter', 0.5, 0, 1)] as const);
-    const f = path.join(outDir, `f_${t.toFixed(2).padStart(7, '0')}.png`);
-    if (typeof SAMPLES !== 'number') console.log(`t=${t}: ${k} sub-frames`);
-    // at scale > 1 the canvas is shown downscaled on the page: save the full-res pixel buffer instead
-    if (SCALE !== 1) await Bun.write(f, Buffer.from(await page.evaluate(() => ((window as any).__motion || (window as any).__pdoom).png()), 'base64'));
-    else await page.screenshot({ path: f, clip: { x: 0, y: 0, width: 1920, height: 1080 } });
-    files.push(f);
+  let currentResolve: ((buf: Uint8Array) => void) | null = null;
+  const server = SCALE !== 1 ? Bun.serve({
+    port: 0,
+    fetch(req, srv) { return srv.upgrade(req) ? undefined : new Response('ws only', { status: 400 }); },
+    websocket: {
+      maxPayloadLength: Math.max(128 * 1024 * 1024, OW * OH * 4 + 1024),
+      message(ws, msg) {
+        if (currentResolve) {
+          const cb = currentResolve;
+          currentResolve = null;
+          cb(msg as Uint8Array);
+        }
+      },
+    },
+  }) : null;
+
+  try {
+    for (const t of times) {
+      const k: number = await page.evaluate(([t, s, sh]) => ((window as any).__motion || (window as any).__pdoom).still(t, s, sh), [t, SAMPLES, numOpt('shutter', 0.5, 0, 1)] as const);
+      const f = path.join(outDir, `f_${t.toFixed(2).padStart(7, '0')}.png`);
+      if (typeof SAMPLES !== 'number') console.log(`t=${t}: ${k} sub-frames`);
+      // at scale > 1 stream full-resolution PNG directly over WebSocket to avoid base64 IPC explosion
+      if (SCALE !== 1 && server) {
+        const framePromise = new Promise<Uint8Array>((resolve) => { currentResolve = resolve; });
+        await page.evaluate((wsUrl) => ((window as any).__motion || (window as any).__pdoom).png(wsUrl), `ws://localhost:${server.port}`);
+        const pngBuf = await framePromise;
+        await Bun.write(f, pngBuf);
+      } else {
+        await page.screenshot({ path: f, clip: { x: 0, y: 0, width: 1920, height: 1080 } });
+      }
+      files.push(f);
+    }
+  } finally {
+    if (server) server.stop();
   }
   return files;
 }
@@ -203,7 +229,7 @@ async function sheet(page: Page, times: number[], cols: number, out: string) {
 async function video(page: Page, from: number, to: number, fps: number, out: string) {
   const outDir = path.dirname(path.resolve(out));
   if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
-  const gpuEncode = flag('gpu-encode') || (mode === 'video' && flag('gpu'));
+  let gpuEncode = flag('gpu-encode') || (mode === 'video' && flag('gpu'));
   const format: ExportFormat = (opt('format') as ExportFormat) || (flag('transparent') ? 'webm-alpha' : out.endsWith('.webm') ? 'webm-alpha' : out.endsWith('.mov') ? 'prores-4444' : 'mp4');
   const crfVal = opt('crf') ? Number(opt('crf')) : (gpuEncode ? 22 : undefined);
   const explicitAudio = opt('audio');
@@ -235,6 +261,18 @@ async function video(page: Page, from: number, to: number, fps: number, out: str
       mixedAudio = true;
     }
   }
+  let chosenGpuEncoder = opt('gpu-encoder');
+  if (gpuEncode && !chosenGpuEncoder) {
+    const detected = ExportPipeline.detectGPUEncoder();
+    if (detected) {
+      chosenGpuEncoder = detected;
+      console.log(`[render] Auto-detected GPU encoder: ${detected}`);
+    } else {
+      console.warn('[render] No compatible GPU hardware encoder detected (tested nvenc, amf, qsv, mf). Falling back to software libx264.');
+      gpuEncode = false;
+    }
+  }
+
   const exportOpts: ExportVideoOptions = {
     format,
     outPath: out,
@@ -247,7 +285,7 @@ async function video(page: Page, from: number, to: number, fps: number, out: str
     audioMixed: mixedAudio || undefined,
     transparent: flag('transparent') || format === 'webm-alpha' || format === 'prores-4444',
     gpu: gpuEncode,
-    gpuEncoder: (opt('gpu-encoder', 'h264_amf') as any),
+    gpuEncoder: chosenGpuEncoder as any,
     crf: crfVal,
     preset: opt('preset', 'slow'),
     x264Params: opt('x264', 'aq-mode=3'),

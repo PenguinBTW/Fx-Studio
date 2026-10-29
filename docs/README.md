@@ -50,6 +50,12 @@ docs/
 ├── projects/                         # Project manifests & workspace architecture
 │   └── project-system.md             # Multi-project workspace, active.json, project.json manifests
 │
+├── audio/                            # Multi-track mixdown, event registry, SFX & song analysis
+│   ├── song-analysis.md              # Offline acoustic decomposition (Librosa/SciPy), tempo maps & overrides
+│   ├── sfx-synth.md                  # Procedural SFX synthesizer (PolyBLEP), recipe library, cue schemas
+│   ├── events.md                     # Visual event registry & musical downbeat snapping
+│   └── mixdown.md                    # Multi-track bus routing, sidechain ducking, two-pass EBU R128 & Void Cut
+│
 └── roadmap/                          # Engine evolution & proposed instrumentation
     ├── v0.5.0-roadmap-review.md      # Architecture review & 4-milestone execution record
     └── proposed-instruments/         # Proposed instrument specifications (Roadmap 05–09)
@@ -105,25 +111,27 @@ docs/
 * [**Cinematic Camera Choreography & Splines**](authoring/camera-choreography.md): Centripetal Catmull-Rom splines, Bishop orthonormal frames, SQUAD orientation, lens breathing, and analytical closed-form trauma shake.
 * [**Audio, Music & Speech Synchronization Pipeline**](authoring/audio-and-music-sync.md): Offline audio analysis (`scripts/analyze_song.py`), Librosa/SciPy frequency decomposition, `AudioData` query APIs, instant `f.a` transient pulses, lyrics karaoke synchronization, and timeline drivers.
 
-### E. Command-Line Interface & Video Export
+### E. Audio, SFX & Broadcast Mastering
+* [**Song Analysis**](audio/song-analysis.md): `scripts/analyze_song.py` usage, tempo map and `tempo_overrides.json` schema, sections, silences, melodic onsets, 60 Hz rms/centroid envelopes.
+* [**Procedural SFX Synthesiser**](audio/sfx-synth.md): `bun scripts/sfx/synth.ts` deterministic seeded SFX renderer (48 kHz / 24-bit stereo), recipe library, `sfx_cues.json` format, event-time resolution via `events.json`.
+* [**Visual Event Registry**](audio/events.md): `engine/events.ts` visual event IDs -> times (timeline, transitions, downbeat snap), `events.json` via `render.ts video --events-out`.
+* [**Multi-Track Mixdown**](audio/mixdown.md): `render.ts video --mix mix.json` buses, sidechain duck, sample-exact Void Cut gate, two-pass loudnorm, `scripts/verify_audio.py`, `bun scripts/test_mixdown.ts`.
+
+### F. Command-Line Interface & Video Export
 * [**Render CLI Reference (`bun scripts/render.ts`)**](cli/render-cli-reference.md): Complete reference for all subcommands (`stills`, `sheet`, `video`, `perf`, `motion`, `onion`, `godview`, `stitch`, `compare`), global parameters, and defaults.
 * [**Headless Video Export Pipeline & Acceleration**](cli/video-export-pipeline.md): Playwright frame evaluation, streaming rawvideo pipe to `Bun.spawn` FFmpeg, GPU hardware encoding (AMD AMF, NVIDIA NVENC), transparent alpha formats (ProRes 4444, WebM VP9), and sub-frame adaptive supersampling.
 * [**Long-Timeline Rendering (`docs/cli/long-timeline.md`)**](cli/long-timeline.md): declaring 10+ scenes / 9 transitions, memory smoke test (`smoke_memory.ts`), per-act chunked render + join (`render_chunks.ts`), `--scale 2` (4K) status, measured ms/frame.
 * [**Automated Engine Verification & Test Suites**](cli/testing-and-verification.md): Milestone regression suites (`test_milestone1.ts` through `test_milestone4.ts`), transition sweeps, transition seam checker (`check_seams.ts` / P9), visual tool tests, and continuous integration testing protocols.
 
-### F. Project Architecture & Manifests
+### G. Project Architecture & Manifests
 * [**Multi-Project Workspace & Manifest Architecture**](projects/project-system.md): Multi-project directory structure, `active.json` pointer, `project.json` manifest specification, scene entries, transition declarations, hot module reloading (HMR) isolation, interactive preview player hotkeys, and step-by-step project creation tutorial.
 
-### G. Changelog & Releases
+### H. Changelog & Releases
 * [**v0.7.0 Release Record: Physical Optics, Volumetrics, Engine Modernization & Architectural Overhaul**](changelog/v0.7.0-release-record.md): Major engine release delivering physical optics (Cauchy dispersion, Descartes caustics, Wyman-Sloan spectrum), Bishop RMF ribbons, divergence-free curl noise, 500k GPU particles, multi-track audio mixdown (-14 LUFS / -1 dBTP), in-world kinetic typography, automated seam continuity, zero-allocation lazy subsystem architecture, engine file modularization, and strict type restoration.
 * [**v0.6.1 Bug Fix & Engine Audit Report**](changelog/v0.6.1-bug-fix-report.md): Complete architectural audit and stability report detailing 24 bug fixes across core rendering loops, WebGL state cache isolation, alpha premultiplication, GLTF caching, ODE springs, and FFmpeg pipeline mapping.
 * [**v0.6.0 Execution Record & Release Notes**](changelog/v0.6.0-release-record.md): Complete release notes for engine v0.6.0 (Procedural Materials, 3D Kinetic Typography, Optical DoF & Volumetrics).
 
-### H. Roadmap & Future Diagnostics
+### I. Roadmap & Future Diagnostics
 * [**Claude f(x) Studio Review & Feedback**](feedback/claude_fx_studio_review.md): Autonomous synthesis of Claude's design session experience, tool friction analysis, and architectural recommendations.
 * [**Engine Architecture Review & Execution Record (v0.5.0)**](roadmap/v0.5.0-roadmap-review.md): Complete architectural review and 4-milestone execution record for v0.5.0.
 * [**Proposed Visual Diagnostic Instruments (Roadmap 05–09)**](roadmap/proposed-instruments/README.md): Design specifications and problem statements for proposed instruments 05–09 (Parametric Speed Graph, Gaze Saliency Heatmap, Dynamic Contrast & Legibility, Choreography Gantt & Stagger, and Multi-Aspect Responsive Framing).
-* [**Song Analysis**](audio/song-analysis.md): `scripts/analyze_song.py` usage, tempo map and `tempo_overrides.json` schema, sections, silences, melodic onsets, 60 Hz rms/centroid envelopes.
-* [**SFX Synthesiser**](audio/sfx-synth.md): `bun scripts/sfx/synth.ts` deterministic seeded SFX renderer (48 kHz / 24-bit stereo), recipe library, `sfx_cues.json` format, event-time resolution via `events.json`.
-* [**Event Registry**](audio/events.md): `engine/events.ts` visual event IDs -> times (timeline, transitions, downbeat snap), `events.json` via `render.ts video --events-out`.
-* [**Multi-track Mixdown**](audio/mixdown.md): `render.ts video --mix mix.json` buses, sidechain duck, sample-exact Void Cut gate, two-pass loudnorm, `scripts/verify_audio.py`, `bun scripts/test_mixdown.ts`.

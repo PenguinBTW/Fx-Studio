@@ -1,5 +1,6 @@
 # Internal agent state and milestones
-.agents/
+.agents/*
+!.agents/skills/
 **/.m*_done
 opencode.json
 **/__pycache__/
@@ -24,6 +25,7 @@ app/out/
 app/public/data/
 **/draco/
 **/audio/
+!docs/audio/
 
 
 # Tool and bundler caches

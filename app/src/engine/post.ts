@@ -212,6 +212,12 @@ export const DEFAULT_POST: PostParams = {
 
 const MIPS = 7;
 
+function unpackGradeV3(val: number | V3 | undefined, defaultVal: number, out: THREE.Vector3): void {
+  if (val === undefined) out.set(defaultVal, defaultVal, defaultVal);
+  else if (typeof val === 'number') out.set(val, val, val);
+  else out.set(val[0], val[1], val[2]);
+}
+
 export class Post {
   private prefilter: FSPass;
   private down: FSPass;
@@ -219,6 +225,8 @@ export class Post {
   private final: FSPass;
   private optics: OpticsPass | null = null;
   private depthDofPass: DepthDoFPass | null = null;
+  private scratchDofParams: Partial<DepthDoFParams> = {};
+  private scratchOpticsParams: OpticsParams = { ...DEFAULT_OPTICS };
   private mips: THREE.WebGLRenderTarget[] = [];
   private ups: THREE.WebGLRenderTarget[] = [];
 
@@ -443,13 +451,17 @@ ${SCALE === 1 ? `        float g1 = hash12(gl_FragCoord.xy + fract(time * 13.37)
     );
     if (depthTex && hasDepthDof) {
       this.depthDofPass ??= new DepthDoFPass();
-      const dofParams: Partial<DepthDoFParams> = {
-        enabled: true,
-        ...(p.depthFocusDist !== undefined ? { focusDistance: p.depthFocusDist } : {}),
-        ...(p.depthAperture !== undefined ? { aperture: p.depthAperture } : {}),
-        ...p.depthDof,
-      };
-      effectiveSrc = this.depthDofPass.render(renderer, src, depthTex, dofParams);
+      const dp = this.scratchDofParams;
+      dp.enabled = true;
+      dp.focusDistance = p.depthFocusDist !== undefined ? p.depthFocusDist : p.depthDof?.focusDistance;
+      dp.aperture = p.depthAperture !== undefined ? p.depthAperture : p.depthDof?.aperture;
+      dp.maxRadius = p.depthDof?.maxRadius;
+      dp.blades = p.depthDof?.blades;
+      dp.anamorphicRatio = p.depthDof?.anamorphicRatio;
+      dp.near = p.depthDof?.near;
+      dp.far = p.depthDof?.far;
+      dp.samples = p.depthDof?.samples;
+      effectiveSrc = this.depthDofPass.render(renderer, src, depthTex, dp);
     }
 
     const bloomVal = p.bloomIntensity !== undefined ? p.bloomIntensity : p.bloom;
@@ -526,13 +538,14 @@ ${SCALE === 1 ? `        float g1 = hash12(gl_FragCoord.xy + fract(time * 13.37)
     else if (p.grade === 'infrared') gradeIdx = 4;
     const gp = typeof p.grade === 'function' ? p.grade(time) : typeof p.grade === 'object' && p.grade ? p.grade : null;
     if (gp) {
-      const g = resolveGrade(gp);
       gradeIdx = 5;
-      (f.gradeLift!.value as THREE.Vector3).set(...g.lift);
-      (f.gradeGain!.value as THREE.Vector3).set(...g.gain);
-      (f.gradeInvGamma!.value as THREE.Vector3).set(1 / Math.max(g.gamma[0], 1e-4), 1 / Math.max(g.gamma[1], 1e-4), 1 / Math.max(g.gamma[2], 1e-4));
-      (f.gradeTint!.value as THREE.Vector3).set(...g.tint);
-      f.gradeSat!.value = g.saturation;
+      unpackGradeV3(gp.lift, 0, f.gradeLift!.value as THREE.Vector3);
+      unpackGradeV3(gp.gain, 1, f.gradeGain!.value as THREE.Vector3);
+      unpackGradeV3(gp.tint, 1, f.gradeTint!.value as THREE.Vector3);
+      const gGamma = f.gradeInvGamma!.value as THREE.Vector3;
+      unpackGradeV3(gp.gamma, 1, gGamma);
+      gGamma.set(1 / Math.max(gGamma.x, 1e-4), 1 / Math.max(gGamma.y, 1e-4), 1 / Math.max(gGamma.z, 1e-4));
+      f.gradeSat!.value = gp.saturation ?? 1;
     }
     f.grade!.value = gradeIdx;
     f.toneMap!.value = p.toneMap === 'aces' ? 1 : p.toneMap === 'agx' ? 2 : 0;
@@ -542,7 +555,8 @@ ${SCALE === 1 ? `        float g1 = hash12(gl_FragCoord.xy + fract(time * 13.37)
 
     const op = p.optics;
     if (op && (op.intensity ?? DEFAULT_OPTICS.intensity) > 0 && p.fade < 1) {
-      const o: OpticsParams = { ...DEFAULT_OPTICS, ...op };
+      Object.assign(this.scratchOpticsParams, DEFAULT_OPTICS, op);
+      const o = this.scratchOpticsParams;
       this.optics ??= new OpticsPass();
       f.opticsTex!.value = this.optics.render(renderer, effectiveSrc, o);
       (f.opticsGain!.value as THREE.Vector3).set(o.tint[0] * o.intensity, o.tint[1] * o.intensity, o.tint[2] * o.intensity);
@@ -551,8 +565,11 @@ ${SCALE === 1 ? `        float g1 = hash12(gl_FragCoord.xy + fract(time * 13.37)
       f.opticsOn!.value = false;
     }
 
-    const ct = p.colorTint ?? [1, 1, 1];
-    (f.colorTint!.value as THREE.Vector3).set(ct[0], ct[1], ct[2]);
+    if (p.colorTint) {
+      (f.colorTint!.value as THREE.Vector3).set(p.colorTint[0], p.colorTint[1], p.colorTint[2]);
+    } else {
+      (f.colorTint!.value as THREE.Vector3).set(1, 1, 1);
+    }
 
     this.final.render(renderer, out);
     renderer.resetState();

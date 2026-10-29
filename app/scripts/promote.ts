@@ -9,7 +9,7 @@
 // ==============================================================================
 
 import path from 'node:path';
-import { existsSync, rmSync, readdirSync, copyFileSync } from 'node:fs';
+import { existsSync, rmSync, readdirSync, copyFileSync, readFileSync, writeFileSync } from 'node:fs';
 
 const SCRIPT_DIR = import.meta.dir;
 const APP_DIR = path.resolve(SCRIPT_DIR, '..');
@@ -20,6 +20,74 @@ const skipTests = args.includes('--skip-tests');
 const noTag = args.includes('--no-tag');
 const pushRemote = args.includes('--push');
 const dryRun = args.includes('--dry-run');
+
+function getPruneList(rootDir: string, appDir: string): string[] {
+  const ignoreFile = [
+    path.join(rootDir, '.promoteignore'),
+    path.join(appDir, '.promoteignore'),
+    path.join(appDir, 'scripts', '.promoteignore'),
+  ].find((p) => existsSync(p));
+
+  const rules: string[] = [];
+  if (ignoreFile) {
+    console.log(`[promote] Reading exclusion patterns from ${path.relative(rootDir, ignoreFile)}...`);
+    const content = readFileSync(ignoreFile, 'utf8');
+    for (const line of content.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('#')) rules.push(trimmed);
+    }
+  } else {
+    console.log('[promote] No .promoteignore found, using built-in defaults...');
+    rules.push(
+      'app/scripts/promote.ts',
+      'app/scripts/check_scrub_determinism.ts',
+      'app/scripts/smoke_memory.ts',
+      'app/scripts/_glyph_hash.ts',
+      'app/scripts/inspect_frame.ts',
+      'app/scripts/raster_glyphs.ts',
+      'app/scripts/gen_hershey_glyphs.ts',
+      'app/scripts/debug_act2.ts',
+      'app/scripts/raycast_debug.ts',
+      'app/scripts/queries',
+      'app/scripts/sfx/test_synth.ts',
+      'app/src/scenes/_prereq_demos',
+      'prompts',
+      'prompt.md',
+      'scripts/test_analyze_song.py',
+      'README.nightly.md',
+      'docs/feedback',
+      'docs/roadmap',
+      'app/scripts/test_*.ts',
+      'app/scripts/time_*.ts'
+    );
+  }
+
+  const toDelete = new Set<string>();
+  for (const rule of rules) {
+    const isNegation = rule.startsWith('!');
+    const pattern = (isNegation ? rule.slice(1) : rule).trim().replace(/[\\/]+$/, '');
+    const hasGlob = pattern.includes('*') || pattern.includes('?');
+
+    if (!hasGlob) {
+      const full = path.resolve(rootDir, pattern);
+      if (existsSync(full)) {
+        const rel = path.relative(rootDir, full);
+        if (isNegation) toDelete.delete(rel);
+        else toDelete.add(rel);
+      }
+    } else {
+      const glob = new Bun.Glob(pattern);
+      for (const match of glob.scanSync({ cwd: rootDir })) {
+        const rel = path.normalize(match);
+        if (isNegation) toDelete.delete(rel);
+        else toDelete.add(rel);
+      }
+    }
+  }
+
+  toDelete.add('.promoteignore');
+  return Array.from(toDelete);
+}
 
 function run(cmd: string[], cwd: string = ROOT_DIR): { exitCode: number; stdout: string; stderr: string } {
   const proc = Bun.spawnSync(cmd, { cwd });
@@ -73,6 +141,7 @@ if (!skipTests) {
   execOrThrow([process.execPath, 'run', 'typecheck'], 'Running TypeScript typecheck', APP_DIR);
   execOrThrow([process.execPath, 'scripts/check_seams.ts'], 'Checking transition seams', APP_DIR);
   execOrThrow([process.execPath, 'scripts/test_mixdown.ts'], 'Verifying audio compliance', APP_DIR);
+  execOrThrow([process.execPath, 'scripts/test_milestones.ts'], 'Running milestone test suite', APP_DIR);
   console.log('✓ All verification tests passed!\n');
 } else {
   console.log('⚠️ Skipping tests (--skip-tests flag passed).\n');
@@ -90,31 +159,8 @@ execOrThrow(['git', 'checkout', 'nightly', '--', '.'], 'Syncing all files from n
 
 // 5. Strip dev-only files on main
 console.log('--- 3. Pruning dev-only test harnesses & internal files ---');
-const filesToPrune = [
-  // Dev & benchmark test scripts
-  'app/scripts/check_scrub_determinism.ts',
-  'app/scripts/smoke_memory.ts',
-  'app/scripts/_glyph_hash.ts',
-  'app/scripts/inspect_frame.ts',
-  'app/scripts/raster_glyphs.ts',
-  'app/scripts/gen_hershey_glyphs.ts',
-  'app/scripts/queries',
-  'app/src/scenes/_prereq_demos',
-  'prompts',
-  'prompt.md',
-  'scripts/test_analyze_song.py',
-  'README.nightly.md',
-];
-
-// Add all test_*.ts and time_*.ts in app/scripts
-const scriptsDir = path.join(APP_DIR, 'scripts');
-if (existsSync(scriptsDir)) {
-  for (const file of readdirSync(scriptsDir)) {
-    if (file.startsWith('test_') || file.startsWith('time_')) {
-      filesToPrune.push(path.join('app', 'scripts', file));
-    }
-  }
-}
+const filesToPrune = getPruneList(ROOT_DIR, APP_DIR);
+console.log(`[promote] Identified ${filesToPrune.length} item(s) to prune.`);
 
 for (const relPath of filesToPrune) {
   const fullPath = path.join(ROOT_DIR, relPath);
@@ -133,6 +179,15 @@ if (existsSync(readmeMainPath)) {
   console.log('  ✓ Deployed consumer README.md to root of main');
 }
 
+// Clean docs/README.md on main if roadmap was pruned
+const docsReadmePath = path.join(ROOT_DIR, 'docs', 'README.md');
+if (existsSync(docsReadmePath)) {
+  let docContent = readFileSync(docsReadmePath, 'utf8');
+  docContent = docContent.replace(/### I\. Roadmap & Future Diagnostics[\s\S]*$/, '');
+  writeFileSync(docsReadmePath, docContent.trim() + '\n', 'utf8');
+  console.log('  ✓ Cleaned internal roadmap links from docs/README.md on main');
+}
+
 // 7. Update app/package.json on main (prune deleted script commands)
 const mainPkgPath = path.join(APP_DIR, 'package.json');
 if (existsSync(mainPkgPath)) {
@@ -141,9 +196,8 @@ if (existsSync(mainPkgPath)) {
     dev: mainPkg.scripts?.dev || 'vite',
     build: mainPkg.scripts?.build || 'vite build',
     typecheck: 'tsc --noEmit',
-    test: 'bun scripts/test_milestones.ts',
-    'test:seams': 'bun scripts/check_seams.ts',
     'check:determinism': 'bun scripts/check_determinism.ts',
+    'check:seams': 'bun scripts/check_seams.ts',
   };
   mainPkg.scripts = cleanScripts;
   await Bun.write(mainPkgPath, JSON.stringify(mainPkg, null, 2) + '\n');

@@ -249,12 +249,16 @@ export class Layer2D {
   upload() { this.texture.needsUpdate = true; return this.texture; }
 }
 
-/** Clear a render target to a linear colour. */
+const _scratchClearColorPrev = new THREE.Color();
+const _scratchClearColorNew = new THREE.Color();
+
+
 export function clearRT(renderer: THREE.WebGLRenderer, rt: THREE.WebGLRenderTarget | null, rgb: [number, number, number] = [0, 0, 0], a = 1) {
-  const prev = renderer.getClearColor(new THREE.Color()).clone();
+  renderer.getClearColor(_scratchClearColorPrev);
   const prevA = renderer.getClearAlpha();
   renderer.setRenderTarget(rt);
-  renderer.setClearColor(new THREE.Color().setRGB(rgb[0], rgb[1], rgb[2], THREE.LinearSRGBColorSpace), a);
+  _scratchClearColorNew.setRGB(rgb[0], rgb[1], rgb[2], THREE.LinearSRGBColorSpace);
+  renderer.setClearColor(_scratchClearColorNew, a);
   renderer.clear(true, true, true);
-  renderer.setClearColor(prev, prevA);
+  renderer.setClearColor(_scratchClearColorPrev, prevA);
 }

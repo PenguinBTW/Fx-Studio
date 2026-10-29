@@ -138,6 +138,10 @@ void main() {
 
 const COPY_FRAG = /* glsl */ `uniform sampler2D src; void main() { fragColor = texelFetch(src, ivec2(gl_FragCoord.xy), 0); }`;
 
+const _scratchRMInv = new THREE.Matrix4();
+const _scratchRMPos = new THREE.Vector3();
+const _scratchRMFwd = new THREE.Vector3();
+
 export class RaymarchPass {
   readonly mat: THREE.RawShaderMaterial;
   private scene = new THREE.Scene();
@@ -235,12 +239,12 @@ export class RaymarchPass {
     cam.updateMatrixWorld(true);
     const pc = cam as THREE.PerspectiveCamera;
     if (pc.updateProjectionMatrix && (cam as any).isPerspectiveCamera) { pc.aspect = PW / PH; pc.updateProjectionMatrix(); }
-    const inv = new THREE.Matrix4().multiplyMatrices(cam.matrixWorld, cam.projectionMatrixInverse);
-    (this.u.rmInvVP!.value as THREE.Matrix4).copy(inv);
-    const pos = new THREE.Vector3().setFromMatrixPosition(cam.matrixWorld);
-    (this.u.rmCamPos!.value as THREE.Vector3).copy(pos);
-    const fwd = new THREE.Vector3(0, 0, -1).transformDirection(cam.matrixWorld);
-    (this.u.rmCamFwd!.value as THREE.Vector3).copy(fwd);
+    _scratchRMInv.multiplyMatrices(cam.matrixWorld, cam.projectionMatrixInverse);
+    (this.u.rmInvVP!.value as THREE.Matrix4).copy(_scratchRMInv);
+    _scratchRMPos.setFromMatrixPosition(cam.matrixWorld);
+    (this.u.rmCamPos!.value as THREE.Vector3).copy(_scratchRMPos);
+    _scratchRMFwd.set(0, 0, -1).transformDirection(cam.matrixWorld);
+    (this.u.rmCamFwd!.value as THREE.Vector3).copy(_scratchRMFwd);
     (this.u.rmNearFar!.value as THREE.Vector2).set(pc.near, pc.far);
     const tanHalf = Math.tan(THREE.MathUtils.degToRad(pc.fov ?? 50) / 2);
     this.baseAngle = 2 * tanHalf;

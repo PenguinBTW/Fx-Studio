@@ -48,6 +48,8 @@ void main() {
 }
 `;
 
+const _scratchGraphClearColor = new THREE.Color();
+
 export class CompositorGraph {
   private layers: GraphLayerDef[] = [];
   private layerRTs = new Map<string, THREE.WebGLRenderTarget>();
@@ -127,9 +129,8 @@ export class CompositorGraph {
     // NOTE: l.post (ScopedPostOpts) is accepted but not yet implemented — scoped
     // post isolation is a no-op in v0.7. Do not rely on per-layer post.
     // Preserve transparent-black clear for alpha delivery (WebM-alpha / ProRes4444).
-    const origClearColor = new THREE.Color();
     const origClearAlpha = renderer.getClearAlpha ? renderer.getClearAlpha() : 1;
-    if (renderer.getClearColor) renderer.getClearColor(origClearColor);
+    if (renderer.getClearColor) renderer.getClearColor(_scratchGraphClearColor);
 
     // 1. Render all base layers into their allocated targets
     for (const l of this.layers) {
@@ -202,7 +203,7 @@ export class CompositorGraph {
     }
 
     if (typeof (renderer as any).setClearColor === "function") {
-      (renderer as any).setClearColor(origClearColor, origClearAlpha);
+      (renderer as any).setClearColor(_scratchGraphClearColor, origClearAlpha);
     }
     renderer.resetState();
   }

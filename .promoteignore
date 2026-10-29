@@ -1,0 +1,47 @@
+# ==============================================================================
+# f(x) Studio: Release Promotion Exclusions (.promoteignore)
+#
+# Rules for pruning development, benchmark, and machine-specific files when
+# promoting nightly to the clean public/consumer main branch.
+#
+# Syntax:
+#   - Relative paths or directories from repository root
+#   - Wildcard globs supported (e.g. app/scripts/test_*.ts)
+#   - Negation supported with ! (e.g. !app/scripts/test_milestones.ts)
+#   - Comments (#) and blank lines are ignored
+# ==============================================================================
+
+# Local machine & Windows developer scripts
+render_full_video.bat
+render_fullres.bat
+render_fullres.ps1
+
+# Branch documentation & internal LLM prompts
+README.nightly.md
+prompt.md
+prompts/
+docs/feedback/
+docs/roadmap/
+
+# Developer test harnesses, debug scripts, and internal utilities
+app/scripts/promote.ts
+app/scripts/check_scrub_determinism.ts
+app/scripts/smoke_memory.ts
+app/scripts/_glyph_hash.ts
+app/scripts/inspect_frame.ts
+app/scripts/raster_glyphs.ts
+app/scripts/gen_hershey_glyphs.ts
+app/scripts/debug_act2.ts
+app/scripts/raycast_debug.ts
+app/scripts/queries/
+app/scripts/sfx/test_synth.ts
+scripts/test_analyze_song.py
+
+# Milestone & domain test runners and benchmarks
+app/scripts/test_*.ts
+app/scripts/time_*.ts
+
+# Experimental and prereq demo scenes
+app/src/scenes/_prereq_demos/
+app/src/scenes/sonnet-test/
+app/src/scenes/child_lock/
