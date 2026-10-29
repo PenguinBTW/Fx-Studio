@@ -1,0 +1,54 @@
+{
+  "project": "first_light",
+  "entries": [
+    {
+      "scene": "first_light/photon",
+      "id": "act-core",
+      "start": 0.0,
+      "end": 22.5,
+      "caption": { "fig": "01", "text": "SOLAR CORE: BROWNIAN RANDOM WALK", "dur": 4.0 }
+    },
+    {
+      "scene": "first_light/photon",
+      "id": "act-radiative",
+      "start": 21.5,
+      "end": 64.5,
+      "caption": { "fig": "02", "text": "RADIATIVE ZONE", "dur": 4.0 }
+    },
+    {
+      "scene": "first_light/photon",
+      "id": "act-convection",
+      "start": 63.5,
+      "end": 110.5,
+      "caption": { "fig": "03", "text": "CONVECTION ZONE", "dur": 4.0 }
+    },
+    {
+      "scene": "first_light/photon",
+      "id": "act-vacuum",
+      "start": 109.5,
+      "end": 154.5,
+      "caption": { "fig": "04", "text": "VACUUM PROPAGATION", "dur": 4.0 }
+    },
+    {
+      "scene": "first_light/photon",
+      "id": "act-droplet",
+      "start": 153.5,
+      "end": 198.5,
+      "caption": { "fig": "05", "text": "ATMOSPHERIC DROPLET", "dur": 4.0 }
+    },
+    {
+      "scene": "first_light/photon",
+      "id": "act-retina",
+      "start": 197.5,
+      "end": 256.0,
+      "caption": { "fig": "06", "text": "RETINAL ABSORPTION", "dur": 4.0 }
+    }
+  ],
+  "transitions": [
+    { "id": "t-core-rad", "transition": "dissolve", "from": "act-core", "to": "act-radiative", "at": 21.5, "dur": 1.0 },
+    { "id": "t-rad-conv", "transition": "dissolve", "from": "act-radiative", "to": "act-convection", "at": 63.5, "dur": 1.0 },
+    { "id": "t-conv-vac", "transition": "dissolve", "from": "act-convection", "to": "act-vacuum", "at": 109.5, "dur": 1.0 },
+    { "id": "t-vac-drop", "transition": "dissolve", "from": "act-vacuum", "to": "act-droplet", "at": 153.5, "dur": 1.0 },
+    { "id": "t-drop-ret", "transition": "dissolve", "from": "act-droplet", "to": "act-retina", "at": 197.5, "dur": 1.0 }
+  ]
+}

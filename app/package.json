@@ -8,9 +8,8 @@
     "dev": "vite",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
-    "test": "bun scripts/test_milestones.ts",
-    "test:seams": "bun scripts/check_seams.ts",
-    "check:determinism": "bun scripts/check_determinism.ts"
+    "check:determinism": "bun scripts/check_determinism.ts",
+    "check:seams": "bun scripts/check_seams.ts"
   },
   "devDependencies": {
     "@types/bun": "latest",

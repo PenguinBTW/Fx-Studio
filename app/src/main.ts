@@ -132,14 +132,27 @@ function setupExport() {
     timeline: TIMELINE.map(({ id, start, end }) => ({ id, start, end })),
     /** Render a single frame at t (seeks as needed). */
     still(t: number, samples: number | AdaptiveSampling = 1, shutter = 0.5) { return engine.render(t, 1 / 60, true, samples, shutter); },
-    /** The last rendered frame as a full-resolution (PW x PH) PNG, base64 (for stills at scale > 1). */
-    async png() {
+    /** The last rendered frame as a full-resolution (PW x PH) PNG. If wsUrl is given, streams binary PNG over WebSocket; otherwise returns base64. */
+    async png(wsUrl?: string) {
       const px = await engine.readPixelsAsync(), row = PW * 4;
       const img = new ImageData(PW, PH);
       for (let y = 0; y < PH; y++) img.data.set(px.subarray((PH - 1 - y) * row, (PH - y) * row), y * row); // bottom-up -> top-down
       const oc = new OffscreenCanvas(PW, PH);
       oc.getContext('2d')!.putImageData(img, 0, 0);
       const b = new Uint8Array(await (await oc.convertToBlob({ type: 'image/png' })).arrayBuffer());
+      if (wsUrl) {
+        const ws = new WebSocket(wsUrl);
+        ws.binaryType = 'arraybuffer';
+        await new Promise<void>((res, rej) => {
+          ws.onopen = () => {
+            ws.send(b);
+            ws.close();
+            res();
+          };
+          ws.onerror = (e) => rej(e);
+        });
+        return '';
+      }
       let s = '';
       for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode(...b.subarray(i, i + 0x8000));
       return btoa(s);

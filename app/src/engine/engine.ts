@@ -81,7 +81,9 @@ export class Engine {
     makeRT(W, H, { depthTexture: true }),
     makeRT(W, H, { depthTexture: true }),
   ];
-  private transScratch = [makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT()];
+  private transScratch = [makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT()];
+  private transDepthRT = makeRT(W, H, { depthBuffer: false, type: THREE.HalfFloatType });
+  private transDepthPass: FSPass;
   private transScratchIdx = 0;
   private transLoaded = new Map<string, { entry: TransitionEntry; trans: Transition | null; error?: string }>();
   // motion-blur sub-frame sums (float: up to hundreds of sub-frames), their average, and the error estimate
@@ -116,6 +118,8 @@ export class Engine {
     this.renderer.setPixelRatio(1);
     this.renderer.setSize(PW, PH, false);
     this.renderer.autoClear = false;
+    this.transDepthPass = new FSPass(`uniform sampler2D depthA; uniform sampler2D depthB; uniform float u;
+      void main(){ float da = texture(depthA, vUv).r; float db = texture(depthB, vUv).r; fragColor = vec4(vec3(mix(da, db, u)), 1.0); }`, { depthA: { value: null }, depthB: { value: null }, u: { value: 0.5 } });
     this.blit = new FSPass(`uniform sampler2D src; void main(){ fragColor = texture(src, vUv); }`, { src: { value: null } });
     this.xfade = new FSPass(`uniform sampler2D a; uniform sampler2D b; uniform float k;
       void main(){ fragColor = mix(texture(a, vUv), texture(b, vUv), k); }`, { a: { value: null }, b: { value: null }, k: { value: 0 } });
@@ -241,11 +245,22 @@ export class Engine {
   private sampleScene(id: string, t: number, dt: number, tin = 1, tout = 0): THREE.Texture {
     const entry = this.timeline.find((e) => e.id === id || e.file === id);
     const rec = entry && this.loaded.get(entry.id);
-    const rt = this.transScratch[this.transScratchIdx % this.transScratch.length]!;
+    if (this.transScratchIdx >= this.transScratch.length) {
+      if (this.transScratch.length >= 64) {
+        throw new Error(
+          `Transition scratch buffer limit exceeded: requested sample ${this.transScratchIdx + 1} in a single frame (max 64). Overwriting bound targets violates shader texture invariants.`
+        );
+      }
+      this.transScratch.push(makeRT());
+    }
+    const rt = this.transScratch[this.transScratchIdx]!;
     this.transScratchIdx++;
     if (!entry || !rec?.scene) {
       clearRT(this.renderer, rt, [0.25, 0.0, 0.0]);
       return rt.texture;
+    }
+    if (rec.scene.stateful) {
+      throw new Error(`sampleScene('${entry.id}') failed: scene is stateful (transitions cannot drive integrated state)`);
     }
     const fObj = this.frameFor(entry, t, dt, false, false, null, tin, tout);
     try {
@@ -433,6 +448,7 @@ export class Engine {
    * participants — transitions cannot drive integrated state.
    */
   private renderTransition(tr: TransitionEntry, t: number, dt: number, seeked: boolean): { outTex: THREE.Texture; depthTex: THREE.Texture | null; post: PostParams; probe: Record<string, number> | null } | null {
+    this.transScratchIdx = 0;
     const trec = this.transLoaded.get(tr.id);
     const aE = this.timeline.find((e) => e.id === tr.from || e.file === tr.from);
     const bE = this.timeline.find((e) => e.id === tr.to || e.file === tr.to);
@@ -475,7 +491,19 @@ export class Engine {
     this.mixIdx++;
     const ovT = trec.trans.render(fTrans, targetMix, this.transRTs[0]!.texture, this.transRTs[1]!.texture, api);
     post = { ...post, ...(ovT ?? {}) };
-    return { outTex: targetMix.texture, depthTex: this.transRTs[1]?.depthTexture ?? this.transRTs[0]?.depthTexture ?? null, post, probe };
+    let depthTex: THREE.Texture | null = null;
+    const depthA = this.transRTs[0]?.depthTexture;
+    const depthB = this.transRTs[1]?.depthTexture;
+    if (depthA && depthB && u0 > 0.001 && u0 < 0.999) {
+      this.transDepthPass.u.depthA!.value = depthA;
+      this.transDepthPass.u.depthB!.value = depthB;
+      this.transDepthPass.u.u!.value = u0;
+      this.transDepthPass.render(this.renderer, this.transDepthRT);
+      depthTex = this.transDepthRT.texture;
+    } else {
+      depthTex = (u0 >= 0.5 ? depthB : depthA) ?? depthB ?? depthA ?? null;
+    }
+    return { outTex: targetMix.texture, depthTex, post, probe };
   }
 
   private composite(t: number, dt: number, seeked: boolean): { outTex: THREE.Texture; post: PostParams; depthTex: THREE.Texture | null } {
@@ -546,7 +574,15 @@ export class Engine {
         this.xfade.u.k!.value = tin;
         this.xfade.render(r, targetMix);
         outTex = targetMix.texture;
-        depthTex = rt.depthTexture;
+        if (depthTex && rt.depthTexture && tin > 0.001 && tin < 0.999) {
+          this.transDepthPass.u.depthA!.value = depthTex;
+          this.transDepthPass.u.depthB!.value = rt.depthTexture;
+          this.transDepthPass.u.u!.value = tin;
+          this.transDepthPass.render(r, this.transDepthRT);
+          depthTex = this.transDepthRT.texture;
+        } else {
+          depthTex = (tin >= 0.5 ? rt.depthTexture : depthTex) ?? rt.depthTexture;
+        }
       } else {
         outTex = rt.texture;
         depthTex = rt.depthTexture;
@@ -581,6 +617,8 @@ export class Engine {
     this.mixRTs.forEach((rt) => rt.dispose());
     this.transRTs.forEach((rt) => rt.dispose());
     this.transScratch.forEach((rt) => rt.dispose());
+    this.transDepthRT.dispose();
+    this.transDepthPass.dispose();
     this.sumRT.dispose();
     this.newRT.dispose();
     this.avgRT.dispose();
