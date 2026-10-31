@@ -41,6 +41,9 @@ bun scripts/render.ts sheet --from 0 --to 30 --n 24 --cols 6 --out out/sheet.png
 # Export high-fidelity video with audio & AMD AMF hardware encoding
 bun scripts/render.ts video --from 0 --to 125 --fps 60 --gpu --samples 8 --out out/final.mp4
 
+# Export audio only (sample-exact mixdown & mastering without rendering video frames)
+bun scripts/render.ts audio --from 0 --to 125 --out out/master.wav --mp3
+
 # Benchmark render turnaround and GPU memory
 bun scripts/render.ts perf --from 10 --to 20 --samples 1
 
@@ -134,7 +137,26 @@ bun scripts/render.ts video --from 0 --to 125 --fps 60 --crf 16 --gpu --out out/
 
 ---
 
-### 3.4 `perf` (Turnaround & Memory Profiling)
+### 3.4 `audio` (Master Mixdown & Soundtrack Audio Export)
+Renders the complete mastered audio track without rendering or encoding video frames. Resolves project timeline and scene-local events, applies downbeat snapping from `audio.json`, executes multi-track bus summing and lookahead sidechain ducking via `mixdown.ts`, and outputs an EBU R128 mastered WAV file (and optional 320 kbps MP3).
+
+```bash
+bun scripts/render.ts audio --project brand_campaign --mix mix.json --from 0 --to 125 --out out/audio.wav --mp3
+```
+
+| Flag | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `--mix <path>` | file path | Auto-detected | Multi-track mix manifest (`mix.json`). |
+| `--from <seconds>` | float | `0.0` | Start of audio timeline. |
+| `--to <seconds>` | float | Duration | End of audio timeline. |
+| `--out <path>` | file path | `../out/audio.wav` | Master WAV destination. |
+| `--foley-out <path>`| file path | None | Auxiliary foley guide stem destination. |
+| `--events-out <path>`| file path | Auto-detected | Destination for resolved event timestamp table. |
+| `--mp3` | flag | `false` | Also encodes a 320 kbps MP3 alongside the master WAV. |
+
+---
+
+### 3.5 `perf` (Turnaround & Memory Profiling)
 Measures per-frame render turnaround time, GPU synchronization latency, and memory stability.
 
 ```bash
@@ -145,7 +167,7 @@ bun scripts/render.ts perf --from 0 --to 10 --samples 1
 
 ---
 
-### 3.5 `motion` (Visual Telemetry & Kinematics)
+### 3.6 `motion` (Visual Telemetry & Kinematics)
 Runs the full 60fps telemetry suite, evaluating rules F01–F16 and generating `report.md`, `findings.json`, and timeseries plots.
 
 ```bash
@@ -156,7 +178,7 @@ bun scripts/render.ts motion --from 0 --to 30 --out out/motion_audit/
 
 ---
 
-### 3.6 Diagnostic Visual Instruments (`godview`, `onion`, `stitch`, `compare`)
+### 3.7 Diagnostic Visual Instruments (`godview`, `onion`, `stitch`, `compare`)
 - `godview`: Orthographic 3D camera flight blueprint.
 - `onion`: Multi-exposure chromatic motion trail composite.
 - `stitch`: Transition boundary false-color overlay & filmstrip.

@@ -54,7 +54,7 @@ Define assets in the `models` dictionary. The engine guarantees that all models 
 ```typescript
 import * as THREE from 'three';
 import { defineScene, type SceneContext } from '../../engine/dsl';
-import { cubicEaseInOut } from '../../engine/motion';
+import { ease } from '../../engine/util';
 import type { Frame } from '../../engine/scene';
 
 export default defineScene({
@@ -94,10 +94,10 @@ export default defineScene({
     hero.setTime(f.lt, 'ExplodedAssembly');
 
     // 5. Procedural Turntable Sweep
-    const ease = cubicEaseInOut(Math.min(1.0, f.lt / 3.5));
+    const easeVal = ease.inOutCubic(Math.min(1.0, f.lt / 3.5));
     hero.root.rotation.y = f.lt * 0.35;
 
-    ctx.rig.position = [Math.sin(ease * 0.7) * 8.0, 2.5, Math.cos(ease * 0.7) * 8.0];
+    ctx.rig.position = [Math.sin(easeVal * 0.7) * 8.0, 2.5, Math.cos(easeVal * 0.7) * 8.0];
     ctx.rig.target = [0, 0, 0];
     ctx.updateCamera(f.t, f.p);
 

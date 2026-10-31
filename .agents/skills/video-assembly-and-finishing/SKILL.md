@@ -84,6 +84,17 @@ bun scripts/render.ts video \
   --out out/renders/child_lock_video.mp4
 ```
 
+```bash
+# Standalone Master Audio Render (resolves downbeats & mixdown without rendering video frames)
+bun scripts/render.ts audio \
+  --project child_lock \
+  --mix mix.json \
+  --from 0.0 \
+  --to 58.0 \
+  --out out/renders/child_lock_audio.wav \
+  --mp3
+```
+
 ### Critical CLI Flags:
 - `--scale 2`: Renders at native **4K UHD ($3840 \times 2160$)** from canonical $1920 \times 1080$ coordinates.
 - `--samples 8`: Evaluates 8 sub-frame samples per frame with adaptive ternary supersampling, producing true cinematic optical motion blur.

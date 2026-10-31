@@ -1,14 +1,16 @@
 ---
 name: fx-kinetic-typography
-description: Kinetic typography authoring standards, word-stagger reveals, numeric rolling counters, variable font weight/tracking animation, single-stroke Hershey vector plotter fonts, and knockout understroke halos in f(x) Studio.
+description: Kinetic typography authoring standards, in-world 3D PBR extruded text (text_lighting.ts), word-stagger reveals, numeric rolling counters, Hershey vector plotter fonts, and knockout halos in f(x) Studio.
 ---
-# f(x) Studio: Universal Kinetic Typography & Vector Lettering
+# f(x) Studio: Kinetic Typography & In-World 3D Lettering
 
-Technical standards, kinetic choreographies, vector plotter systems, and legibility protocols for authoring **on-screen typography, speech-timed kinetic manifestos, technical annotations, and numeric counters** in **f(x) Studio**.
+Technical standards, kinetic choreographies, in-world 3D extruded typography, vector plotter systems, and legibility protocols for authoring **on-screen typography, speech-timed kinetic manifestos, technical annotations, and numeric counters** in **f(x) Studio**.
 
 ## When to Use
 
 - Authoring kinetic typography sequences, title cards, or word-by-word speech subtitle tracks.
+- Implementing diegetic in-world 3D PBR extruded typography that participates in scene lighting, shadows, and thin-lens DoF ([`text_lighting.ts`](file:///c:/Users/brosf/Documents/A%20vio%20projects/VioPls/Agentic%20motion%20design%20toolset/app/src/engine/text_lighting.ts)).
+- Deflecting particle streams and volumetrics around physical 3D glyphs (`deflectPointFromGlyph`).
 - Animating words with physical mass (scale slams, weight/width pressure, tracking overshoots).
 - Implementing technical annotations, engineering blueprints, or schematic labels via single-stroke vector plotter fonts ([`stroke.ts`](file:///c:/Users/brosf/Documents/A%20vio%20projects/VioPls/Agentic%20motion%20design%20toolset/app/src/engine/stroke.ts)).
 - Creating smooth, deterministic numeric rolling counters and telemetry metric readouts.
@@ -35,11 +37,11 @@ Select the typography modality that matches the project's aesthetic intent:
                                      │
       ┌──────────────────────────────┼──────────────────────────────┐
       ▼                              ▼                              ▼
-[ MODALITY A: Canvas2D ]     [ MODALITY B: Hershey ]     [ MODALITY C: planeAffine ]
-High-Impact Editorial        Vector Plotter Blueprint    3D Surface-Mounted
-• Knockout understroke halos • GPU LineBatch hairlines   • Skewed onto 3D planes
-• Scale slams & font weights • Zero font files needed    • Parallax & depth-of-field
-• 1–3 word speech chunking   • Technical / Engineering   • Diegetic world integration
+[ MODALITY A: Canvas2D ]     [ MODALITY B: In-World 3D ]   [ MODALITY C: Hershey ]
+High-Impact Editorial HUD    Diegetic Physical 3D Mesh     Vector Plotter Blueprint
+• Knockout understroke halos • text_lighting.ts PBR mesh   • GPU LineBatch hairlines
+• Scale slams & font weights • Depth buffer & real shadows • Zero font files needed
+• 1–3 word speech chunking   • Thin-lens DoF & particle hit • Technical / Engineering
 ```
 
 ### Modality A: High-Impact Canvas2D with Knockout Halos
@@ -48,16 +50,34 @@ Used for bold manifesto titles, central narrative keywords, and speech captions 
 - Automatically gates on `await document.fonts.ready` to eliminate Flash-Of-Unstyled-Text (FOUT).
 - Automatically publishes bounding boxes to `window.__motion.textProbes` for telemetry validation.
 
-### Modality B: Hershey Vector Plotter Typography (`stroke.ts`)
+### Modality B: In-World 3D PBR Extruded Typography (`text_lighting.ts`)
+Used for spatial, diegetic text integrated physically into the 3D scene (monolithic typography, architectural signage, mechanical labels):
+- Built via [`text_lighting.ts`](file:///c:/Users/brosf/Documents/A%20vio%20projects/VioPls/Agentic%20motion%20design%20toolset/app/src/engine/text_lighting.ts) and [`text3d.ts`](file:///c:/Users/brosf/Documents/A%20vio%20projects/VioPls/Agentic%20motion%20design%20toolset/app/src/engine/text3d.ts).
+- **Physical Depth Participation:** Configured with `depthWrite: true`, casts/receives real Three.js shadows, and undergoes optical thin-lens bokeh blur via `dof.ts`.
+- **Active Volumetric Deflection:** Generates per-glyph world-space bounding obstacles that actively repel particle streams via `deflectPointFromGlyph`.
+
+```typescript
+import { createInWorldText, getTextLayout, computeTextCoC } from '../../engine/text_lighting';
+
+// Create true 3D extruded physical text
+const titleMesh = createInWorldText('AUTONOMOUS PROTOCOL', {
+  size: 1.2,
+  depth: 0.25,
+  color: '#E8E4DA',         // --bone
+  roughness: 0.2,
+  metalness: 0.9,           // Brushed metallic surface
+  depthWrite: true,
+  castShadow: true,
+  receiveShadow: true,
+});
+scene.add(titleMesh);
+```
+
+### Modality C: Hershey Vector Plotter Typography (`stroke.ts`)
 Used for CAD schematics, industrial blueprints, and engineering annotations:
 - Renders text purely as 3D/2D line segments via `LineBatch`, requiring **zero external font files**.
 - Based on the Hershey vector plotter dataset: clean, uniform, anti-aliased single-stroke geometry.
 - Lines seamlessly receive HDR bloom and optical halation alongside structural wireframes.
-
-### Modality C: 3D Surface-Mounted Typography (`planeAffine`)
-Used for text that exists diegetically in the 3D scene (etched into metal plates, printed on walls):
-- Computes affine 2D transform matrices from 3D camera pinhole geometry ([`util.ts`](file:///c:/Users/brosf/Documents/A%20vio%20projects/VioPls/Agentic%20motion%20design%20toolset/app/src/engine/util.ts)).
-- Text scales and rotates in physical metres, perfectly tracking camera orbits without polygonal 3D meshes.
 
 ---
 
@@ -68,7 +88,7 @@ Used for text that exists diegetically in the 3D scene (etched into metal plates
 **Mandatory:** Treat typography as a solid physical mass that slams into place with spring overshoot:
 
 ```typescript
-import { springStep } from '../../engine/motion';
+import { springStep } from '../../engine/util';
 
 // Physical Slam Overshoot: Scale drops from 1.35x to 1.0x with damped spring settle
 export function getWordSlamTransform(t: number, hitTime: number): { scale: number; yOffset: number } {
@@ -113,7 +133,6 @@ words.forEach((word, idx) => {
   const color = isActive ? '#FF2A1F' : '#E8E4DA'; // --signal on active, --bone on rest
   const scale = isActive ? 1.08 : 1.0;
 
-  // Render staggered word block
   renderWord(word, xPos[idx], yPos, scale, color);
 });
 ```
@@ -125,21 +144,26 @@ words.forEach((word, idx) => {
 When authoring engineering drawings or HUD coordinates, use Hershey single-stroke fonts:
 
 ```typescript
-import { HersheyFont } from '../../engine/stroke';
+import { strokeText } from '../../engine/stroke';
 import { LineBatch } from '../../engine/lines';
 
-export function renderSchematicLabels(lines: LineBatch, cam: any): void {
-  const font = new HersheyFont();
-  
-  // Render technical coordinate stamp
-  // renderText(text, x, y, scaleM, color, lines)
-  font.render(
-    'VALVE_PRESSURE: 420.8 kPa',
-    lines,
-    [2.4, 1.2, 0.0],  // 3D World Anchor
-    0.045,            // Scale in metres
-    [0.42, 0.41, 0.40, 0.9] // --ash
-  );
+export function renderSchematicLabels(lines: LineBatch, x: number, y: number, z: number): void {
+  // Lays out single-stroke polylines using technical vector plotter font
+  const textData = strokeText('VALVE_PRESSURE: 420.8 kPa', 'tech', 48);
+  const scale = 0.001; // Screen px to world metres
+  const col = [0.42, 0.41, 0.40, 0.9]; // --ash
+
+  for (const stroke of textData.strokes) {
+    for (let i = 0; i < stroke.length - 1; i++) {
+      const p0 = stroke[i]!;
+      const p1 = stroke[i + 1]!;
+      lines.seg(
+        x + p0.x * scale, y - p0.y * scale, z,
+        x + p1.x * scale, y - p1.y * scale, z,
+        1.2, col[0], col[1], col[2], col[3]
+      );
+    }
+  }
 }
 ```
 
@@ -193,13 +217,12 @@ export function renderRollingCounter(
 To satisfy WCAG standards and prevent telemetry Rule `F04` (Text Collision / Unreadable Contrast):
 
 ```typescript
-// Complete Knockout Halo Implementation in Canvas2D
 export function drawContrastText(
   ctx: CanvasRenderingContext2D,
   text: string,
   x: number,
   y: number,
-  textColor = '#E8E4DA',         // --bone
+  textColor = '#E8E4DA',             // --bone
   haloColor = 'rgba(5, 5, 6, 0.95)', // --void with high opacity
   haloWidth = 6
 ): void {
@@ -220,10 +243,6 @@ export function drawContrastText(
 }
 ```
 
-- **Halo Width Standard:**
-  - 16:9 Desktop / 4K: `haloWidth = 6`
-  - 9:16 Mobile Shorts: `haloWidth = 8` (compensates for small smartphone screens)
-
 ---
 
 ## 7. Pre-Flight Kinetic Typography Checklist
@@ -232,7 +251,8 @@ Before finalizing any typography pass:
 
 - [ ] **Font Loading Gate:** Initialization strictly awaits `document.fonts.ready`.
 - [ ] **No Naked Fades:** Words enter via mass slams (scale/overshoot) or typographic pressure, not bare opacity fades.
-- [ ] **Knockout Halos:** All text over 3D scenes or particles features dark knockout halos (`haloWidth >= 6`).
+- [ ] **Modality Chosen:** Clear intent between 2D Canvas HUD, In-World 3D Extruded PBR (`text_lighting.ts`), or Hershey wireframe vectors.
+- [ ] **Knockout Halos:** All 2D text over 3D scenes or particles features dark knockout halos (`haloWidth >= 6`).
 - [ ] **Monospace Digits:** Numeric counters use tabular/monospace formatting to eliminate horizontal digit jitter.
 - [ ] **Safe Zone Adherence:** Titles respect 90% safe zones on 16:9 and Central 60% Core on 9:16 Shorts.
 - [ ] **Telemetry Compliance:** Text does not intersect other text elements (`F04`) or clip viewport bounds (`F05`).

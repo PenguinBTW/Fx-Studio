@@ -82,11 +82,11 @@ Tier A flags represent physical geometry overlap, clipping, or fatal render faul
   import { LayoutNode } from '../../engine/transform';
   
   // Pin text to safe title anchor rather than raw screen coordinates:
-  const titleNode = new LayoutNode({
-    anchor: 'top-center',
-    offset: [0, 80], // 80px down from top edge (well inside safe box)
-    safeZone: 'action',
-  });
+  const titleNode = new LayoutNode('title').setPin('top-center', { top: 80 });
+
+
+
+
   ```
 * **Remediation Recipe 2 (Camera Frustum Pullback):**
   ```typescript

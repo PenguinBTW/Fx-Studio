@@ -4,6 +4,7 @@
 //   sheet:   bun scripts/render.ts sheet --from 20 --to 35 [--n 12] [--cols 4] [--only ids] [--out file.png]   (or --times a,b,c | --cuts)
 //   plates:  bun scripts/render.ts plates   (renders one representative JPEG per plate into public/plates/ (used by the outro's rewind), times from plates.json or entry midpoints)
 //   perf:    bun scripts/render.ts perf --from 20 --to 25 [--only ids] [--samples 1] [--shutter 0.5]   (avg ms per frame incl. GPU sync and the export's pixel readback)
+//   audio:   bun scripts/render.ts audio [--project p] [--mix mix.json] [--from 0] [--to 120] [--out ../out/audio.wav] [--foley-out guide.wav] [--events-out events.json] [--mp3]
 //   video:   bun scripts/render.ts video [--from 0] [--to 156.65] [--fps 60] [--crf 16] [--x264 aq-mode=3] [--gpu] [--gpu-encoder h264_amf] [--samples 1] [--shutter 0.5] [--out ../out/motion.mp4] [--noaudio]
 //            --mix mix.json [--foley-out guide.wav] multi-track mixdown (docs/audio/mixdown.md); --events-out events.json writes the resolved event table (docs/audio/events.md)
 //            --gpu enables AMD AMF hardware video encoding (h264_amf, hevc_amf, av1_amf), offloading CPU load;
@@ -224,6 +225,77 @@ async function sheet(page: Page, times: number[], cols: number, out: string) {
   const outDir = path.dirname(path.resolve(out));
   if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
   await Bun.write(out, Buffer.from(dataUrl.split(',')[1]!, 'base64'));
+}
+
+async function audioOnly(page: Page, from: number, to: number, out: string) {
+  const outDir = path.dirname(path.resolve(out));
+  if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
+
+  const evMod = await import('../src/engine/events');
+  const projName = opt('project') ?? JSON.parse(await Bun.file(path.join(APP, 'src/scenes/active.json')).text()).project;
+  const manifest = await Bun.file(path.join(APP, 'src/scenes', projName, 'project.json')).json();
+  const analysisPath = opt('analysis') ? resolveOut(opt('analysis')) : path.join(APP, 'public/data/audio.json');
+  const analysis = existsSync(analysisPath) ? await Bun.file(analysisPath).json() : null;
+
+  const registry = new evMod.EventRegistry();
+  try { registry.load(await page.evaluate(() => (globalThis as any).__fxEvents?.dump?.() ?? {})); } catch {}
+  const events = evMod.resolveEvents(manifest, analysis, { fps: numOpt('fps', 60), registry });
+
+  const eventsOut = opt('events-out');
+  if (eventsOut) {
+    const evFile = resolveOut(eventsOut);
+    await Bun.write(evFile, JSON.stringify({ fps: numOpt('fps', 60), events }, null, 2));
+    console.log(`[audio] wrote events table to ${evFile} (${events.length} events)`);
+  }
+
+  let mixPath = opt('mix');
+  if (!mixPath) {
+    const candidateSceneMix = path.join(APP, 'src/scenes', projName, 'mix.json');
+    const candidatePublicMix = path.join(APP, 'public/data/mix.json');
+    if (existsSync(candidateSceneMix)) mixPath = candidateSceneMix;
+    else if (existsSync(candidatePublicMix)) mixPath = candidatePublicMix;
+    else if (manifest.mix) mixPath = path.isAbsolute(manifest.mix) ? manifest.mix : path.join(APP, 'src/scenes', projName, manifest.mix);
+  }
+
+  if (mixPath && existsSync(resolveOut(mixPath))) {
+    const { mixdown } = await import('./mixdown');
+    const foley = opt('foley-out');
+    console.log(`[audio] Rendering multi-track mixdown (${from.toFixed(2)}s to ${to.toFixed(2)}s) from ${mixPath}...`);
+    const report = await mixdown({
+      mix: resolveOut(mixPath),
+      events: { events },
+      from,
+      to,
+      out: resolveOut(out),
+      foleyOut: foley ? resolveOut(foley) : undefined,
+      log: (m) => console.log(`[mixdown] ${m}`),
+    });
+
+    console.log(`\n[audio] Success! Master audio written to: ${out}`);
+    console.log(`- Sample rate: ${report.sampleRate} Hz`);
+    console.log(`- Duration: ${(to - from).toFixed(2)}s (${report.samples} samples)`);
+    if (foley) console.log(`- Foley guide: ${foley}`);
+  } else {
+    const explicitAudio = opt('audio');
+    const defaultAudio = path.join(APP, 'public/audio/audio.mp3');
+    const audioTrack = explicitAudio ? resolveOut(explicitAudio) : (existsSync(defaultAudio) ? defaultAudio : '');
+    if (!audioTrack || !existsSync(audioTrack)) {
+      throw new Error(`[audio] No mix manifest found (pass --mix path/to/mix.json) and no audio track at ${defaultAudio}`);
+    }
+    console.log(`[audio] Extracting audio range (${from.toFixed(2)}s to ${to.toFixed(2)}s) from ${audioTrack}...`);
+    const p = Bun.spawn(['ffmpeg', '-y', '-v', 'error', '-i', audioTrack, '-ss', String(from), '-to', String(to), resolveOut(out)]);
+    const exitCode = await p.exited;
+    if (exitCode !== 0) throw new Error(`[audio] FFmpeg export failed with code ${exitCode}`);
+    console.log(`\n[audio] Success! Exported audio track to: ${out}`);
+  }
+
+  if (flag('mp3') && !out.endsWith('.mp3')) {
+    const mp3Out = out.replace(/\.[^.]+$/, '') + '.mp3';
+    console.log(`[audio] Encoding MP3 (320 kbps): ${mp3Out}...`);
+    const p = Bun.spawn(['ffmpeg', '-y', '-v', 'error', '-i', resolveOut(out), '-b:a', '320k', resolveOut(mp3Out)]);
+    await p.exited;
+    console.log(`[audio] Wrote ${mp3Out}`);
+  }
 }
 
 async function video(page: Page, from: number, to: number, fps: number, out: string) {
@@ -926,6 +998,12 @@ try {
       return { n: ms.length, avg: ms.reduce((a, b) => a + b, 0) / ms.length, p50: ms[ms.length >> 1], p95: ms[Math.floor(ms.length * 0.95)], max: ms[ms.length - 1], used };
     }, { from, to, samples: SAMPLES, shutter: numOpt('shutter', 0.5, 0, 1) });
     console.log(`frames ${r.n}  avg ${r.avg.toFixed(1)}ms  p50 ${r.p50.toFixed(1)}  p95 ${r.p95.toFixed(1)}  max ${r.max.toFixed(1)}  sub-frames ${hist(r.used)}`);
+  } else if (mode === 'audio') {
+    const dur: number = await page.evaluate(() => (window as any).__motion?.duration ?? (window as any).__pdoom?.duration ?? 5.0);
+    const aFrom = numOpt('from', 0, 0);
+    let aTo = numOpt('to', dur, 0);
+    if (aTo <= aFrom) { console.warn(`[audio] Empty window (to<=from), expanding to from+1s`); aTo = aFrom + 1; }
+    await audioOnly(page, aFrom, aTo, resolveOut(opt('out'), path.join(ROOT, 'out/audio.wav')));
   } else if (mode === 'video') {
     const dur: number = await page.evaluate(() => (window as any).__motion?.duration ?? (window as any).__pdoom?.duration ?? 5.0);
     const vFrom = numOpt('from', 0, 0);

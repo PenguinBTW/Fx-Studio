@@ -43,7 +43,7 @@ Staggers, Hershey Fonts
 
 | Task / Intent | Required Skill | Description & Scope |
 |---|---|---|
-| **Authoring or editing scenes** in `app/src/scenes/` | **`fx-scenes`** | Raw `Scene` subclasses (common) or optional `defineScene()` DSL, 6-DOF camera choreography, 2D/3D layout nodes, kinetic typography halos, particle presets, and closed-form math $\text{Frame} = f(t)$. |
+| **Authoring or editing scenes** in `app/src/scenes/` | **`fx-scenes`** | True 3D visual staging, physical optics (DoF, blackbody/spectral lighting), CameraRig analytical choreography (`solveDollyZoom`, `orbitPosition`), and deciding between Declarative DSL (`defineScene`) vs. Raw `Scene` subclasses for multi-pass depth pipelines. |
 | **Connecting scenes or writing seams** in `app/src/transitions/` | **`fx-transitions`** | Scene-to-scene momentum continuity, carrier handoffs, `api.sampleScene(id, t)` speed ramps, and `overlayTextDuck` anti-collision text ducking. |
 | **Modifying engine source code** in `app/src/engine/` | **`fx-engine-dev`** | WebGL state cache restoration (`resetState()`), HalfFloat HDR render target allocation, custom GLSL fullscreen passes, and static GPU buffer memory rules. |
 | **Visual QA, debugging, telemetry, or export** | **`fx-diagnostics`** | Running the 4 visual instruments (`godview`, `onion`, `stitch`, `compare`), evaluating Tier A/B/C telemetry rules (`F01–F16`), waiver logging, and CLI rendering. |
@@ -75,7 +75,13 @@ app/
 ├── src/
 │   ├── engine/             # Core Engine Plumbing (Managed via fx-engine-dev)
 │   │   ├── dsl.ts          # Declarative scene authoring DSL (defineScene)
-│   │   ├── rig.ts          # 6-DOF Camera Rig (Centripetal splines, Bishop frames)
+│   │   ├── rig.ts          # 6-DOF Camera Rig (solveDollyZoom, orbitPosition, focusDistance, Bishop splines)
+│   │   ├── dof.ts          # Physical thin-lens Circle-of-Confusion DoF (bilateral gather, bokeh)
+│   │   ├── spectrum.ts     # Spectral colour science (Planckian blackbody, CIE 1931, emission lines)
+│   │   ├── refract.ts      # Cauchy dispersion, Fresnel reflection, Descartes caustics
+│   │   ├── text_lighting.ts# In-world 3D PBR extruded typography & particle deflection
+│   │   ├── particles_large.ts # 500k stateless GPU instanced particles with 3D curl noise
+│   │   ├── ribbon.ts       # Twist-free dynamic ribbon geometry via Bishop parallel transport
 │   │   ├── transform.ts    # TransformNode & responsive LayoutNode
 │   │   ├── text.ts         # Kinetic typography engine with knockout halos
 │   │   ├── sdf.ts          # Instanced GPU Signed Distance Fields (cards, rings)
