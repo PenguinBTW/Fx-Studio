@@ -102,6 +102,21 @@ def main():
         d2 = np.array([t for t in j2['downbeats'] if 18 <= t < 28])
         check(len(d2) and abs(d2[0] - 18.0) < 1e-3, f'override pins downbeat at 18.0 ({d2[:2]})')
 
+        # Test --audit flag
+        out_audit = os.path.join(d, 'audit.json')
+        r_audit = run(['--audio', wav, '--out', out, '--audit', '--audit-out', out_audit])
+        check(r_audit.returncode == 0, 'analysis with --audit runs')
+        check(os.path.exists(out_audit), 'audit.json created')
+        if os.path.exists(out_audit):
+            ja = json.load(open(out_audit))
+            check('barsCount' in ja and ja['barsCount'] > 0, 'audit has barsCount')
+            check('bars' in ja and len(ja['bars']) == ja['barsCount'], 'audit has bars array')
+            check('candidateCuts' in ja and len(ja['candidateCuts']) > 0, 'audit has candidateCuts')
+            if len(ja['candidateCuts']):
+                first_cut = ja['candidateCuts'][0]
+                for field in ('fromBar', 'toBar', 'chromaCosineSimilarity', 'bassRootMatch', 'vocalSilenceGapSec', 'kickPreAttackOffsetMs', 'reliabilityScore'):
+                    check(field in first_cut, f'candidate cut has {field}')
+
     print('\n%d failure(s)' % check.failed)
     sys.exit(1 if check.failed else 0)
 

@@ -261,6 +261,32 @@ When scripts call for cosmic dust, atmospheric currents, or magnetic data flows,
 - Pure closed-form evaluation $p(\text{seed}, t)$: scrubs bidirectionally with zero accumulator drift.
 - Supports Planckian blackbody and spectral wavelength emission colors.
 
+### 5.3 Scene-Bound Audio Telemetry Emission (`emitAudioTelemetry`) [v0.8.0]
+To spatialize 3D sound effects (thrusters, impacts, engines, room tone) without running DSP inside the visual render loop:
+1. Scenes emit lightweight telemetry points each frame using `emitAudioTelemetry`:
+   ```typescript
+   import { emitAudioTelemetry, projectWorldToScreenPan } from '../../engine/audio';
+
+   // Compute screen NDC projection and distance without Three.js runtime dependency
+   const { pan, distance } = projectWorldToScreenPan(
+     [ship.position.x, ship.position.y, ship.position.z],
+     camera.matrixWorldInverse.elements,
+     camera.projectionMatrix.elements,
+     0.65 // maxPan boundary
+   );
+
+   emitAudioTelemetry('cargo_ship', {
+     pos: [ship.position.x, ship.position.y, ship.position.z],
+     pan,
+     distance,
+     velocity: shipVelocity,
+     zone: inHangar ? 'hangar' : 'vacuum',
+     occluded: isBehindBulkhead,
+   });
+   ```
+2. During offline rendering, these snapshots stream to `out/events.jsonl`.
+3. In Pass 3, the NLE mixdown engine (`app/scripts/mixdown.ts`) reads `events.jsonl`, binding `spatialSources` to scene IDs with 1-pole de-zippering and Cytomic SVF air absorption rolloff.
+
 ---
 
 ## 6. Pre-Flight Scene Authoring Checklist
@@ -277,3 +303,4 @@ Before marking a scene complete or submitting for review, verify:
 - [ ] **Text Ducking:** 2D overlays multiply alpha by `ctx.overlayDuck` / `overlayTextDuck(f.tin, f.tout)`.
 - [ ] **Resource Disposal:** Custom textures, geometries, materials, and render targets are fully freed in `dispose()`.
 - [ ] **Safe Boundaries:** All critical visuals and text sit comfortably inside safe zones.
+- [ ] **Audio Telemetry:** Dynamic 3D audio emitters register transforms via `emitAudioTelemetry(id, ...)` for Pass 3 spatialization.

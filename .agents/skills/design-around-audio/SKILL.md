@@ -157,24 +157,68 @@ Identify and excise passages that weaken visual cutting cadence:
    $$\text{Cut Point} = \text{downbeats}[K], \quad \text{Resume Point} = \text{downbeats}[K + N]$$
 3. **Phase Invariant:** The splice must maintain continuous bar phase so the following measure begins firmly on Beat 1.
 
-### 3.3 Multi-Stem Staggered Crossfading (No Master Razor Cuts)
-Never cut all stems simultaneously on the same frame. Stagger cuts across isolated stems:
-- **Vocals Stem:** Must cut cleanly during vocal silences ($\ge 120\text{ ms}$ breath gap). Never splice mid-vowel or mid-syllable (Rule `F10`).
-- **Drums & Bass Stems:** Snap with sample-level precision to Beat 1 downbeat of the resuming measure, preserving transient punch.
-- **Harmonic / Ambient Stems (`other`):** Apply an exponential decay release ($1.5\text{--}3.0\text{s}$) to let the pre-cut synth or piano reverb tail naturally wash across the cut, blending imperceptibly into the next section.
+### 3.3 Declarative Multi-Stem NLE & Seam Physics (f(x) Studio v0.8.0) [RULE]
+Never cut all stems simultaneously on the same frame. In v0.8.0, use the `defineMix()` declarative DSL with `excise` and physical seam primitives:
 
-### 3.4 Procedural Seam Camouflage (`synth.ts`)
-To completely eliminate perceptible arrangement jumps or micro-phase steps at the splice:
-1. Synthesize a reverse riser or filtered noise whoosh swelling across the final $0.5\text{--}1.0\text{s}$ leading into the seam cut.
-2. Trigger an 808 sub-drop or procedural transient impact right on the landing downbeat frame.
-3. The ear interprets the transition as an intentional arrangement drop rather than a cut.
+```typescript
+import { defineMix } from '@/engine/audio';
+
+export default defineMix({
+  soundtracks: [
+    {
+      id: 'score',
+      stems: {
+        drums: 'stems/drums.wav',
+        bass: 'stems/bass.wav',
+        vocals: 'stems/vocals.wav',
+        other: 'stems/other.wav',
+      },
+      edits: {
+        quantize: 'bars',
+        excise: [
+          {
+            fromBar: 4,
+            toBar: 12,
+            stems: {
+              drums: { transientLock: true, lagBars: 2 },
+              vocals: { breathGate: true },
+              other: { tailSpillover: { spillSec: 2.0, tauSec: 0.7 } },
+            },
+          },
+        ],
+      },
+    },
+  ],
+});
+```
+
+1. **Master Transient Lock (`transientLock`)**:
+   Offsets the incoming cut across all stems together by the kick drum's pre-attack zero crossing ($-2.38\,\text{ms}$) with an asymmetric crossfade ($3\,\text{ms}$ cosine out, $0\,\text{ms}$ hard in). Applying this offset collectively preserves absolute phase alignment across all stems, eliminating phase smearing from Demucs stem bleed.
+2. **Harmonic Tail Spillover (`tailSpillover`)**:
+   Harmonic instruments (`other`, synths, guitars, strings) do not cut abruptly at the seam. An exponential decay envelope $\text{Decay}(t) = \exp(-t/\tau)$ overlays the outgoing tail across the incoming scene for $1.5\text{--}2.5\,\text{s}$.
+3. **Vocal Breath Gating (`breathGate`)**:
+   Snaps vocal cuts to detected silence gaps ($\ge 120\,\text{ms}$), suppressing orphan breath gasps and zero-filling the edit window.
+4. **Sub-Bass Decoupling**:
+   SFX sub-drops and musical 808 kicks must never land on the exact same downbeat frame. Split-band ducking (`splitBandDuck`) decouples mid/high ducking from sub frequencies below $250\,\text{Hz}$ via a 2-pole Linkwitz-Riley crossover, keeping physical weight rock-solid.
+
+### 3.4 Acoustic Candidate Cut Auditing (`analyze_song.py --audit`)
+Before executing excisions, run the acoustic audit tool to discover mathematically optimal cut points:
+```bash
+python scripts/analyze_song.py --audio song/track.mp3 --stems stems/htdemucs/ --audit --audit-out data/audit.json
+```
+The audit computes:
+- Bar-by-bar chroma cosine similarity ($\ge 0.85$ matches key and harmony)
+- Bass fundamental root matching ($\ge 0.80$)
+- Vocal silence gap verification ($\ge 0.12\,\text{s}$)
+- Kick pre-attack zero crossing offset (target $-2.38\,\text{ms}$)
+- Overall cut reliability score ($0.0 \dots 1.0$)
 
 ### 3.5 Broadcast Master Mixdown (`mixdown.ts` / `render.ts audio`)
-Assemble the re-edited stems into `mix.json`, declare bus gains and sidechain ducking, and compile via the engine CLI:
+Assemble the re-edited stems into `mix.ts`, declare bus routing, and compile via the engine CLI:
 ```bash
-bun scripts/render.ts audio --project <project> --mix mix.json --from 0.0 --to <dur> --out out/master.wav --mp3
+bun scripts/render.ts audio --project <project> --mix audio/mix.ts --from 0.0 --to <dur> --out out/master.wav --mp3
 ```
-This applies two-pass EBU R128 loudness normalization ($-14.0\text{ LUFS}$ / $-1.5\text{ dBTP}$) and sample-exact digital silence gating.
+This applies two-pass EBU R128 loudness normalization ($-14.0\text{ LUFS}$ / $-1.5\text{ dBTP}$), lookahead peak limiting ($1.5\,\text{ms}$ lookahead), and sample-exact digital silence gating.
 
 ---
 

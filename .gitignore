@@ -26,6 +26,7 @@ app/public/data/
 **/draco/
 **/audio/
 !docs/audio/
+!app/src/engine/audio/
 
 
 # Tool and bundler caches

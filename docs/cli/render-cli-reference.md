@@ -138,20 +138,24 @@ bun scripts/render.ts video --from 0 --to 125 --fps 60 --crf 16 --gpu --out out/
 ---
 
 ### 3.4 `audio` (Master Mixdown & Soundtrack Audio Export)
-Renders the complete mastered audio track without rendering or encoding video frames. Resolves project timeline and scene-local events, applies downbeat snapping from `audio.json`, executes multi-track bus summing and lookahead sidechain ducking via `mixdown.ts`, and outputs an EBU R128 mastered WAV file (and optional 320 kbps MP3).
+Renders the complete mastered audio track without rendering or encoding video frames. Resolves project timeline and scene-local events, processes multi-stem NLE soundtracks (`defineMix`), executes 3D object-bound spatial audio from visual telemetry streams (`events.jsonl`), applies split-band ducking and vocal sanctuary dynamic EQ via `mixdown.ts`, and outputs an EBU R128 mastered WAV file (and optional 320 kbps MP3).
 
 ```bash
-bun scripts/render.ts audio --project brand_campaign --mix mix.json --from 0 --to 125 --out out/audio.wav --mp3
+# Render master audio mix from TypeScript mix manifest:
+bun scripts/render.ts audio --project spacecraft_docking --mix scenes/spacecraft_docking/audio/mix.ts --from 0 --to 45 --out out/audio.wav --mp3
+
+# Render with explicit telemetry stream and secondary foley guide output:
+bun scripts/render.ts audio --mix mix.ts --events out/events.jsonl --from 0 --to 125 --out out/audio.wav --foley-out out/foley_guide.wav
 ```
 
 | Flag | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `--mix <path>` | file path | Auto-detected | Multi-track mix manifest (`mix.json`). |
+| `--mix <path>` | file path | Auto-detected | Multi-stem mix manifest (`mix.ts` or `mix.json`). |
 | `--from <seconds>` | float | `0.0` | Start of audio timeline. |
 | `--to <seconds>` | float | Duration | End of audio timeline. |
-| `--out <path>` | file path | `../out/audio.wav` | Master WAV destination. |
+| `--out <path>` | file path | `../out/audio.wav` | Master 48kHz / 24-bit WAV destination. |
 | `--foley-out <path>`| file path | None | Auxiliary foley guide stem destination. |
-| `--events-out <path>`| file path | Auto-detected | Destination for resolved event timestamp table. |
+| `--events-out <path>`| file path | Auto-detected | Destination for resolved event timestamp table or `events.jsonl`. |
 | `--mp3` | flag | `false` | Also encodes a 320 kbps MP3 alongside the master WAV. |
 
 ---

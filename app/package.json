@@ -23,6 +23,10 @@
     "test:dof": "bun scripts/test_depth_dof.ts",
     "test:ribbons": "bun scripts/test_ribbons.ts",
     "test:seams": "bun scripts/check_seams.ts",
+    "test:nle": "bun scripts/test_stem_nle.ts",
+    "test:spatial": "bun scripts/test_spatializer.ts",
+    "test:dsp": "bun scripts/test_dsp.ts",
+    "test:transitions": "bun scripts/test_transitions_registry.ts",
     "check:determinism": "bun scripts/check_determinism.ts",
     "release:promote": "bun scripts/promote.ts"
   },

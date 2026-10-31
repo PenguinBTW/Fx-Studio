@@ -100,6 +100,24 @@ try {
   const gv = Bun.spawnSync([py, path.join(ROOT, 'scripts/verify_audio.py'), path.join(tmp, 'guide_only.wav'), '--no-loudness', '--mute', '5', '8'], { stdout: 'pipe', stderr: 'pipe' });
   assert(gv.exitCode === 0, 'foley-only file verifies (void zero)');
 
+  console.log('split-band duck & vocal sanctuary');
+  const mixDsp: MixManifest = {
+    sampleRate: SR,
+    stems: [
+      { id: 'music', file: 'music.wav', bus: 'music', gainDb: -3 },
+      { id: 'vo', file: 'hit.wav', bus: 'vo', at: 1.0 },
+      { id: 'click', file: 'hit.wav', bus: 'sfx', at: 3.0 },
+    ],
+    duck: { cues: ['click'], amountDb: 6, attack: 0.02, release: 0.4, splitBand: true, splitHz: 250 },
+    vocalSanctuary: { centerHz: 2200, cutDb: -4 },
+    master: { lufs: -14, truePeak: -1.5, limiterLookaheadMs: 1.5 },
+  };
+  const dspOut = path.join(tmp, 'dsp_mix.wav');
+  const dspRep = await mixdown({ mix: mixDsp, baseDir: tmp, from: 0, to: 5, out: dspOut, log: () => {} });
+  assert(dspRep.samples === 5 * SR, 'split-band & vocal sanctuary mixdown completed');
+  const dspVerify = Bun.spawnSync([py, path.join(ROOT, 'scripts/verify_audio.py'), dspOut, '--target-lufs', '-14', '--max-tp', '-1.0'], { stdout: 'pipe', stderr: 'pipe' });
+  assert(dspVerify.exitCode === 0, 'dsp mix passes audio verification (LUFS -14, TP <= -1.0)');
+
   console.log('mux (no -shortest, explicit pad)');
   const base = { format: 'mp4' as const, outPath: path.join(tmp, 'v.mp4'), width: 320, height: 240, fps: 30 as const, from: 0, to: 12 };
   const legacy = ExportPipeline.buildFFmpegArgs({ ...base, audioTrack: 'a.mp3' });

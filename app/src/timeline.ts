@@ -7,6 +7,7 @@
 import type { TimelineEntry } from './engine/engine';
 import type { SceneClass } from './engine/scene';
 import { validateTransition, type TransitionClass, type TransitionEntry } from './engine/transition';
+import { createTransitionResolver } from './engine/transitions/registry';
 import {
   buildTimelineEntries,
   buildTransitionEntries,
@@ -64,7 +65,8 @@ export function makeTimeline(
 
 export function makeTransitions(project?: string | null): TransitionEntry[] {
   const manifest = loadManifest(project);
-  const trs = buildTransitionEntries(manifest, transition);
+  const trResolver = createTransitionResolver(manifest.project);
+  const trs = buildTransitionEntries(manifest, trResolver);
   const entries = buildTimelineEntries(manifest, scene);
   for (const tr of trs) {
     const errs = validateTransition(tr, entries);

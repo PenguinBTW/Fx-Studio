@@ -74,6 +74,16 @@ f(x) Studio projects are isolated inside `app/src/scenes/<project_name>/`:
 app/
 ├── src/
 │   ├── engine/             # Core Engine Plumbing (Managed via fx-engine-dev)
+│   │   ├── audio/          # Dedicated Engine Audio Subsystem (v0.8.0)
+│   │   │   ├── manifest.ts    # defineMix() DSL, validation & types
+│   │   │   ├── telemetry.ts   # emitAudioTelemetry, screen projection
+│   │   │   ├── smoother.ts    # 1-pole de-zippering k-to-a rate bridge
+│   │   │   ├── spatializer.ts # Vector pan, Cytomic SVF LPF & occlusion
+│   │   │   ├── stem_nle.ts    # Multi-stem timeline, transientLock & spillover
+│   │   │   ├── dsp.ts         # Vocal sanctuary notch, split-band ducking, limiter
+│   │   │   └── index.ts       # Unified subsystem exports
+│   │   ├── transitions/
+│   │   │   └── registry.ts    # Two-tier transition cascade resolver
 │   │   ├── dsl.ts          # Declarative scene authoring DSL (defineScene)
 │   │   ├── rig.ts          # 6-DOF Camera Rig (solveDollyZoom, orbitPosition, focusDistance, Bishop splines)
 │   │   ├── dof.ts          # Physical thin-lens Circle-of-Confusion DoF (bilateral gather, bokeh)
@@ -99,9 +109,11 @@ app/
 │   │   ├── active.json     # Active project pointer
 │   │   └── <project_name>/
 │   │       ├── project.json  # Timeline manifest (scenes, cuts, audio, BPM)
+│   │       ├── transitions/  # Project-local bespoke transitions (Tier 1 Cascade)
+│   │       ├── audio/        # Scoped mix manifests (mix.ts) & local SFX
 │   │       └── *.ts          # Scene definitions
-│   └── transitions/        # Seam Logic (Managed via fx-transitions)
-│       └── *.ts            # Bespoke transition classes
+│   └── transitions/        # Global Seam Logic (Tier 2 Cascade)
+│       └── *.ts            # Global platform transition classes
 ├── public/                 # Static Assets (audio, models, extracted data)
 └── scripts/                # CLI & Diagnostic Tools (Managed via fx-diagnostics)
     ├── render.ts           # Offline export CLI (stills, sheets, video, telemetry)

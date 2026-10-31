@@ -1,15 +1,30 @@
 #!/usr/bin/env bun
-// Multi-track mixdown (P3d). Stems -> buses -> sidechain duck -> pre-master -> loudnorm two-pass
+// Multi-track mixdown (f(x) Studio v0.8.0 Unified Audiovisual Production Engine)
+// Stems & Spatial Sources -> buses -> sidechain duck -> pre-master -> loudnorm two-pass
 // -> sample-exact hard-mute gate (applied last, so the zeros survive the limiter).
-// ffmpeg only decodes stems and runs loudnorm; summing, ducking and gating are done on PCM here
-// because ffmpeg cannot guarantee exact digital zero after resampling/limiting.
-//   bun scripts/mixdown.ts --mix mix.json [--events events.json] [--from 0] [--to 120] --out mix.wav [--foley-out guide.wav]
-// Docs: docs/audio/mixdown.md
+// ffmpeg only decodes audio files and runs loudnorm; summing, ducking, spatialization,
+// and gating are executed on Float32 PCM in memory.
+// Docs: docs/audio/mixdown.md, docs/architecture/v0.8.0-unified-audiovisual-production.md
+
 import path from 'node:path';
 import { existsSync, mkdirSync, mkdtempSync, rmSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import {
+  type MixBus,
+  type MixConfig,
+  type SoundtrackConfig,
+  type SpatialSourceConfig,
+  type TelemetryFrame,
+  assembleSoundtrackStems,
+  spatializeSource,
+  parseTelemetryStream,
+  applyVocalSanctuary,
+  applySplitBandDuck,
+  applyLookaheadLimiter,
+  applyPreDropVacuum,
+} from '../src/engine/audio';
 
-export type MixBus = 'music' | 'sfx' | 'sub' | 'foley_guide';
+export type { MixBus };
 
 export interface MixStem {
   id: string;
@@ -41,8 +56,10 @@ export interface MixMute {
 
 export interface MixManifest {
   sampleRate?: number;
-  stems: MixStem[];
-  buses?: Partial<Record<MixBus, { gainDb?: number }>>;
+  stems?: MixStem[];
+  soundtracks?: SoundtrackConfig[];
+  spatialSources?: SpatialSourceConfig[];
+  buses?: Partial<Record<MixBus, { gainDb?: number; vocalSanctuary?: any; splitBandDuck?: any } | any>>;
   duck?: {
     bus?: MixBus;
     /** Stem ids or event ids; ducks while the cue plays. */
@@ -53,18 +70,23 @@ export interface MixManifest {
     release?: number;
     /** Seconds the duck is held from cue start. Default: the cue stem's duration. */
     hold?: number;
+    /** Whether to use split-band ducking preserving sub-bass below splitHz. */
+    splitBand?: boolean;
+    splitHz?: number;
   };
+  vocalSanctuary?: { centerHz?: number; q?: number; cutDb?: number };
   mutes?: MixMute[];
-  master?: { lufs?: number; truePeak?: number; normalize?: boolean };
+  master?: { lufs?: number; truePeak?: number; normalize?: boolean; limiterLookaheadMs?: number; limiter?: boolean };
   /** Optional second output: foley_guide bus only. */
   foleyGuide?: { out?: string };
 }
 
 export interface MixOptions {
-  mix: string | MixManifest;
+  mix: string | MixManifest | MixConfig;
   /** Directory stem paths are relative to (default: dirname of mix path, else cwd). */
   baseDir?: string;
   events?: string | { events: Array<{ id: string; t: number }> } | null;
+  analysisPath?: string;
   from?: number;
   to: number;
   out: string;
@@ -138,24 +160,32 @@ function evalAutomationDb(a: Array<{ t: number; gainDb: number }>, t: number): n
   return a[a.length - 1]!.gainDb;
 }
 
-/** Zero [s0, s1) in every channel (interleaved stereo). Exact: writes literal 0. */
-export function applyGate(buf: Float32Array, regions: Array<{ s0: number; s1: number }>): void {
-  const frames = buf.length / CH;
+export function applyGate(pcm: Float32Array, regions: Array<{ s0: number; s1: number }>): void {
+  const frames = pcm.length / CH;
   for (const r of regions) {
-    const a = Math.max(0, r.s0), b = Math.min(frames, r.s1);
-    if (b > a) buf.fill(0, a * CH, b * CH);
+    const s0 = Math.max(0, Math.min(frames, r.s0));
+    const s1 = Math.max(0, Math.min(frames, r.s1));
+    if (s1 > s0) pcm.fill(0, s0 * CH, s1 * CH);
   }
 }
 
-function placeStem(
-  dst: Float32Array, src: Float32Array, startSample: number, gain: number, pan: number,
-  auto: MixStem['automation'] | undefined, winFrom: number, sr: number, pos: { frames: number },
-) {
+export function placeStem(
+  dst: Float32Array,
+  src: Float32Array,
+  startSample: number,
+  gain: number,
+  pan: number,
+  auto: Array<{ t: number; gainDb: number }> | undefined,
+  winFrom: number,
+  sr: number,
+  opts: { frames?: number } = {}
+): void {
   const [gl, gr] = panGains(pan);
+  const dstFrames = opts.frames ?? (dst.length / CH);
   const srcFrames = src.length / CH;
   const d0 = Math.max(0, startSample);
-  const d1 = Math.min(pos.frames, startSample + srcFrames);
-  const sortedAuto = auto && auto.length > 1 ? auto.slice().sort((p, q) => p.t - q.t) : auto;
+  const d1 = Math.min(dstFrames, startSample + srcFrames);
+  const sortedAuto = auto && auto.length ? [...auto].sort((a, b) => a.t - b.t) : undefined;
   for (let d = d0; d < d1; d++) {
     const s = d - startSample;
     let g = gain;
@@ -182,6 +212,21 @@ function duckEnvelope(frames: number, sr: number, hits: Array<{ s0: number; s1: 
   return env;
 }
 
+function computeVoEnvelope(voPcm: Float32Array, sr: number): Float32Array {
+  const frames = voPcm.length / CH;
+  const env = new Float32Array(frames);
+  const attackAlpha = 1 - Math.exp(-1 / (sr * 0.005)); // 5ms attack
+  const releaseAlpha = 1 - Math.exp(-1 / (sr * 0.080)); // 80ms release
+  let val = 0;
+  for (let i = 0; i < frames; i++) {
+    const peak = Math.max(Math.abs(voPcm[i * CH] ?? 0), Math.abs(voPcm[i * CH + 1] ?? 0));
+    const alpha = peak > val ? attackAlpha : releaseAlpha;
+    val += alpha * (peak - val);
+    env[i] = Math.min(1.0, val * 3.0);
+  }
+  return env;
+}
+
 function parseLoudnormJson(err: string): Record<string, string> {
   const m = err.match(/\{[^{}]*"input_i"[^{}]*\}/);
   if (!m) throw new Error('[mixdown] could not parse loudnorm measurement');
@@ -190,14 +235,46 @@ function parseLoudnormJson(err: string): Record<string, string> {
 
 export async function mixdown(o: MixOptions): Promise<MixReport> {
   const log = o.log ?? ((m: string) => console.log(m));
-  const manifest: MixManifest = typeof o.mix === 'string' ? JSON.parse(readFileSync(o.mix, 'utf8')) : o.mix;
+
+  // Load manifest (supports JSON string path, .ts script export, or direct object)
+  let manifest: MixManifest;
+  if (typeof o.mix === 'string') {
+    const absPath = path.resolve(o.mix);
+    if (absPath.endsWith('.ts') || absPath.endsWith('.js')) {
+      const mod = await import(absPath);
+      manifest = mod.default ?? mod.mix ?? mod;
+    } else {
+      manifest = JSON.parse(readFileSync(absPath, 'utf8'));
+    }
+  } else {
+    manifest = o.mix as any;
+  }
+
   const baseDir = o.baseDir ?? (typeof o.mix === 'string' ? path.dirname(path.resolve(o.mix)) : process.cwd());
   const sr = manifest.sampleRate ?? 48000;
   const from = o.from ?? 0;
   const dur = o.to - from;
   if (!(dur > 0)) throw new Error(`[mixdown] invalid window ${from}..${o.to}`);
   const frames = Math.round(dur * sr);
-  const evJson = typeof o.events === 'string' ? JSON.parse(readFileSync(o.events, 'utf8')) : o.events;
+
+  // Parse events (JSON or NDJSON)
+  let evJson: any = null;
+  let telemetryFrames: TelemetryFrame[] = [];
+
+  if (typeof o.events === 'string') {
+    const evFile = path.resolve(o.events);
+    if (existsSync(evFile)) {
+      const text = readFileSync(evFile, 'utf8').trim();
+      if (evFile.endsWith('.jsonl') || (text.startsWith('{') && text.includes('\n{'))) {
+        telemetryFrames = parseTelemetryStream(text);
+      } else {
+        try { evJson = JSON.parse(text); } catch {}
+      }
+    }
+  } else if (o.events) {
+    evJson = o.events;
+  }
+
   const ev = new Map<string, number>((evJson?.events ?? []).map((e: any) => [e.id, e.t]));
   const evT = (id: string) => {
     const t = ev.get(id);
@@ -206,41 +283,111 @@ export async function mixdown(o: MixOptions): Promise<MixReport> {
   };
 
   const buses: Record<MixBus, Float32Array> = {
-    music: new Float32Array(frames * CH), sfx: new Float32Array(frames * CH),
-    sub: new Float32Array(frames * CH), foley_guide: new Float32Array(frames * CH),
+    music: new Float32Array(frames * CH),
+    sfx: new Float32Array(frames * CH),
+    sub: new Float32Array(frames * CH),
+    vo: new Float32Array(frames * CH),
+    foley_guide: new Float32Array(frames * CH),
+    ambient: new Float32Array(frames * CH),
   };
+
   const report: MixReport = { sampleRate: sr, from, to: o.to, samples: frames, mutes: [], cues: [], duck: [], out: o.out };
   const stemSpan = new Map<string, { s0: number; s1: number; t: number }>();
   const ids = new Set<string>();
 
-  for (const stemDecl of manifest.stems) {
-    let st = stemDecl;
-    if (ids.has(st.id)) throw new Error(`[mixdown] duplicate stem id '${st.id}'`);
-    ids.add(st.id);
-    if (!buses[st.bus]) throw new Error(`[mixdown] stem '${st.id}': unknown bus '${st.bus}'`);
-    const file = path.resolve(baseDir, st.file);
-    if (!existsSync(file)) throw new Error(`[mixdown] stem '${st.id}': missing file ${file}`);
-    const base = st.eventId !== undefined ? evT(st.eventId) : (st.at ?? 0);
-    if (st.onset === undefined) {
-      const side = file.replace(/\.wav$/i, '.manifest.json');
-      if (side !== file && existsSync(side)) {
-        const hit = JSON.parse(readFileSync(side, 'utf8')).hitOffsetSec;
-        if (typeof hit === 'number' && hit > 0) st = { ...st, onset: hit };
+  // 1. Process Legacy Stems (manifest.stems)
+  if (manifest.stems && manifest.stems.length > 0) {
+    for (const stemDecl of manifest.stems) {
+      let st = stemDecl;
+      if (ids.has(st.id)) throw new Error(`[mixdown] duplicate stem id '${st.id}'`);
+      ids.add(st.id);
+      if (!buses[st.bus]) throw new Error(`[mixdown] stem '${st.id}': unknown bus '${st.bus}'`);
+      const file = path.resolve(baseDir, st.file);
+      if (!existsSync(file)) throw new Error(`[mixdown] stem '${st.id}': missing file ${file}`);
+      const base = st.eventId !== undefined ? evT(st.eventId) : (st.at ?? 0);
+      if (st.onset === undefined) {
+        const side = file.replace(/\.wav$/i, '.manifest.json');
+        if (side !== file && existsSync(side)) {
+          const hit = JSON.parse(readFileSync(side, 'utf8')).hitOffsetSec;
+          if (typeof hit === 'number' && hit > 0) st = { ...st, onset: hit };
+        }
       }
-    }
-    const tPlay = base + (st.offset ?? 0) - (st.onset ?? 0);
-    const src = await decodeStereoF32(file, sr);
-    const start = Math.round((tPlay - from) * sr);
-    const busGain = db(manifest.buses?.[st.bus]?.gainDb ?? 0);
-    placeStem(buses[st.bus], src, start, db(st.gainDb ?? 0) * busGain, st.pan ?? 0, st.automation, from, sr, { frames });
-    const span = { s0: start, s1: start + src.length / CH, t: base + (st.offset ?? 0) };
-    stemSpan.set(st.id, span);
-    if (st.bus !== 'foley_guide' && (st.eventId !== undefined || st.onset !== undefined)) {
-      report.cues.push({ stem: st.id, eventId: st.eventId, expectedT: span.t, onset: st.onset ?? 0 });
+      const tPlay = base + (st.offset ?? 0) - (st.onset ?? 0);
+      const src = await decodeStereoF32(file, sr);
+      const start = Math.round((tPlay - from) * sr);
+      const busGain = db(manifest.buses?.[st.bus]?.gainDb ?? 0);
+      placeStem(buses[st.bus], src, start, db(st.gainDb ?? 0) * busGain, st.pan ?? 0, st.automation, from, sr, { frames });
+      const span = { s0: start, s1: start + src.length / CH, t: base + (st.offset ?? 0) };
+      stemSpan.set(st.id, span);
+      if (st.bus !== 'foley_guide' && (st.eventId !== undefined || st.onset !== undefined)) {
+        report.cues.push({ stem: st.id, eventId: st.eventId, expectedT: span.t, onset: st.onset ?? 0 });
+      }
     }
   }
 
-  const d = manifest.duck;
+  // 2. Process Multi-Stem NLE Soundtracks (manifest.soundtracks)
+  if (manifest.soundtracks && manifest.soundtracks.length > 0) {
+    const audioJsonPath = o.analysisPath ?? (existsSync(path.resolve(baseDir, 'analysis/audio.json')) ? path.resolve(baseDir, 'analysis/audio.json') : path.resolve(baseDir, '../public/data/audio.json'));
+    let audioData: { downbeats: number[]; beats: number[]; bpm?: number } = { downbeats: [0], beats: [0], bpm: 120 };
+    if (existsSync(audioJsonPath)) {
+      try {
+        const aj = JSON.parse(readFileSync(audioJsonPath, 'utf8'));
+        audioData = { downbeats: aj.downbeats ?? [0], beats: aj.beats ?? [0], bpm: aj.bpm ?? 120 };
+      } catch {}
+    }
+
+    for (const track of manifest.soundtracks) {
+      log(`[mixdown] Assembling multi-stem soundtrack '${track.id}'...`);
+      const assembled = await assembleSoundtrackStems(
+        track,
+        audioData,
+        {
+          sampleRate: sr,
+          baseDir,
+          loader: decodeStereoF32,
+        }
+      );
+
+      const targetBus: MixBus = track.bus ?? 'music';
+      const trackGain = db(track.gainDb ?? 0) * db((manifest.buses as any)?.[targetBus]?.gainDb ?? 0);
+      const trackPan = track.pan ?? 0;
+      const atSec = track.at ?? 0;
+      const start = Math.round((atSec - from) * sr);
+
+      for (const [stemName, src] of Object.entries(assembled)) {
+        placeStem(buses[targetBus], src, start, trackGain, trackPan, undefined, from, sr, { frames });
+      }
+    }
+  }
+
+  // 3. Process 3D Spatial Sources (manifest.spatialSources)
+  if (manifest.spatialSources && manifest.spatialSources.length > 0) {
+    for (const spSrc of manifest.spatialSources) {
+      const file = path.resolve(baseDir, spSrc.file);
+      if (!existsSync(file)) {
+        log(`[mixdown] warning: spatial source '${spSrc.id}' missing file: ${file}`);
+        continue;
+      }
+      log(`[mixdown] Spatializing 3D source '${spSrc.id}' bound to '${spSrc.bindTo}'...`);
+      const src = await decodeStereoF32(file, sr);
+      const spatialPcm = spatializeSource(src, telemetryFrames, spSrc, { sampleRate: sr });
+      const targetBus: MixBus = spSrc.bus ?? 'sfx';
+      const busGain = db((manifest.buses as any)?.[targetBus]?.gainDb ?? 0);
+      placeStem(buses[targetBus], spatialPcm, 0, busGain, 0, undefined, from, sr, { frames });
+    }
+  }
+
+  // 4. Bus Ducking
+  const busSplitDuck = (manifest.buses as any)?.music?.splitBandDuck;
+  const d: MixManifest['duck'] = manifest.duck ?? (busSplitDuck ? {
+    bus: 'music' as MixBus,
+    cues: busSplitDuck.cues,
+    amountDb: Math.abs(busSplitDuck.attenDb ?? 4.5),
+    attack: busSplitDuck.attackMs !== undefined ? busSplitDuck.attackMs / 1000 : 0.02,
+    release: busSplitDuck.releaseMs !== undefined ? busSplitDuck.releaseMs / 1000 : 0.4,
+    splitBand: true,
+    splitHz: busSplitDuck.splitHz ?? 250,
+  } : undefined);
   if (d) {
     const amount = d.amountDb ?? 4;
     if (!(amount > 0 && amount <= 12)) throw new Error(`[mixdown] duck.amountDb ${amount} out of range (0,12]`);
@@ -256,10 +403,55 @@ export async function mixdown(o: MixOptions): Promise<MixReport> {
       report.duck.push({ cue: c, t, hold });
     }
     const env = duckEnvelope(frames, sr, hits, amount, d.attack ?? 0.02, d.release ?? 0.4);
-    const bus = buses[d.bus ?? 'music'];
-    for (let i = 0; i < frames; i++) { bus[i * CH] *= env[i]!; bus[i * CH + 1] *= env[i]!; }
+    const busKey = d.bus ?? 'music';
+    const bus = buses[busKey];
+    const busSplitCfg = (manifest.buses as any)?.[busKey]?.splitBandDuck;
+    const isSplit = d.splitBand || busSplitCfg !== undefined;
+    if (isSplit) {
+      const splitHz = busSplitCfg?.splitHz ?? d.splitHz ?? 250;
+      const lo = db(-amount);
+      const duckNorm = new Float32Array(frames);
+      for (let i = 0; i < frames; i++) {
+        const norm = (1 - env[i]!) / Math.max(1e-6, 1 - lo);
+        duckNorm[i] = Math.max(0, Math.min(1, norm));
+      }
+      buses[busKey] = applySplitBandDuck(bus, duckNorm, {
+        splitHz,
+        attenDb: -amount,
+        sampleRate: sr,
+      });
+    } else {
+      for (let i = 0; i < frames; i++) { bus[i * CH] *= env[i]!; bus[i * CH + 1] *= env[i]!; }
+    }
   }
 
+  // 4b. Vocal Sanctuary Dynamic Notch Filter
+  const voBus = buses.vo;
+  let voHasSignal = false;
+  for (let i = 0; i < voBus.length; i++) {
+    if (Math.abs(voBus[i]!) > 1e-4) {
+      voHasSignal = true;
+      break;
+    }
+  }
+
+  if (voHasSignal) {
+    const voEnv = computeVoEnvelope(voBus, sr);
+    for (const bName of ['music', 'sfx'] as const) {
+      const vsCfg = (manifest.buses as any)?.[bName]?.vocalSanctuary ?? manifest.vocalSanctuary;
+      if (vsCfg) {
+        log(`[mixdown] Applying Vocal Sanctuary dynamic notch to '${bName}' bus around VO...`);
+        buses[bName] = applyVocalSanctuary(buses[bName], voEnv, {
+          centerHz: vsCfg.centerHz ?? 2200,
+          q: vsCfg.q ?? 1.2,
+          cutDb: vsCfg.cutDb ?? -3.5,
+          sampleRate: sr,
+        });
+      }
+    }
+  }
+
+  // 5. Mutes & Zero Gates
   const regions = (manifest.mutes ?? []).map((m, i) => {
     const a = m.fromEvent !== undefined ? evT(m.fromEvent) : m.from;
     const b = m.toEvent !== undefined ? evT(m.toEvent) : m.to;
@@ -269,18 +461,22 @@ export async function mixdown(o: MixOptions): Promise<MixReport> {
     return r;
   });
 
+  // 6. Master Bus Summing
   const pre = new Float32Array(frames * CH);
-  for (const k of ['music', 'sfx', 'sub'] as const) for (let i = 0; i < pre.length; i++) pre[i] += buses[k][i]!;
+  for (const k of ['music', 'sfx', 'sub', 'vo', 'ambient'] as const) {
+    for (let i = 0; i < pre.length; i++) pre[i] += buses[k][i]!;
+  }
   applyGate(pre, regions);
 
+  // 7. EBU R128 Loudnorm Two-Pass & WAV Export
   const tmp = mkdtempSync(path.join(tmpdir(), 'mixdown-'));
   try {
     const outDir = path.dirname(path.resolve(o.out));
     if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
-    let master = pre;
+    let master: Float32Array = pre;
     const m = manifest.master ?? {};
     const hasSignal = pre.some((v) => v !== 0);
-    if (m.normalize !== false && hasSignal) {
+    if ((m as any).normalize !== false && hasSignal) {
       const I = m.lufs ?? -14;
       // Internal true-peak ceiling sits 0.5 dB under the requested one to absorb the 192k->48k resample.
       const tp = (m.truePeak ?? -1) - 0.5;
@@ -297,6 +493,12 @@ export async function mixdown(o: MixOptions): Promise<MixReport> {
       master.set(dec.subarray(0, Math.min(dec.length, master.length)));
     } else if (!hasSignal) {
       log('[mixdown] mix is silent: skipping loudnorm');
+    }
+    // Master Lookahead Limiter to strictly guarantee true-peak compliance
+    if (m.limiter !== false && hasSignal) {
+      const tpCeiling = m.truePeak ?? -1.0;
+      const lookaheadMs = m.limiterLookaheadMs ?? 1.5;
+      master = applyLookaheadLimiter(master, tpCeiling, lookaheadMs, sr);
     }
     applyGate(master, regions);
     writeWav(o.out, master, sr, 24);
@@ -321,10 +523,18 @@ export async function mixdown(o: MixOptions): Promise<MixReport> {
 if (import.meta.main) {
   const argv = process.argv.slice(2);
   const opt = (k: string) => { const i = argv.indexOf(`--${k}`); return i >= 0 ? argv[i + 1] : undefined; };
-  const mix = opt('mix'), out = opt('out'), to = opt('to');
+  const mix = opt('mix'), out = opt('out'), to = opt('to'), analysis = opt('analysis');
   if (!mix || !out || to === undefined) {
-    console.error('usage: bun scripts/mixdown.ts --mix mix.json --to <s> [--from 0] [--events events.json] --out mix.wav [--foley-out guide.wav]');
+    console.error('usage: bun scripts/mixdown.ts --mix mix.json --to <s> [--from 0] [--events events.json] [--analysis audio.json] --out mix.wav [--foley-out guide.wav]');
     process.exit(2);
   }
-  await mixdown({ mix, to: +to, from: +(opt('from') ?? 0), events: opt('events') ?? null, out: path.resolve(out), foleyOut: opt('foley-out') ? path.resolve(opt('foley-out')!) : undefined });
+  await mixdown({
+    mix,
+    to: +to,
+    from: +(opt('from') ?? 0),
+    events: opt('events') ?? null,
+    analysisPath: analysis ? path.resolve(analysis) : undefined,
+    out: path.resolve(out),
+    foleyOut: opt('foley-out') ? path.resolve(opt('foley-out')!) : undefined,
+  });
 }

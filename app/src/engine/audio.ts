@@ -214,3 +214,7 @@ export class AudioData {
     return this.sections.find((s) => t >= s.start && t < s.end) ?? this.sections[this.sections.length - 1];
   }
 }
+
+
+// Re-export v0.8.0 audio subsystem NLE & DSL
+export * from './audio/index';

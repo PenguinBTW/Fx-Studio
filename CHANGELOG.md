@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [[v0.8.0]](docs/architecture/v0.8.0-unified-audiovisual-production.md) - 2026-10-31
+
+### Added
+- **Unified Audiovisual Production Engine**:
+  - **Modular Audio Subsystem (`app/src/engine/audio/`)**:
+    - `manifest.ts`: Declarative `defineMix()` TypeScript DSL with schema validation and complete type definitions (`MixBus`, `StemsConfig`, `StemEditOptions`, `Excision`, `SoundtrackConfig`, `SpatialSourceConfig`, `BusConfig`, `MixConfig`).
+    - `stem_nle.ts`: Offline Float32 PCM multi-stem timeline assembly with master transient lock (`PRE_ATTACK_KICK_OFFSET_MS = -2.38` ms applied collectively across all stems to eliminate phase smearing), asymmetric 3ms cosine crossfades, exponential harmonic tail spillover ($\exp(-t/\tau)$), and vocal breath gating ($\ge 120$ ms).
+    - `smoother.ts`: Recursive 1-pole lowpass IIR parameter smoother bridging 60 Hz visual frame rate to 48 kHz audio rate for de-zippered stereo panning and filter sweeps.
+    - `telemetry.ts`: Scene-side zero-DSP telemetry emitter (`AudioTelemetryEmitter`), screen NDC projection arithmetic (`projectWorldToScreenPan`), and NDJSON streaming (`events.jsonl`).
+    - `spatializer.ts`: Pure TypeScript/Bun 3D spatializer with equal-power vector panning $[-0.65, +0.65]$, clamped distance attenuation, Cytomic SVF zero-delay feedback air absorption rolloff ($20\text{ kHz} \to 2.5\text{ kHz}$), and occlusion shelf notch filtering.
+    - `dsp.ts`: High-performance cinematic DSP suite:
+      - `applyVocalSanctuary`: Dynamic parametric Cytomic SVF notch at $2.2\text{ kHz}$ ($Q = 1.2$, $-3.5\text{ dB}$) modulated by speech envelope.
+      - `applySplitBandDuck`: 2-pole Linkwitz-Riley crossover at $250\text{ Hz}$ decoupling sub-bass punch while ducking mid/high frequencies around dialogue and SFX.
+      - `applyLookaheadLimiter`: $1.5\text{ ms}$ lookahead mastering limiter strictly enforcing $\le -1.5\text{ dBTP}$ ceiling.
+      - `applyPreDropVacuum`: $40\text{--}120\text{ ms}$ digital silence air gap preceding major visual downbeats with $2\text{ ms}$ cosine anti-click fade.
+  - **Two-Tier Transition Cascade & Registry (`app/src/engine/transitions/registry.ts`)**:
+    - Project-local bespoke transitions in `scenes/<project>/transitions/` take priority (Tier 1) over global engine transitions (Tier 2).
+    - Dual-environment compatible: Vite compile-time `import.meta.glob` for browser runtime + headless CLI injection (`setTransitionRegistry`).
+  - **Unified Offline Acoustic Analysis CLI (`scripts/analyze_song.py --audit`)**:
+    - Bar-by-bar chroma cosine similarity, bass fundamental root matching, vocal silence gap detection, kick pre-attack zero crossing offset, and candidate cut reliability scoring.
+  - **Autonomous Spacecraft Docking Benchmark (`app/src/scenes/spacecraft_docking/`)**:
+    - 45-second cinematic sequence of an orbital cargo transport docking with an asteroid station, featuring multi-stem music excision, 3D object-bound thruster audio, bespoke `hangar_airlock` transition, split-band ducking, vocal sanctuary, and broadcast EBU R128 mastering (-14.40 LUFS, -1.70 dBTP).
+- **Documentation & Agent Skills Overhaul**:
+  - Comprehensive documentation updates: `docs/architecture/v0.8.0-unified-audiovisual-production.md`, `docs/audio/mixdown.md`, `docs/cli/render-cli-reference.md`.
+  - Upgraded agent skills for v0.8.0: `design-around-audio`, `fx-engine`, `fx-scenes`, `sound-design-and-foley`, `video-assembly-and-finishing`.
+
+---
+
 ## [[v0.7.0]](docs/changelog/v0.7.0-release-record.md) - 2026-10-26
 
 ### Added
