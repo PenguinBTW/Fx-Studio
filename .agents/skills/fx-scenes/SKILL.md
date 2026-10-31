@@ -28,6 +28,7 @@ Before authoring scenes, ensure alignment with connected production skills:
 - **`fx-procedural-modeling`:** Authoring code-only shaders, procedural wireframes, ribbons, and mathematical textures.
 - **`fx-kinetic-typography`:** Word staggers, numeric rollers, variable font axes, and in-world 3D extruded typography.
 - **`fx-transitions`:** Seam continuity, camera momentum handoffs, and spatial transitions (`f.under`).
+- **`fx-audio`:** Emitting 3D object-bound spatial telemetry (`AudioTelemetryEmitter`, `projectWorldToScreenPan`) into `out/events.jsonl` for acoustic positioning and sound-reactive staging.
 - **`fx-diagnostics`:** Running visual diagnostic instruments (`godview`, `onion`, `stitch`) to audit the finished scene.
 
 ---

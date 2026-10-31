@@ -14,6 +14,7 @@ Standards, technical workflows, mathematical foundations, and visual-musical map
 - Syncing particle systems, light flashes, UI pulses, and 3D object motion to rhythm.
 - Designing build-ups, structural drops, tension ramps, and quiet narrative breathing zones.
 - Auditing a visual sequence for rhythmic coherence, downbeat phase alignment, and optical sync.
+- For engine-level multi-stem NLE timeline assembly, 3D spatial audio, parameter smoothing, and cinematic DSP in f(x) Studio, see **`fx-audio`**.
 
 ---
 

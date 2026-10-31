@@ -22,6 +22,7 @@ Standards, spectral budgeting principles, tactile micro-sync workflows, and spat
 - **`design-around-audio`:** Governs the soundtrack, stems, beat grids, and musical downbeats. SFX must complement, not clash with, musical stems.
 - **`design-around-narration`:** Establishes the vocal track. Sound design must never compromise voiceover intelligibility.
 - **`video-design` / `fx-transitions`:** Defines visual momentum, match cuts, and kinetic typography reveals that require tactile audio reinforcement.
+- **`fx-audio`:** Governs the native f(x) Studio audio engine (`app/src/engine/audio/`), 3D object-bound vector spatializer, Cytomic SVF air absorption, 1-pole parameter smoothing, and split-band ducking DSP.
 
 ---
 

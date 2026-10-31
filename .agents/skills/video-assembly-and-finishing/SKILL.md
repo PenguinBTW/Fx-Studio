@@ -23,6 +23,7 @@ Production standards, timeline manifest engineering, FFmpeg audio multiplexing p
 - **`fx-diagnostics` & `fx-telemetry-remediation`**: Verify that all scenes pass telemetry audits with zero blocking Tier A flags before final assembly.
 - **`sound-design-and-foley`**: Provides the structural cue sheet (`sound_design_guide.md`) for SFX placement.
 - **`design-around-narration`**: Provides line timestamps and breathing zones (`narration_guide.md`).
+- **`fx-audio`**: Authors declarative mix manifests (`defineMix`), executes native multi-stem NLE mixdowns (`app/scripts/mixdown.ts`), and applies EBU R128 broadcast mastering.
 
 ---
 

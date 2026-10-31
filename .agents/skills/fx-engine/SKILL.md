@@ -20,20 +20,20 @@ The central architectural index and routing guide for **f(x) Studio**, a determi
 f(x) Studio divides responsibilities into dedicated skills. **Do not load all skills simultaneously.** Inspect the user's intent and reference the specific skill required:
 
 ```
-                                      [ fx-engine ]
-                                 (Central Index & Router)
-                                            │
-        ┌───────────────────┬───────────────┴───────────────┬───────────────────┐
-        ▼                   ▼                               ▼                   ▼
-  [ fx-scenes ]     [ fx-transitions ]              [ fx-engine-dev ]   [ fx-diagnostics ]
- Scene Authoring    Bespoke Cuts                    Core Plumbing       Visual Audits
- & 3D Staging       & Seam Morphs                   & GL Shaders        & Telemetry Rules
-        │                                                   │
-  ┌─────┴──────────────────┐                                │
-  ▼                        ▼                                ▼
-[ fx-3d-assets ]    [ fx-procedural-modeling ]     [ fx-telemetry-remediation ]
-GLTF / GLB CAD      Code-Only Shaders              Directorial Self-Correction
-Models & Skinned    & Line Geometries              & F01-F16 Fixes
+                                       [ fx-engine ]
+                                  (Central Index & Router)
+                                             │
+        ┌───────────────────┬───────────────┼───────────────┬───────────────────┐
+        ▼                   ▼               ▼               ▼                   ▼
+  [ fx-scenes ]     [ fx-transitions ] [ fx-audio ]   [ fx-engine-dev ]   [ fx-diagnostics ]
+ Scene Authoring    Bespoke Cuts       Multi-Stem NLE  Core Plumbing       Visual Audits
+ & 3D Staging       & Seam Morphs      3D Spatializer  & GL Shaders        & Telemetry Rules
+        │                                  │                │
+  ┌─────┴──────────────────┐               │                │
+  ▼                        ▼               ▼                ▼
+[ fx-3d-assets ]    [ fx-procedural-modeling ] [ dsp.ts / telemetry ]  [ fx-telemetry-remediation ]
+GLTF / GLB CAD      Code-Only Shaders          1-Pole Smoothing        Directorial Self-Correction
+Models & Skinned    & Line Geometries          Vocal Sanctuary & Duck  & F01-F16 Fixes
   │
   ▼
 [ fx-kinetic-typography ]
@@ -45,6 +45,7 @@ Staggers, Hershey Fonts
 |---|---|---|
 | **Authoring or editing scenes** in `app/src/scenes/` | **`fx-scenes`** | True 3D visual staging, physical optics (DoF, blackbody/spectral lighting), CameraRig analytical choreography (`solveDollyZoom`, `orbitPosition`), and deciding between Declarative DSL (`defineScene`) vs. Raw `Scene` subclasses for multi-pass depth pipelines. |
 | **Connecting scenes or writing seams** in `app/src/transitions/` | **`fx-transitions`** | Scene-to-scene momentum continuity, carrier handoffs, `api.sampleScene(id, t)` speed ramps, and `overlayTextDuck` anti-collision text ducking. |
+| **Authoring mixes, multi-stem NLE edits, spatial audio & DSP** in `app/src/engine/audio/` | **`fx-audio`** | Declarative mix manifests (`defineMix`), Float32 PCM multi-stem timeline assembly with master transient lock (`-2.38ms`), 3D object-bound spatial telemetry (`AudioTelemetryEmitter`), 1-pole parameter smoothing, Cytomic SVF air absorption, 2-pole Linkwitz-Riley split-band ducking @ 250Hz, dynamic Vocal Sanctuary notch @ 2.2kHz, True Peak lookahead mastering limiter, and headless CLI mixdown (`mixdown.ts`). |
 | **Modifying engine source code** in `app/src/engine/` | **`fx-engine-dev`** | WebGL state cache restoration (`resetState()`), HalfFloat HDR render target allocation, custom GLSL fullscreen passes, and static GPU buffer memory rules. |
 | **Visual QA, debugging, telemetry, or export** | **`fx-diagnostics`** | Running the 4 visual instruments (`godview`, `onion`, `stitch`, `compare`), evaluating Tier A/B/C telemetry rules (`F01–F16`), waiver logging, and CLI rendering. |
 | **Importing or animating 3D CAD/GLTF models** in `app/public/models/` | **`fx-3d-assets`** | Asynchronous GLTF/GLB caching, Draco decompression, skeletal normalization (`fitToBox`, `center`), screen-bounds projection, and `model.setTime(t)`. |
