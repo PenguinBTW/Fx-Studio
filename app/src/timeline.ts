@@ -7,7 +7,7 @@
 import type { TimelineEntry } from './engine/engine';
 import type { SceneClass } from './engine/scene';
 import { validateTransition, type TransitionClass, type TransitionEntry } from './engine/transition';
-import { createTransitionResolver } from './engine/transitions/registry';
+import { createTransitionResolver, setTransitionRegistry } from './engine/transitions/registry';
 import {
   buildTimelineEntries,
   buildTransitionEntries,
@@ -23,6 +23,7 @@ import activePointer from './scenes/active.json';
 // Recursive glob: scenes/<project>/<scene>.ts (and legacy root scenes/<scene>.ts).
 const sceneModules = import.meta.glob<{ default: SceneClass }>('./scenes/**/*.ts');
 const transitionModules = import.meta.glob<{ default: TransitionClass }>('./transitions/*.ts');
+const localTransitionModules = import.meta.glob<{ default: TransitionClass }>('./scenes/*/transitions/*.ts');
 const manifestFiles = import.meta.glob<ProjectManifest>('./scenes/{*,_prereq_demos/*}/project.json', {
   eager: true,
   import: 'default',
@@ -65,6 +66,10 @@ export function makeTimeline(
 
 export function makeTransitions(project?: string | null): TransitionEntry[] {
   const manifest = loadManifest(project);
+  setTransitionRegistry({
+    local: localTransitionModules as any,
+    global: transitionModules as any,
+  });
   const trResolver = createTransitionResolver(manifest.project);
   const trs = buildTransitionEntries(manifest, trResolver);
   const entries = buildTimelineEntries(manifest, scene);

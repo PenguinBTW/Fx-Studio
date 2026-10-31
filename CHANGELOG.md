@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [[v0.8.0]](docs/architecture/v0.8.0-unified-audiovisual-production.md) - 2026-10-31
+## [[v0.8.0]](docs/changelog/v0.8.0-release-record.md) - 2026-10-31
 
 ### Added
 - **Unified Audiovisual Production Engine**:

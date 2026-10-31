@@ -20,17 +20,8 @@ export function setTransitionRegistry(registry: TransitionRegistryMap | null): v
   customRegistry = registry;
 }
 
-// Vite glob discovery (transformed at compile time when bundled by Vite)
-const viteGlob = (import.meta as any).glob as
-  | ((pattern: string, options?: any) => Record<string, TransitionLoader>)
-  | undefined;
-
-const defaultLocal: Record<string, TransitionLoader> =
-  typeof viteGlob === 'function' ? viteGlob('../../scenes/*/transitions/*.ts') : {};
-
-const defaultGlobal: Record<string, TransitionLoader> =
-  typeof viteGlob === 'function' ? viteGlob('../../transitions/*.ts') : {};
-
+const defaultLocal: Record<string, TransitionLoader> = {};
+const defaultGlobal: Record<string, TransitionLoader> = {};
 /**
  * Returns a list of all available transition identifiers, segregated by tier.
  */
@@ -79,16 +70,28 @@ export function resolveTransition(
 
   // 1. Tier 1: Check project-local bespoke transitions
   if (project) {
-    const localKey = `../../scenes/${project}/transitions/${cleanName}.ts`;
-    if (localMap[localKey]) return localMap[localKey]!;
-    if (localMap[`${project}/${cleanName}`]) return localMap[`${project}/${cleanName}`]!;
-    if (localMap[cleanName]) return localMap[cleanName]!;
+    const candidates = [
+      `./scenes/${project}/transitions/${cleanName}.ts`,
+      `scenes/${project}/transitions/${cleanName}.ts`,
+      `../../scenes/${project}/transitions/${cleanName}.ts`,
+      `${project}/${cleanName}`,
+      cleanName,
+    ];
+    for (const k of candidates) {
+      if (localMap[k]) return localMap[k]!;
+    }
   }
 
   // 2. Tier 2: Check global platform transition library
-  const globalKey = `../../transitions/${cleanName}.ts`;
-  if (globalMap[globalKey]) return globalMap[globalKey]!;
-  if (globalMap[cleanName]) return globalMap[cleanName]!;
+  const globalCandidates = [
+    `./transitions/${cleanName}.ts`,
+    `transitions/${cleanName}.ts`,
+    `../../transitions/${cleanName}.ts`,
+    cleanName,
+  ];
+  for (const k of globalCandidates) {
+    if (globalMap[k]) return globalMap[k]!;
+  }
 
   // 3. Fallback error with actionable diagnostics
   return () => {
