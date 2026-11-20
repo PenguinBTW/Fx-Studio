@@ -7,7 +7,7 @@ import { GLSL_NOISE, rng, type V3 } from './common';
 export type PortalKind = 'nether' | 'end' | 'aether' | 'sift';
 
 const MEMBRANE = /* glsl */ `
-uniform float t, uOpen, uStyle, uIntensity; uniform sampler2D uRT; uniform vec2 uRes; uniform vec2 uHalf;
+uniform float t, uOpen, uStyle, uIntensity, uView; uniform sampler2D uRT; uniform vec2 uRes; uniform vec2 uHalf;
 varying vec2 vUv; varying vec3 vWP; varying vec3 vLP;
 ${GLSL_NOISE}
 float stars(vec2 p, float s) { vec2 c = floor(p * s); vec2 f = fract(p * s) - 0.5; float h = bh21(c);
@@ -48,7 +48,7 @@ void main() {
   float open = clamp(uOpen, 0.0, 1.0);
   vec3 view = texture2D(uRT, suv + warp * (1.0 - open) * (1.0 - rim)).rgb;
   float see = mix(0.42, 1.0, open) * (1.0 - rim * (1.0 - open * 0.6));
-  vec3 col = mix(film * uIntensity, view, see);
+  vec3 col = mix(film * uIntensity, view, see * uView);
   col += film * uIntensity * (rim * 0.9 + 0.08) * (1.0 - open * 0.7);
   if (r > 1.0) discard;
   gl_FragColor = vec4(col, 1.0);
@@ -69,7 +69,7 @@ export class Portal {
     const style = { nether: 0, end: 1, aether: 2, sift: 3 }[kind];
     this.half = kind === 'end' ? new THREE.Vector2(4.6, 4.6) : kind === 'sift' ? new THREE.Vector2(7, 7) : new THREE.Vector2(4.2, 6.4);
     this.mat = new THREE.ShaderMaterial({
-      uniforms: { t: { value: 0 }, uOpen: { value: 0 }, uStyle: { value: style }, uRT: { value: rt }, uRes: { value: res }, uHalf: { value: this.half }, uIntensity: { value: 1 } },
+      uniforms: { t: { value: 0 }, uOpen: { value: 0 }, uStyle: { value: style }, uRT: { value: rt }, uRes: { value: res }, uHalf: { value: this.half }, uIntensity: { value: 1 }, uView: { value: 0 } },
       vertexShader: /* glsl */ `varying vec2 vUv; varying vec3 vWP; varying vec3 vLP;
         void main() { vUv = uv; vLP = position; vec4 w = modelMatrix * vec4(position, 1.0); vWP = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
       fragmentShader: MEMBRANE, side: THREE.DoubleSide,

@@ -90,7 +90,7 @@ export default class Odyssey extends Scene {
 
     const cur = this.worlds[k]!;
     cur.update(t, cam, birdP);
-    for (const P of this.portals) P.update(t, 0);
+    for (const P of this.portals) { P.update(t, 0); P.mat.uniforms.uView!.value = 0; }
 
     if (k < this.portals.length) {
       const P = this.portals[k]!, d = -P.side(cam.position);
@@ -99,9 +99,13 @@ export default class Odyssey extends Scene {
         const next = this.worlds[k + 1]!;
         next.update(t, cam, birdP);
         r.setRenderTarget(this.rt); r.setClearColor(0x000000, 1); r.clear();
+        // other membranes sample this.rt: hide them so the preview never reads its own target
+        for (const Q of this.portals) Q.membrane.visible = false;
         r.clippingPlanes = [P.plane];
         r.render(next.scene, cam);
         r.clippingPlanes = [];
+        for (const Q of this.portals) Q.membrane.visible = true;
+        P.mat.uniforms.uView!.value = 1;
       }
     }
     r.setRenderTarget(out); r.setClearColor(0x000000, 1); r.clear();
