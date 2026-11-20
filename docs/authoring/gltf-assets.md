@@ -19,7 +19,7 @@ Loading external 3D CAD models, vehicle chassis, electronic hardware, or rigged 
 ```mermaid
 flowchart TD
     subgraph Storage["1. Asset Storage"]
-        FILE["GLTF / GLB File\n(public/models/*.glb)"]
+        FILE["GLTF / GLB File\n(scenes/<project>/assets/<id>/model.glb)"]
     end
 
     subgraph Manager["2. GLTFManager (gltf.ts)"]
@@ -254,11 +254,11 @@ export interface GLTFLoadOptions {
 
 | Member | Description |
 |---|---|
-| `setClips(t, weights, opts?)` | Closed-form weighted blend of several clips; unlisted clips stop. |
-| `clipNames` / `clipDefaults` | Clip names in export order; per-clip `offset` / `loop` / `timeScale` defaults (set from `manifest.clips`). |
-| `setMorph(name, w)` / `setMorphs()` / `morphTargets` | Shape-key weights; call after clip evaluation. |
+| `setClips(t, weights, opts?)` | Closed-form weighted blend; weights may be `{ weight, time }`. Keep weights summing to 1; unlisted clips drop to weight 0. |
+| `clipNames` / `clipDuration(name)` / `clipDefaults` | Clip names in export order; per-clip `offset` / `loop` / `timeScale` defaults (set from `manifest.clips`). |
+| `setMorph(name, w, part?)` / `setMorphs()` / `morphTargets` | Shape-key weights, optionally per part; call after clip evaluation. |
 | `parts` / `part(id)` / `definePart(id, node)` / `getPartScreenBounds(id, cam)` | Stable part handles from the `fx_part` custom property. |
-| `node(name)` | Exact-name lookup that throws when missing. |
+| `node(name)` | Lookup by Blender or sanitized name; throws when missing. |
 | `cameras` / `lights` | Exported cameras and punctual lights. |
 
 ### `GLTFManager` Static Methods

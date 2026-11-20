@@ -54,7 +54,12 @@ export function inspectAsset(dir: string, project: string, id: string, materials
     }
   }
   for (const ext of json.extensionsRequired ?? []) if (!SUPPORTED.has(ext)) r.errors.push(`required extension '${ext}' is not supported by the engine loader`);
-  for (const ext of json.extensionsUsed ?? []) if (!SUPPORTED.has(ext) && !(json.extensionsRequired ?? []).includes(ext)) r.warnings.push(`extension '${ext}' is not supported and will be ignored`);
+  for (const ext of json.extensionsUsed ?? []) {
+    if (SUPPORTED.has(ext) || (json.extensionsRequired ?? []).includes(ext)) continue;
+    r.warnings.push(ext === 'KHR_animation_pointer'
+      ? 'KHR_animation_pointer (Blender 4.x material/light/camera animation) is ignored by three; bake to node transforms or drive in code'
+      : `extension '${ext}' is not supported and will be ignored`);
+  }
 
   const acc = json.accessors ?? [];
   const meshTris = (json.meshes ?? []).map((m: any) =>
@@ -69,7 +74,7 @@ export function inspectAsset(dir: string, project: string, id: string, materials
   for (const n of nodes) {
     if (n.mesh !== undefined) r.stats.tris += meshTris[n.mesh] ?? 0;
     if (n.name) names.set(n.name, (names.get(n.name) ?? 0) + 1);
-    const part = n.extras?.fx_part ?? n.extras?.fx?.part;
+    const part = n.extras?.fx_part ?? n.extras?.['fx.part'] ?? n.extras?.fx?.part;
     if (typeof part === 'string') {
       if (r.stats.parts.includes(part)) r.errors.push(`duplicate fx_part '${part}'`);
       r.stats.parts.push(part);

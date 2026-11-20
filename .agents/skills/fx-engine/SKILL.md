@@ -32,7 +32,7 @@ f(x) Studio divides responsibilities into dedicated skills. **Do not load all sk
   ┌─────┴──────────────────┐                                │
   ▼                        ▼                                ▼
 [ fx-3d-assets ]    [ fx-procedural-modeling ]     [ fx-telemetry-remediation ]
-GLTF / GLB CAD      Code-Only Shaders              Directorial Self-Correction
+Blender assets      Code-Only Shaders              Directorial Self-Correction
 Models & Skinned    & Line Geometries              & F01-F16 Fixes
   │
   ▼

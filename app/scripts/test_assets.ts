@@ -98,7 +98,10 @@ ok(near(mesh.position.x, 2.5) && near(mesh.position.y, 0), 'setTime evaluates th
 inst.setClips(0.5, { Move: 1, Up: 1 });
 ok(near(mesh.position.x, 2.5) && near(mesh.position.y, 2.5), `setClips blends by weight (${mesh.position.x.toFixed(3)}, ${mesh.position.y.toFixed(3)})`);
 inst.setClips(0.25, { Up: 1 });
-ok(near(mesh.position.x, 0) && near(mesh.position.y, 2.5), 'setClips with one clip stops the others');
+ok(near(mesh.position.x, 0) && near(mesh.position.y, 2.5), 'setClips zeroes unlisted clips');
+inst.setClips(0, { Move: { weight: 1, time: 0.3 } });
+ok(near(mesh.position.x, 3), 'setClips per-clip time');
+ok(inst.clipDuration('Move') === 1 && inst.clipDuration('nope') === 0, 'clipDuration');
 inst.setClips(1.5, { Move: 1 }, { loop: false });
 ok(near(mesh.position.x, 10), 'one-shot blend clamps at the end');
 inst.setClips(0.1, { Move: 1 }, { loop: false });
@@ -112,6 +115,21 @@ inst.clipDefaults = { Move: { offset: 0.5 } };
 inst.setTime(0, 'Up');
 inst.setTime(0, 'Move');
 ok(near(mesh.position.x, 5), 'clipDefaults offset applied by setTime');
+
+// Blender names, flat 'fx.part' key, light target relink, per-part morph
+const g2 = new THREE.Group();
+const sanitized = new THREE.Object3D(); sanitized.name = 'Rotor001'; sanitized.userData.name = 'Rotor.001';
+const flat = new THREE.Object3D(); flat.userData['fx.part'] = 'hatch';
+const sun = new THREE.DirectionalLight(); g2.add(sanitized, flat, sun); g2.remove(sun.target);
+const m2 = new THREE.Mesh(geom.clone(), new THREE.MeshBasicMaterial()); m2.userData.fx_part = 'face'; m2.updateMorphTargets();
+const m3 = new THREE.Mesh(geom.clone(), new THREE.MeshBasicMaterial()); m3.updateMorphTargets();
+g2.add(m2, m3);
+const i2 = new GLTFInstance({ animations: [], scene: g2 } as any, g2);
+ok(i2.node('Rotor.001') === sanitized && i2.node('Rotor001') === sanitized, 'node() accepts Blender and sanitized names');
+ok(i2.part('hatch') === flat, "flat 'fx.part' custom property recognised");
+ok(sun.target.parent === sun && i2.lights.length === 1, 'directional light target re-linked');
+i2.setMorph('Smile', 0.5, 'face');
+ok(near(m2.morphTargetInfluences![0]!, 0.5) && near(m3.morphTargetInfluences![0]!, 0), 'setMorph scoped to a part');
 
 console.log(failed ? `\n${failed} asset test(s) FAILED` : '\nall asset tests passed');
 if (failed) process.exit(1);

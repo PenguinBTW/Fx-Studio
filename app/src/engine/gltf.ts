@@ -96,11 +96,19 @@ export class GLTFInstance {
 
     // 1. Catalog all child meshes, geometries, and materials
     this.root.traverse((node) => {
-      const ud = node.userData as { fx_part?: unknown; fx?: { part?: unknown } } | undefined;
-      const partId = ud?.fx_part ?? ud?.fx?.part;
+      const ud = node.userData as Record<string, any> | undefined;
+      const partId = ud?.fx_part ?? ud?.['fx.part'] ?? ud?.fx?.part;
       if (typeof partId === 'string' && partId) this.parts.set(partId, node);
       if ((node as THREE.Camera).isCamera) this.cameras.push(node as THREE.Camera);
-      if ((node as THREE.Light).isLight) this.lights.push(node as THREE.Light);
+      if ((node as THREE.Light).isLight) {
+        const light = node as THREE.Light & { target?: THREE.Object3D };
+        // SkeletonUtils.clone leaves directional/spot targets unparented; re-link so the light keeps its exported aim.
+        if (light.target && !light.target.parent) {
+          light.target.position.set(0, 0, -1);
+          light.add(light.target);
+        }
+        this.lights.push(light);
+      }
       if ((node as THREE.Mesh).isMesh) {
         for (const name of Object.keys((node as THREE.Mesh).morphTargetDictionary ?? {})) this.morphTargets.add(name);
       }
@@ -200,23 +208,25 @@ export class GLTFInstance {
    * Closed-form weighted blend of several clips at time t, e.g. `setClips(f.lt, { Walk: 1, Wave: 0.4 })`.
    * Clips not listed (or weight <= 0) are stopped. Per-clip defaults supply offset/loop/timeScale.
    */
-  setClips(timeInSeconds: number, weights: Record<string, number>, opts?: AnimationPlayOptions): this {
+  setClips(timeInSeconds: number, weights: Record<string, number | { weight: number; time?: number }>, opts?: AnimationPlayOptions): this {
     if (!this.mixer) return this;
     for (const name of Object.keys(weights)) {
       if (!this.actions.has(name)) console.warn(`[gltf] Animation clip '${name}' not found. Clips: ${this.clipNames.join(', ') || 'none'}`);
     }
     for (const [name, action] of this.actions) {
-      const w = weights[name] ?? 0;
-      if (w <= 0) { action.stop(); continue; }
+      const v = weights[name] ?? 0;
+      const spec = typeof v === 'number' ? { weight: v } : v;
+      // Unlisted clips drop to weight 0 but stay active, so the bound rest pose is not re-captured mid-shot.
+      if (spec.weight <= 0) { if (action.isScheduled()) action.setEffectiveWeight(0); continue; }
       const o = { ...this.clipDefaults[name], ...opts };
       const dur = action.getClip().duration;
-      const raw = Math.max(0, timeInSeconds * (o.timeScale ?? 1) + (o.offset ?? 0));
+      const raw = Math.max(0, (spec.time ?? timeInSeconds) * (o.timeScale ?? 1) + (o.offset ?? 0));
       action.reset();
       action.loop = o.loop === false ? THREE.LoopOnce : THREE.LoopRepeat;
       action.clampWhenFinished = o.loop === false;
       action.play();
       action.setEffectiveTimeScale(1);
-      action.setEffectiveWeight(w);
+      action.setEffectiveWeight(spec.weight);
       action.time = dur > 0 ? (o.loop === false ? Math.min(raw, dur) : raw % dur) : 0;
     }
     this.mixer.update(0);
@@ -227,9 +237,10 @@ export class GLTFInstance {
    * Set a morph target (Blender shape key) weight on every mesh that has it.
    * Call after setTime/setClips: clip evaluation overwrites animated morph weights.
    */
-  setMorph(name: string, weight: number): this {
+  setMorph(name: string, weight: number, partId?: string): this {
     let found = false;
-    for (const mesh of this.meshes) {
+    const scope = partId ? this.meshesUnder(this.part(partId)) : this.meshes;
+    for (const mesh of scope) {
       const idx = mesh.morphTargetDictionary?.[name];
       if (idx !== undefined && mesh.morphTargetInfluences) {
         mesh.morphTargetInfluences[idx] = weight;
@@ -248,9 +259,24 @@ export class GLTFInstance {
     return this;
   }
 
-  /** Node by exact name; throws so renamed Blender objects fail loudly. */
+  /** Clip duration in seconds (0 when missing). */
+  clipDuration(name: string): number {
+    return this.actions.get(name)?.getClip().duration ?? 0;
+  }
+
+  private meshesUnder(obj: THREE.Object3D): THREE.Mesh[] {
+    const out: THREE.Mesh[] = [];
+    obj.traverse((o) => { if ((o as THREE.Mesh).isMesh) out.push(o as THREE.Mesh); });
+    return out;
+  }
+
+  /**
+   * Node by name; throws so renamed Blender objects fail loudly. Accepts the Blender name
+   * (`Rotor.001`) as well as three's sanitized name (`Rotor001`, duplicates get `_1`).
+   */
   node(name: string): THREE.Object3D {
-    const n = this.root.getObjectByName(name);
+    let n = this.root.getObjectByName(name) ?? this.root.getObjectByName(THREE.PropertyBinding.sanitizeNodeName(name));
+    if (!n) this.root.traverse((o) => { if (!n && o.userData?.name === name) n = o; });
     if (!n) throw new Error(`[gltf] node '${name}' not found in model`);
     return n;
   }
@@ -511,14 +537,14 @@ export class GLTFManager {
     return asset.instantiate(opts);
   }
 
-  /**
-   * Clear all cached assets and release Draco loader workers.
-   */
   /** Drop one URL from the cache (instances already created keep working). */
   static release(url: string): void {
     this.cache.delete(url);
   }
 
+  /**
+   * Clear all cached assets and release Draco loader workers.
+   */
   static clearCache(): void {
     this.cache.clear();
     if (this.dracoLoader) {

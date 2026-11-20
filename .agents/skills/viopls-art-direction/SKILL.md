@@ -45,7 +45,7 @@ Downstream agents frequently default to generic, overused stock motion tropes. T
 
 ## 3. The 3 Laws of Scene Cohesion [RULE]
 
-To ensure a scene feels premium and unified rather than an assortment of downloaded 3D assets:
+To ensure a scene feels premium and unified rather than a collage of unrelated stock elements (imported or procedural):
 
 ### 3.1 Consistent Material Physics
 - All surfaces in a scene must obey the same physical rendering rules.

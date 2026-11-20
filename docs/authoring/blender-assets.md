@@ -18,7 +18,7 @@ app/src/scenes/<project>/
     └── <name>.ts              # material library: default export THREE.Material or () => THREE.Material
 ```
 
-- Models are imported through Vite (`?url`), so production builds get content-hashed URLs and the GLTF cache can never serve a stale export.
+- Models are imported through Vite (`?url`), so production builds get content-hashed URLs. In dev the URL is stable: reload the page after re-exporting. Every project's model files are copied into a build (they are only fetched when a scene loads them).
 - Assets are resolved per project: `ctx.loadAsset('turbine')` looks in the active project; `'other_project/turbine'` reaches across explicitly.
 - Do not put project models in `app/public/models/`; that folder is shared and unversioned per project.
 
@@ -32,18 +32,18 @@ app/src/scenes/<project>/
 | Mesh › Apply Modifiers | On, but check shape keys | Applying modifiers can drop shape keys; apply destructive modifiers manually first if you need both. |
 | Animation mode | Actions (default) or NLA Tracks — pick one per project | Clip names come from actions/tracks. |
 | Sampling rate | Scene fps = project fps (60) | The exporter bakes keys at Blender's fps; 24 fps keys played at 60 fps show kinks. |
-| Frame start | 0, or set `clips.<name>.offset` | Blender defaults to frame 1, ≈16.7 ms late at 60 fps. |
+| Frame start | 0, enable Animation › "Slide to zero", or set `clips.<name>.offset` | Blender defaults to frame 1, ≈16.7 ms late at 60 fps. |
 | Lighting mode | Standard | Light values then land in three's physical units. |
 | Compression | None or Draco | Draco decoders ship with the app. Meshopt and KTX2 are not supported yet (preflight errors). |
 
-Not exported by glTF: Blender timeline markers, the World/HDRI, area lights, procedural node textures (bake them), shape-key drivers (bake them), lens shift/f-stop/focus distance. Carry what you need through `manifest.json` or code.
+Not supported: `KHR_animation_pointer` (Blender 4.x material/light/camera animation) is ignored by three's loader; bake it to node transforms or drive it in code. Not exported by glTF: Blender timeline markers, the World/HDRI, area lights, procedural node textures (bake them), shape-key drivers (bake them), lens shift/f-stop/focus distance. Carry what you need through `manifest.json` or code.
 
 Colour: Blender previews with Filmic (3.x) or AgX (4.x). The engine uses its own tone mapping, so judge final look in f(x) Studio, not in Blender's viewport.
 
 ## 3. Naming parts and materials
 
-- **Parts:** give any object a custom property `fx_part = "rotor"`. It becomes `inst.part('rotor')` and the SceneGraph entity `<assetId>.rotor` with per-frame world and screen bounds (telemetry, notes and selectors can target it). Renaming the Blender object no longer breaks code; a missing part throws with the list of available parts.
-- **Materials:** name Blender materials meaningfully (`Hull`, `Glass`). Map them to project library entries in `manifest.json` to restyle every asset from one place.
+- **Parts:** give any object a custom property `fx_part = "rotor"` (a property literally named `fx.part` also works). It becomes `inst.part('rotor')` and the SceneGraph entity `<assetId>.rotor` with per-frame world and screen bounds (telemetry, notes and selectors can target it). Renaming the Blender object no longer breaks code; a missing part throws with the list of available parts. Parts register with SceneGraph role `background` unless you pass `role`. `manifest.parts` and `node()` accept Blender object names (`Rotor.001`) as well as three's sanitized names (`Rotor001`).
+- **Materials:** name Blender materials meaningfully (`Hull`, `Glass`). Map them to project library entries in `manifest.json` to restyle every asset from one place. Factory exports run once per asset instance, so per-instance uniform tweaks don't leak; exporting a Material instance shares it on purpose.
 
 ## 4. `manifest.json`
 
@@ -81,7 +81,8 @@ export default defineScene({
   },
   render(ctx, f, out) {
     const t = ctx.asset('turbine');
-    t.setClips(f.lt, { Spin: 1, Deploy: Math.min(1, f.p * 2) }); // closed-form blend
+    const d = Math.min(1, f.p * 2);
+    t.setClips(f.lt, { Spin: 1 - d, Deploy: { weight: d, time: f.lt - 1 } }); // weights sum to 1
     t.setMorph('Vent_Open', ctx.sceneCtx.audio.env('drums', f.t)); // after clip evaluation
     t.part('intake').rotation.z = f.lt * 0.5;                     // code-driven motion on a named part
     ctx.updateCamera(f.t, f.p);
@@ -90,19 +91,21 @@ export default defineScene({
 });
 ```
 
+Evaluate clips and morphs before `ctx.updateCamera()`: part world/screen bounds are computed there.
+
 Raw `Scene` subclasses can use `GLTFManager`/`GLTFInstance` directly; the project helpers live in `engine/assets.ts` (`resolveAsset`, `loadMaterialLibrary`, `applyMaterialSlots`).
 
 ### Animation API (all closed-form, safe for seeking and motion-blur sub-samples)
 
 | Call | Use |
 |---|---|
-| `setTime(t, clip?, { timeScale, loop, offset })` | Play one clip (switching stops others). Per-clip defaults come from `manifest.clips`. |
-| `setClips(t, { A: 1, B: 0.4 })` | Weighted blend of several clips. |
-| `clipNames` | Clip names in export order. |
-| `setMorph(name, w)` / `setMorphs({...})` / `morphTargets` | Shape keys; call after clip evaluation. |
+| `setTime(t, clip?, { timeScale, loop, offset })` | Play one clip at full weight; other clips stop. Per-clip defaults come from `manifest.clips`. |
+| `setClips(t, { A: 0.6, B: { weight: 0.4, time } })` | Weighted blend. Weights above a total of 1 are normalised and below 1 blend toward the rest pose, so keep them summing to 1. Per-clip `time` lets a one-shot start on a beat while a loop runs. |
+| `clipNames` / `clipDuration(name)` | Clip names in export order; clip length in seconds. |
+| `setMorph(name, w, part?)` / `setMorphs({...})` / `morphTargets` | Shape keys, optionally limited to one part; call after clip evaluation. |
 | `parts`, `part(id)`, `definePart(id, nodeName)`, `getPartScreenBounds(id, cam)` | Stable handles to Blender objects. |
 | `node(name)` | Exact-name lookup that throws when missing. |
-| `cameras`, `lights` | Exported cameras/lights, for reference or manual use (not yet auto-driving the rig). |
+| `cameras`, `lights` | Exported cameras (listed; not yet driving the rig) and punctual lights (live in the scene with their exported aim; set `visible = false` to disable). |
 
 ## 6. Preflight
 

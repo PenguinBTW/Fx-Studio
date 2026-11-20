@@ -25,7 +25,7 @@ Rule of thumb: if an artist would reach for a mouse and a viewport, it belongs i
 - `GLTFManager.instantiate(url)` + `SkeletonUtils.clone`, closed-form `setTime(t, clip)`, `center()/fitToBox()`, `getScreenBounds()`.
 - **Shipped:** Draco decoders are copied to `public/draco/` on install/dev/build. Clip switching no longer blends with the auto-played first clip. One-shot clips survive backward scrubbing (`reset().play()`).
 - **Shipped:** project asset layer (section 5).
-- Gaps: GLTF camera driving, world/HDRI, colour-management parity, morph-target drivers, hot reload, markers, KTX2/Meshopt, per-project asset folders.
+- Gaps: GLTF camera driving, world/HDRI, colour-management parity, morph-target drivers, hot reload, markers, KTX2/Meshopt.
 
 ### 1.2 Target workflow
 ```
@@ -117,6 +117,16 @@ Choose **one** per-project location now (`scenes/<project>/assets/`, served thro
 - Skills: extract one `fx-invariants` skill (determinism, `setTime`, stateless transitions, no render-time fetch) and link to it from the others; cut the repeated "never…" lists; add a Blender how-to skill once B1–B4 land.
 - One test runner (`bun run test --filter rig`) instead of 15+ `test:*` scripts; CI on PRs running typecheck, build, determinism and tests on a fresh clone (no gitignored data).
 
+## 4. Suggested order
+1. Overlay/layer semantics (2.3), treated as a bug.
+2. B0 preflight + sidecar (fps, frame start, colour, aspect).
+3. B2 environment lighting + AgX tone mapping.
+4. B1 camera import (matrix mode first).
+5. B4 hot reload + one per-project asset folder.
+6. B5 morphs/audio, then B3 markers and the beat round-trip.
+7. Timeline strip and live params, then the B7 add-on, then render passes and EXR output.
+8. Simplification backlog (section 3) in parallel throughout.
+
 ## 5. Project asset layer
 
 **Shipped** (see `docs/authoring/blender-assets.md`):
@@ -133,14 +143,6 @@ Choose **one** per-project location now (`scenes/<project>/assets/`, served thro
 - Shared assets: an optional `scenes/_shared/assets/` library that projects reference explicitly (`'_shared/rock_kit'`), still versioned in git.
 - Mesh-vs-label telemetry: extend F04 so text overlapping a registered part is flagged, now that parts have screen bounds.
 - Part-level material overrides in the manifest (`parts.rotor.material`) and per-instance tint uniforms for variants.
+- Animation layering: additive clips (`AdditiveAnimationBlendMode`), bone/part masks, and sub-clips by frame range (`clips.<name>.{ from, to }`), since Blender markers don't export.
+- Camera pass-through: the rig follows an animated Blender camera (fov, aspect) — the main remaining pass-through gap.
 - Asset browser tab in the preview: list project assets, parts, clips and morphs, scrub a clip on a turntable.
-
-## 4. Suggested order
-1. Overlay/layer semantics (2.3), treated as a bug.
-2. B0 preflight + sidecar (fps, frame start, colour, aspect).
-3. B2 environment lighting + AgX tone mapping.
-4. B1 camera import (matrix mode first).
-5. B4 hot reload + one per-project asset folder.
-6. B5 morphs/audio, then B3 markers and the beat round-trip.
-7. Timeline strip and live params, then the B7 add-on, then render passes and EXR output.
-8. Simplification backlog (section 3) in parallel throughout.

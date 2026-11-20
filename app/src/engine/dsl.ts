@@ -32,7 +32,7 @@ export interface LoadAssetOptions extends GLTFLoadOptions {
   id?: string;
   /** Add the root to scene3D (default true). */
   add?: boolean;
-  /** SceneGraph role for registered parts (default 'hero_subject'). */
+  /** SceneGraph role for registered parts (default 'background'). */
   role?: EntityRole;
   /** Register parts in the SceneGraph (default true). */
   register?: boolean;
@@ -64,7 +64,7 @@ export class SceneContext {
   readonly scene3D = new THREE.Scene();
   /** Instantiated GLTF models cataloged by ID */
   readonly models = new Map<string, GLTFInstance>();
-  private readonly partEntities: { id: string; obj: THREE.Object3D }[] = [];
+  private readonly partEntities: { id: string; obj: THREE.Object3D; precise: boolean }[] = [];
   /** Instantiated 3D extruded text meshes cataloged by ID */
   readonly text3DNodes = new Map<string, THREE.Group>();
 
@@ -192,8 +192,10 @@ export class SceneContext {
     if (register !== false) {
       for (const [pid, obj] of inst.parts) {
         const entityId = `${id}.${pid}`;
-        this.sceneGraph.register({ id: entityId, type: 'mesh', role: role ?? 'hero_subject', opacity: 1 });
-        this.partEntities.push({ id: entityId, obj });
+        this.sceneGraph.register({ id: entityId, type: 'mesh', role: role ?? 'background', opacity: 1 });
+        let precise = false;
+        obj.traverse((o) => { if ((o as THREE.SkinnedMesh).isSkinnedMesh || (o as THREE.Mesh).morphTargetInfluences?.length) precise = true; });
+        this.partEntities.push({ id: entityId, obj, precise });
       }
     }
     return inst;
@@ -481,7 +483,7 @@ export class SceneContext {
       const meta = this.sceneGraph.get(pe.id);
       if (!meta) continue;
       pe.obj.updateWorldMatrix(true, true);
-      const box = new THREE.Box3().setFromObject(pe.obj);
+      const box = new THREE.Box3().setFromObject(pe.obj, pe.precise); // precise: skinned/morphed parts
       if (box.isEmpty()) continue;
       meta.worldBounds = [box.min.x, box.min.y, box.min.z, box.max.x, box.max.y, box.max.z];
       const c = box.getCenter(new THREE.Vector3());

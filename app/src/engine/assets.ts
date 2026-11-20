@@ -3,7 +3,7 @@
 //   scenes/<project>/assets/<assetId>/model.glb       exported from Blender (or built by build.py)
 //   scenes/<project>/assets/<assetId>/manifest.json   optional: parts, material slots, clip defaults, budgets
 //   scenes/<project>/materials/<name>.ts              material library (default export: Material or () => Material)
-// Models are imported through Vite (?url), so builds get content-hashed URLs and stale caches cannot occur.
+// Models are imported through Vite (?url): production builds get content-hashed URLs. In dev, re-exports need a page reload.
 import * as THREE from 'three';
 import type { AnimationPlayOptions, GLTFInstance, GLTFLoadOptions } from './gltf';
 
@@ -40,14 +40,23 @@ export interface ResolvedAsset {
 export type MaterialFactory = () => THREE.Material;
 
 // Globs live inside functions so non-Vite runtimes (bun tests importing the engine) never evaluate them.
-function globAssets() {
-  return {
-    manifestFiles: import.meta.glob<AssetManifest>('../scenes/*/assets/*/manifest.json', { eager: true, import: 'default' }),
-    modelFiles: import.meta.glob<string>('../scenes/*/assets/*/*.{glb,gltf}', { eager: true, query: '?url', import: 'default' }),
-  };
+// Outside Vite (bun harnesses) import.meta.glob is undefined; the registry is then empty and resolveAsset() reports it.
+function globAssets(): { manifestFiles: Record<string, AssetManifest>; modelFiles: Record<string, string> } {
+  try {
+    return {
+      manifestFiles: import.meta.glob<AssetManifest>('../scenes/*/assets/*/manifest.json', { eager: true, import: 'default' }),
+      modelFiles: import.meta.glob<string>('../scenes/*/assets/*/*.{glb,gltf}', { eager: true, query: '?url', import: 'default' }),
+    };
+  } catch {
+    return { manifestFiles: {}, modelFiles: {} };
+  }
 }
-function globMaterials() {
-  return import.meta.glob<{ default: THREE.Material | MaterialFactory }>('../scenes/*/materials/*.ts');
+function globMaterials(): Record<string, () => Promise<{ default: THREE.Material | MaterialFactory }>> {
+  try {
+    return import.meta.glob<{ default: THREE.Material | MaterialFactory }>('../scenes/*/materials/*.ts');
+  } catch {
+    return {};
+  }
 }
 
 const ASSET_PATH = /^\.\.\/scenes\/([^/]+)\/assets\/([^/]+)\/([^/]+)$/;
@@ -64,7 +73,9 @@ function buildIndex(): Map<string, ResolvedAsset> {
   for (const key of folders) {
     const [project, folder] = key.split('/') as [string, string];
     const manifest = manifestFiles[`../scenes/${key}/manifest.json`] ?? {};
-    const file = manifest.model ?? (modelFiles[`../scenes/${key}/model.glb`] ? 'model.glb' : undefined);
+    const prefix = `../scenes/${key}/`;
+    const file = manifest.model
+      ?? (modelFiles[`${prefix}model.glb`] ? 'model.glb' : Object.keys(modelFiles).find((p) => p.startsWith(prefix))?.slice(prefix.length));
     const url = file ? modelFiles[`../scenes/${key}/${file}`] : undefined;
     if (!url) continue;
     const id = manifest.id ?? folder;
@@ -91,29 +102,34 @@ export function resolveAsset(ref: string, project?: string | null): ResolvedAsse
   throw new Error(`[assets] asset '${ref}' not found in project '${proj}'. Available: ${avail}. Expected scenes/${proj}/assets/<id>/model.glb`);
 }
 
-const libraries = new Map<string, Promise<Map<string, THREE.Material>>>();
+const libraries = new Map<string, Promise<Map<string, MaterialFactory>>>();
 
-/** Loads the project's material library once (`scenes/<project>/materials/*.ts`). */
-export function loadMaterialLibrary(project: string): Promise<Map<string, THREE.Material>> {
+/**
+ * Loads the project's material library once (`scenes/<project>/materials/*.ts`).
+ * Factories run per asset instance; a module exporting a Material instance is shared on purpose.
+ */
+export function loadMaterialLibrary(project: string): Promise<Map<string, MaterialFactory>> {
   let lib = libraries.get(project);
   if (!lib) {
     lib = (async () => {
-      const out = new Map<string, THREE.Material>();
+      const out = new Map<string, MaterialFactory>();
       for (const [path, load] of Object.entries(globMaterials())) {
         const m = MATERIAL_PATH.exec(path);
         if (!m || m[1] !== project) continue;
         const mod = await load();
-        out.set(m[2]!, typeof mod.default === 'function' ? mod.default() : mod.default);
+        const d = mod.default;
+        out.set(m[2]!, typeof d === 'function' ? d : () => d);
       }
       return out;
     })();
+    lib.catch(() => libraries.delete(project));
     libraries.set(project, lib);
   }
   return lib;
 }
 
 /** Replace materials by Blender material name using the project library. Throws on unknown names or keys. */
-export function applyMaterialSlots(inst: GLTFInstance, slots: Record<string, string>, lib: Map<string, THREE.Material>): void {
+export function applyMaterialSlots(inst: GLTFInstance, slots: Record<string, string>, lib: Map<string, MaterialFactory>): void {
   for (const [slot, key] of Object.entries(slots)) {
     if (!inst.materials.has(slot)) {
       throw new Error(`[assets] material slot '${slot}' not in model. Slots: ${[...inst.materials.keys()].join(', ') || 'none'}`);
@@ -122,10 +138,14 @@ export function applyMaterialSlots(inst: GLTFInstance, slots: Record<string, str
       throw new Error(`[assets] material '${key}' missing from library. Add scenes/<project>/materials/${key}.ts`);
     }
   }
+  const made = new Map<string, THREE.Material>();
   inst.traverseMeshes((mesh) => {
     const swap = (mat: THREE.Material) => {
       const key = slots[mat.name];
-      return key ? lib.get(key)! : mat;
+      if (!key) return mat;
+      let out = made.get(key);
+      if (!out) { out = lib.get(key)!(); made.set(key, out); }
+      return out;
     };
     mesh.material = Array.isArray(mesh.material) ? mesh.material.map(swap) : swap(mesh.material);
   });
