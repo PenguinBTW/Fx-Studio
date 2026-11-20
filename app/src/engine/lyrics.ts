@@ -40,8 +40,10 @@ export class Lyrics {
     return new Lyrics({ lines: [] });
   }
 
-  static async load(): Promise<Lyrics> {
-    for (const url of ['data/lyrics.json', 'data/lyrics.approx.json']) {
+  /** Loads `data/<project>/lyrics.json` first (per-project songs), then the shared `data/lyrics.json`. */
+  static async load(project?: string | null): Promise<Lyrics> {
+    const per = project ? [`data/${project}/lyrics.json`, `data/${project}/lyrics.approx.json`] : [];
+    for (const url of [...per, 'data/lyrics.json', 'data/lyrics.approx.json']) {
       try {
         const r = await fetch(url);
         if (r.ok && (r.headers.get('content-type') ?? '').includes('json')) return new Lyrics(await r.json());

@@ -169,6 +169,9 @@ export class Engine {
       }`, { e: { value: null } });
   }
 
+  /** Active project name; selects per-project audio/lyrics under `data/<project>/`. */
+  project: string | null = null;
+
   async init(only?: (e: TimelineEntry) => boolean, driver?: TimelineDriver) {
     if (typeof document !== 'undefined' && (document as any).fonts?.ready) {
       try {
@@ -178,13 +181,13 @@ export class Engine {
     await Promise.allSettled([loadFonts(), loadStrokeFonts()]);
 
     try {
-      this.audio = await AudioData.load();
+      this.audio = await AudioData.load(this.project);
     } catch {
       this.audio = AudioData.createDummy();
     }
 
     try {
-      this.lyrics = await Lyrics.load();
+      this.lyrics = await Lyrics.load(this.project);
     } catch {
       this.lyrics = Lyrics.createEmpty();
     }
@@ -469,7 +472,13 @@ export class Engine {
     const renderSide = (entry: TimelineEntry, scene: Scene, rec: { lastT: number }, rt: THREE.WebGLRenderTarget, tin: number, tout: number): PostOverrides | void => {
       const sideSeeked = seeked || rec.lastT < 0 || Math.abs(t - rec.lastT) > 0.25;
       const fObj = this.frameFor(entry, t, sideSeeked ? 0 : dt, sideSeeked, false, null, tin, tout);
-      const ov = scene.render(fObj, rt);
+      let ov: PostOverrides | void = undefined;
+      try {
+        ov = scene.render(fObj, rt);
+      } catch (err) {
+        console.error(`scene ${entry.id} render error (transition '${tr.id}')`, err);
+        clearRT(this.renderer, rt, [0.25, 0.0, 0.0]);
+      }
       const s = scene as unknown as { probe?: (f: Frame) => unknown };
       if (typeof s.probe === 'function') {
         const pr = s.probe(fObj);
@@ -519,15 +528,29 @@ export class Engine {
 
     // Standalone transition window: a dedicated block owns the seam so scenes stay pure.
     const activeTransition = resolveTransitionAt(this.transitions, t);
+    let layers = active;
+    let base = false;
     if (activeTransition) {
       const rendered = this.renderTransition(activeTransition, t, dt, seeked);
       if (rendered) {
-        this.lastSceneProbe = rendered.probe;
-        return { outTex: rendered.outTex, post: rendered.post, depthTex: rendered.depthTex };
+        const parts = new Set([activeTransition.from, activeTransition.to]);
+        layers = active.filter((e) => !parts.has(e.id) && !(e.file && parts.has(e.file)));
+        if (layers.length === 0) {
+          this.lastSceneProbe = rendered.probe;
+          return { outTex: rendered.outTex, post: rendered.post, depthTex: rendered.depthTex };
+        }
+        // Overlays/underlays running alongside the transition layer on top of its output.
+        base = true;
+        under = outTex = rendered.outTex;
+        depthTex = rendered.depthTex;
+        post = rendered.post;
+        sceneProbeData = rendered.probe;
       }
       // Missing/broken participant or loader: fall through to the default path.
     }
-    active.forEach((e, idx) => {
+    layers.forEach((e, idx) => {
+      const active = layers;
+      const layered = idx > 0 || base;
       const rec = this.loaded.get(e.id);
       const rt = this.rts[idx % this.rts.length]!;
       const prev = active[idx - 1], next = active[idx + 1];
@@ -552,7 +575,7 @@ export class Engine {
         }
       }
       let ov: PostOverrides | void = undefined;
-      const fObj = this.frameFor(e, t, sceneSeeked ? 0 : dt, sceneSeeked && !s.stateful, false, idx > 0 ? under : null, tin, tout);
+      const fObj = this.frameFor(e, t, sceneSeeked ? 0 : dt, sceneSeeked && !s.stateful, false, layered ? under : null, tin, tout);
       try {
         ov = s.render(fObj, rt);
         if (typeof (s as any).probe === 'function') {
@@ -565,7 +588,7 @@ export class Engine {
       }
       rec.lastT = t;
       post = { ...post, ...(e.post ?? {}), ...(ov ?? {}) };
-      if (idx > 0 && !s.handlesTransition && under) {
+      if (layered && !s.handlesTransition && under) {
         // default: crossfade from the previous scene over the overlap
         const targetMix = this.mixRTs[this.mixIdx % 2]!;
         this.mixIdx++;

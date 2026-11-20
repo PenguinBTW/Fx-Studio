@@ -130,6 +130,7 @@ export class CameraRig {
   position: V3 = [0, 1.8, -8.0];
   target: V3 = [0, 0, 0];
   roll = 0;
+  pathTiming: 'keyed' | 'uniform' = 'keyed';
   focalLengthMm = 50.0;                // 35mm equivalent focal length
   focalLengthPx = 50.0 * (H / 24.0);   // Synchronized pixel equivalent (1080/24 = 45 px/mm)
   isoScale = 6.0;                      // World units across screen for isometric mode
@@ -229,8 +230,21 @@ export class CameraRig {
     return this;
   }
 
+  /** Map path progress u to the spline's waypoint-index parameter so waypoint i is reached at its own `t`. */
+  private keyedSplineParam(u: number): number {
+    const w = this.waypoints;
+    const n = w.length;
+    if (u <= w[0]!.t) return 0;
+    if (u >= w[n - 1]!.t) return 1;
+    let i = 0;
+    while (i + 2 < n && u > w[i + 1]!.t) i++;
+    const span = Math.max(1e-6, w[i + 1]!.t - w[i]!.t);
+    return (i + clamp((u - w[i]!.t) / span, 0, 1)) / (n - 1);
+  }
+
   /**
-   * Sample camera trajectory along normalized arc length u in [0, 1]
+   * Sample camera trajectory at path progress u in [0, 1].
+   * 'keyed' (default): each waypoint is reached at its `t`. 'uniform': constant arc-length speed, waypoint `t` only drives roll/focal.
    */
   evalPath(u: number): this {
     const p = clamp(u, 0, 1);
@@ -246,8 +260,9 @@ export class CameraRig {
       return this;
     }
     if (this.splinePos && this.splineTarget) {
-      const pos = this.splinePos.getPointAt(p);
-      const tgt = this.splineTarget.getPointAt(p);
+      const s = this.pathTiming === 'uniform' ? p : this.keyedSplineParam(p);
+      const pos = this.pathTiming === 'uniform' ? this.splinePos.getPointAt(s) : this.splinePos.getPoint(s);
+      const tgt = this.pathTiming === 'uniform' ? this.splineTarget.getPointAt(s) : this.splineTarget.getPoint(s);
       this.position = [pos.x, pos.y, pos.z];
       this.target = [tgt.x, tgt.y, tgt.z];
 
@@ -260,13 +275,11 @@ export class CameraRig {
         const k = clamp((p - w0.t) / span, 0, 1);
         this.roll = (w0.roll ?? 0) * (1 - k) + (w1.roll ?? 0) * k;
 
-        const fl0 = w0.focalLength ?? this.focalLengthMm;
-        const fl1 = w1.focalLength ?? fl0;
-        const fl = fl0 * (1 - k) + fl1 * k;
-
-        // Convention: < 300 is millimeters, >= 300 is screen pixels
-        if (fl < 300) this.setLensMm(fl);
-        else this.setFocalLengthPx(fl);
+        // Convention: < 300 is millimeters, >= 300 is screen pixels; blend in mm so mixed units stay valid
+        const toMm = (v: number) => (v < 300 ? v : v / (H / 24.0));
+        const fl0 = toMm(w0.focalLength ?? this.focalLengthMm);
+        const fl1 = w1.focalLength !== undefined ? toMm(w1.focalLength) : fl0;
+        this.setLensMm(fl0 * (1 - k) + fl1 * k);
       }
     }
     return this;

@@ -130,6 +130,11 @@ export class GLTFInstance {
     }
 
     const scale = opts?.timeScale ?? 1.0;
+    // setTime owns the scale; reset any play()-level timeScale so it isn't applied twice.
+    if (opts?.timeScale !== undefined) {
+      const a = clipName ? this.actions.get(clipName) : undefined;
+      if (a) a.timeScale = 1;
+    }
     const t = Math.max(0, timeInSeconds * scale);
     this.mixer.setTime(t);
     return this;

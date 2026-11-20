@@ -2,7 +2,7 @@
 import { Engine, type AdaptiveSampling } from './engine/engine';
 import { PW, PH, SCALE } from './engine/gl';
 import { BRIDGE_VERSION, type EngineBridge, type TextProbeRecord } from './engine/bridge';
-import { makeTimeline, makeTransitions } from './timeline';
+import { makeTimeline, makeTransitions, activeProjectName } from './timeline';
 import { installFxStats, exposeFxStats } from './engine/fxstats';
 
 const params = new URLSearchParams(location.search);
@@ -23,6 +23,7 @@ let TIMELINE: typeof engine.timeline = [];
 
 async function boot() {
   const onlySet = ONLY ? new Set(ONLY.split(',')) : null;
+  engine.project = activeProjectName(PROJECT);
   engine.transitions = makeTransitions(PROJECT);
   await engine.init(onlySet ? (e) => onlySet.has(e.id) || (Boolean(e.file) && onlySet.has(e.file!)) : undefined);
   TIMELINE = engine.timeline;

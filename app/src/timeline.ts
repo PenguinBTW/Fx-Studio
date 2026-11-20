@@ -43,6 +43,15 @@ const transition = (name: string) => () => {
   return m ? m() : Promise.reject(new Error(`transition module not found: transitions/${name}.ts`));
 };
 
+/** Project name the timeline will load (URL param, then `scenes/active.json`, then default). */
+export function activeProjectName(project?: string | null): string {
+  return resolveProjectName({
+    urlProject: project,
+    pointer: (activePointer as { project?: string } | null)?.project ?? null,
+    available: Object.keys(manifests),
+  });
+}
+
 function loadManifest(project?: string | null): ProjectManifest {
   const available = Object.keys(manifests);
   const want = resolveProjectName({

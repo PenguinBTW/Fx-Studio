@@ -246,7 +246,7 @@ export interface GLTFLoadOptions {
 | `getScreenBounds(cam, W, H)`| Projects the 3D bounding box (including animated bones) through camera to return 2D pixels `[minX, minY, maxX, maxY]`. |
 | `setMaterial(material)` | Overrides materials across all child meshes (useful for wireframe or holographic passes). |
 | `traverseMeshes(fn)` | Iterates through all child meshes. |
-| `dispose()` | Disposes all cloned geometries, materials, attached textures, and unbinds the animation mixer. |
+| `dispose()` | Stops and uncaches the animation mixer and detaches the cloned hierarchy. Geometry and textures are shared with the cached asset and stay on the GPU until `GLTFManager.clearCache()`. |
 
 ### `GLTFManager` Static Methods
 | Method | Description |
@@ -265,7 +265,7 @@ export interface GLTFLoadOptions {
 2. **Prefer Binary `.glb` over `.gltf`**:
    Single-file `.glb` bundles contain geometry, embedded buffers, and textures in a single payload, eliminating multi-file HTTP waterfalls.
 3. **Local Draco Decoder Bundling for Offline / CI Nodes**:
-   The engine bundles the official Draco WebAssembly decoders in `app/public/draco/`. In air-gapped CI environments or headless render nodes without internet access, `GLTFManager` resolves decoders locally from `/draco/`. Remote CDNs can still be specified via `GLTFManager.setDracoDecoderPath('https://...')` or per-asset in `GLTFLoadOptions.dracoDecoderPath`.
+   `bun install` copies the Draco WebAssembly decoders from `three/examples/jsm/libs/draco/gltf` into `app/public/draco/` (gitignored) via `scripts/sync_draco.ts`. In air-gapped CI environments or headless render nodes without internet access, `GLTFManager` resolves decoders locally from `/draco/`. Remote CDNs can still be specified via `GLTFManager.setDracoDecoderPath('https://...')` or per-asset in `GLTFLoadOptions.dracoDecoderPath`.
 4. **Use `getScreenBounds()` with `SceneGraph`**:
    Register projected screen bounds into the SceneGraph so automated telemetry rules (`F04` text collision) detect if 2D typography penetrates the 3D model silhouette. For rigged characters, `getScreenBounds()` automatically accounts for animated bone deformations outside the rest pose.
 5. **Always Call `dispose()`**:

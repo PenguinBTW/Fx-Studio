@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { LIN } from './palette';
 
 export interface BrushedMetalOpts {
+  /** Key light direction (world space). Default [0.5, 0.8, 0.6]. Update `material.uniforms.uLightDir` to follow a scene light. */
+  lightDir?: [number, number, number];
   baseColor?: string | [number, number, number];
   roughnessX?: number; // Tangent roughness (e.g. 0.15)
   roughnessY?: number; // Bitangent roughness (e.g. 0.65)
@@ -26,6 +28,8 @@ export interface FrostedGlassOpts {
 }
 
 export interface MattePolymerOpts {
+  /** Key light direction (world space). Default [0.4, 0.9, 0.3]. */
+  lightDir?: [number, number, number];
   color?: string | [number, number, number];
   roughness?: number;
   grain?: number;
@@ -75,6 +79,7 @@ export class ProceduralMaterial {
     return new THREE.ShaderMaterial({
       uniforms: {
         uBaseColor: { value: baseCol },
+        uLightDir: { value: new THREE.Vector3(...(opts.lightDir ?? [0.5, 0.8, 0.6])).normalize() },
         uRoughnessX: { value: rx },
         uRoughnessY: { value: ry },
         uGrooveScale: { value: scale },
@@ -95,6 +100,7 @@ export class ProceduralMaterial {
       `,
       fragmentShader: /* glsl */ `
         uniform vec3 uBaseColor;
+        uniform vec3 uLightDir;
         uniform float uRoughnessX;
         uniform float uRoughnessY;
         uniform float uGrooveScale;
@@ -113,7 +119,7 @@ export class ProceduralMaterial {
         void main() {
           vec3 N = normalize(vNormal);
           vec3 V = normalize(cameraPosition - vWorldPos);
-          vec3 L = normalize(vec3(0.5, 0.8, 0.6));
+          vec3 L = normalize(uLightDir);
           vec3 H = normalize(L + V);
 
           // Anisotropic tangent space derived from world normal (singular-safe on floors/roofs)
@@ -282,6 +288,7 @@ export class ProceduralMaterial {
     return new THREE.ShaderMaterial({
       uniforms: {
         uColor: { value: col },
+        uLightDir: { value: new THREE.Vector3(...(opts.lightDir ?? [0.4, 0.9, 0.3])).normalize() },
         uRoughness: { value: rough },
         uGrain: { value: grain },
       },
@@ -299,6 +306,7 @@ export class ProceduralMaterial {
         uniform vec3 uColor;
         uniform float uRoughness;
         uniform float uGrain;
+        uniform vec3 uLightDir;
         varying vec3 vNormal;
         varying vec3 vWorldPos;
 
@@ -310,7 +318,7 @@ export class ProceduralMaterial {
 
         void main() {
           vec3 N = normalize(vNormal);
-          vec3 L = normalize(vec3(0.4, 0.9, 0.3));
+          vec3 L = normalize(uLightDir);
           float diff = max(dot(N, L), 0.05);
           // Roughness absorption curve
           diff = mix(diff, pow(diff, 1.0 + uRoughness), 0.55);
