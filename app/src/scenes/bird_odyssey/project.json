@@ -1,0 +1,11 @@
+{
+  "project": "bird_odyssey",
+  "entries": [
+    {
+      "scene": "bird_odyssey/odyssey",
+      "id": "bird_odyssey",
+      "start": 0.0,
+      "end": 82.0
+    }
+  ]
+}
