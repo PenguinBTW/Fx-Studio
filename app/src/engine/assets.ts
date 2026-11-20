@@ -118,7 +118,7 @@ export function loadMaterialLibrary(project: string): Promise<Map<string, Materi
         if (!m || m[1] !== project) continue;
         const mod = await load();
         const d = mod.default;
-        out.set(m[2]!, typeof d === 'function' ? d : () => d);
+        out.set(m[2]!, typeof d === 'function' ? d : Object.assign(() => d, { shared: true }));
       }
       return out;
     })();
@@ -144,7 +144,12 @@ export function applyMaterialSlots(inst: GLTFInstance, slots: Record<string, str
       const key = slots[mat.name];
       if (!key) return mat;
       let out = made.get(key);
-      if (!out) { out = lib.get(key)!(); made.set(key, out); }
+      if (!out) {
+        const make = lib.get(key)!;
+        out = make();
+        made.set(key, out);
+        if (!(make as { shared?: boolean }).shared) inst.ownedMaterials.push(out);
+      }
       return out;
     };
     mesh.material = Array.isArray(mesh.material) ? mesh.material.map(swap) : swap(mesh.material);

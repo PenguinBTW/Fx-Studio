@@ -88,6 +88,8 @@ export class GLTFInstance {
   /** Per-clip defaults (offset, loop, timeScale), e.g. from an asset manifest. Explicit options win. */
   clipDefaults: Record<string, AnimationPlayOptions> = {};
   private warnedMorphs = new Set<string>();
+  /** Materials created for this instance (e.g. by material-library factories); disposed with it. */
+  readonly ownedMaterials: THREE.Material[] = [];
 
   constructor(gltf: GLTF, clonedRoot: THREE.Group, opts?: GLTFLoadOptions) {
     this.gltf = gltf;
@@ -439,6 +441,8 @@ export class GLTFInstance {
       this.mixer.uncacheRoot(this.root);
     }
     this.root.clear();
+    for (const m of this.ownedMaterials) m.dispose();
+    this.ownedMaterials.length = 0;
     this.meshes.length = 0;
     this.geometries.length = 0;
     this.materials.clear();
