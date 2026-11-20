@@ -118,7 +118,7 @@ export function sift(renderer: THREE.WebGLRenderer): World {
       sieves.forEach((s, i) => { s.rotation.y = t * 0.05 * (i % 2 ? 1 : -1); });
       stream.lookAt(cam.position.x, stream.getWorldPosition(new THREE.Vector3()).y, cam.position.z); stream.rotation.x = 0; stream.rotation.z = 0;
     },
-    post: () => ({ exposure: 1.0, bloom: 0.5, bloomThreshold: 1.4, volumetric: 0.25, volumetricDecay: 0.93, halation: 0.3, ca: 0.8 }),
+    post: () => ({ exposure: 1.0, bloom: 0.5, bloomThreshold: 1.4, volumetric: 0.22, volumetricDecay: 0.93, halation: 0.12, ca: 0.6 }),
     dispose() { disposeTree(scene); disposeEnv(scene); },
   };
 }
