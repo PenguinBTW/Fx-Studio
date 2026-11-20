@@ -211,6 +211,8 @@ export class AudioData {
   }
 
   section(t: number) {
+    const first = this.sections[0];
+    if (first && t < first.start) return first;
     return this.sections.find((s) => t >= s.start && t < s.end) ?? this.sections[this.sections.length - 1];
   }
 }

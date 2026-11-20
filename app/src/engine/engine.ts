@@ -81,7 +81,7 @@ export class Engine {
     makeRT(W, H, { depthTexture: true }),
     makeRT(W, H, { depthTexture: true }),
   ];
-  private transScratch = [makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT(), makeRT()];
+  private transScratch: THREE.WebGLRenderTarget[] = [];
   private transDepthRT = makeRT(W, H, { depthBuffer: false, type: THREE.HalfFloatType });
   private transDepthPass: FSPass;
   private transScratchIdx = 0;
@@ -287,7 +287,7 @@ export class Engine {
   }
 
   get duration() {
-    const tlEnd = this.timeline.length > 0 ? this.timeline[this.timeline.length - 1]!.end : 0;
+    const tlEnd = this.timeline.reduce((m, e) => Math.max(m, e.end), 0);
     const drDur = this.driver?.duration ?? 0;
     return Math.max(tlEnd, drDur) || 5.0;
   }
