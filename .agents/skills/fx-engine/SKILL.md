@@ -32,7 +32,7 @@ f(x) Studio divides responsibilities into dedicated skills. **Do not load all sk
   ┌─────┴──────────────────┐               │                │
   ▼                        ▼               ▼                ▼
 [ fx-3d-assets ]    [ fx-procedural-modeling ] [ dsp.ts / telemetry ]  [ fx-telemetry-remediation ]
-GLTF / GLB CAD      Code-Only Shaders          1-Pole Smoothing        Directorial Self-Correction
+Blender / GLTF CAD  Code-Only Shaders          1-Pole Smoothing        Directorial Self-Correction
 Models & Skinned    & Line Geometries          Vocal Sanctuary & Duck  & F01-F16 Fixes
   │
   ▼
@@ -48,7 +48,7 @@ Staggers, Hershey Fonts
 | **Authoring mixes, multi-stem NLE edits, spatial audio & DSP** in `app/src/engine/audio/` | **`fx-audio`** | Declarative mix manifests (`defineMix`), Float32 PCM multi-stem timeline assembly with master transient lock (`-2.38ms`), 3D object-bound spatial telemetry (`AudioTelemetryEmitter`), 1-pole parameter smoothing, Cytomic SVF air absorption, 2-pole Linkwitz-Riley split-band ducking @ 250Hz, dynamic Vocal Sanctuary notch @ 2.2kHz, True Peak lookahead mastering limiter, and headless CLI mixdown (`mixdown.ts`). |
 | **Modifying engine source code** in `app/src/engine/` | **`fx-engine-dev`** | WebGL state cache restoration (`resetState()`), HalfFloat HDR render target allocation, custom GLSL fullscreen passes, and static GPU buffer memory rules. |
 | **Visual QA, debugging, telemetry, or export** | **`fx-diagnostics`** | Running the 4 visual instruments (`godview`, `onion`, `stitch`, `compare`), evaluating Tier A/B/C telemetry rules (`F01–F16`), waiver logging, and CLI rendering. |
-| **Importing or animating 3D CAD/GLTF models** in `app/public/models/` | **`fx-3d-assets`** | Asynchronous GLTF/GLB caching, Draco decompression, skeletal normalization (`fitToBox`, `center`), screen-bounds projection, and `model.setTime(t)`. |
+| **Blender / GLTF assets** in `app/src/scenes/<project>/assets/` | **`fx-3d-assets`** | Project asset folders + manifests, material libraries, named parts, `setTime`/`setClips` clip playback and blending, shape keys, `assets:check` preflight, normalization and screen bounds. |
 | **Code-only procedural shaders & wireframe geometry** | **`fx-procedural-modeling`** | Minimalist-3D wireframes (`LineBatch`), anisotropic normal noise (brushed metals), procedural displacement, raymarched SDFs, and recursive zoom fractals. |
 | **Kinetic typography, word staggers & Hershey fonts** | **`fx-kinetic-typography`** | Stagger reveals, numeric rollers, variable font axes, Hershey vector single-stroke plotter fonts (`stroke.ts`), and knockout understroke halos (`text.ts`). |
 | **Remediating telemetry flags & auto-healing** | **`fx-telemetry-remediation`** | Actionable remediation patterns for `F01–F16` flags, resolving CI export blockers, and registering machine-actionable repair directives via `heal.ts`. |

@@ -36,6 +36,7 @@ docs/
 │
 ├── authoring/                        # Developer & agent authoring guides
 │   ├── scene-authoring-guide.md      # Declarative DSL (defineScene) vs Raw Scene subclassing
+│   ├── blender-assets.md             # Project asset layer: Blender export, manifests, parts, materials
 │   ├── gltf-assets.md                # GLTF/GLB loading, instancing & deterministic animation (setTime)
 │   ├── custom-components.md          # Authoring custom passes, runtime invariants, telemetry gates
 │   ├── kinetic-typography.md         # KineticText, LyricRig, knockout halos, Hershey vector fonts
@@ -105,6 +106,7 @@ docs/
 
 ### D. Authoring & Scene Development
 * [**Scene Authoring Guide: DSL & Raw Scenes**](authoring/scene-authoring-guide.md): Comprehensive guide to declarative DSL (`defineScene`, `SceneContext`) vs raw `Scene` subclassing, lifecycle (`init`, `render`, `dispose`), and closed-form determinism.
+* [**Blender & Imported Assets: Project Asset Layer**](authoring/blender-assets.md): Per-project asset folders and manifests, Blender export settings, named parts (`fx_part`), material libraries, clip blending, shape keys, and `assets:check` preflight.
 * [**GLTF & GLB 3D Asset Loading, Instancing & Deterministic Animation**](authoring/gltf-assets.md): Loading external 3D CAD models, preloading race condition elimination, `SkeletonUtils.clone` instancing, `fitToBox`/`center` normalization, 2D screen bounding box projection, and deterministic closed-form animation evaluation (`model.setTime(t)`).
 * [**Authoring Custom Components & Render Passes**](authoring/custom-components.md): Normative guide to engine invariants (target ownership, WebGL state cache, transitions ducking, sub-frame motion blur, memory disposal) and telemetry emission gates.
 * [**Kinetic Typography & Lyric Synchronization**](authoring/kinetic-typography.md): `KineticText`, `LyricRig`, high-contrast knockout understroke halos, single-stroke Hershey plotter fonts (`stroke.ts`), dynamic word reveals, and telemetry interception.
