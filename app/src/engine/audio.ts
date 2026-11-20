@@ -101,11 +101,16 @@ export class AudioData {
     return d;
   }
 
-  static async load(): Promise<AudioData> {
-    for (const url of ['data/audio.json', 'data/audio.approx.json']) {
+  /** Loads `data/<project>/audio.json` first (per-project songs), then the shared `data/audio.json`. */
+  static async load(project?: string | null): Promise<AudioData> {
+    const per = project ? [`data/${project}/audio.json`, `data/${project}/audio.approx.json`] : [];
+    for (const url of [...per, 'data/audio.json', 'data/audio.approx.json']) {
       try {
         const r = await fetch(url);
-        if (r.ok && (r.headers.get('content-type') ?? '').includes('json')) return new AudioData(await r.json());
+        if (r.ok && (r.headers.get('content-type') ?? '').includes('json')) {
+          console.info(`[AudioData] loaded ${url}`);
+          return new AudioData(await r.json());
+        }
       } catch {}
     }
     // Fall back to dummy driver data instead of hard-crashing

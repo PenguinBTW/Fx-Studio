@@ -169,6 +169,9 @@ export class Engine {
       }`, { e: { value: null } });
   }
 
+  /** Active project name; selects per-project audio/lyrics under `data/<project>/`. */
+  project: string | null = null;
+
   async init(only?: (e: TimelineEntry) => boolean, driver?: TimelineDriver) {
     if (typeof document !== 'undefined' && (document as any).fonts?.ready) {
       try {
@@ -178,13 +181,13 @@ export class Engine {
     await Promise.allSettled([loadFonts(), loadStrokeFonts()]);
 
     try {
-      this.audio = await AudioData.load();
+      this.audio = await AudioData.load(this.project);
     } catch {
       this.audio = AudioData.createDummy();
     }
 
     try {
-      this.lyrics = await Lyrics.load();
+      this.lyrics = await Lyrics.load(this.project);
     } catch {
       this.lyrics = Lyrics.createEmpty();
     }
@@ -469,11 +472,21 @@ export class Engine {
     const renderSide = (entry: TimelineEntry, scene: Scene, rec: { lastT: number }, rt: THREE.WebGLRenderTarget, tin: number, tout: number): PostOverrides | void => {
       const sideSeeked = seeked || rec.lastT < 0 || Math.abs(t - rec.lastT) > 0.25;
       const fObj = this.frameFor(entry, t, sideSeeked ? 0 : dt, sideSeeked, false, null, tin, tout);
-      const ov = scene.render(fObj, rt);
-      const s = scene as unknown as { probe?: (f: Frame) => unknown };
-      if (typeof s.probe === 'function') {
-        const pr = s.probe(fObj);
-        if (pr && typeof pr === 'object') probe = { ...(probe || {}), ...(pr as Record<string, number>) };
+      let ov: PostOverrides | void = undefined;
+      try {
+        ov = scene.render(fObj, rt);
+      } catch (err) {
+        console.error(`scene ${entry.id} render error (transition '${tr.id}')`, err);
+        clearRT(this.renderer, rt, [0.25, 0.0, 0.0]);
+      }
+      try {
+        const s = scene as unknown as { probe?: (f: Frame) => unknown };
+        if (typeof s.probe === 'function') {
+          const pr = s.probe(fObj);
+          if (pr && typeof pr === 'object') probe = { ...(probe || {}), ...(pr as Record<string, number>) };
+        }
+      } catch (err) {
+        console.error(`scene ${entry.id} probe error`, err);
       }
       rec.lastT = t;
       return ov;
@@ -489,7 +502,13 @@ export class Engine {
     const fTrans = this.frameFor(bE, t, seeked ? 0 : dt, seeked, false, null, 1, 0);
     const targetMix = this.mixRTs[this.mixIdx % 2]!;
     this.mixIdx++;
-    const ovT = trec.trans.render(fTrans, targetMix, this.transRTs[0]!.texture, this.transRTs[1]!.texture, api);
+    let ovT: ReturnType<typeof trec.trans.render>;
+    try {
+      ovT = trec.trans.render(fTrans, targetMix, this.transRTs[0]!.texture, this.transRTs[1]!.texture, api);
+    } catch (err) {
+      console.error(`transition '${tr.id}' render error; falling back to default compositing`, err);
+      return null;
+    }
     post = { ...post, ...(ovT ?? {}) };
     let depthTex: THREE.Texture | null = null;
     const depthA = this.transRTs[0]?.depthTexture;
