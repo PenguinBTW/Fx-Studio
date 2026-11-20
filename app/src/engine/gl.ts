@@ -247,6 +247,7 @@ export class Layer2D {
     else c.clearRect(0, 0, this.w, this.h);
   }
   upload() { this.texture.needsUpdate = true; return this.texture; }
+  dispose() { this.texture.dispose(); }
 }
 
 const _scratchClearColorPrev = new THREE.Color();
