@@ -5,7 +5,7 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 import type { World } from './world';
 import { Sun } from './world';
 import { BIRD } from './path';
-import { makeSky, envFromSky, islandGeometry, pbr, makeMotes, makeSurface, makePuffs, instanced, disposeTree, setTime, fbm2c, sstep, rng, type FogSpec, type PuffItem } from './common';
+import { makeSky, envFromSky, disposeEnv, islandGeometry, pbr, makeMotes, makeSurface, makePuffs, instanced, disposeTree, setTime, fbm2c, sstep, rng, type FogSpec, type PuffItem } from './common';
 
 const SKY = /* glsl */ `
 vec3 skyColor(vec3 d) {
@@ -158,6 +158,6 @@ export function theEnd(renderer: THREE.WebGLRenderer): World {
       void nearPath;
     },
     post: () => ({ exposure: 1.1, bloom: 0.9, bloomThreshold: 0.9, volumetric: 0.25, volumetricDecay: 0.93, halation: 0.2, ca: 1.0 }),
-    dispose() { disposeTree(scene); (scene.environment as THREE.Texture | null)?.dispose(); },
+    dispose() { disposeTree(scene); disposeEnv(scene); },
   };
 }

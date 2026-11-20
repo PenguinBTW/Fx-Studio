@@ -5,7 +5,7 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 import type { World } from './world';
 import { Sun } from './world';
 import { BIRD } from './path';
-import { makeSky, envFromSky, terrainGeometry, pbr, makePuffs, makeMotes, makeSurface, instanced, disposeTree, setTime, fbm2c, ridged, sstep, rng, type FogSpec, type PuffItem } from './common';
+import { makeSky, envFromSky, disposeEnv, terrainGeometry, pbr, makePuffs, makeMotes, makeSurface, instanced, disposeTree, setTime, fbm2c, ridged, sstep, rng, type FogSpec, type PuffItem } from './common';
 
 const SKY = /* glsl */ `vec3 skyColor(vec3 d) { return mix(vec3(0.35, 0.06, 0.03), vec3(0.06, 0.01, 0.01), clamp(d.y * 1.5 + 0.3, 0.0, 1.0)); }`;
 const LAVA_Y = -6;
@@ -168,6 +168,6 @@ export function nether(renderer: THREE.WebGLRenderer): World {
     name: 'nether', scene, fog,
     update(t, _cam, bird) { key.follow(bird); setTime(scene, t); },
     post: () => ({ exposure: 1.0, bloom: 0.75, bloomThreshold: 1.0, halation: 0.35, volumetric: 0, ca: 0.9 }),
-    dispose() { disposeTree(scene); (scene.environment as THREE.Texture | null)?.dispose(); },
+    dispose() { disposeTree(scene); disposeEnv(scene); },
   };
 }

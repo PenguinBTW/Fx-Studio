@@ -131,7 +131,17 @@ export function envFromSky(renderer: THREE.WebGLRenderer, glsl: string, uniforms
   pm.dispose();
   (sky.material as THREE.Material).dispose(); sky.geometry.dispose();
   renderer.resetState();
+  ENV_RT.set(rt.texture, rt);
   return rt.texture;
+}
+const ENV_RT = new WeakMap<THREE.Texture, THREE.WebGLRenderTarget>();
+/** Free a scene's PMREM environment (the render target that owns the texture). */
+export function disposeEnv(scene: THREE.Scene) {
+  const tex = scene.environment;
+  if (!tex) return;
+  const rt = ENV_RT.get(tex);
+  if (rt) rt.dispose(); else tex.dispose();
+  scene.environment = null;
 }
 
 // ---------------------------------------------------------------------------- terrain
@@ -397,6 +407,8 @@ export function disposeTree(root: THREE.Object3D) {
   root.traverse((o) => {
     const m = o as THREE.Mesh;
     m.geometry?.dispose();
+    if ((o as THREE.InstancedMesh).isInstancedMesh) (o as THREE.InstancedMesh).dispose();
+    (o as THREE.DirectionalLight).shadow?.dispose();
     const mats = Array.isArray(m.material) ? m.material : m.material ? [m.material] : [];
     for (const x of mats) {
       for (const v of Object.values(x as any)) if (v instanceof THREE.Texture) v.dispose();

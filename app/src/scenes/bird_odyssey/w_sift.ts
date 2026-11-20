@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import type { World } from './world';
 import { Sun } from './world';
 import { BIRD } from './path';
-import { makeSky, envFromSky, terrainGeometry, islandGeometry, pbr, makePuffs, makeMotes, makeSurface, disposeTree, setTime, fbm2c, sstep, rng, type FogSpec, type PuffItem } from './common';
+import { makeSky, envFromSky, disposeEnv, terrainGeometry, islandGeometry, pbr, makePuffs, makeMotes, makeSurface, disposeTree, setTime, fbm2c, sstep, rng, type FogSpec, type PuffItem } from './common';
 
 const SUN = new THREE.Vector3(0.55, 0.08, -0.83).normalize();
 const SKY = /* glsl */ `
@@ -119,6 +119,6 @@ export function sift(renderer: THREE.WebGLRenderer): World {
       stream.lookAt(cam.position.x, stream.getWorldPosition(new THREE.Vector3()).y, cam.position.z); stream.rotation.x = 0; stream.rotation.z = 0;
     },
     post: () => ({ exposure: 1.0, bloom: 0.5, bloomThreshold: 1.4, volumetric: 0.25, volumetricDecay: 0.93, halation: 0.3, ca: 0.8 }),
-    dispose() { disposeTree(scene); (scene.environment as THREE.Texture | null)?.dispose(); },
+    dispose() { disposeTree(scene); disposeEnv(scene); },
   };
 }

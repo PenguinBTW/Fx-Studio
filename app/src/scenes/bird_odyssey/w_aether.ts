@@ -5,7 +5,7 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 import type { World } from './world';
 import { Sun } from './world';
 import { BIRD } from './path';
-import { makeSky, envFromSky, islandGeometry, pbr, makePuffs, makeMotes, makeSurface, instanced, disposeTree, setTime, fbm2c, sstep, rng, type FogSpec, type PuffItem } from './common';
+import { makeSky, envFromSky, disposeEnv, islandGeometry, pbr, makePuffs, makeMotes, makeSurface, instanced, disposeTree, setTime, fbm2c, sstep, rng, type FogSpec, type PuffItem } from './common';
 
 const SUN = new THREE.Vector3(0.45, 0.55, -0.7).normalize();
 const SKY = /* glsl */ `
@@ -121,6 +121,6 @@ export function aether(renderer: THREE.WebGLRenderer): World {
     name: 'aether', scene, fog, lightPos,
     update(t, cam, bird) { sun.follow(bird); setTime(scene, t); lightPos.copy(cam.position).addScaledVector(SUN, 4000); },
     post: () => ({ exposure: 0.95, bloom: 0.55, bloomThreshold: 1.3, volumetric: 0.3, volumetricDecay: 0.94, halation: 0.12, ca: 0.6 }),
-    dispose() { disposeTree(scene); (scene.environment as THREE.Texture | null)?.dispose(); },
+    dispose() { disposeTree(scene); disposeEnv(scene); },
   };
 }
