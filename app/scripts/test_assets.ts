@@ -6,6 +6,7 @@ import path from 'node:path';
 import * as THREE from 'three';
 import { inspectAsset, parseGlb } from './assets_check';
 import { GLTFInstance } from '../src/engine/gltf';
+import { indexAssets } from '../src/engine/assets';
 
 let failed = 0;
 const ok = (cond: boolean, msg: string) => { console.log(`${cond ? 'PASS' : 'FAIL'} ${msg}`); if (!cond) failed++; };
@@ -68,6 +69,14 @@ fs.rmSync(path.join(assetDir, 'manifest.json'));
 r = inspectAsset(assetDir, 'proj', 'turbine', matDir);
 ok(r.errors.some((e) => e.includes('EXT_meshopt_compression')) && r.errors.some((e) => e.includes('tex.png')), 'unsupported extension and external URI rejected');
 fs.rmSync(tmp, { recursive: true, force: true });
+
+// --- registry ---
+const reg = indexAssets(
+  { '../scenes/p/assets/turbine/manifest.json': { id: 'jet', clips: { Spin: { loop: true } } } },
+  { '../scenes/p/assets/turbine/model.glb': '/u/turbine.glb', '../scenes/p/assets/rock/rock_v2.glb': '/u/rock.glb' },
+);
+ok(reg.get('p/jet')?.url === '/u/turbine.glb' && reg.get('p/jet')?.manifest.clips?.Spin?.loop === true, 'registry resolves model + manifest under assets/');
+ok(reg.get('p/rock')?.url === '/u/rock.glb', 'registry falls back to the only .glb in the folder');
 
 // --- GLTFInstance ---
 const geom = new THREE.BufferGeometry();

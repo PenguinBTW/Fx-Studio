@@ -62,8 +62,8 @@ function globMaterials(): Record<string, () => Promise<{ default: THREE.Material
 const ASSET_PATH = /^\.\.\/scenes\/([^/]+)\/assets\/([^/]+)\/([^/]+)$/;
 const MATERIAL_PATH = /^\.\.\/scenes\/([^/]+)\/materials\/([^/]+)\.ts$/;
 
-function buildIndex(): Map<string, ResolvedAsset> {
-  const { manifestFiles, modelFiles } = globAssets();
+/** Build the registry from glob results keyed `../scenes/<project>/assets/<id>/<file>`. */
+export function indexAssets(manifestFiles: Record<string, AssetManifest>, modelFiles: Record<string, string>): Map<string, ResolvedAsset> {
   const index = new Map<string, ResolvedAsset>();
   const folders = new Set<string>();
   for (const p of [...Object.keys(manifestFiles), ...Object.keys(modelFiles)]) {
@@ -72,11 +72,11 @@ function buildIndex(): Map<string, ResolvedAsset> {
   }
   for (const key of folders) {
     const [project, folder] = key.split('/') as [string, string];
-    const manifest = manifestFiles[`../scenes/${key}/manifest.json`] ?? {};
-    const prefix = `../scenes/${key}/`;
+    const prefix = `../scenes/${project}/assets/${folder}/`;
+    const manifest = manifestFiles[`${prefix}manifest.json`] ?? {};
     const file = manifest.model
       ?? (modelFiles[`${prefix}model.glb`] ? 'model.glb' : Object.keys(modelFiles).find((p) => p.startsWith(prefix))?.slice(prefix.length));
-    const url = file ? modelFiles[`../scenes/${key}/${file}`] : undefined;
+    const url = file ? modelFiles[`${prefix}${file}`] : undefined;
     if (!url) continue;
     const id = manifest.id ?? folder;
     index.set(`${project}/${id}`, { project, id, url, manifest });
@@ -85,7 +85,7 @@ function buildIndex(): Map<string, ResolvedAsset> {
 }
 
 let assetIndexCache: Map<string, ResolvedAsset> | null = null;
-const assetIndex = () => (assetIndexCache ??= buildIndex());
+const assetIndex = () => (assetIndexCache ??= (() => { const g = globAssets(); return indexAssets(g.manifestFiles, g.modelFiles); })());
 
 /** All assets, optionally filtered to one project. */
 export function listAssets(project?: string | null): ResolvedAsset[] {
