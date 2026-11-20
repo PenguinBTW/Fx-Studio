@@ -142,7 +142,7 @@ export class CameraRig {
   pathTiming: 'keyed' | 'uniform' = 'uniform';
   private keyArcPos: number[] = [];
   private keyArcTarget: number[] = [];
-  private pathBaseFocalMm = 50.0;
+  private keyFocalMm: number[] = [];
   focalLengthMm = 50.0;                // 35mm equivalent focal length
   focalLengthPx = 50.0 * (H / 24.0);   // Synchronized pixel equivalent (1080/24 = 45 px/mm)
   isoScale = 6.0;                      // World units across screen for isometric mode
@@ -240,7 +240,9 @@ export class CameraRig {
       this.splineTarget = new THREE.CatmullRomCurve3(targetPoints, false, 'centripetal', 0.5);
       this.keyArcPos = knotArcFractions(this.splinePos, this.waypoints.length);
       this.keyArcTarget = knotArcFractions(this.splineTarget, this.waypoints.length);
-      this.pathBaseFocalMm = this.focalLengthMm;
+      // Missing focal keys hold the last explicit key (or the lens at setPath time); mm and px keys normalised to mm.
+      let cur = this.focalLengthMm;
+      this.keyFocalMm = this.waypoints.map((w) => (cur = w.focalLength === undefined ? cur : w.focalLength < 300 ? w.focalLength : w.focalLength / (H / 24.0)));
     }
     return this;
   }
@@ -291,9 +293,9 @@ export class CameraRig {
         this.roll = (w0.roll ?? 0) * (1 - k) + (w1.roll ?? 0) * k;
 
         // Convention: < 300 is millimeters, >= 300 is screen pixels; blend in mm so mixed units stay valid
-        const toMm = (v: number) => (v < 300 ? v : v / (H / 24.0));
-        const fl0 = toMm(w0.focalLength ?? this.pathBaseFocalMm);
-        const fl1 = w1.focalLength !== undefined ? toMm(w1.focalLength) : fl0;
+        const j = Math.min(i + 1, this.waypoints.length - 1);
+        const fl0 = this.keyFocalMm[i] ?? this.focalLengthMm;
+        const fl1 = this.keyFocalMm[j] ?? fl0;
         this.setLensMm(fl0 * (1 - k) + fl1 * k);
       }
     }
