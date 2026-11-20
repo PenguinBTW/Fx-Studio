@@ -3,10 +3,10 @@
 import * as THREE from 'three';
 
 function shapeGeo(pts: [number, number][]): THREE.BufferGeometry {
-  const s = new THREE.Shape(pts.map(([x, y]) => new THREE.Vector2(x, y)));
+  const s = new THREE.Shape(pts.map(([x, y]) => new THREE.Vector2(-x, y)));
   const g = new THREE.ShapeGeometry(s, 6);
-  g.rotateX(Math.PI / 2);
-  g.scale(1, 1, -1); // shape +y -> +z (forward)
+  g.rotateX(Math.PI / 2); // shape +y -> +z (forward)
+  g.scale(-1, 1, 1); // undo the x pre-flip; keeps normals facing +y
   g.computeVertexNormals();
   return g;
 }
@@ -100,8 +100,9 @@ export class Bird {
       const sh = this.shoulders[i]!, wr = this.wrists[i]!;
       const glideFlex = 0.06 * Math.sin(t * 1.3 + i);
       sh.rotation.set(0, 0, 0);
-      sh.rotation.z = A * s + 0.12 * (1 - amp) + glideFlex - fold * 0.25;
-      sh.rotation.y = -(0.25 * amp * (0.5 + 0.5 * c) + fold * 0.9);
+      const m = sh.scale.x; // mirrored shoulder: z/y rotations flip sign so both wings beat together
+      sh.rotation.z = m * (A * s + 0.12 * (1 - amp) + glideFlex - fold * 0.25);
+      sh.rotation.y = -m * (0.25 * amp * (0.5 + 0.5 * c) + fold * 0.9);
       sh.rotation.x = -0.12 * amp * c;
       wr.rotation.z = A * 0.55 * Math.sin(phase - 0.9) - 0.05 * (1 - amp) + fold * 0.2;
       wr.rotation.y = -(0.45 * amp * Math.max(0, c) + fold * 1.3 - 0.05);
