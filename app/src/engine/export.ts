@@ -108,7 +108,7 @@ export class ExportPipeline {
           '-y',
           '-loglevel', 'error',
           '-f', 'lavfi',
-          '-i', 'nullsrc=s=64x64:d=0.01',
+          '-i', 'nullsrc=s=256x256:d=0.01',
           '-c:v', enc,
           '-f', 'null',
           '-',
