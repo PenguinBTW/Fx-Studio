@@ -104,6 +104,10 @@ ok(near(mesh.position.x, 10), 'one-shot blend clamps at the end');
 inst.setClips(0.1, { Move: 1 }, { loop: false });
 ok(near(mesh.position.x, 1), 'one-shot blend scrubs backwards');
 
+inst.setClips(0.5, { Move: 0.4, Up: 1 });
+inst.setTime(0.5, 'Move');
+ok(near(mesh.position.x, 5) && near(mesh.position.y, 0), 'setTime after setClips plays one clip at full weight');
+
 inst.clipDefaults = { Move: { offset: 0.5 } };
 inst.setTime(0, 'Up');
 inst.setTime(0, 'Move');

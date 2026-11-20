@@ -170,13 +170,13 @@ export class GLTFInstance {
     if (clipName) {
       const targetAction = this.actions.get(clipName);
       if (!targetAction) console.warn(`[gltf] Animation clip '${clipName}' not found. Clips: ${this.clipNames.join(', ') || 'none'}`);
-      if (targetAction && !targetAction.isRunning()) {
-        for (const a of this.actions.values()) if (a !== targetAction) a.stop();
-        targetAction.reset().play();
-        if (opts?.loop === false) {
-          targetAction.clampWhenFinished = true;
-          targetAction.loop = THREE.LoopOnce;
-        }
+      if (targetAction) {
+        // Single-clip mode: stop anything left running (e.g. by setClips) and play at full weight.
+        for (const a of this.actions.values()) if (a !== targetAction && a.isScheduled()) a.stop();
+        if (!targetAction.isRunning()) targetAction.reset().play();
+        targetAction.setEffectiveWeight(1);
+        targetAction.loop = opts?.loop === false ? THREE.LoopOnce : THREE.LoopRepeat;
+        targetAction.clampWhenFinished = opts?.loop === false;
       }
     }
 
