@@ -185,7 +185,7 @@ export class Portal {
           gl_PointSize = clamp((uStyle > 2.5 ? 30.0 : 55.0) / -mv.z, 1.0, 10.0);
         }`,
       fragmentShader: /* glsl */ `uniform vec3 uCol; varying float vA;
-        void main() { float d = length(gl_PointCoord - 0.5); gl_FragColor = vec4(uCol * vA * smoothstep(0.5, 0.0, d), 0.0); }`,
+        void main() { float d = length(gl_PointCoord - 0.5); gl_FragColor = vec4(uCol * vA * smoothstep(0.5, 0.0, d), 1.0); }`,
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
     });
     const pts = new THREE.Points(g, m); pts.frustumCulled = false;
