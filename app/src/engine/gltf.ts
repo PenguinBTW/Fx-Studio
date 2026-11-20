@@ -121,7 +121,7 @@ export class GLTFInstance {
       const targetAction = this.actions.get(clipName);
       if (targetAction && !targetAction.isRunning()) {
         for (const a of this.actions.values()) if (a !== targetAction) a.stop();
-        targetAction.play();
+        targetAction.reset().play();
         if (opts?.loop === false) {
           targetAction.clampWhenFinished = true;
           targetAction.loop = THREE.LoopOnce;
@@ -130,12 +130,10 @@ export class GLTFInstance {
     }
 
     const scale = opts?.timeScale ?? 1.0;
-    // setTime owns the scale; reset any play()-level timeScale so it isn't applied twice.
-    if (opts?.timeScale !== undefined) {
-      const a = clipName ? this.actions.get(clipName) : undefined;
-      if (a) a.timeScale = 1;
-    }
-    const t = Math.max(0, timeInSeconds * scale);
+    // A setTime timeScale replaces (not compounds with) any play()-level action.timeScale.
+    const target = clipName ? this.actions.get(clipName) : undefined;
+    const actionScale = opts?.timeScale !== undefined && target && target.timeScale !== 0 ? target.timeScale : 1;
+    const t = Math.max(0, (timeInSeconds * scale) / actionScale);
     this.mixer.setTime(t);
     return this;
   }

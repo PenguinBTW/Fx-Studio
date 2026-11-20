@@ -92,7 +92,7 @@ export class ProceduralMaterial {
 
         void main() {
           vUv = uv;
-          vNormal = normalize(normalMatrix * normal);
+          vNormal = normalize(mat3(modelMatrix) * normal); // world space, matches L/V
           vec4 worldPos = modelMatrix * vec4(position, 1.0);
           vWorldPos = worldPos.xyz;
           gl_Position = projectionMatrix * viewMatrix * worldPos;
@@ -296,7 +296,7 @@ export class ProceduralMaterial {
         varying vec3 vNormal;
         varying vec3 vWorldPos;
         void main() {
-          vNormal = normalize(normalMatrix * normal);
+          vNormal = normalize(mat3(modelMatrix) * normal); // world space, matches L/V
           vec4 worldPos = modelMatrix * vec4(position, 1.0);
           vWorldPos = worldPos.xyz;
           gl_Position = projectionMatrix * viewMatrix * worldPos;

@@ -479,10 +479,14 @@ export class Engine {
         console.error(`scene ${entry.id} render error (transition '${tr.id}')`, err);
         clearRT(this.renderer, rt, [0.25, 0.0, 0.0]);
       }
-      const s = scene as unknown as { probe?: (f: Frame) => unknown };
-      if (typeof s.probe === 'function') {
-        const pr = s.probe(fObj);
-        if (pr && typeof pr === 'object') probe = { ...(probe || {}), ...(pr as Record<string, number>) };
+      try {
+        const s = scene as unknown as { probe?: (f: Frame) => unknown };
+        if (typeof s.probe === 'function') {
+          const pr = s.probe(fObj);
+          if (pr && typeof pr === 'object') probe = { ...(probe || {}), ...(pr as Record<string, number>) };
+        }
+      } catch (err) {
+        console.error(`scene ${entry.id} probe error`, err);
       }
       rec.lastT = t;
       return ov;
@@ -498,7 +502,13 @@ export class Engine {
     const fTrans = this.frameFor(bE, t, seeked ? 0 : dt, seeked, false, null, 1, 0);
     const targetMix = this.mixRTs[this.mixIdx % 2]!;
     this.mixIdx++;
-    const ovT = trec.trans.render(fTrans, targetMix, this.transRTs[0]!.texture, this.transRTs[1]!.texture, api);
+    let ovT: ReturnType<typeof trec.trans.render>;
+    try {
+      ovT = trec.trans.render(fTrans, targetMix, this.transRTs[0]!.texture, this.transRTs[1]!.texture, api);
+    } catch (err) {
+      console.error(`transition '${tr.id}' render error; falling back to default compositing`, err);
+      return null;
+    }
     post = { ...post, ...(ovT ?? {}) };
     let depthTex: THREE.Texture | null = null;
     const depthA = this.transRTs[0]?.depthTexture;
@@ -528,29 +538,15 @@ export class Engine {
 
     // Standalone transition window: a dedicated block owns the seam so scenes stay pure.
     const activeTransition = resolveTransitionAt(this.transitions, t);
-    let layers = active;
-    let base = false;
     if (activeTransition) {
       const rendered = this.renderTransition(activeTransition, t, dt, seeked);
       if (rendered) {
-        const parts = new Set([activeTransition.from, activeTransition.to]);
-        layers = active.filter((e) => !parts.has(e.id) && !(e.file && parts.has(e.file)));
-        if (layers.length === 0) {
-          this.lastSceneProbe = rendered.probe;
-          return { outTex: rendered.outTex, post: rendered.post, depthTex: rendered.depthTex };
-        }
-        // Overlays/underlays running alongside the transition layer on top of its output.
-        base = true;
-        under = outTex = rendered.outTex;
-        depthTex = rendered.depthTex;
-        post = rendered.post;
-        sceneProbeData = rendered.probe;
+        this.lastSceneProbe = rendered.probe;
+        return { outTex: rendered.outTex, post: rendered.post, depthTex: rendered.depthTex };
       }
       // Missing/broken participant or loader: fall through to the default path.
     }
-    layers.forEach((e, idx) => {
-      const active = layers;
-      const layered = idx > 0 || base;
+    active.forEach((e, idx) => {
       const rec = this.loaded.get(e.id);
       const rt = this.rts[idx % this.rts.length]!;
       const prev = active[idx - 1], next = active[idx + 1];
@@ -575,7 +571,7 @@ export class Engine {
         }
       }
       let ov: PostOverrides | void = undefined;
-      const fObj = this.frameFor(e, t, sceneSeeked ? 0 : dt, sceneSeeked && !s.stateful, false, layered ? under : null, tin, tout);
+      const fObj = this.frameFor(e, t, sceneSeeked ? 0 : dt, sceneSeeked && !s.stateful, false, idx > 0 ? under : null, tin, tout);
       try {
         ov = s.render(fObj, rt);
         if (typeof (s as any).probe === 'function') {
@@ -588,7 +584,7 @@ export class Engine {
       }
       rec.lastT = t;
       post = { ...post, ...(e.post ?? {}), ...(ov ?? {}) };
-      if (layered && !s.handlesTransition && under) {
+      if (idx > 0 && !s.handlesTransition && under) {
         // default: crossfade from the previous scene over the overlap
         const targetMix = this.mixRTs[this.mixIdx % 2]!;
         this.mixIdx++;

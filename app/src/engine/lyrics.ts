@@ -46,7 +46,10 @@ export class Lyrics {
     for (const url of [...per, 'data/lyrics.json', 'data/lyrics.approx.json']) {
       try {
         const r = await fetch(url);
-        if (r.ok && (r.headers.get('content-type') ?? '').includes('json')) return new Lyrics(await r.json());
+        if (r.ok && (r.headers.get('content-type') ?? '').includes('json')) {
+          console.info(`[Lyrics] loaded ${url}`);
+          return new Lyrics(await r.json());
+        }
       } catch {}
     }
     console.warn('[Lyrics] No lyrics data found; continuing in non-lyric motion mode.');

@@ -107,7 +107,10 @@ export class AudioData {
     for (const url of [...per, 'data/audio.json', 'data/audio.approx.json']) {
       try {
         const r = await fetch(url);
-        if (r.ok && (r.headers.get('content-type') ?? '').includes('json')) return new AudioData(await r.json());
+        if (r.ok && (r.headers.get('content-type') ?? '').includes('json')) {
+          console.info(`[AudioData] loaded ${url}`);
+          return new AudioData(await r.json());
+        }
       } catch {}
     }
     // Fall back to dummy driver data instead of hard-crashing
