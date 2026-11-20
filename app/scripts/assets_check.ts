@@ -72,7 +72,12 @@ export function inspectAsset(dir: string, project: string, id: string, materials
   const nodes: any[] = json.nodes ?? [];
   const names = new Map<string, number>();
   for (const n of nodes) {
-    if (n.mesh !== undefined) r.stats.tris += meshTris[n.mesh] ?? 0;
+    if (n.mesh !== undefined) {
+      const instAttrs = n.extensions?.EXT_mesh_gpu_instancing?.attributes as Record<string, number> | undefined;
+      const first = instAttrs ? Object.values(instAttrs)[0] : undefined;
+      const instances = first !== undefined ? acc[first]?.count ?? 1 : 1;
+      r.stats.tris += (meshTris[n.mesh] ?? 0) * instances;
+    }
     if (n.name) names.set(n.name, (names.get(n.name) ?? 0) + 1);
     const part = n.extras?.fx_part ?? n.extras?.['fx.part'] ?? n.extras?.fx?.part;
     if (typeof part === 'string') {

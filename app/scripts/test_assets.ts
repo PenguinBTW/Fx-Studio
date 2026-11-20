@@ -67,6 +67,10 @@ const ext = makeGlb({ ...gltfJson, extensionsRequired: ['EXT_meshopt_compression
 fs.writeFileSync(path.join(assetDir, 'model.glb'), ext);
 fs.rmSync(path.join(assetDir, 'manifest.json'));
 r = inspectAsset(assetDir, 'proj', 'turbine', matDir);
+const instJson = { ...gltfJson, accessors: [...gltfJson.accessors, { componentType: 5126, count: 10, type: 'VEC3' }], nodes: [{ name: 'Rock', mesh: 0, extensions: { EXT_mesh_gpu_instancing: { attributes: { TRANSLATION: 1 } } } }] };
+fs.writeFileSync(path.join(assetDir, 'model.glb'), makeGlb(instJson, new Uint8Array(positions.buffer)));
+ok(inspectAsset(assetDir, 'proj', 'turbine', matDir).stats.tris === 10, 'GPU-instanced meshes count every instance');
+fs.writeFileSync(path.join(assetDir, 'model.glb'), ext);
 ok(r.errors.some((e) => e.includes('EXT_meshopt_compression')) && r.errors.some((e) => e.includes('tex.png')), 'unsupported extension and external URI rejected');
 fs.rmSync(tmp, { recursive: true, force: true });
 
