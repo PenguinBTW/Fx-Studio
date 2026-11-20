@@ -120,6 +120,7 @@ export class GLTFInstance {
     if (clipName) {
       const targetAction = this.actions.get(clipName);
       if (targetAction && !targetAction.isRunning()) {
+        for (const a of this.actions.values()) if (a !== targetAction) a.stop();
         targetAction.play();
         if (opts?.loop === false) {
           targetAction.clampWhenFinished = true;

@@ -1,9 +1,9 @@
+/// <reference types="vite/client" />
 // Universal 3D Kinetic Lyric Rig for 'No Takebacks'
 // Provides word-level karaoke highlighting, 3D projection anchoring,
 // optical size clamping (24px - 72px), knockout halos, and diegetic confidence glitching.
 
 import * as THREE from 'three';
-import lyricsJson from '../../data/lyrics.json';
 import { ViewportSpace } from '../../engine/viewport';
 import { clamp, ease } from '../../engine/util';
 
@@ -22,7 +22,9 @@ export interface LineData {
   words: WordData[];
 }
 
-export const ALL_LINES: LineData[] = lyricsJson.lines as LineData[];
+// data/ is gitignored; fall back to no lines so fresh clones still build.
+const lyricsFiles = import.meta.glob<{ lines?: unknown[] }>('../../data/lyrics.json', { eager: true, import: 'default' });
+export const ALL_LINES: LineData[] = (Object.values(lyricsFiles)[0]?.lines ?? []) as LineData[];
 
 export interface LyricRenderOpts {
   worldPos: [number, number, number];
