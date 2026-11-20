@@ -24,7 +24,8 @@ Rule of thumb: if an artist would reach for a mouse and a viewport, it belongs i
 ### 1.1 Today
 - `GLTFManager.instantiate(url)` + `SkeletonUtils.clone`, closed-form `setTime(t, clip)`, `center()/fitToBox()`, `getScreenBounds()`.
 - **Shipped:** Draco decoders are copied to `public/draco/` on install/dev/build. Clip switching no longer blends with the auto-played first clip. One-shot clips survive backward scrubbing (`reset().play()`).
-- Gaps: GLTF cameras, lights/world, colour-management parity, morph-target drivers, hot reload, markers, KTX2/Meshopt, per-project asset folders.
+- **Shipped:** project asset layer (section 5).
+- Gaps: GLTF camera driving, world/HDRI, colour-management parity, morph-target drivers, hot reload, markers, KTX2/Meshopt.
 
 ### 1.2 Target workflow
 ```
@@ -125,3 +126,23 @@ Choose **one** per-project location now (`scenes/<project>/assets/`, served thro
 6. B5 morphs/audio, then B3 markers and the beat round-trip.
 7. Timeline strip and live params, then the B7 add-on, then render passes and EXR output.
 8. Simplification backlog (section 3) in parallel throughout.
+
+## 5. Project asset layer
+
+**Shipped** (see `docs/authoring/blender-assets.md`):
+- Per-project assets: `scenes/<project>/assets/<id>/model.glb` + optional `manifest.json` + authoring source; materials in `scenes/<project>/materials/`. Imported through Vite, so build URLs are content-hashed.
+- `defineScene({ assets })`, `ctx.loadAsset(id)`, `ctx.asset(id)`; manifest parts, material slots, clip defaults, scale and load options applied on load.
+- Named parts from the Blender `fx_part` custom property (`inst.part(id)`), registered in the SceneGraph as `<asset>.<part>` with per-frame world and screen bounds.
+- Animation: `setClips()` weighted blending, per-clip `offset`, `clipNames`, `setMorph()` shape keys, `node()` strict lookup, exported `cameras` / `lights` listed.
+- `bun run assets:check`: missing models, external URIs, unsupported extensions, manifest drift and budgets; `bun run test:assets` covers it.
+
+**Next:**
+- Release GPU memory per project: reference-count `GLTFManager` entries and dispose geometry/textures when the last instance goes (today `release()` only drops the cache entry).
+- Hot reload that keeps `t`: a Vite plugin that sends a custom event on `.glb` change instead of a full page reload.
+- Headless publish: `blender -b source.blend --python fx_export.py` with a pinned Blender version, writing the GLB and manifest (hashes, parts, clip list) so agents and humans produce identical exports.
+- Shared assets: an optional `scenes/_shared/assets/` library that projects reference explicitly (`'_shared/rock_kit'`), still versioned in git.
+- Mesh-vs-label telemetry: extend F04 so text overlapping a registered part is flagged, now that parts have screen bounds.
+- Part-level material overrides in the manifest (`parts.rotor.material`) and per-instance tint uniforms for variants.
+- Animation layering: additive clips (`AdditiveAnimationBlendMode`), bone/part masks, and sub-clips by frame range (`clips.<name>.{ from, to }`), since Blender markers don't export.
+- Camera pass-through: the rig follows an animated Blender camera (fov, aspect) — the main remaining pass-through gap.
+- Asset browser tab in the preview: list project assets, parts, clips and morphs, scrub a clip on a turntable.
