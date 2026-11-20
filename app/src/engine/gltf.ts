@@ -277,8 +277,10 @@ export class GLTFInstance {
    * (`Rotor.001`) as well as three's sanitized name (`Rotor001`, duplicates get `_1`).
    */
   node(name: string): THREE.Object3D {
-    let n = this.root.getObjectByName(name) ?? this.root.getObjectByName(THREE.PropertyBinding.sanitizeNodeName(name));
-    if (!n) this.root.traverse((o) => { if (!n && o.userData?.name === name) n = o; });
+    // Original Blender name first, so `Rotor.001` never resolves to an unrelated node literally named `Rotor001`.
+    let n: THREE.Object3D | undefined;
+    this.root.traverse((o) => { if (!n && o.userData?.name === name) n = o; });
+    n ??= this.root.getObjectByName(name) ?? this.root.getObjectByName(THREE.PropertyBinding.sanitizeNodeName(name));
     if (!n) throw new Error(`[gltf] node '${name}' not found in model`);
     return n;
   }

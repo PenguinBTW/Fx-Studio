@@ -127,14 +127,15 @@ ok(near(mesh.position.x, 5), 'clipDefaults offset applied by setTime');
 
 // Blender names, flat 'fx.part' key, light target relink, per-part morph
 const g2 = new THREE.Group();
-const sanitized = new THREE.Object3D(); sanitized.name = 'Rotor001'; sanitized.userData.name = 'Rotor.001';
+const sanitized = new THREE.Object3D(); sanitized.name = 'Rotor001_1'; sanitized.userData.name = 'Rotor.001';
+const literal = new THREE.Object3D(); literal.name = 'Rotor001'; literal.userData.name = 'Rotor001'; g2.add(literal);
 const flat = new THREE.Object3D(); flat.userData['fx.part'] = 'hatch';
 const sun = new THREE.DirectionalLight(); g2.add(sanitized, flat, sun); g2.remove(sun.target);
 const m2 = new THREE.Mesh(geom.clone(), new THREE.MeshBasicMaterial()); m2.userData.fx_part = 'face'; m2.updateMorphTargets();
 const m3 = new THREE.Mesh(geom.clone(), new THREE.MeshBasicMaterial()); m3.updateMorphTargets();
 g2.add(m2, m3);
 const i2 = new GLTFInstance({ animations: [], scene: g2 } as any, g2);
-ok(i2.node('Rotor.001') === sanitized && i2.node('Rotor001') === sanitized, 'node() accepts Blender and sanitized names');
+ok(i2.node('Rotor.001') === sanitized && i2.node('Rotor001_1') === sanitized && i2.node('Rotor001') === literal, 'node() prefers the Blender name, then the sanitized name');
 ok(i2.part('hatch') === flat, "flat 'fx.part' custom property recognised");
 ok(sun.target.parent === sun && i2.lights.length === 1, 'directional light target re-linked');
 i2.setMorph('Smile', 0.5, 'face');
