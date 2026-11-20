@@ -132,9 +132,11 @@ export class GLTFInstance {
     const scale = opts?.timeScale ?? 1.0;
     // A setTime timeScale replaces (not compounds with) any play()-level action.timeScale.
     const target = clipName ? this.actions.get(clipName) : undefined;
-    const actionScale = opts?.timeScale !== undefined && target && target.timeScale !== 0 ? target.timeScale : 1;
-    const t = Math.max(0, (timeInSeconds * scale) / actionScale);
-    this.mixer.setTime(t);
+    const override = opts?.timeScale !== undefined && target ? target : undefined;
+    const prevScale = override?.timeScale ?? 1;
+    if (override) override.timeScale = 1;
+    this.mixer.setTime(Math.max(0, timeInSeconds * scale));
+    if (override) override.timeScale = prevScale;
     return this;
   }
 
