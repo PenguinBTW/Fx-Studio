@@ -24,7 +24,7 @@ Before authoring scenes, ensure alignment with connected production skills:
 - **`viopls-art-direction`:** Palette discipline (60/30/10 rule), anti-slop blacklist, unified materiality, and bold structural typography.
 - **`design-around-audio` / `sound-design-and-foley`:** Downbeat anchoring, transient hit responses (`hit()`), and tactile micro-sync.
 - **`fx-engine`:** Root architecture, coordinate conventions ($1920 \times 1080$), and engine invariants.
-- **`fx-3d-assets`:** Ingesting, preloading (`models: { ... }`), and deterministically animating external GLTF/GLB models.
+- **`fx-3d-assets`:** Project Blender/GLTF assets (`assets: [...]`, `ctx.loadAsset`), material libraries, named parts, and deterministic clip/morph animation.
 - **`fx-procedural-modeling`:** Authoring code-only shaders, procedural wireframes, ribbons, and mathematical textures.
 - **`fx-kinetic-typography`:** Word staggers, numeric rollers, variable font axes, and in-world 3D extruded typography.
 - **`fx-transitions`:** Seam continuity, camera momentum handoffs, and spatial transitions (`f.under`).

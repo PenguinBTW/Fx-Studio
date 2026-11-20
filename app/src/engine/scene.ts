@@ -19,6 +19,8 @@ export interface SceneCtx {
   /** Timeline entry id and its free-form params (lets one scene module serve several entries). */
   id: string;
   params: Record<string, any>;
+  /** Active project (folder under scenes/); resolves project assets and materials. */
+  project?: string;
   /** Entry window (song seconds). */
   start: number;
   end: number;

@@ -203,7 +203,7 @@ export class Engine {
     }
 
     this.timeline = this.makeTimeline ? this.makeTimeline(this.lyrics, this.audio, this.driver) : [];
-    this.ctx = { renderer: this.renderer, audio: this.audio, lyrics: this.lyrics, driver: this.driver, comp: this.comp, W, H, id: '', params: {}, start: 0, end: 0 };
+    this.ctx = { renderer: this.renderer, audio: this.audio, lyrics: this.lyrics, driver: this.driver, comp: this.comp, W, H, id: '', params: {}, start: 0, end: 0, project: this.project ?? undefined };
     this.post = new Post();
     const captions: Caption[] = this.timeline.filter((e) => e.caption).map((e) => {
       const d = e.caption!.delay ?? 0.3;

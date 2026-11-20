@@ -1,10 +1,10 @@
 ---
 name: fx-procedural-modeling
-description: Procedural code-only 3D geometry, PBR materiality, spectral optics (blackbody, Cauchy dispersion), twist-free Bishop ribbons, 500k GPU curl particles, raymarched SDFs, and Minimalist-3D architecture in f(x) Studio.
+description: Procedural (code-built) 3D geometry, PBR materiality, spectral optics (blackbody, Cauchy dispersion), twist-free Bishop ribbons, 500k GPU curl particles, raymarched SDFs, and Minimalist-3D architecture in f(x) Studio.
 ---
 # f(x) Studio: Procedural 3D Modeling, Shaders & Volumetrics
 
-Technical standards, procedural algorithms, optical physics, and shader pipelines for building **code-only 3D visual environments, mechanical assemblies, dynamic ribbons, and atmospheric volumetrics** in **f(x) Studio** without importing external `.glb` models, raster textures, or image files.
+Technical standards, procedural algorithms, optical physics, and shader pipelines for building **code-only 3D visual environments, mechanical assemblies, dynamic ribbons, and atmospheric volumetrics** in **f(x) Studio**. Procedural is one of two equal options: for hero props, characters, organic forms or anything easier to model by hand, use Blender assets via **`fx-3d-assets`** and combine them freely with procedural geometry and shaders.
 
 ## When to Use
 
@@ -28,14 +28,14 @@ Technical standards, procedural algorithms, optical physics, and shader pipeline
 
 ---
 
-## 2. The Code-Only Philosophy: Mathematics as Geometry
+## 2. When Code-Built Geometry Wins
 
-In procedural motion design, virtual objects are not sculpted vertex-by-vertex in external CAD software. They are analytical mathematical expressions evaluated directly on the GPU or instantiated once as parametric buffer arrays:
+Choose procedural when the shape is analytical, parametric, generative or driven by time/audio. Choose a Blender asset when the shape is authored (silhouettes, bevels, UVs, rigs). Procedural objects are mathematical expressions evaluated on the GPU or instantiated once as parametric buffers:
 
 - **Infinite Resolution**: Parametric curves and analytical SDFs never pixelate or show polygonal faceting when the camera pushes into extreme macro close-ups.
 - **Stateless Determinism**: Procedural deformations, displacements, and sparks must evaluate cleanly as pure functions of local time:
   $$\text{State} = f(t)$$
-- **Zero Asset Waterfall**: Eliminates HTTP asset loading, Draco WASM decompression delays, and texture decoding freezes in headless CI export.
+- **No Asset Round-Trip**: Parameters can be tweaked in code without a re-export. (Imported assets are preloaded before `setup()`, so they do not stall headless export either.)
 
 ---
 
@@ -289,7 +289,7 @@ void main() {
 
 Before approving procedural geometry or custom shaders:
 
-- [ ] **Zero External Assets:** Scene requires zero `.glb`, `.png`, or `.jpg` network requests.
+- [ ] **Right Tool:** Geometry that is authored (hero props, characters) comes from Blender assets (`fx-3d-assets`); procedural is used where it is analytical or generative.
 - [ ] **Pure Determinism:** Displacements, ribbons, and particles evaluate from `f.lt` or `f.t` without accumulators.
 - [ ] **Palette Discipline:** Adheres strictly to token colors (`--void`, `--bone`, `--ash`, `--signal`) and physical blackbody kelvins.
 - [ ] **Edge Anti-Aliasing:** All shader SDFs and barycentric lines use `fwidth()` derivatives for sub-pixel anti-aliasing.

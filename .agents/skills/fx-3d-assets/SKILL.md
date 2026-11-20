@@ -1,14 +1,15 @@
 ---
 name: fx-3d-assets
-description: Ingestion standards, runtime caching, skeletal normalization, and deterministic animation workflows for importing and rendering external GLTF/GLB 3D models in f(x) Studio.
+description: Project-scoped Blender/GLTF asset pipeline for f(x) Studio — per-project asset folders and manifests, material libraries, named parts, deterministic clip playback and blending, shape keys, preflight, caching and normalization.
 ---
 # f(x) Studio: 3D Asset Pipeline (GLTF / GLB)
 
-Technical standards, memory invariants, normalization pipelines, and deterministic animation rules for importing, caching, and rendering external 3D models (`.glb` / `.gltf`) in **f(x) Studio**.
+Technical standards for bringing Blender (or any glTF-exporting DCC) assets into **f(x) Studio** and animating them well. Imported assets are first-class: model hero props, characters, environments and anything with deliberate silhouettes, bevels or UVs in Blender; keep timing, camera, effects and compositing in code. Full workflow: `docs/authoring/blender-assets.md`.
 
 ## When to Use
 
-- Importing external 3D assets into `app/public/models/`.
+- Adding Blender/GLTF assets to a project under `app/src/scenes/<project>/assets/<assetId>/`.
+- Loading assets with `defineScene({ assets: [...] })` / `ctx.loadAsset(id)`, mapping materials, and targeting named parts.
 - Preloading and instantiating models in scenes via `defineScene({ models: { ... } })` or `GLTFManager`.
 - Evaluating skeletal animations, node rigs, and skinned meshes deterministically.
 - Normalizing imported CAD geometry origins (`center()`) and scale (`fitToBox()`).
@@ -34,15 +35,22 @@ Violating any of these invariants introduces headless export blank frames, anima
 1. **Zero Render-Time Preloading:** Never initiate an asynchronous asset fetch inside `render()`. Assets must be preloaded in `models: { ... }` or during `init()`.
 2. **Closed-Form Temporal Evaluation:** Never use `mixer.update(dt)`. Always evaluate animations via `model.setTime(t, clipName)`.
 3. **Skeleton-Safe Instancing:** Always use `SkeletonUtils.clone()` via `asset.instantiate()` so bone matrices and skinned mesh bindings are cloned independently.
-4. **Air-Gapped Local Draco:** Always resolve Draco decoders from local `/draco/` WebAssembly files to support offline rendering.
+4. **Air-Gapped Local Draco:** Always resolve Draco decoders from local `/draco/` WebAssembly files to support offline rendering (copied automatically on install/dev/build).
+
+`setClips()` calls `mixer.update(0)` internally after setting each action's time directly; that is still closed-form. The rule forbids accumulating real `dt`.
 
 ---
 
 ## 2. Asset Storage & Naming Conventions
 
-- **Storage Location:** All binary models reside in **`app/public/models/`** (e.g., `app/public/models/jet_turbine.glb`).
-- **Format Standard:** Strictly use binary `.glb`. Never use multi-file `.gltf` + `.bin` + `.png` folders, which trigger asynchronous HTTP waterfalls.
-- **Vite Pathing:** In code, reference models via root-relative URLs: `'/models/jet_turbine.glb'`.
+- **Storage Location (per project):** `app/src/scenes/<project>/assets/<assetId>/model.glb`, with optional `manifest.json` (parts, material slots, clip defaults, budgets, load options) and the authoring source (`source.blend` or `build.py`) beside it. Project materials live in `app/src/scenes/<project>/materials/<name>.ts`.
+- **Format Standard:** Use binary `.glb` (single file, embedded textures). Multi-file `.gltf` folders trigger request waterfalls and are flagged by preflight.
+- **Loading:** Reference assets by id, never by URL: `defineScene({ assets: ['turbine'] })`, `await ctx.loadAsset('turbine')`, then `ctx.asset('turbine')`. Vite imports the GLB, so builds get content-hashed URLs.
+- **Named parts:** Set a Blender custom property `fx_part = "rotor"` (export with Include › Custom Properties) or map `manifest.parts`. Use `inst.part('rotor')`; parts are registered in the SceneGraph as `<assetId>.<part>` with screen bounds.
+- **Materials:** Map Blender material names to library entries in `manifest.materials` to restyle assets from one place.
+- **Animation:** `setTime(t, clip)` for one clip, `setClips(t, { A: 1, B: 0.4 })` to blend, `setMorph(name, w)` for shape keys (after clip evaluation), per-clip `offset`/`loop`/`timeScale` from `manifest.clips`.
+- **Preflight:** `bun run assets:check [project]` before committing an export.
+- `app/public/models/` + `GLTFManager.instantiate(url)` still works for shared or ad-hoc models, but project assets belong in the project folder.
 
 ---
 
@@ -194,7 +202,8 @@ const textY = Math.max(80, minY - 30);
 
 Before finalizing a scene containing external 3D models:
 
-- [ ] **Binary Format:** Asset is stored as a single `.glb` file in `app/public/models/`.
+- [ ] **Project Asset:** Stored as `scenes/<project>/assets/<id>/model.glb` and passes `bun run assets:check`.
+- [ ] **Stable Handles:** Code targets `part('<id>')` / manifest parts, not raw mesh names.
 - [ ] **Zero Render-Time Fetch:** Model is loaded via `models: { ... }` or inside `init()` (never in `render()`).
 - [ ] **Closed-Form Timing:** Animations evaluate via `hero.setTime(f.lt, 'Clip')` (no `mixer.update()`).
 - [ ] **Normalization Applied:** Model uses `center: true` and `fit: <dim>` to prevent origin/scale surprises.

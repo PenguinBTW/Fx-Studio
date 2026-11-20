@@ -5,6 +5,8 @@
 
 ---
 
+> **Project assets:** for Blender exports that belong to a project, use the project asset layer (`scenes/<project>/assets/<id>/`, `ctx.loadAsset(id)`); see [Blender & Imported Assets](blender-assets.md). This page documents the underlying `GLTFManager` / `GLTFInstance` API.
+
 ## 1. Overview & Architectural Invariants
 
 Loading external 3D CAD models, vehicle chassis, electronic hardware, or rigged characters in a procedural motion graphics engine requires strict adherence to engine invariants:
@@ -248,11 +250,23 @@ export interface GLTFLoadOptions {
 | `traverseMeshes(fn)` | Iterates through all child meshes. |
 | `dispose()` | Stops and uncaches the animation mixer and detaches the cloned hierarchy. Geometry and textures are shared with the cached asset and stay on the GPU until `GLTFManager.clearCache()`. |
 
+### Animation, Parts & Morphs (`GLTFInstance`)
+
+| Member | Description |
+|---|---|
+| `setClips(t, weights, opts?)` | Closed-form weighted blend of several clips; unlisted clips stop. |
+| `clipNames` / `clipDefaults` | Clip names in export order; per-clip `offset` / `loop` / `timeScale` defaults (set from `manifest.clips`). |
+| `setMorph(name, w)` / `setMorphs()` / `morphTargets` | Shape-key weights; call after clip evaluation. |
+| `parts` / `part(id)` / `definePart(id, node)` / `getPartScreenBounds(id, cam)` | Stable part handles from the `fx_part` custom property. |
+| `node(name)` | Exact-name lookup that throws when missing. |
+| `cameras` / `lights` | Exported cameras and punctual lights. |
+
 ### `GLTFManager` Static Methods
 | Method | Description |
 | :--- | :--- |
 | `GLTFManager.load(url, opts?)` | Asynchronously loads and caches the master `GLTFAsset`. Deduplicates simultaneous requests. |
 | `GLTFManager.instantiate(url, opts?)` | Loads (or fetches from cache) and returns an independent `GLTFInstance`. |
+| `GLTFManager.release(url)` | Drops one URL from the cache; existing instances keep working. |
 | `GLTFManager.setDracoDecoderPath(path)`| Configures Draco decoder WASM/JS directory (defaults to local `/draco/`). |
 | `GLTFManager.clearCache()` | Clears the global asset cache and releases Draco worker threads. |
 
@@ -260,8 +274,8 @@ export interface GLTFLoadOptions {
 
 ## 6. Best Practices for Production & Telemetry
 
-1. **Host Models in `app/public/models/`**:
-   Place `.glb` files under `app/public/models/`. They are served directly by Vite at `/models/name.glb`.
+1. **Host Models in the Project**:
+   Project models go in `app/src/scenes/<project>/assets/<id>/model.glb` and load by id (`ctx.loadAsset(id)`), which gives content-hashed build URLs. `app/public/models/` (served at `/models/name.glb`) remains available for shared, ad-hoc models.
 2. **Prefer Binary `.glb` over `.gltf`**:
    Single-file `.glb` bundles contain geometry, embedded buffers, and textures in a single payload, eliminating multi-file HTTP waterfalls.
 3. **Local Draco Decoder Bundling for Offline / CI Nodes**:

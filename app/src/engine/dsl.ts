@@ -24,6 +24,20 @@ import { GLTFManager, GLTFInstance, type GLTFLoadOptions } from './gltf';
 import { ProceduralMaterial, type BrushedMetalOpts, type WireframeGlowOpts, type FrostedGlassOpts, type MattePolymerOpts, type EmissivePulseOpts } from './material';
 import { ExtrudedText, type ExtrudedTextOpts } from './text3d';
 
+import { resolveAsset, loadMaterialLibrary, applyMaterialSlots } from './assets';
+import { screenBoundsOfBox } from './gltf';
+
+export interface LoadAssetOptions extends GLTFLoadOptions {
+  /** Id used for ctx.asset()/getModel() and SceneGraph part ids (default: the asset id). */
+  id?: string;
+  /** Add the root to scene3D (default true). */
+  add?: boolean;
+  /** SceneGraph role for registered parts (default 'hero_subject'). */
+  role?: EntityRole;
+  /** Register parts in the SceneGraph (default true). */
+  register?: boolean;
+}
+
 export interface SceneContextOptions {
   rigMode?: CameraMode;
   particleCapacity?: number;
@@ -50,6 +64,7 @@ export class SceneContext {
   readonly scene3D = new THREE.Scene();
   /** Instantiated GLTF models cataloged by ID */
   readonly models = new Map<string, GLTFInstance>();
+  private readonly partEntities: { id: string; obj: THREE.Object3D }[] = [];
   /** Instantiated 3D extruded text meshes cataloged by ID */
   readonly text3DNodes = new Map<string, THREE.Group>();
 
@@ -155,6 +170,40 @@ export class SceneContext {
    */
   getModel(id: string): GLTFInstance | undefined {
     return this.models.get(id);
+  }
+
+  /**
+   * Load a project asset (`scenes/<project>/assets/<ref>/model.glb`) by id, apply its manifest
+   * (parts, material slots from `scenes/<project>/materials/`, clip defaults, scale), add it to scene3D
+   * and register its parts in the SceneGraph as `<id>.<part>` with per-frame screen bounds.
+   */
+  async loadAsset(ref: string, opts: LoadAssetOptions = {}): Promise<GLTFInstance> {
+    const { id: idOpt, add, role, register, ...loadOpts } = opts;
+    const a = resolveAsset(ref, this.sceneCtx.project);
+    const inst = await GLTFManager.instantiate(a.url, { ...a.manifest.load, ...loadOpts });
+    const m = a.manifest;
+    if (m.scale && m.scale !== 1) inst.root.scale.multiplyScalar(m.scale);
+    for (const [pid, nodeName] of Object.entries(m.parts ?? {})) inst.definePart(pid, nodeName);
+    inst.clipDefaults = { ...m.clips };
+    if (m.materials) applyMaterialSlots(inst, m.materials, await loadMaterialLibrary(a.project));
+    const id = idOpt ?? a.id;
+    this.models.set(id, inst);
+    if (add !== false) this.scene3D.add(inst.root);
+    if (register !== false) {
+      for (const [pid, obj] of inst.parts) {
+        const entityId = `${id}.${pid}`;
+        this.sceneGraph.register({ id: entityId, type: 'mesh', role: role ?? 'hero_subject', opacity: 1 });
+        this.partEntities.push({ id: entityId, obj });
+      }
+    }
+    return inst;
+  }
+
+  /** Retrieve a loaded asset/model instance by id (throws when missing). */
+  asset(id: string): GLTFInstance {
+    const inst = this.models.get(id);
+    if (!inst) throw new Error(`[assets] asset '${id}' is not loaded in this scene. Loaded: ${[...this.models.keys()].join(', ') || 'none'}`);
+    return inst;
   }
 
   get materials(): typeof ProceduralMaterial {
@@ -428,6 +477,17 @@ export class SceneContext {
     const cam = this.rig.evalCam(t);
     this.rig.syncToThreeCamera(cam, this.threeCam);
     this.sceneGraph.updateScreenProjections(this.threeCam, this.W, this.H);
+    for (const pe of this.partEntities) {
+      const meta = this.sceneGraph.get(pe.id);
+      if (!meta) continue;
+      pe.obj.updateWorldMatrix(true, true);
+      const box = new THREE.Box3().setFromObject(pe.obj);
+      if (box.isEmpty()) continue;
+      meta.worldBounds = [box.min.x, box.min.y, box.min.z, box.max.x, box.max.y, box.max.z];
+      const c = box.getCenter(new THREE.Vector3());
+      meta.worldPos = [c.x, c.y, c.z];
+      meta.screenBounds = screenBoundsOfBox(box, this.threeCam, this.W, this.H);
+    }
     for (const [id, grp] of this.text3DNodes.entries()) {
       const bounds = ExtrudedText.getScreenBounds(grp, this.threeCam, this.W, this.H);
       const meta = this.sceneGraph.get(id);
@@ -496,6 +556,7 @@ export class SceneContext {
       model.dispose();
     }
     this.models.clear();
+    this.partEntities.length = 0;
     for (const grp of this.text3DNodes.values()) {
       this.disposeObject(grp);
       this.scene3D.remove(grp);
@@ -525,6 +586,8 @@ export interface DeclarativeSceneDef {
   sdfCapacity?: number;
   /** Declarative GLTF/GLB models preloaded and instantiated before setup() */
   models?: Record<string, string | ({ url: string } & GLTFLoadOptions)>;
+  /** Project assets (`scenes/<project>/assets/<id>/`) loaded via ctx.loadAsset before setup(). Array of ids or id → options. */
+  assets?: string[] | Record<string, LoadAssetOptions & { asset?: string }>;
   /** Asynchronous preloading phase (assets, textures, fonts) */
   preload?: (ctx: SceneCtx) => Promise<void>;
   /** One-time setup phase (configuring rig flight paths, particle emitters) */
@@ -574,6 +637,15 @@ export function defineScene(def: DeclarativeSceneDef): SceneClass {
           const url = typeof config === 'string' ? config : config.url;
           const opts = typeof config === 'object' ? config : undefined;
           await this.sc.loadModel(id, url, opts);
+        }
+      }
+
+      // 3b. Project assets (Blender exports under scenes/<project>/assets/)
+      if (def.assets) {
+        const entries = Array.isArray(def.assets) ? def.assets.map((a) => [a, {}] as const) : Object.entries(def.assets);
+        for (const [key, cfg] of entries) {
+          const { asset, ...o } = cfg as LoadAssetOptions & { asset?: string };
+          await this.sc.loadAsset(asset ?? key, { id: key, ...o });
         }
       }
 

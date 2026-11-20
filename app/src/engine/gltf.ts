@@ -33,6 +33,37 @@ export interface AnimationPlayOptions {
   timeScale?: number;
   /** Loop mode (default: true). If false, clamps at final frame */
   loop?: boolean;
+  /** Clip-time offset in seconds added after scaling (e.g. Blender frame_start / fps). */
+  offset?: number;
+}
+
+/** Project world-space box corners to screen [xMin, yMin, xMax, yMax]; [0,0,0,0] when empty or fully off-screen. */
+export function screenBoundsOfBox(
+  box: THREE.Box3,
+  camera: THREE.Camera,
+  viewportWidth = 1920,
+  viewportHeight = 1080,
+): [number, number, number, number] {
+  if (box.isEmpty()) return [0, 0, 0, 0];
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  let anyVisible = false;
+  for (let i = 0; i < 8; i++) {
+    const x = i & 1 ? box.max.x : box.min.x;
+    const y = i & 2 ? box.max.y : box.min.y;
+    const z = i & 4 ? box.max.z : box.min.z;
+    const proj = ViewportSpace.worldToScreen([x, y, z], camera, viewportWidth, viewportHeight);
+    if (!proj) continue;
+    anyVisible = true;
+    minX = Math.min(minX, proj[0]); maxX = Math.max(maxX, proj[0]);
+    minY = Math.min(minY, proj[1]); maxY = Math.max(maxY, proj[1]);
+  }
+  if (!anyVisible) return [0, 0, 0, 0];
+  return [
+    Math.max(0, Math.floor(minX)),
+    Math.max(0, Math.floor(minY)),
+    Math.min(viewportWidth, Math.ceil(maxX)),
+    Math.min(viewportHeight, Math.ceil(maxY)),
+  ];
 }
 
 /**
@@ -47,6 +78,16 @@ export class GLTFInstance {
   readonly materials = new Map<string, THREE.Material>();
   readonly meshes: THREE.Mesh[] = [];
   readonly geometries: THREE.BufferGeometry[] = [];
+  /** Stable part handles: nodes with a `fx_part` (or `fx.part`) custom property, plus `definePart()` / manifest parts. */
+  readonly parts = new Map<string, THREE.Object3D>();
+  /** Cameras and lights exported from the DCC (glTF cameras, KHR_lights_punctual). */
+  readonly cameras: THREE.Camera[] = [];
+  readonly lights: THREE.Light[] = [];
+  /** Morph target (shape key) names available on this model. */
+  readonly morphTargets = new Set<string>();
+  /** Per-clip defaults (offset, loop, timeScale), e.g. from an asset manifest. Explicit options win. */
+  clipDefaults: Record<string, AnimationPlayOptions> = {};
+  private warnedMorphs = new Set<string>();
 
   constructor(gltf: GLTF, clonedRoot: THREE.Group, opts?: GLTFLoadOptions) {
     this.gltf = gltf;
@@ -55,6 +96,14 @@ export class GLTFInstance {
 
     // 1. Catalog all child meshes, geometries, and materials
     this.root.traverse((node) => {
+      const ud = node.userData as { fx_part?: unknown; fx?: { part?: unknown } } | undefined;
+      const partId = ud?.fx_part ?? ud?.fx?.part;
+      if (typeof partId === 'string' && partId) this.parts.set(partId, node);
+      if ((node as THREE.Camera).isCamera) this.cameras.push(node as THREE.Camera);
+      if ((node as THREE.Light).isLight) this.lights.push(node as THREE.Light);
+      if ((node as THREE.Mesh).isMesh) {
+        for (const name of Object.keys((node as THREE.Mesh).morphTargetDictionary ?? {})) this.morphTargets.add(name);
+      }
       if ((node as THREE.Mesh).isMesh) {
         const mesh = node as THREE.Mesh;
         this.meshes.push(mesh);
@@ -116,9 +165,11 @@ export class GLTFInstance {
    */
   setTime(timeInSeconds: number, clipName?: string, opts?: AnimationPlayOptions): this {
     if (!this.mixer) return this;
+    opts = clipName ? { ...this.clipDefaults[clipName], ...opts } : opts;
 
     if (clipName) {
       const targetAction = this.actions.get(clipName);
+      if (!targetAction) console.warn(`[gltf] Animation clip '${clipName}' not found. Clips: ${this.clipNames.join(', ') || 'none'}`);
       if (targetAction && !targetAction.isRunning()) {
         for (const a of this.actions.values()) if (a !== targetAction) a.stop();
         targetAction.reset().play();
@@ -135,9 +186,95 @@ export class GLTFInstance {
     const override = opts?.timeScale !== undefined && target ? target : undefined;
     const prevScale = override?.timeScale ?? 1;
     if (override) override.timeScale = 1;
-    this.mixer.setTime(Math.max(0, timeInSeconds * scale));
+    this.mixer.setTime(Math.max(0, timeInSeconds * scale + (opts?.offset ?? 0)));
     if (override) override.timeScale = prevScale;
     return this;
+  }
+
+  /** Clip names in export order (Blender actions / NLA tracks). */
+  get clipNames(): string[] {
+    return this.animations.map((c) => c.name);
+  }
+
+  /**
+   * Closed-form weighted blend of several clips at time t, e.g. `setClips(f.lt, { Walk: 1, Wave: 0.4 })`.
+   * Clips not listed (or weight <= 0) are stopped. Per-clip defaults supply offset/loop/timeScale.
+   */
+  setClips(timeInSeconds: number, weights: Record<string, number>, opts?: AnimationPlayOptions): this {
+    if (!this.mixer) return this;
+    for (const name of Object.keys(weights)) {
+      if (!this.actions.has(name)) console.warn(`[gltf] Animation clip '${name}' not found. Clips: ${this.clipNames.join(', ') || 'none'}`);
+    }
+    for (const [name, action] of this.actions) {
+      const w = weights[name] ?? 0;
+      if (w <= 0) { action.stop(); continue; }
+      const o = { ...this.clipDefaults[name], ...opts };
+      const dur = action.getClip().duration;
+      const raw = Math.max(0, timeInSeconds * (o.timeScale ?? 1) + (o.offset ?? 0));
+      action.reset();
+      action.loop = o.loop === false ? THREE.LoopOnce : THREE.LoopRepeat;
+      action.clampWhenFinished = o.loop === false;
+      action.play();
+      action.setEffectiveTimeScale(1);
+      action.setEffectiveWeight(w);
+      action.time = dur > 0 ? (o.loop === false ? Math.min(raw, dur) : raw % dur) : 0;
+    }
+    this.mixer.update(0);
+    return this;
+  }
+
+  /**
+   * Set a morph target (Blender shape key) weight on every mesh that has it.
+   * Call after setTime/setClips: clip evaluation overwrites animated morph weights.
+   */
+  setMorph(name: string, weight: number): this {
+    let found = false;
+    for (const mesh of this.meshes) {
+      const idx = mesh.morphTargetDictionary?.[name];
+      if (idx !== undefined && mesh.morphTargetInfluences) {
+        mesh.morphTargetInfluences[idx] = weight;
+        found = true;
+      }
+    }
+    if (!found && !this.warnedMorphs.has(name)) {
+      this.warnedMorphs.add(name);
+      console.warn(`[gltf] morph target '${name}' not found. Available: ${[...this.morphTargets].join(', ') || 'none'}`);
+    }
+    return this;
+  }
+
+  setMorphs(weights: Record<string, number>): this {
+    for (const [name, w] of Object.entries(weights)) this.setMorph(name, w);
+    return this;
+  }
+
+  /** Node by exact name; throws so renamed Blender objects fail loudly. */
+  node(name: string): THREE.Object3D {
+    const n = this.root.getObjectByName(name);
+    if (!n) throw new Error(`[gltf] node '${name}' not found in model`);
+    return n;
+  }
+
+  /** Stable part handle (see `parts`). Throws with the available ids when missing. */
+  part(id: string): THREE.Object3D {
+    const p = this.parts.get(id);
+    if (!p) {
+      throw new Error(`[gltf] part '${id}' not found. Parts: ${[...this.parts.keys()].join(', ') || 'none'} (set a 'fx_part' custom property in Blender, or map it in manifest.parts)`);
+    }
+    return p;
+  }
+
+  /** Register a part id for a named node. */
+  definePart(id: string, nodeName: string): this {
+    this.parts.set(id, this.node(nodeName));
+    return this;
+  }
+
+  /** Screen bounds of one part (world box of its subtree). */
+  getPartScreenBounds(id: string, camera: THREE.Camera, viewportWidth = 1920, viewportHeight = 1080): [number, number, number, number] {
+    const obj = this.part(id);
+    obj.updateWorldMatrix(true, true);
+    return screenBoundsOfBox(new THREE.Box3().setFromObject(obj), camera, viewportWidth, viewportHeight);
   }
 
   /**
@@ -244,42 +381,7 @@ export class GLTFInstance {
     viewportWidth = 1920,
     viewportHeight = 1080
   ): [number, number, number, number] {
-    const box = this.getBounds();
-    if (box.isEmpty()) return [0, 0, 0, 0];
-
-    const corners = [
-      new THREE.Vector3(box.min.x, box.min.y, box.min.z),
-      new THREE.Vector3(box.min.x, box.min.y, box.max.z),
-      new THREE.Vector3(box.min.x, box.max.y, box.min.z),
-      new THREE.Vector3(box.min.x, box.max.y, box.max.z),
-      new THREE.Vector3(box.max.x, box.min.y, box.min.z),
-      new THREE.Vector3(box.max.x, box.min.y, box.max.z),
-      new THREE.Vector3(box.max.x, box.max.y, box.min.z),
-      new THREE.Vector3(box.max.x, box.max.y, box.max.z),
-    ];
-
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    let anyVisible = false;
-
-    for (const pt of corners) {
-      const proj = ViewportSpace.worldToScreen([pt.x, pt.y, pt.z], camera, viewportWidth, viewportHeight);
-      if (proj) {
-        anyVisible = true;
-        if (proj[0] < minX) minX = proj[0];
-        if (proj[0] > maxX) maxX = proj[0];
-        if (proj[1] < minY) minY = proj[1];
-        if (proj[1] > maxY) maxY = proj[1];
-      }
-    }
-
-    if (!anyVisible) return [0, 0, 0, 0];
-
-    return [
-      Math.max(0, Math.floor(minX)),
-      Math.max(0, Math.floor(minY)),
-      Math.min(viewportWidth, Math.ceil(maxX)),
-      Math.min(viewportHeight, Math.ceil(maxY)),
-    ];
+    return screenBoundsOfBox(this.getBounds(), camera, viewportWidth, viewportHeight);
   }
 
   /**
@@ -412,6 +514,11 @@ export class GLTFManager {
   /**
    * Clear all cached assets and release Draco loader workers.
    */
+  /** Drop one URL from the cache (instances already created keep working). */
+  static release(url: string): void {
+    this.cache.delete(url);
+  }
+
   static clearCache(): void {
     this.cache.clear();
     if (this.dracoLoader) {

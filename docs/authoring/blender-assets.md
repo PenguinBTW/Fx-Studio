@@ -1,0 +1,124 @@
+# Blender & Imported Assets: Project Asset Layer
+
+Blender (or any DCC that exports glTF) is a first-class source for f(x) Studio. Model hero props, characters, environments and anything with deliberate silhouettes, bevels or UVs in Blender. Keep timing, camera choreography, effects, typography and compositing in code. Procedural modeling (`fx-procedural-modeling`) is a tool, not a rule: use whichever produces the better shot.
+
+## 1. Where assets live (per project)
+
+A project is a folder under `app/src/scenes/<project>/`. It owns its assets:
+
+```
+app/src/scenes/<project>/
+├── project.json
+├── assets/
+│   └── <assetId>/
+│       ├── model.glb          # glTF Binary export (committed)
+│       ├── manifest.json      # optional: parts, material slots, clip defaults, budgets
+│       └── source.blend       # or build.py — the authoring source, kept with the export
+└── materials/
+    └── <name>.ts              # material library: default export THREE.Material or () => THREE.Material
+```
+
+- Models are imported through Vite (`?url`), so production builds get content-hashed URLs and the GLTF cache can never serve a stale export.
+- Assets are resolved per project: `ctx.loadAsset('turbine')` looks in the active project; `'other_project/turbine'` reaches across explicitly.
+- Do not put project models in `app/public/models/`; that folder is shared and unversioned per project.
+
+## 2. Blender export settings (glTF 2.0)
+
+| Setting | Value | Why |
+|---|---|---|
+| Format | glTF Binary (`.glb`) | One file, embedded textures, no request waterfall. |
+| Include › Custom Properties | On | Exports `fx_part` and other custom properties as glTF extras (→ `userData`). |
+| Transform › +Y Up | On | Matches three.js. Blender exports in metres; keep unit scale 1.0. |
+| Mesh › Apply Modifiers | On, but check shape keys | Applying modifiers can drop shape keys; apply destructive modifiers manually first if you need both. |
+| Animation mode | Actions (default) or NLA Tracks — pick one per project | Clip names come from actions/tracks. |
+| Sampling rate | Scene fps = project fps (60) | The exporter bakes keys at Blender's fps; 24 fps keys played at 60 fps show kinks. |
+| Frame start | 0, or set `clips.<name>.offset` | Blender defaults to frame 1, ≈16.7 ms late at 60 fps. |
+| Lighting mode | Standard | Light values then land in three's physical units. |
+| Compression | None or Draco | Draco decoders ship with the app. Meshopt and KTX2 are not supported yet (preflight errors). |
+
+Not exported by glTF: Blender timeline markers, the World/HDRI, area lights, procedural node textures (bake them), shape-key drivers (bake them), lens shift/f-stop/focus distance. Carry what you need through `manifest.json` or code.
+
+Colour: Blender previews with Filmic (3.x) or AgX (4.x). The engine uses its own tone mapping, so judge final look in f(x) Studio, not in Blender's viewport.
+
+## 3. Naming parts and materials
+
+- **Parts:** give any object a custom property `fx_part = "rotor"`. It becomes `inst.part('rotor')` and the SceneGraph entity `<assetId>.rotor` with per-frame world and screen bounds (telemetry, notes and selectors can target it). Renaming the Blender object no longer breaks code; a missing part throws with the list of available parts.
+- **Materials:** name Blender materials meaningfully (`Hull`, `Glass`). Map them to project library entries in `manifest.json` to restyle every asset from one place.
+
+## 4. `manifest.json`
+
+```json
+{
+  "id": "turbine",
+  "version": 3,
+  "source": "source.blend",
+  "scale": 1,
+  "parts": { "intake": "Intake_Ring" },
+  "materials": { "Hull": "brushed_hull", "Glass": "frosted" },
+  "clips": { "Spin": { "loop": true }, "Deploy": { "loop": false, "offset": 0.0167 } },
+  "budgets": { "tris": 250000, "textureMB": 32 },
+  "load": { "center": true, "fit": 4, "castShadow": true }
+}
+```
+
+All fields are optional; an asset folder with only `model.glb` works.
+
+`materials/brushed_hull.ts`:
+
+```ts
+import { ProceduralMaterial } from '../../../engine/material';
+export default () => ProceduralMaterial.brushedMetal({ baseColor: '#9aa4ad' });
+```
+
+## 5. Using assets in scenes
+
+```ts
+export default defineScene({
+  id: 'turbine_reveal',
+  assets: ['turbine'],                       // or { hero: { asset: 'turbine', role: 'hero_subject' } }
+  setup(ctx) {
+    ctx.asset('turbine').root.position.set(0, 0, -6);
+  },
+  render(ctx, f, out) {
+    const t = ctx.asset('turbine');
+    t.setClips(f.lt, { Spin: 1, Deploy: Math.min(1, f.p * 2) }); // closed-form blend
+    t.setMorph('Vent_Open', ctx.sceneCtx.audio.env('drums', f.t)); // after clip evaluation
+    t.part('intake').rotation.z = f.lt * 0.5;                     // code-driven motion on a named part
+    ctx.updateCamera(f.t, f.p);
+    ctx.flush(out, true);
+  },
+});
+```
+
+Raw `Scene` subclasses can use `GLTFManager`/`GLTFInstance` directly; the project helpers live in `engine/assets.ts` (`resolveAsset`, `loadMaterialLibrary`, `applyMaterialSlots`).
+
+### Animation API (all closed-form, safe for seeking and motion-blur sub-samples)
+
+| Call | Use |
+|---|---|
+| `setTime(t, clip?, { timeScale, loop, offset })` | Play one clip (switching stops others). Per-clip defaults come from `manifest.clips`. |
+| `setClips(t, { A: 1, B: 0.4 })` | Weighted blend of several clips. |
+| `clipNames` | Clip names in export order. |
+| `setMorph(name, w)` / `setMorphs({...})` / `morphTargets` | Shape keys; call after clip evaluation. |
+| `parts`, `part(id)`, `definePart(id, nodeName)`, `getPartScreenBounds(id, cam)` | Stable handles to Blender objects. |
+| `node(name)` | Exact-name lookup that throws when missing. |
+| `cameras`, `lights` | Exported cameras/lights, for reference or manual use (not yet auto-driving the rig). |
+
+## 6. Preflight
+
+```bash
+cd app && bun run assets:check [project]
+```
+
+Reports triangles, texture size, parts, clips and morphs per asset, and fails on missing models, external URIs, unsupported required extensions, manifest parts/material slots/clips that do not exist, and budget overruns.
+
+## 7. Division of labour
+
+| Blender | f(x) Studio |
+|---|---|
+| Modeling, UVs, sculpting, retopo | Placement, choreography, camera, timing to music |
+| Rigging, skinning, hand-keyed character animation (baked to clips) | Clip selection, blending, offsets, audio-driven morphs |
+| Cloth/fluid/rigid sims (bake to clips; topology-changing sims are out of scope for now) | Procedural FX, particles, SDF, typography |
+| Look development references | Final lighting, post, compositing, export |
+
+See also: [GLTF & GLB loading and deterministic animation](gltf-assets.md) and the [engine roadmap](../roadmap/engine-future-and-blender.md).
