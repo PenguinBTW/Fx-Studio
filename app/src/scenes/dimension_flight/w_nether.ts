@@ -211,7 +211,7 @@ export function nether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
     name: 'nether', scene, fog, plant,
     overlay(rd, cam, target, t) { embers.render(rd, cam, target, t); },
     update(t, _cam, bird) { key.follow(bird); setTime(scene, t); },
-    post: () => ({ grade: { saturation: 1.2, gamma: 0.85 }, exposure: 0.85, bloom: 0.75, bloomThreshold: 1.0, halation: 0.35, volumetric: 0, ca: 0.9 }),
+    post: () => ({ grade: { saturation: 1.2, gamma: 0.85 }, exposure: 0.85, bloom: 0.55, bloomThreshold: 1.2, halation: 0.2, volumetric: 0, ca: 0.45 }),
     dispose() { embers.dispose(); disposeTree(scene); disposeEnv(scene); },
   };
 }
