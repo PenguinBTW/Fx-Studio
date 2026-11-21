@@ -1,0 +1,299 @@
+{
+  "cues": [
+    {
+      "id": "cold_tick0",
+      "recipe": "tick",
+      "seed": 11,
+      "at": 0.1,
+      "params": {
+        "count": 2,
+        "spacing": 0.03,
+        "freq": 2600,
+        "pan": -0.5
+      }
+    },
+    {
+      "id": "cold_tick1",
+      "recipe": "tick",
+      "seed": 48,
+      "at": 0.28,
+      "params": {
+        "count": 2,
+        "spacing": 0.03,
+        "freq": 3000,
+        "pan": -0.16666666666666669
+      }
+    },
+    {
+      "id": "cold_tick2",
+      "recipe": "tick",
+      "seed": 85,
+      "at": 0.46,
+      "params": {
+        "count": 2,
+        "spacing": 0.03,
+        "freq": 3400,
+        "pan": 0.16666666666666663
+      }
+    },
+    {
+      "id": "cold_tick3",
+      "recipe": "tick",
+      "seed": 122,
+      "at": 0.64,
+      "params": {
+        "count": 2,
+        "spacing": 0.03,
+        "freq": 3800,
+        "pan": 0.5
+      }
+    },
+    {
+      "id": "ink_bleed",
+      "recipe": "whoosh",
+      "seed": 159,
+      "at": 20.7,
+      "params": {
+        "dur": 1.1,
+        "cutLo": 200,
+        "cutHi": 2200,
+        "q": 0.8,
+        "peakAt": 0.45
+      }
+    },
+    {
+      "id": "crest_shear",
+      "recipe": "whoosh",
+      "seed": 196,
+      "at": 36.45,
+      "params": {
+        "dur": 0.6,
+        "cutLo": 800,
+        "cutHi": 6000,
+        "q": 1.4,
+        "peakAt": 0.5
+      }
+    },
+    {
+      "id": "block_ticks",
+      "recipe": "tick",
+      "seed": 233,
+      "at": 51.8,
+      "params": {
+        "count": 8,
+        "spacing": 0.243,
+        "freq": 1800,
+        "spread": 5,
+        "panSpread": 0.7,
+        "decayMs": 9
+      }
+    },
+    {
+      "id": "block_land",
+      "recipe": "subHit",
+      "seed": 270,
+      "at": 52.28,
+      "params": {
+        "dur": 1.4,
+        "f0": 110,
+        "f1": 40,
+        "click": 0.08,
+        "wet": 0.1
+      }
+    },
+    {
+      "id": "city_dust",
+      "recipe": "pressure",
+      "seed": 307,
+      "at": 85.332,
+      "params": {
+        "dur": 9.72,
+        "cutLo": 60,
+        "cutHi": 700
+      }
+    },
+    {
+      "id": "vacuum_rise",
+      "recipe": "riser",
+      "seed": 344,
+      "at": 95.05,
+      "params": {
+        "dur": 3.89,
+        "fLo": 150,
+        "fHi": 2600,
+        "noise": 0.5
+      }
+    },
+    {
+      "id": "tunnel_drop",
+      "recipe": "subHit",
+      "seed": 381,
+      "at": 98.94,
+      "params": {
+        "dur": 2.0,
+        "f0": 120,
+        "f1": 36,
+        "click": 0.12,
+        "wet": 0.15
+      }
+    },
+    {
+      "id": "paper_tear",
+      "recipe": "whoosh",
+      "seed": 418,
+      "at": 129.65,
+      "params": {
+        "dur": 0.8,
+        "cutLo": 1500,
+        "cutHi": 7000,
+        "q": 2.0,
+        "peakAt": 0.55
+      }
+    },
+    {
+      "id": "paper_crackle",
+      "recipe": "tick",
+      "seed": 455,
+      "at": 129.95,
+      "params": {
+        "count": 10,
+        "spacing": 0.025,
+        "freq": 4200,
+        "spread": 9,
+        "panSpread": 0.8,
+        "decayMs": 4
+      }
+    },
+    {
+      "id": "page_fold",
+      "recipe": "whoosh",
+      "seed": 492,
+      "at": 160.7,
+      "params": {
+        "dur": 0.95,
+        "cutLo": 250,
+        "cutHi": 2500,
+        "q": 0.9,
+        "peakAt": 0.5
+      }
+    },
+    {
+      "id": "time_smear",
+      "recipe": "reverseReverb",
+      "seed": 529,
+      "at": 168.93,
+      "params": {
+        "source": "noise",
+        "lead": 0.9,
+        "tail": 0.6,
+        "freq": 900
+      }
+    },
+    {
+      "id": "slice0",
+      "recipe": "tick",
+      "seed": 566,
+      "at": 176.644,
+      "params": {
+        "count": 2,
+        "spacing": 0.06,
+        "freq": 3000,
+        "pan": -0.4
+      }
+    },
+    {
+      "id": "slice1",
+      "recipe": "tick",
+      "seed": 603,
+      "at": 180.532,
+      "params": {
+        "count": 2,
+        "spacing": 0.06,
+        "freq": 3000,
+        "pan": 0.4
+      }
+    },
+    {
+      "id": "slice2",
+      "recipe": "tick",
+      "seed": 640,
+      "at": 184.42,
+      "params": {
+        "count": 2,
+        "spacing": 0.06,
+        "freq": 3000,
+        "pan": -0.4
+      }
+    },
+    {
+      "id": "slice3",
+      "recipe": "tick",
+      "seed": 677,
+      "at": 188.309,
+      "params": {
+        "count": 2,
+        "spacing": 0.06,
+        "freq": 3000,
+        "pan": 0.4
+      }
+    },
+    {
+      "id": "slice4",
+      "recipe": "tick",
+      "seed": 714,
+      "at": 192.197,
+      "params": {
+        "count": 2,
+        "spacing": 0.06,
+        "freq": 3000,
+        "pan": -0.4
+      }
+    },
+    {
+      "id": "multiverse_hit",
+      "recipe": "subHit",
+      "seed": 751,
+      "at": 196.15,
+      "params": {
+        "dur": 2.0,
+        "f0": 120,
+        "f1": 36,
+        "click": 0.1,
+        "wet": 0.2
+      }
+    },
+    {
+      "id": "vortex_air",
+      "recipe": "windRise",
+      "seed": 788,
+      "at": 200.033,
+      "params": {
+        "dur": 3.89,
+        "cutLo": 300,
+        "cutHi": 4000
+      }
+    },
+    {
+      "id": "logo_ping",
+      "recipe": "glassPing",
+      "seed": 825,
+      "at": 206.837,
+      "params": {
+        "freq": 1760,
+        "decay": 1.8,
+        "leadIn": 0.8
+      }
+    },
+    {
+      "id": "logo_shimmer",
+      "recipe": "shimmer",
+      "seed": 862,
+      "at": 207.81,
+      "params": {
+        "dur": 3.5,
+        "freq": 2093,
+        "decay": 2.2
+      }
+    }
+  ]
+}

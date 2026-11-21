@@ -1,0 +1,1 @@
+{ "id": "tunnel_module", "version": 1, "source": "build.py", "budgets": { "tris": 120000, "textureMB": 1 } }

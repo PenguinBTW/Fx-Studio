@@ -1,0 +1,319 @@
+// a4_city (bars 27-48, 52.28-95.05 s): a city of Blender kit floors assembles on the 8th-note grid at dawn, lights up as
+// an equaliser at night, is abandoned (lights die on off-beats, fog, moss), then collapses into dust on the beat.
+// Every state is a closed-form function of T; params.remap = [s0, s1, e0, e1] maps song time s0..s1 onto city time
+// e0..e1 (e0 > e1 plays it backwards: the rewind in A9a).
+import * as THREE from 'three';
+import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
+import { Layer2D } from '../../engine/gl';
+import { overlayTextDuck } from '../../engine/transition';
+import { F, font } from '../../engine/type';
+import { clamp, ease, prog, smoothstep, lerp } from '../../engine/util';
+import { C, BAR, BEAT, B0, bar, beatAt, model, present, slam, typeLine, applyCam, mixKey, Instanced, sceneTime, type CamKey } from './kit';
+
+const h = (i: number, s = 0) => { const x = Math.sin(i * 127.1 + s * 311.7) * 43758.5453; return x - Math.floor(x); };
+const FH = 0.3, G = 15, CELL = 3.2, ND = 4200;
+const qBeat = (t: number, div = 1) => B0 + Math.ceil((t - B0) / (BEAT / div)) * (BEAT / div);
+const VAR = ['floor_a', 'floor_b', 'floor_c'] as const;
+
+interface Bld { x: number; z: number; v: number; n: number; rot: number; sc: number; r: number; tb: number; tc: number; band: number; psi: number; fo: number; falls: boolean; crane: boolean }
+
+// Palette keys (bar, look). Colours are sRGB hex; THREE.Color converts to linear.
+interface Look { top: string; bot: string; fog: string; fogD: number; sun: string; sunI: number; elev: number; hemi: string; gnd: string; hemiI: number; body: string; exp: number; bloom: number }
+const LOOKS: [number, Look][] = [
+  [27, { top: '#6F9BD8', bot: '#F6B27E', fog: '#D9C2B8', fogD: 0.002, sun: '#FFD2A8', sunI: 3.8, elev: 8, hemi: '#BFD4E6', gnd: '#5E5450', hemiI: 1.0, body: '#F2EEE8', exp: 1.0, bloom: 0.25 }],
+  [33, { top: '#8FB4DC', bot: '#F6DCC0', fog: '#EAD8C6', fogD: 0.0018, sun: '#FFF0DC', sunI: 3.2, elev: 24, hemi: '#BFD4E6', gnd: '#8A7A6A', hemiI: 1.0, body: '#ECE7DF', exp: 1.0, bloom: 0.25 }],
+  [34.6, { top: '#2A2D5A', bot: '#FF9A5A', fog: '#6A4A5A', fogD: 0.008, sun: '#FF7A3A', sunI: 1.6, elev: 3, hemi: '#5A4A7A', gnd: '#2A1A1A', hemiI: 0.6, body: '#D8C8C0', exp: 1.0, bloom: 0.5 }],
+  [35.6, { top: '#03060F', bot: '#0A1430', fog: '#0A1430', fogD: 0.007, sun: '#6A8AFF', sunI: 0.35, elev: 40, hemi: '#1A2650', gnd: '#050505', hemiI: 0.35, body: '#B8BCC8', exp: 1.05, bloom: 0.9 }],
+  [40.6, { top: '#03060F', bot: '#0A1430', fog: '#0A1430', fogD: 0.007, sun: '#6A8AFF', sunI: 0.35, elev: 40, hemi: '#1A2650', gnd: '#050505', hemiI: 0.35, body: '#B8BCC8', exp: 1.05, bloom: 0.9 }],
+  [42, { top: '#4A5654', bot: '#7A8682', fog: '#5F6E6A', fogD: 0.009, sun: '#C8D2CC', sunI: 0.5, elev: 50, hemi: '#8A9894', gnd: '#3A3E36', hemiI: 0.9, body: '#9A9C94', exp: 0.95, bloom: 0.35 }],
+  [45, { top: '#6A5A44', bot: '#B9A07A', fog: '#A08A68', fogD: 0.005, sun: '#E0C090', sunI: 1.0, elev: 18, hemi: '#B9A07A', gnd: '#3A3026', hemiI: 0.8, body: '#8A8070', exp: 0.95, bloom: 0.35 }],
+  [49, { top: '#2A2622', bot: '#6A5A44', fog: '#4A4034', fogD: 0.007, sun: '#E0C090', sunI: 0.4, elev: 6, hemi: '#6A5A44', gnd: '#1A1612', hemiI: 0.5, body: '#5A5248', exp: 0.9, bloom: 0.4 }],
+];
+const ca = new THREE.Color(), cb = new THREE.Color();
+function lookAt(T: number) {
+  const b = (T - B0) / BAR + 1;
+  let i = 0;
+  while (i < LOOKS.length - 2 && b > LOOKS[i + 1]![0]) i++;
+  const [b0, A] = LOOKS[i]!, [b1, B] = LOOKS[i + 1]!;
+  const k = ease.inOutCubic(clamp((b - b0) / (b1 - b0)));
+  const col = (x: string, y: string) => ca.set(x).lerp(cb.set(y), k).clone();
+  const num = (x: number, y: number) => lerp(x, y, k);
+  return {
+    top: col(A.top, B.top), bot: col(A.bot, B.bot), fog: col(A.fog, B.fog), fogD: num(A.fogD, B.fogD), sun: col(A.sun, B.sun), sunI: num(A.sunI, B.sunI),
+    elev: num(A.elev, B.elev), hemi: col(A.hemi, B.hemi), gnd: col(A.gnd, B.gnd), hemiI: num(A.hemiI, B.hemiI), body: col(A.body, B.body), exp: num(A.exp, B.exp), bloom: num(A.bloom, B.bloom),
+  };
+}
+
+const CAM: [number, CamKey][] = [
+  [27, { pos: [24, 14, 28], tgt: [0, 3, 0], fov: 40 }],
+  [31, { pos: [-34, 24, 40], tgt: [0, 6, 0], fov: 40 }],
+  [34.5, { pos: [-6, 12, 40], tgt: [0, 8, 0], fov: 50 }],
+  [35.2, { pos: [0, 3.4, 27], tgt: [0, 5.5, 0], fov: 62 }],
+  [39.2, { pos: [0, 4.6, -8], tgt: [0, 7, -34], fov: 62 }],
+  [41, { pos: [10, 27, -30], tgt: [0, 7, 0], fov: 46 }],
+  [45, { pos: [-30, 16, -14], tgt: [0, 5, 0], fov: 44 }],
+  [48, { pos: [0, 11, 46], tgt: [0, 4, 0], fov: 50 }],
+  [49.2, { pos: [0, 8, 60], tgt: [0, 8, -60], fov: 50 }],
+];
+// Hard cuts through the abandonment and the collapse: low and close, one angle per bar, no fog in the way.
+const CUTS: [number, number, CamKey, CamKey][] = [
+  [43, 45, { pos: [0, 2.4, 26], tgt: [-5, 9, 0], fov: 56 }, { pos: [0, 3.0, 14], tgt: [5, 10, -4], fov: 60 }],
+  [45, 46, { pos: [-36, 2.2, 8], tgt: [0, 7, 0], fov: 40 }, { pos: [-33, 2.4, 4], tgt: [0, 7, 0], fov: 42 }],
+  [46, 47, { pos: [0, 1.8, -2], tgt: [9, 9, 5], fov: 64 }, { pos: [0, 2.2, 3], tgt: [9, 10, 2], fov: 66 }],
+  [47, 48, { pos: [34, 1.6, -6], tgt: [0, 8, 0], fov: 44 }, { pos: [31, 1.8, -2], tgt: [0, 8, 0], fov: 46 }],
+];
+function camAt(T: number): CamKey {
+  const b = (T - B0) / BAR + 1;
+  for (const [b0, b1, A, B] of CUTS) if (b >= b0 && b < b1) return mixKey(A, B, (b - b0) / (b1 - b0));
+  if (b <= CAM[0]![0]) return CAM[0]![1];
+  for (let i = 0; i < CAM.length - 1; i++) {
+    const [b0, A] = CAM[i]!, [b1, B] = CAM[i + 1]!;
+    if (b <= b1) return mixKey(A, B, ease.inOutCubic((b - b0) / (b1 - b0)));
+  }
+  return CAM[CAM.length - 1]![1];
+}
+
+const SKY_VS = `varying vec3 vDir; void main(){ vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+const SKY_FS = `uniform vec3 uTop, uBot, uSunCol; uniform vec3 uSun; varying vec3 vDir;
+void main(){ vec3 d = normalize(vDir); float y = d.y; vec3 c = mix(uBot, uTop, smoothstep(-0.02, 0.55, y));
+  float s = max(dot(d, normalize(uSun)), 0.0); c += uSunCol * (pow(s, 900.0) * 6.0 + pow(s, 12.0) * 0.35);
+  gl_FragColor = vec4(c, 1.0); }`;
+const DUST_VS = `attribute float aA; attribute float aS; uniform float uScale; varying float vA;
+void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv; gl_PointSize = aS * uScale / max(0.1, -mv.z); vA = aA; }`;
+const DUST_FS = `uniform vec3 uCol; varying float vA; void main(){ vec2 p = gl_PointCoord - 0.5; float a = exp(-dot(p, p) * 14.0) * vA; if (a < 0.002) discard; gl_FragColor = vec4(uCol, a); }`;
+
+export default class A4City extends Scene {
+  private scene = new THREE.Scene();
+  private cam = new THREE.PerspectiveCamera(45, 16 / 9, 0.1, 700);
+  private layer = new Layer2D();
+  private B: Bld[] = [];
+  private fl: Instanced[] = [];
+  private roofs!: Instanced;
+  private cranes!: Instanced;
+  private sun = new THREE.DirectionalLight(0xffffff, 3);
+  private hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
+  private sky!: THREE.ShaderMaterial;
+  private dust!: THREE.Points;
+  private dustMat!: THREE.ShaderMaterial;
+  private thread!: THREE.MeshBasicMaterial;
+  private ground!: THREE.MeshStandardMaterial;
+  private tallest = 0;
+  private nFloors = 0;
+  private v = new THREE.Vector3(); private q = new THREE.Quaternion(); private q2 = new THREE.Quaternion(); private s = new THREE.Vector3();
+  private c = new THREE.Color(); private ax = new THREE.Vector3(); private up = new THREE.Vector3(0, 1, 0); private e = new THREE.Euler();
+  override async init() {
+    const r = this.ctx.renderer;
+    r.shadowMap.enabled = true;
+    r.shadowMap.type = THREE.PCFSoftShadowMap;
+    // Layout: a 15x15 lot grid, the x = 0 column kept open as the avenue the camera flies down.
+    const cnt = [0, 0, 0];
+    let id = 0, best = 0;
+    for (let gx = 0; gx < G; gx++) for (let gz = 0; gz < G; gz++) {
+      id++;
+      if (gx === 7 || h(id, 1) < 0.1) continue;
+      const x = (gx - 7) * CELL + (h(id, 2) - 0.5) * 0.4, z = (gz - 7) * CELL + (h(id, 3) - 0.5) * 0.4;
+      const rr = Math.hypot(x, z);
+      const n = Math.max(3, Math.min(44, Math.round(3 + 36 * Math.exp(-(rr * rr) / (2 * 13 * 13)) * (0.45 + 0.9 * h(id, 4)))));
+      const hv = h(id, 5), v = hv < 0.45 ? 0 : hv < 0.75 ? 1 : 2;
+      const rot = v === 2 ? (h(id, 6) < 0.5 ? 0 : Math.PI / 2) : v === 1 ? Math.PI / 8 : 0;
+      const sc = v === 0 ? 1.6 + 0.6 * h(id, 7) : v === 1 ? 2.0 + 0.4 * h(id, 7) : 1.5;
+      const tb = qBeat(bar(27) + (rr / 32) * 5 * BAR + h(id, 8) * BAR * 0.5, 2);
+      this.B.push({ x, z, v, n, rot, sc, r: rr, tb, tc: 0, band: Math.floor(h(id, 9) * 5), psi: h(id, 10) * Math.PI * 2, fo: cnt[v]!, falls: h(id, 11) < 0.88, crane: false });
+      cnt[v]! += n;
+      if (n > best) { best = n; this.tallest = this.B.length - 1; }
+    }
+    this.nFloors = cnt[0]! + cnt[1]! + cnt[2]!;
+    // Collapse order: short/random first, the tallest (with the beacon) last; each hit lands on a beat.
+    const order = this.B.map((b, i) => ({ i, k: h(i, 12) + (b.n / 44) * 0.9 + (i === this.tallest ? 9 : 0) })).sort((a, b) => a.k - b.k);
+    order.forEach((o, rank) => { this.B[o.i]!.tc = qBeat(bar(45) + (rank / Math.max(1, order.length - 1)) * 3.0 * BAR); });
+    this.B[this.tallest]!.falls = true;
+    [...this.B].sort((a, b) => b.n - a.n).slice(0, 9).forEach((b) => (b.crane = true));
+
+    const inst = await model(this.ctx, 'city_kit');
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.78, metalness: 0.05 });
+    const winMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const pick = (name: string, m: THREE.Material) => (name.toLowerCase().includes('win') ? winMat : name.toLowerCase().includes('steel') ? m : bodyMat);
+    VAR.forEach((nm, vi) => {
+      const I = new Instanced(inst, Math.max(1, cnt[vi]!), pick, (m) => m.startsWith(nm));
+      for (const im of I.meshes) { im.castShadow = true; im.receiveShadow = true; }
+      for (let i = 0; i < I.count; i++) I.color(i, this.c.set(0xffffff));
+      this.fl.push(I); this.scene.add(I.group);
+    });
+    this.roofs = new Instanced(inst, this.B.length, pick, (m) => m.startsWith('roof'));
+    this.cranes = new Instanced(inst, this.B.length, (_n, m) => m, (m) => m.startsWith('crane'));
+    for (const I of [this.roofs, this.cranes]) { for (const im of I.meshes) im.castShadow = true; for (let i = 0; i < I.count; i++) I.color(i, this.c.set(0xffffff)); this.scene.add(I.group); }
+
+    this.sky = new THREE.ShaderMaterial({ vertexShader: SKY_VS, fragmentShader: SKY_FS, side: THREE.BackSide, depthWrite: false, fog: false,
+      uniforms: { uTop: { value: new THREE.Color() }, uBot: { value: new THREE.Color() }, uSunCol: { value: new THREE.Color() }, uSun: { value: new THREE.Vector3(0, 1, 0) } } });
+    const skyM = new THREE.Mesh(new THREE.SphereGeometry(500, 48, 24), this.sky); skyM.renderOrder = -1; skyM.frustumCulled = false;
+    this.ground = new THREE.MeshStandardMaterial({ color: 0x2a2826, roughness: 0.95 });
+    const gnd = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), this.ground); gnd.rotation.x = -Math.PI / 2; gnd.receiveShadow = true;
+    // The Thread: an orange power line strung down the avenue on poles, sagging between them.
+    const pts: THREE.Vector3[] = [];
+    for (let z = -26; z <= 26; z += 0.5) { const u = ((z + 26) % 6.5) / 6.5; pts.push(new THREE.Vector3(1.25, 3.0 - 0.55 * Math.sin(Math.PI * u), z)); }
+    this.thread = new THREE.MeshBasicMaterial({ color: new THREE.Color(C.signal) });
+    const tube = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 400, 0.035, 6), this.thread);
+    this.sun.castShadow = true;
+    this.sun.shadow.mapSize.set(2048, 2048);
+    Object.assign(this.sun.shadow.camera, { left: -36, right: 36, top: 36, bottom: -36, near: 1, far: 260 });
+    this.sun.shadow.bias = -0.0004; this.sun.shadow.normalBias = 0.03;
+    const dg = new THREE.BufferGeometry();
+    dg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(ND * 3), 3));
+    dg.setAttribute('aA', new THREE.BufferAttribute(new Float32Array(ND), 1));
+    dg.setAttribute('aS', new THREE.BufferAttribute(new Float32Array(ND), 1));
+    this.dustMat = new THREE.ShaderMaterial({ vertexShader: DUST_VS, fragmentShader: DUST_FS, transparent: true, depthWrite: false, uniforms: { uCol: { value: new THREE.Color(C.ash) }, uScale: { value: 900 } } });
+    this.dust = new THREE.Points(dg, this.dustMat); this.dust.frustumCulled = false;
+    this.scene.add(skyM, gnd, tube, this.sun, this.sun.target, this.hemi, this.dust);
+    this.scene.fog = new THREE.FogExp2(0xffffff, 0.01);
+  }
+
+  private cityTime(t: number) {
+    const R = this.ctx.params?.remap as number[] | undefined;
+    if (R && R.length === 4) return R[2]! + ((t - R[0]!) / (R[1]! - R[0]!)) * (R[3]! - R[2]!);
+    return sceneTime(this.ctx, t);
+  }
+
+  render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
+    const T = this.cityTime(f.t);
+    const a = f.a;
+    const L = lookAt(T);
+    const bands = [a.low, a.bass, a.mid, a.high, a.vocal];
+    const night = smoothstep(bar(35), bar(35.8), T);
+    const decay = prog(T, bar(41), bar(46), ease.inOutCubic);
+    const dustK = prog(T, bar(45), bar(48.5));
+
+    // Look: sky, sun arc, fog, hemisphere.
+    const el = (L.elev * Math.PI) / 180, az = -0.9 + 0.5 * prog(T, bar(27), bar(41));
+    this.v.set(Math.cos(el) * Math.cos(az), Math.sin(el), Math.cos(el) * Math.sin(az));
+    this.sky.uniforms.uTop!.value.copy(L.top); this.sky.uniforms.uBot!.value.copy(L.bot);
+    this.sky.uniforms.uSun!.value.copy(this.v); this.sky.uniforms.uSunCol!.value.copy(L.sun).multiplyScalar(1 - night);
+    this.sun.position.copy(this.v).multiplyScalar(120); this.sun.target.position.set(0, 0, 0);
+    this.sun.color.copy(L.sun); this.sun.intensity = L.sunI;
+    this.hemi.color.copy(L.hemi); this.hemi.groundColor.copy(L.gnd); this.hemi.intensity = L.hemiI;
+    const fog = this.scene.fog as THREE.FogExp2; fog.color.copy(L.fog); fog.density = L.fogD;
+    this.ground.color.copy(L.gnd).lerp(L.fog, 0.55).multiplyScalar(0.75);
+
+    const moss = new THREE.Color('#5C6B34'), grime = new THREE.Color('#6E716A'), ochre = new THREE.Color('#B9A07A');
+    const winCols = [new THREE.Color('#FFB547'), new THREE.Color('#FFB547'), new THREE.Color('#F2E6D0'), new THREE.Color('#46E0FF'), new THREE.Color('#46E0FF')];
+    const spark = new THREE.Color(2.2, 0.7, 0.2);
+    const glass = L.top.clone().lerp(L.bot, 0.55).multiplyScalar(0.55);
+    const TB = (T - B0) / BAR;
+    const qf = new THREE.Quaternion(), qr = new THREE.Quaternion();
+    this.B.forEach((b, bi) => {
+      const I = this.fl[b.v]!;
+      const tau = b.falls ? T - b.tc : -1;
+      const theta = tau > 0 ? Math.min(1.25, 0.32 * tau * tau) : 0;
+      const drop = tau > 0.15 ? 0.5 * 6.5 * (tau - 0.15) ** 2 : 0;
+      const tauK = Math.min(1, Math.max(0, tau));
+      this.ax.set(-Math.sin(b.psi), 0, Math.cos(b.psi));
+      this.q.setFromAxisAngle(this.up, b.rot);
+      this.q2.setFromAxisAngle(this.ax, theta);
+      const lightsOn = smoothstep(bar(35) + (b.r / 32) * BAR, bar(35) + (b.r / 32) * BAR + 0.25, T);
+      const lvl = 0.12 + 0.95 * bands[b.band]!;
+      for (let i = 0; i < b.n; i++) {
+        const idx = b.fo + i;
+        const tf = b.tb + i * (BEAT / 2);
+        if (T < tf) { I.set(idx, this.v.set(0, -50, 0), this.q, this.s.set(1e-4, 1e-4, 1e-4)); continue; }
+        const p = clamp((T - tf) / 0.24);
+        this.v.set(0, i * FH + 2.6 * (1 - p) * (1 - p) - 0.05 * Math.sin(Math.PI * p), 0);
+        if (tau > 0) {
+          this.v.applyQuaternion(this.q2);
+          const sep = tau * tau * 0.18 * (i / b.n);
+          this.v.x += Math.cos(b.psi + h(idx, 20) * 2) * sep; this.v.z += Math.sin(b.psi + h(idx, 21) * 2) * sep;
+          this.v.y = Math.max(0.05 + 1.1 * (i / b.n) * h(idx, 22), this.v.y - drop);
+        }
+        this.v.x += b.x; this.v.z += b.z;
+        const crush = tau > 0 ? Math.max(0.35, 1 - 0.4 * Math.max(0, tau - 1.2)) : 1;
+        this.s.set(b.sc, crush, b.sc);
+        this.e.set((h(idx, 23) - 0.5) * tauK * 0.8, 0, (h(idx, 24) - 0.5) * tauK * 0.8);
+        qf.setFromEuler(this.e).premultiply(this.q2).multiply(this.q);
+        I.set(idx, this.v, qf, this.s);
+        // Body: clean -> grime + moss creeping up from the street -> dust coat.
+        this.c.copy(L.body);
+        const m = decay * 1.3 - i / b.n - h(idx, 25) * 0.25;
+        if (m > 0) this.c.lerp(h(idx, 26) < 0.55 ? moss : grime, Math.min(0.85, m * 2));
+        if (tau > 0) this.c.lerp(ochre, Math.min(0.8, tau * 0.4));
+        I.color(idx, this.c, 'body');
+        // Windows: glass by day; at night each facade is one band of the mix; they die one by one on off-beats.
+        const td = qBeat(bar(41) + h(idx, 27) * 3.6 * BAR, 2) + BEAT / 4;
+        const alive = T < td ? 1 : 0;
+        const flick = T > td - 0.14 && T < td ? (Math.sin(T * 90 + idx) > 0 ? 1 : 0.1) : 1;
+        const eq = smoothstep(-0.04, 0.04, lvl - (i + 0.5) / b.n);
+        const lit = (0.08 + 1.9 * eq * (0.8 + 0.5 * a.kick)) * lightsOn * alive * flick * (1 - tauK);
+        this.c.copy(glass);
+        if (night < 0.5 && T < tf + 0.3) this.c.lerp(spark, 1 - clamp((T - tf) / 0.3));
+        if (night > 0) this.c.multiplyScalar(1 - night).add(ca.copy(winCols[b.band]!).multiplyScalar(lit * night));
+        if (decay > 0 && !alive) this.c.multiplyScalar(0.05);
+        I.color(idx, this.c, 'win');
+      }
+      // Roof crown pops on when the last floor lands; the tallest carries the orange beacon.
+      const done = b.tb + b.n * (BEAT / 2) + 0.1;
+      const rp = clamp((T - done) / 0.3);
+      this.v.set(0, b.n * FH, 0);
+      if (tau > 0) { this.v.applyQuaternion(this.q2); this.v.y = Math.max(0.3, this.v.y - drop); }
+      this.v.x += b.x; this.v.z += b.z;
+      const rs = ease.outBack(rp) * (b.v === 2 ? 1.2 : b.sc * 0.55) + 1e-4;
+      qr.copy(this.q2).multiply(this.q);
+      this.roofs.set(bi, this.v, qr, this.s.set(rs, rs, rs));
+      const blink = Math.sin(TB * Math.PI * 2) > 0 ? 1 : 0;
+      if (bi === this.tallest) this.c.set(C.signal).multiplyScalar(0.6 + 3 * blink * (0.4 + night + decay));
+      else this.c.setScalar(0.25 + 0.8 * night * (1 - decay));
+      this.roofs.color(bi, this.c, 'win');
+      this.roofs.color(bi, L.body, 'body');
+      // Cranes ride the top of the tallest towers while they build, slewing on each downbeat.
+      const building = b.crane && T > b.tb - BAR && T < done + BAR * 0.6;
+      const top = Math.max(0, Math.min(b.n, Math.floor((T - b.tb) / (BEAT / 2)) + 1)) * FH;
+      const cs = building ? 1.7 * ease.outCubic(clamp((T - b.tb + BAR) / 0.4)) * (1 - ease.inCubic(clamp((T - done - BAR * 0.2) / 0.4))) + 1e-4 : 1e-4;
+      this.e.set(0, b.psi + 0.6 * Math.floor(TB) + 0.6 * ease.inOutCubic(TB - Math.floor(TB)), 0);
+      qr.setFromEuler(this.e);
+      this.cranes.set(bi, this.v.set(b.x + b.sc * 0.3, top, b.z), qr, this.s.set(cs, cs, cs));
+    });
+    for (const I of this.fl) I.commit();
+    this.roofs.commit(); this.cranes.commit();
+
+    // Dust: each collapsing tower exhales a billow from its base that rises and drifts downwind.
+    const geo = this.dust.geometry;
+    const pos = geo.getAttribute('position') as THREE.BufferAttribute, aA = geo.getAttribute('aA') as THREE.BufferAttribute, aS = geo.getAttribute('aS') as THREE.BufferAttribute;
+    const fallers = this.B.filter((b) => b.falls);
+    for (let i = 0; i < ND; i++) {
+      const b = fallers[i % fallers.length]!;
+      const age = T - (b.tc + 0.25 + h(i, 30) * 1.2);
+      if (age <= 0) { aA.setX(i, 0); continue; }
+      const ang = h(i, 31) * Math.PI * 2, spread = (1.5 + 5 * h(i, 32)) * (1 - Math.exp(-age * 0.9));
+      pos.setXYZ(i, b.x + Math.cos(ang) * spread + age * 0.9, 0.3 + b.n * FH * 0.6 * h(i, 33) * (1 - Math.exp(-age * 0.7)) + age * 0.25, b.z + Math.sin(ang) * spread);
+      aA.setX(i, 0.11 * clamp(age / 0.4) * (0.5 + 0.5 * h(i, 34)));
+      aS.setX(i, 2 + 6 * h(i, 35) + age * 1.6);
+    }
+    pos.needsUpdate = true; aA.needsUpdate = true; aS.needsUpdate = true;
+    this.dustMat.uniforms.uCol!.value.copy(L.fog).lerp(ochre, 0.5);
+    this.dustMat.uniforms.uScale!.value = 1080 / (2 * Math.tan((this.cam.fov * Math.PI) / 360));
+
+    // The Thread brightens with the vocal at night and keeps glowing after everything else dies.
+    this.thread.color.set(C.signal).multiplyScalar(1.2 + night * (1 + 1.5 * a.vocal) * (1 - decay * 0.5) + dustK * 2);
+    applyCam(this.cam, camAt(T), a.kick * 0.5 * (1 - night * 0.5) + dustK * a.kick * 2);
+
+    const g = this.layer.ctx; this.layer.clear();
+    const cap = this.ctx.params?.caption as string | undefined;
+    if (cap) typeLine(g, cap, 960, 980, f.t, (f.start ?? f.t) + 0.3, { size: 34, align: 'center', color: C.bone });
+    if (this.ctx.params?.notext) { present(this.ctx, out, this.scene, this.cam, this.layer, undefined, 0x050506, overlayTextDuck(f.tin, f.tout)); return { exposure: L.exp, bloom: L.bloom + 0.3 * a.kick, bloomThreshold: 0.9, vignette: 0.5, grain: 0.05, ca: 0.6 + 1.5 * a.kick, zoom: 1 + 0.02 * a.kick }; }
+    const fam = F.archivo(115, 900);
+    const words = ['BUILT', 'ON', 'THE', 'BEAT'];
+    g.font = font(fam, 150);
+    let x = 150;
+    words.forEach((w, i) => {
+      slam(g, w, x, 900, T, { t0: beatAt(29, i), t1: bar(31.5), size: 150, family: fam, align: 'left', from: 1.8, shake: 6, color: i === 3 ? C.signal : C.bone });
+      g.font = font(fam, 150); x += g.measureText(w + ' ').width;
+    });
+    typeLine(g, `assets/city_kit/build.py  →  model.glb  ·  ${this.nFloors.toLocaleString('en')} floors, one per 8th note`, 150, 980, T, bar(29.5), { size: 26, t1: bar(31.5), color: C.bone });
+    slam(g, 'LIT BY THE MIX', 960, 540, T, { t0: bar(36), t1: bar(38) - 0.05, size: 170, family: fam, from: 2.2, shake: 10, color: '#FFB547' });
+    typeLine(g, 'facade[i] = audio.sample(t)[band]', 960, 640, T, bar(36.5), { size: 30, align: 'center', t1: bar(38) - 0.05, color: '#46E0FF' });
+    if (T > bar(41.3) && T < bar(45.6)) {
+      const yr = 2026 + Math.round(100 * prog(T, bar(41.5), bar(45.2), ease.inOutCubic));
+      typeLine(g, `year ${yr}`, 960, 960, T, bar(41.3), { size: 44, align: 'center', cps: 30, color: '#D8DCD6', cursor: false });
+    }
+    slam(g, 'EVERYTHING IS f(t)', 960, 250, T, { t0: bar(46.5), t1: bar(48.7), size: 150, family: fam, from: 2.0, shake: 8, color: C.bone });
+
+    present(this.ctx, out, this.scene, this.cam, this.layer, undefined, 0x050506, overlayTextDuck(f.tin, f.tout));
+    return { exposure: L.exp, bloom: L.bloom + 0.3 * a.kick * night, bloomThreshold: 0.9, vignette: 0.45 + 0.2 * decay, grain: 0.045 + 0.03 * decay, ca: 0.4 + 1.2 * dustK * a.kick, zoom: 1 + 0.015 * a.kick };
+  }
+}

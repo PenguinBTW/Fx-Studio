@@ -1,0 +1,18 @@
+{
+  "id": "block_ticks",
+  "eventId": null,
+  "recipe": "tick",
+  "seed": 233,
+  "file": "block_ticks.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 2.044,
+  "hitOffsetSec": 0,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.017876036172241414,
+  "rmsDb": -34.954575504278154,
+  "eventTime": null,
+  "startTime": null
+}

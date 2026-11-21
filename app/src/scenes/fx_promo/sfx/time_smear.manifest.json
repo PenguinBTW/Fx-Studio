@@ -1,0 +1,18 @@
+{
+  "id": "time_smear",
+  "eventId": null,
+  "recipe": "reverseReverb",
+  "seed": 529,
+  "file": "time_smear.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 1.6199791666666667,
+  "hitOffsetSec": 0.8999791666666667,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.03760795526661591,
+  "rmsDb": -28.494405567960328,
+  "eventTime": null,
+  "startTime": null
+}

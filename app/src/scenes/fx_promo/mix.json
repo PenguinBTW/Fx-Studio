@@ -1,0 +1,232 @@
+{
+  "sampleRate": 48000,
+  "buses": {
+    "music": {
+      "gainDb": 0
+    },
+    "sfx": {
+      "gainDb": -2
+    },
+    "sub": {
+      "gainDb": -3
+    }
+  },
+  "stems": [
+    {
+      "id": "soundtrack",
+      "file": "../../../public/audio/audio.mp3",
+      "bus": "music",
+      "at": 0,
+      "gainDb": 0
+    },
+    {
+      "id": "cold_tick0",
+      "file": "sfx/cold_tick0.wav",
+      "bus": "sfx",
+      "at": 0.1,
+      "gainDb": -10,
+      "pan": 0
+    },
+    {
+      "id": "cold_tick1",
+      "file": "sfx/cold_tick1.wav",
+      "bus": "sfx",
+      "at": 0.28,
+      "gainDb": -10,
+      "pan": 0
+    },
+    {
+      "id": "cold_tick2",
+      "file": "sfx/cold_tick2.wav",
+      "bus": "sfx",
+      "at": 0.46,
+      "gainDb": -10,
+      "pan": 0
+    },
+    {
+      "id": "cold_tick3",
+      "file": "sfx/cold_tick3.wav",
+      "bus": "sfx",
+      "at": 0.64,
+      "gainDb": -10,
+      "pan": 0
+    },
+    {
+      "id": "ink_bleed",
+      "file": "sfx/ink_bleed.wav",
+      "bus": "sfx",
+      "at": 20.7,
+      "gainDb": -14,
+      "pan": 0
+    },
+    {
+      "id": "crest_shear",
+      "file": "sfx/crest_shear.wav",
+      "bus": "sfx",
+      "at": 36.45,
+      "gainDb": -15,
+      "pan": 0
+    },
+    {
+      "id": "block_ticks",
+      "file": "sfx/block_ticks.wav",
+      "bus": "sfx",
+      "at": 51.8,
+      "gainDb": -12,
+      "pan": 0
+    },
+    {
+      "id": "block_land",
+      "file": "sfx/block_land.wav",
+      "bus": "sub",
+      "at": 52.28,
+      "gainDb": -12,
+      "pan": 0
+    },
+    {
+      "id": "city_dust",
+      "file": "sfx/city_dust.wav",
+      "bus": "sfx",
+      "at": 85.332,
+      "gainDb": -20,
+      "pan": 0
+    },
+    {
+      "id": "vacuum_rise",
+      "file": "sfx/vacuum_rise.wav",
+      "bus": "sfx",
+      "at": 95.05,
+      "gainDb": -16,
+      "pan": 0
+    },
+    {
+      "id": "tunnel_drop",
+      "file": "sfx/tunnel_drop.wav",
+      "bus": "sub",
+      "at": 98.94,
+      "gainDb": -10,
+      "pan": 0
+    },
+    {
+      "id": "paper_tear",
+      "file": "sfx/paper_tear.wav",
+      "bus": "sfx",
+      "at": 129.65,
+      "gainDb": -14,
+      "pan": 0
+    },
+    {
+      "id": "paper_crackle",
+      "file": "sfx/paper_crackle.wav",
+      "bus": "sfx",
+      "at": 129.95,
+      "gainDb": -16,
+      "pan": 0
+    },
+    {
+      "id": "page_fold",
+      "file": "sfx/page_fold.wav",
+      "bus": "sfx",
+      "at": 160.7,
+      "gainDb": -14,
+      "pan": 0
+    },
+    {
+      "id": "time_smear",
+      "file": "sfx/time_smear.wav",
+      "bus": "sfx",
+      "at": 168.93,
+      "gainDb": -14,
+      "pan": 0
+    },
+    {
+      "id": "slice0",
+      "file": "sfx/slice0.wav",
+      "bus": "sfx",
+      "at": 176.644,
+      "gainDb": -13,
+      "pan": 0
+    },
+    {
+      "id": "slice1",
+      "file": "sfx/slice1.wav",
+      "bus": "sfx",
+      "at": 180.532,
+      "gainDb": -13,
+      "pan": 0
+    },
+    {
+      "id": "slice2",
+      "file": "sfx/slice2.wav",
+      "bus": "sfx",
+      "at": 184.42,
+      "gainDb": -13,
+      "pan": 0
+    },
+    {
+      "id": "slice3",
+      "file": "sfx/slice3.wav",
+      "bus": "sfx",
+      "at": 188.309,
+      "gainDb": -13,
+      "pan": 0
+    },
+    {
+      "id": "slice4",
+      "file": "sfx/slice4.wav",
+      "bus": "sfx",
+      "at": 192.197,
+      "gainDb": -13,
+      "pan": 0
+    },
+    {
+      "id": "multiverse_hit",
+      "file": "sfx/multiverse_hit.wav",
+      "bus": "sub",
+      "at": 196.15,
+      "gainDb": -10,
+      "pan": 0
+    },
+    {
+      "id": "vortex_air",
+      "file": "sfx/vortex_air.wav",
+      "bus": "sfx",
+      "at": 200.033,
+      "gainDb": -20,
+      "pan": 0
+    },
+    {
+      "id": "logo_ping",
+      "file": "sfx/logo_ping.wav",
+      "bus": "sfx",
+      "at": 206.837,
+      "gainDb": -16,
+      "pan": 0
+    },
+    {
+      "id": "logo_shimmer",
+      "file": "sfx/logo_shimmer.wav",
+      "bus": "sfx",
+      "at": 207.81,
+      "gainDb": -20,
+      "pan": 0
+    }
+  ],
+  "duck": {
+    "bus": "music",
+    "cues": [
+      "tunnel_drop",
+      "multiverse_hit",
+      "block_land"
+    ],
+    "amountDb": 3.0,
+    "attack": 0.05,
+    "hold": 0.25,
+    "release": 0.4
+  },
+  "master": {
+    "normalize": true,
+    "lufs": -14.0,
+    "truePeak": -1.5
+  }
+}

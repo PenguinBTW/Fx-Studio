@@ -1,0 +1,18 @@
+{
+  "id": "vacuum_rise",
+  "eventId": null,
+  "recipe": "riser",
+  "seed": 344,
+  "file": "vacuum_rise.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 3.89,
+  "hitOffsetSec": 3.89,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.060543174688193244,
+  "rmsDb": -24.358696195697647,
+  "eventTime": null,
+  "startTime": null
+}
