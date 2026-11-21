@@ -309,10 +309,18 @@ export default class A4City extends Scene {
     applyCam(this.cam, camAt(T), a.kick * 0.5 * (1 - night * 0.5) + dustK * a.kick * 2);
     this.dustMat.uniforms.uScale!.value = 1080 / (2 * Math.tan((this.cam.fov * Math.PI) / 360));
 
+    // Ash clears out of the sky before the tallest tower's fall so its silhouette reads; embers burst on each landing.
+    const ashK = prog(T, bar(44.5), bar(46), ease.inOutCubic) * (1 - prog(T, bar(48.1), bar(48.5)));
+    let hit = 0;
+    this.B.forEach((b, bi) => { const d = T - (b.tc + (bi === this.tallest ? 0.91 : 1.98)); if (b.falls && d > 0) hit = Math.max(hit, Math.exp(-d * 2.2)); });
+    const emK = prog(T, bar(44.5), bar(45.5)) * (1 - prog(T, bar(49.2), bar(49.8)));
+    this.embers.u.uIntensity!.value = emK * (0.35 + 5 * hit);
+    const R = this.ctx.renderer;
+    const fx = ashK > 0.001 || emK > 0.001 ? () => { if (ashK > 0.001) { this.ash.u.uSize!.value = ashK; this.ash.render(R, this.cam, out, T); } if (emK > 0.001) this.embers.render(R, this.cam, out, T); } : undefined;
     const g = this.layer.ctx; this.layer.clear();
     const cap = this.ctx.params?.caption as string | undefined;
     if (cap) typeLine(g, cap, 960, 980, f.t, (f.start ?? f.t) + 0.3, { size: 34, align: 'center', color: C.bone });
-    if (this.ctx.params?.notext) { present(this.ctx, out, this.scene, this.cam, this.layer, undefined, 0x050506, overlayTextDuck(f.tin, f.tout)); return { exposure: L.exp, bloom: L.bloom + 0.3 * a.kick, bloomThreshold: 0.9, vignette: 0.5, grain: 0.05, ca: 0.6 + 1.5 * a.kick, zoom: 1 + 0.02 * a.kick }; }
+    if (this.ctx.params?.notext) { present(this.ctx, out, this.scene, this.cam, this.layer, fx, 0x050506, overlayTextDuck(f.tin, f.tout)); return { exposure: L.exp, bloom: L.bloom + 0.3 * a.kick, bloomThreshold: 0.9, vignette: 0.5, grain: 0.05, ca: 0.6 + 1.5 * a.kick, zoom: 1 + 0.02 * a.kick }; }
     const fam = F.archivo(115, 900);
     const words = ['BUILT', 'ON', 'THE', 'BEAT'];
     g.font = font(fam, 150);
@@ -330,14 +338,7 @@ export default class A4City extends Scene {
     }
     slam(g, 'EVERYTHING IS f(t)', 960, 250, T, { t0: bar(46.5), t1: bar(48.2), size: 122, family: fam, from: 1.45, shake: 8, color: C.bone });
 
-    // Ash clears out of the sky before the tallest tower's fall so its silhouette reads; embers burst on each landing.
-    const ashK = prog(T, bar(44.5), bar(46), ease.inOutCubic) * (1 - prog(T, bar(48.1), bar(48.5)));
-    let hit = 0;
-    this.B.forEach((b, bi) => { const d = T - (b.tc + (bi === this.tallest ? 0.91 : 1.98)); if (b.falls && d > 0) hit = Math.max(hit, Math.exp(-d * 2.2)); });
-    const emK = prog(T, bar(44.5), bar(45.5)) * (1 - prog(T, bar(49.2), bar(49.8)));
-    this.embers.u.uIntensity!.value = emK * (0.35 + 5 * hit);
-    const R = this.ctx.renderer;
-    present(this.ctx, out, this.scene, this.cam, this.layer, ashK > 0.001 || emK > 0.001 ? () => { if (ashK > 0.001) { this.ash.u.uSize!.value = ashK; this.ash.render(R, this.cam, out, T); } if (emK > 0.001) this.embers.render(R, this.cam, out, T); } : undefined, 0x050506, overlayTextDuck(f.tin, f.tout));
+    present(this.ctx, out, this.scene, this.cam, this.layer, fx, 0x050506, overlayTextDuck(f.tin, f.tout));
     const tImp = this.B[this.tallest]!.tc + 0.91, imp = T > tImp ? Math.exp(-(T - tImp) * 9) : 0;
     return { shake: [0.9 * imp, -0.6 * imp], flash: 0.12 * imp, exposure: L.exp, bloom: L.bloom + 0.3 * a.kick * night, bloomThreshold: 0.9, vignette: 0.45 + 0.2 * decay, grain: 0.045 + 0.03 * decay, ca: 0.4 + 1.2 * dustK * a.kick, zoom: 1 + 0.015 * a.kick };
   }
