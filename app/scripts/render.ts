@@ -4,8 +4,8 @@
 //   sheet:   bun scripts/render.ts sheet --from 20 --to 35 [--n 12] [--cols 4] [--only ids] [--out file.png]   (or --times a,b,c | --cuts)
 //   plates:  bun scripts/render.ts plates   (renders one representative JPEG per plate into public/plates/ (used by the outro's rewind), times from plates.json or entry midpoints)
 //   perf:    bun scripts/render.ts perf --from 20 --to 25 [--only ids] [--samples 1] [--shutter 0.5]   (avg ms per frame incl. GPU sync and the export's pixel readback)
-//   audio:   bun scripts/render.ts audio [--project p] [--mix mix.json] [--from 0] [--to 120] [--out ../out/audio.wav] [--foley-out guide.wav] [--events-out events.json] [--mp3]
-//   video:   bun scripts/render.ts video [--from 0] [--to 156.65] [--fps 60] [--crf 16] [--x264 aq-mode=3] [--gpu] [--gpu-encoder h264_amf] [--samples 1] [--shutter 0.5] [--out ../out/motion.mp4] [--noaudio]
+//   audio:   bun scripts/render.ts audio [--project p] [--mix mix.json] [--from 0] [--to 120] [--out out/audio.wav] [--foley-out guide.wav] [--events-out events.json] [--mp3]
+//   video:   bun scripts/render.ts video [--from 0] [--to 156.65] [--fps 60] [--crf 16] [--x264 aq-mode=3] [--gpu] [--gpu-encoder h264_amf] [--samples 1] [--shutter 0.5] [--out out/motion.mp4] [--noaudio]
 //            --mix mix.json [--foley-out guide.wav] multi-track mixdown (docs/audio/mixdown.md); --events-out events.json writes the resolved event table (docs/audio/events.md)
 //            --gpu enables AMD AMF hardware video encoding (h264_amf, hevc_amf, av1_amf), offloading CPU load;
 //            --samples N averages N sub-frames per frame over shutter×(1/fps): motion blur + temporal AA;
@@ -18,6 +18,7 @@
 //   compare: bun scripts/render.ts compare --active-scene demo --ref-scene loss
 //   --scale N (all modes): render at N× the 1920x1080 layout (--scale 2 = true 3840x2160); stills are then saved
 //            full-res from the pixel buffer, videos are encoded at the physical size.
+// Relative --out paths resolve from the repo root (not app/). Scene errors at boot abort the run unless --allow-scene-errors.
 // Uses the Vite dev server at --url (default http://localhost:5173); starts a private one if unreachable.
 import { chromium, type Page } from 'playwright-core';
 import { mkdirSync, existsSync } from 'node:fs';
@@ -83,6 +84,20 @@ async function reachable(url: string) {
   try { const r = await fetch(url, { signal: AbortSignal.timeout(1500) }); return r.ok; } catch { return false; }
 }
 
+// Kill the server and any children: a leftover vite process piles up and causes blank stills later.
+function killTree(proc: { pid: number; kill: () => void }) {
+  try {
+    if (process.platform === 'win32') Bun.spawnSync(['taskkill', '/pid', String(proc.pid), '/T', '/F'], { stdout: 'ignore', stderr: 'ignore' });
+    else { Bun.spawnSync(['pkill', '-TERM', '-P', String(proc.pid)], { stdout: 'ignore', stderr: 'ignore' }); proc.kill(); }
+  } catch {}
+}
+const exitHooks: (() => void)[] = [];
+const runExitHooks = () => { while (exitHooks.length) exitHooks.pop()!(); };
+process.on('exit', runExitHooks);
+for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) {
+  try { process.on(sig, () => { runExitHooks(); process.exit(130); }); } catch {}
+}
+
 async function ensureServer(): Promise<{ url: string; stop: () => void }> {
   if (typeof (globalThis as any).Bun === 'undefined') {
     throw new Error('[server] Bun runtime required (Bun.spawn + Bun.serve). Run with: bun scripts/render.ts ...');
@@ -91,14 +106,21 @@ async function ensureServer(): Promise<{ url: string; stop: () => void }> {
   if (await reachable(url)) return { url, stop: () => {} };
   const port = 5300 + Math.floor(Math.random() * 500);
   // no live reload: a file saved mid-render must not reload the page
-  const proc = Bun.spawn([process.execPath, 'x', 'vite', '--port', String(port), '--strictPort'], { cwd: APP, stdout: 'ignore', stderr: 'ignore', env: { ...process.env, MOTION_NO_HMR: '1', PDOOM_NO_HMR: '1' } });
+  // run vite's bin directly under node when possible, so the pid we kill is vite itself
+  const viteBin = path.join(APP, 'node_modules/vite/bin/vite.js');
+  const node = Bun.which('node');
+  const cmd = node && existsSync(viteBin) ? [node, viteBin] : [process.execPath, 'x', 'vite'];
+  const proc = Bun.spawn([...cmd, '--port', String(port), '--strictPort'], { cwd: APP, stdout: 'ignore', stderr: 'ignore', env: { ...process.env, MOTION_NO_HMR: '1', PDOOM_NO_HMR: '1' } });
   const u = `http://localhost:${port}`;
   for (let i = 0; i < 100 && !(await reachable(u)); i++) await Bun.sleep(100);
+  let stopped = false;
+  const stop = () => { if (!stopped) { stopped = true; killTree(proc); } };
+  exitHooks.push(stop);
   if (!(await reachable(u))) {
-    try { proc.kill(); } catch {}
+    stop();
     throw new Error(`[server] Vite failed to start at ${u} (port busy or missing dep) — killed proc`);
   }
-  return { url: u, stop: () => { try { proc.kill(); } catch {} } };
+  return { url: u, stop };
 }
 
 async function openPage(url: string) {
@@ -149,16 +171,21 @@ async function openPage(url: string) {
     only = Array.from(expanded).join(',');
   }
   const project = opt('project');
-  await page.goto(`${url}/?export=1${only ? `&only=${only}` : ''}${project ? `&project=${project}` : ''}${SCALE !== 1 ? `&scale=${SCALE}` : ''}`);
-  await page.waitForFunction(() => (window as any).__motion?.ready || (window as any).__pdoom?.ready || (window as any).__motion?.error || (window as any).__pdoom?.error, null, { timeout: 120000 });
-  const bridgeVer = await page.evaluate(() => (window as any).__motion?.version || (window as any).__pdoom?.version);
-  const err = await page.evaluate(() => (window as any).__motion?.error || (window as any).__pdoom?.error);
-  if (err) throw new Error(`app failed to boot:\n${err}\n${logs.join('\n')}`);
-  const size: [number, number] = await page.evaluate(() => [(window as any).__motion?.width ?? (window as any).__pdoom?.width ?? 1920, (window as any).__motion?.height ?? (window as any).__pdoom?.height ?? 1080]);
-  if (size[0] !== OW || size[1] !== OH) throw new Error(`app renders ${size[0]}x${size[1]}, expected ${OW}x${OH} (--scale ${SCALE})`);
-  const sceneErrors: string[] = await page.evaluate(() => (window as any).__motion?.errors || (window as any).__pdoom?.errors || []);
-  if (sceneErrors.length) console.error('SCENE ERRORS:\n' + sceneErrors.join('\n'));
-  return { browser, page, logs };
+  try {
+    await page.goto(`${url}/?export=1${only ? `&only=${only}` : ''}${project ? `&project=${project}` : ''}${SCALE !== 1 ? `&scale=${SCALE}` : ''}`);
+    await page.waitForFunction(() => (window as any).__motion?.ready || (window as any).__pdoom?.ready || (window as any).__motion?.error || (window as any).__pdoom?.error, null, { timeout: 120000 });
+    const bridgeVer = await page.evaluate(() => (window as any).__motion?.version || (window as any).__pdoom?.version);
+    const err = await page.evaluate(() => (window as any).__motion?.error || (window as any).__pdoom?.error);
+    if (err) throw new Error(`app failed to boot:\n${err}\n${logs.join('\n')}`);
+    const size: [number, number] = await page.evaluate(() => [(window as any).__motion?.width ?? (window as any).__pdoom?.width ?? 1920, (window as any).__motion?.height ?? (window as any).__pdoom?.height ?? 1080]);
+    if (size[0] !== OW || size[1] !== OH) throw new Error(`app renders ${size[0]}x${size[1]}, expected ${OW}x${OH} (--scale ${SCALE})`);
+    const sceneErrors: string[] = await page.evaluate(() => (window as any).__motion?.errors || (window as any).__pdoom?.errors || []);
+    if (sceneErrors.length) console.error('SCENE ERRORS:\n' + sceneErrors.join('\n'));
+    return { browser, page, logs, sceneErrors };
+  } catch (e) {
+    await browser.close().catch(() => {});
+    throw e;
+  }
 }
 
 async function stills(page: Page, times: number[], outDir: string) {
@@ -394,7 +421,10 @@ async function video(page: Page, from: number, to: number, fps: number, out: str
         ws.send(String(frames)); // ack: the page keeps at most a few frames ahead of ffmpeg (bounded memory at 4K)
         if (frames % 60 === 0 || frames === total) {
           const el = (performance.now() - t0) / 1000;
-          process.stdout.write(`\r${frames}/${total} frames  ${(frames / el).toFixed(1)} fps  eta ${((total - frames) / (frames / el)).toFixed(0)}s   `);
+          const line = `${frames}/${total} frames  ${(frames / el).toFixed(1)} fps  eta ${((total - frames) / (frames / el)).toFixed(0)}s`;
+          // carriage-return redraw only on a terminal; piped/logged output gets one line per update
+          if (process.stdout.isTTY) process.stdout.write(`\r${line}   `);
+          else if (frames % 600 === 0 || frames === total) console.log(line);
         }
       },
     },
@@ -926,8 +956,11 @@ async function motion(page: Page) {
 }
 
 const { url, stop } = await ensureServer();
-const { browser, page, logs } = await openPage(url);
+const { browser, page, logs, sceneErrors } = await openPage(url).catch((e) => { stop(); throw e; });
 try {
+  if (sceneErrors.length && !flag('allow-scene-errors')) {
+    throw new Error(`[render] ${sceneErrors.length} scene error(s) at boot; refusing to write output (pass --allow-scene-errors to render anyway)`);
+  }
   if (mode === 'gpu') {
     console.log(await page.evaluate(() => {
       const gl = document.createElement('canvas').getContext('webgl2')!;
