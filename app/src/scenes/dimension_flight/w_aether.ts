@@ -6,7 +6,7 @@ import { Sun } from './world';
 import { BIRD } from './path';
 import { makeSky, envFromSky, disposeEnv, islandGeometry, pbr, makePuffs, makeMotes, makeSurface, instanced, disposeTree, setTime, fbm2c, sstep, rng, type FogSpec, type PuffItem } from './common';
 
-const SUN = new THREE.Vector3(0.45, 0.55, -0.7).normalize();
+const SUN = new THREE.Vector3(0.45, 0.26, -0.7).normalize();
 const SKY = /* glsl */ `
 uniform vec3 uSun;
 vec3 skyColor(vec3 d) {
@@ -29,7 +29,7 @@ export function aether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
   scene.add(makeSky(SKY, skyU));
   scene.environment = envFromSky(renderer, SKY, skyU);
   scene.environmentIntensity = 0.7;
-  const sun = new Sun(scene, SUN.clone(), '#fff2dc', 3.6, 90);
+  const sun = new Sun(scene, SUN.clone(), '#ffd9a0', 3.8, 90);
   scene.add(new THREE.HemisphereLight('#bcd8ff', '#8a9a80', 0.5));
   const r = rng(777);
 

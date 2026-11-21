@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { LargeParticles } from '../../engine/particles_large';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { World } from './world';
 import { Sun } from './world';
 import { BIRD } from './path';
@@ -92,9 +93,14 @@ export function nether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
     if (nearPath(x, top + 2.5, z) < 7 || Math.hypot(x - PYLON.x, z - PYLON.y) < 16) continue;
     const w = 0.9 + r() * 1.4, base = LAVA_Y - 4;
     colM.push(M(x, (top + base) / 2, z, w, top - base, w, r() * 1.05));
-    const g = 0.05 + r() * 0.05; colC.push(new THREE.Color(g, g, g * 1.15));
+    const g = 0.06 + r() * 0.08; colC.push(new THREE.Color(g * 1.25, g, g * 1.05));
   }
-  scene.add(instanced(new THREE.CylinderGeometry(1, 1, 1, 6), pbr(fog, { vertexColors: false, roughness: 0.6, metalness: 0.1, color: '#ffffff', flatShading: true }), colM, colC));
+  // hex prism with a chamfered cap so each column catches a bright rim of lava light
+  const hexG = mergeGeometries([
+    new THREE.CylinderGeometry(1, 1, 0.94, 6, 1, true).translate(0, -0.03, 0),
+    new THREE.CylinderGeometry(0.8, 1, 0.06, 6, 1, false).translate(0, 0.47, 0),
+  ].map((g) => g.toNonIndexed()))!;
+  scene.add(instanced(hexG, pbr(fog, { vertexColors: false, roughness: 0.45, metalness: 0.15, color: '#ffffff', flatShading: true }), colM, colC));
 
   // ---- giant fungi on the two plateaus
   const crimsonM: THREE.Matrix4[] = [], warpedM: THREE.Matrix4[] = [];

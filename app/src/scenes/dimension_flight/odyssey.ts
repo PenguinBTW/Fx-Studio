@@ -24,11 +24,11 @@ type Shot = { t0: number; t1: number; a: [number, number, number]; b: [number, n
 const SHOTS: Shot[] = [
   { t0: -3, t1: 5.6, a: [-6, 40, 64], b: [-14, 20, -14], fov: 36, ground: owHeight },
   { t0: 19.6, t1: 25.4, a: [-26, 14, -318], b: [-14, 18, -352], fov: 40 },
-  { t0: 26.2, t1: 29.8, a: [10, 62, -412], b: [8, 72, -440], fov: 42 },
-  { t0: 32.6, t1: 43, a: [6, 0, -462], b: [30, -56, -585], fov: 38 },
+  { t0: 26.2, t1: 29.8, a: [30, 40, -415], b: [24, 52, -445], fov: 40 },
+  { t0: 32.4, t1: 43, a: [12, -26, -488], b: [30, -56, -585], fov: 38 },
   { t0: 51.8, t1: 58.8, a: [-20, -56, -805], b: [-26, -50, -868], fov: 38 },
   { t0: 68, t1: 74.2, a: [16, -38, -1046], b: [18, -40, -1088], fov: 38, ground: siftH },
-  { t0: 76.2, t1: 86, a: [-14, -40, -1140], b: [-6, -33, -1174], fov: 40, ground: siftH },
+  { t0: 76.2, t1: 82.6, a: [-14, -40, -1140], b: [0, -30, -1182], fov: 40, ground: siftH },
 ];
 const SHOT_RAMP = 1.6, _hp = new THREE.Vector3(), _hb = new THREE.Vector3();
 function heroAt(t: number): { w: number; fov: number; p: THREE.Vector3 } {

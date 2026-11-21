@@ -204,7 +204,9 @@ export function islandGeometry(o: IslandOpts): THREE.BufferGeometry {
         y = o.top(x, z, s) * (1 - lip) - lip * 0.6;
       } else {
         under = 1;
-        const s = (j - R) / R, r = (1 - Math.pow(s, 0.75)) * o.radius * e * (1 - 0.04 * Math.sin(17 * a + 9 * s));
+        // stepped rock strata: ledges every ~1/9 of the depth, plus vertical fluting
+        const s = (j - R) / R, ledge = 1 + 0.045 * Math.tanh(4 * Math.sin(s * 28 + ph[0]! + 0.6 * Math.sin(3 * a)));
+        const r = (1 - Math.pow(s, 0.75)) * o.radius * e * (1 - 0.05 * Math.abs(Math.sin(17 * a + 9 * s))) * ledge;
         x = Math.cos(a) * r; z = Math.sin(a) * r;
         const crag = 0.75 + 0.5 * Math.abs(Math.sin(7 * a + ph[1]! + s * 3)) * Math.abs(Math.sin(4 * a + ph[2]!));
         y = -0.6 - o.depth * Math.pow(s, 1.25) * crag;
