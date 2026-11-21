@@ -11,8 +11,8 @@ const SKY = /* glsl */ `
 uniform vec3 uSun;
 vec3 skyColor(vec3 d) {
   float h = d.y;
-  vec3 zen = vec3(0.10, 0.22, 0.52), hor = vec3(1.25, 0.78, 0.52), low = vec3(0.55, 0.42, 0.40);
-  vec3 c = mix(hor, zen, pow(clamp(h, 0.0, 1.0), 0.55));
+  vec3 zen = vec3(0.06, 0.18, 0.55), hor = vec3(1.1, 0.7, 0.48), low = vec3(0.55, 0.42, 0.40);
+  vec3 c = mix(hor, zen, pow(clamp(h, 0.0, 1.0), 0.35));
   c = mix(c, low, smoothstep(0.0, -0.25, h));
   float s = max(dot(d, uSun), 0.0);
   c += vec3(1.6, 0.85, 0.42) * pow(s, 8.0) * 0.9 + vec3(2.0, 1.2, 0.6) * pow(s, 64.0) * 1.5;
@@ -20,7 +20,7 @@ vec3 skyColor(vec3 d) {
   // high cirrus catching the dawn
   vec2 p = d.xz / max(d.y + 0.08, 0.03);
   float ci = smoothstep(0.55, 0.95, fbm2(p * 0.35 + vec2(t * 0.004, 0.0))) * smoothstep(0.0, 0.25, h);
-  c = mix(c, vec3(1.5, 0.9, 0.7) * (0.6 + 0.8 * pow(s, 3.0)), ci * 0.45);
+  c = mix(c, vec3(1.5, 0.9, 0.7) * (0.6 + 0.8 * pow(s, 3.0)), ci * 0.75);
   return c;
 }`;
 
