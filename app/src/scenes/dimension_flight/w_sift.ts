@@ -13,9 +13,9 @@ const SKY = /* glsl */ `
 uniform vec3 uSun;
 vec3 skyColor(vec3 d) {
   float h = d.y, s = max(dot(d, uSun), 0.0);
-  vec3 c = mix(vec3(0.62, 1.05, 0.9), vec3(0.08, 0.62, 0.66), pow(clamp(h, 0.0, 1.0), 0.6));
+  vec3 c = mix(vec3(0.75, 1.05, 0.88), vec3(0.03, 0.42, 0.55), pow(clamp(h, 0.0, 1.0), 0.45));
   c = mix(c, vec3(0.70, 0.55, 0.58), smoothstep(0.02, -0.25, h));
-  c += vec3(1.0, 0.95, 0.8) * pow(s, 12.0) * 0.5 + vec3(6.0, 5.6, 4.6) * smoothstep(0.9985, 0.9992, s);
+  c += vec3(1.3, 0.8, 0.7) * pow(s, 6.0) * 0.6 + vec3(6.0, 5.6, 4.6) * smoothstep(0.9985, 0.9992, s);
   vec2 p = d.xz / max(d.y + 0.08, 0.03);
   float cl = smoothstep(0.55, 0.85, fbm2(p * 0.35 + t * 0.004)) * smoothstep(0.02, 0.2, h);
   c = mix(c, vec3(1.15, 1.05, 1.08) + vec3(0.3, 0.2, 0.1) * pow(s, 3.0), cl * 0.55);
