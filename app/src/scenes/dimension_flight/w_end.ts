@@ -66,6 +66,18 @@ export function theEnd(renderer: THREE.WebGLRenderer): World & { plant(part: (id
     const dm = island(p, 34 + rh() * 50, 40 + rh() * 50, 60 + i, 3);
     dm.rotation.set((rt() - 0.5) * 0.4, rt() * 6.28, (rt() - 0.5) * 0.4); dm.scale.set(0.6 + rt() * 0.9, 0.4 + rt() * 1.6, 0.6 + rt() * 0.9);
   }
+  for (let i = 0; i < 9; i++) {
+    const a = rt() * Math.PI * 2, d = 140 + rt() * 200;
+    const p = new THREE.Vector3(MAIN.x + Math.cos(a) * d, MAIN.y + 90 + rt() * 110, MAIN.z + Math.sin(a) * d);
+    if (nearPathXZ(p.x, p.z) < 50) continue;
+    const um = island(p, 22 + rt() * 40, 30 + rt() * 50, 120 + i, 3);
+    um.rotation.set((rt() - 0.5) * 0.5, rt() * 6.28, (rt() - 0.5) * 0.5); um.scale.y = 0.5 + rt() * 1.2;
+  }
+  for (const [x, y, z, rad] of [[70, -30, -760, 60], [-60, -10, -700, 40], [150, -20, -690, 45]]) {
+    if (nearPathXZ(x, z) < 50) continue;
+    const hm = island(new THREE.Vector3(x, y, z), rad, rad * 1.3, 140 + x, 3);
+    hm.rotation.set((rt() - 0.5) * 0.4, rt() * 6.28, (rt() - 0.5) * 0.4);
+  }
 
   // ---- obsidian spires with caged crystals, beams converging on the levitating egg
   const obs = new THREE.MeshPhysicalMaterial({ color: '#0a0710', roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.1, iridescence: 0.8, iridescenceIOR: 1.8, metalness: 0.3 });
