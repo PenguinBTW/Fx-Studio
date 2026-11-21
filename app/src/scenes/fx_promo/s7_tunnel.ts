@@ -86,9 +86,9 @@ export default class S7Tunnel extends Scene {
     const fam = F.archivo(125, 900);
     COPY.forEach(([w, sub], i) => {
       const t0 = bar(51 + i * 4), tm = bar(53 + i * 4) - 0.06, t1 = bar(55 + i * 4) - 0.1;
-      slam(g, w, 960, 520, T, { t0, t1: tm, size: i === 3 ? 126 : 170, family: fam, from: 2.1, shake: 10, color: i === 3 ? C.signal : C.bone });
+      slam(g, w, 960, 520, T, { t0, t1: tm, size: i === 3 ? 126 : 170, family: fam, from: 2.1, shake: 10, color: shot === 2 ? '#FFFFFF' : i === 3 ? C.signal : C.bone });
       typeLine(g, sub, 960, 650, T, t0 + 2 * BEAT, { size: 34, align: 'center', t1: tm, cps: 40 });
-      slam(g, sub, 960, 540, T, { t0: tm + 0.06, t1, size: 150, family: F.mono(600), from: 1.6, shake: 6, color: i === 3 ? C.bone : C.signal });
+      slam(g, sub, 960, 540, T, { t0: tm + 0.06, t1, size: 130, family: fam, from: 1.6, shake: 6, color: shot === 2 ? '#FFFFFF' : i === 3 ? C.bone : C.signal });
     });
     // Beat words: each bar's off-beats get a quick mono stamp in the corners.
     const stamps = ['kick', 'snare', 'hat', 'bar ' + (nb - 49)];

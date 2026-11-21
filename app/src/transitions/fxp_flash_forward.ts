@@ -12,7 +12,7 @@ const FRAG = `uniform float uK; uniform float uSl;
 void main(){
   vec2 q = vec2(vUv.x + uSl * (step(0.5, fract(vUv.y * 3.0)) - 0.5) * 0.04, vUv.y);
   vec3 c = texture2D(texA, q).rgb * uK;
-  float l = smoothstep(0.003, 0.0, abs(vUv.y - 0.5)) * uK * 0.6;
+  float l = 0.0;
   gl_FragColor = vec4(c + SIGNAL * l, 1.0);
 }`;
 

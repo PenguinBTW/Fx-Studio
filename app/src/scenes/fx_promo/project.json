@@ -29,24 +29,24 @@
       "scene": "fx_promo/s1_boot",
       "id": "s1_boot_d",
       "start": 13.747,
-      "end": 21.675
+      "end": 20.213
     },
     {
       "scene": "fx_promo/s2_surface",
       "id": "s2_surface",
-      "start": 20.695,
+      "start": 19.233,
       "end": 36.985
     },
     {
       "scene": "fx_promo/s3_type",
       "id": "s3_type",
       "start": 36.485,
-      "end": 52.775
+      "end": 52.289
     },
     {
       "scene": "fx_promo/a4_city",
       "id": "a4_city",
-      "start": 51.795,
+      "start": 51.309,
       "end": 95.305
     },
     {
@@ -145,7 +145,7 @@
       "scene": "fx_promo/s10_finale",
       "id": "s10_finale",
       "start": 195.18,
-      "end": 224.69
+      "end": 214.5
     }
   ],
   "transitions": [
@@ -186,7 +186,7 @@
       "transition": "fxp_ink_bleed",
       "from": "s1_boot_d",
       "to": "s2_surface",
-      "at": 20.695,
+      "at": 19.233,
       "dur": 0.97
     },
     {
@@ -202,7 +202,7 @@
       "transition": "fxp_block_drop",
       "from": "s3_type",
       "to": "a4_city",
-      "at": 51.795,
+      "at": 51.309,
       "dur": 0.97
     },
     {
@@ -239,7 +239,7 @@
     },
     {
       "id": "t-s9_plotter-recap1_rewind",
-      "transition": "fxp_time_smear",
+      "transition": "fxp_rewind_scrub",
       "from": "s9_plotter",
       "to": "recap1_rewind",
       "at": 168.443,
@@ -247,7 +247,7 @@
     },
     {
       "id": "t-recap1_rewind-recap3_paper",
-      "transition": "fxp_beat_slice",
+      "transition": "fxp_paper_tear",
       "from": "recap1_rewind",
       "to": "recap3_paper",
       "at": 176.584,
@@ -255,7 +255,7 @@
     },
     {
       "id": "t-recap3_paper-recap4_s2_surface",
-      "transition": "fxp_beat_slice",
+      "transition": "fxp_page_fold",
       "from": "recap3_paper",
       "to": "recap4_s2_surface",
       "at": 180.472,
@@ -263,7 +263,7 @@
     },
     {
       "id": "t-recap4_s2_surface-recap5_city",
-      "transition": "fxp_beat_slice",
+      "transition": "fxp_block_drop",
       "from": "recap4_s2_surface",
       "to": "recap5_city",
       "at": 184.36,
@@ -271,7 +271,7 @@
     },
     {
       "id": "t-recap5_city-recap6_paper",
-      "transition": "fxp_beat_slice",
+      "transition": "fxp_ink_bleed",
       "from": "recap5_city",
       "to": "recap6_paper",
       "at": 188.249,
@@ -279,7 +279,7 @@
     },
     {
       "id": "t-recap6_paper-recap7_s7_tunnel",
-      "transition": "fxp_beat_slice",
+      "transition": "fxp_octa_snap",
       "from": "recap6_paper",
       "to": "recap7_s7_tunnel",
       "at": 192.137,

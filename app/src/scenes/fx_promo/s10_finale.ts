@@ -108,11 +108,10 @@ export default class S10Finale extends Scene {
     train(g, this.cues, T, 960, 540, { size: 150, family: F.archivo(125, 900), from: 1.8, shake: 6, out: 0.05 }, bar(105) - 0.05);
     typeLine(g, 'motion design as code', 960, 840, T, bar(108), { size: 50, align: 'center', cps: 30 });
     typeLine(g, 'github.com/PenguinBTW/Fx-Studio', 960, 930, T, bar(109.5), { size: 62, align: 'center', family: F.mono(600), color: C.signal, cps: 30, cursor: false });
-    slam(g, 'nightly', 1728, 140, T, { t0: bar(111), size: 38, family: F.mono(600), align: 'right', from: 1.4, shake: 2, color: C.ash });
 
     present(this.ctx, out, this.scene, this.cam, this.layer, () => L.render(this.ctx.renderer, out, this.cam));
     const db = Math.exp(-ph * BAR * 7) * (1 - lock * 0.6);
-    const end = prog(T, 222.6, 224.4, ease.inOutQuad);
+    const end = prog(T, 212.4, 214.4, ease.inOutQuad);
     return { exposure: 1.0 + 0.1 * db, bloom: (0.7 + 0.3 * db) * (1 - 0.45 * lock), bloomThreshold: 0.65 + 0.3 * lock, vignette: 0.55, ca: 0.5 + 0.8 * f.a.snare, grain: 0.05, fade: end, flash: lt >= 0 && lt < 0.15 ? 0.5 * (1 - lt / 0.15) : 0 };
   }
 }

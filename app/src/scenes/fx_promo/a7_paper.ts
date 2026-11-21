@@ -153,21 +153,21 @@ export default class A7Paper extends Scene {
       if (!mesh.isMesh) return;
       const isTab = (mesh.name + (mesh.parent?.name ?? '')).includes('tab');
       mesh.material = isTab ? tab : paper; mesh.castShadow = true;
-      if (!isTab) mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry, 25), new THREE.LineBasicMaterial({ color: '#8E7C62' })));
+      if (!isTab) mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry, 25), new THREE.LineBasicMaterial({ color: '#C9BFAE' })));
     });
     for (const nm of ['paper_f', 'paper_lp', 'paper_x', 'paper_rp', 'paper_tab']) { const o = inst.root.getObjectByName(nm); if (o) this.glyphs.push(o); }
     const box = new THREE.Box3().setFromObject(inst.root), size = box.getSize(new THREE.Vector3());
     const k = 4.6 / Math.max(0.001, size.x);
-    inst.root.scale.setScalar(k);
-    inst.root.position.set(-(box.min.x + size.x / 2) * k, -box.min.y * k + 0.07, -(box.min.z + size.z / 2) * k);
+    inst.root.scale.set(k, k, k * 0.4);
+    inst.root.position.set(-(box.min.x + size.x / 2) * k, -box.min.y * k + 0.07, -(box.min.z + size.z / 2) * k * 0.4);
     this.logo.add(inst.root);
     const sh = document.createElement('canvas'); sh.width = 256; sh.height = 128;
     const sg = sh.getContext('2d')!; const gr = sg.createRadialGradient(128, 64, 8, 128, 64, 120);
     gr.addColorStop(0, 'rgba(0,0,0,0.55)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); sg.fillStyle = gr; sg.fillRect(0, 0, 256, 128);
     const drop = new THREE.Mesh(new THREE.PlaneGeometry(6.4, 2.4), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sh), transparent: true, depthWrite: false }));
     drop.rotation.x = -Math.PI / 2; drop.position.set(0.25, 0.08, 0.35); this.logo.add(drop);
-    const key = new THREE.DirectionalLight('#FFF1DE', 2.4); key.position.set(3, 6, 5);
-    const hemi = new THREE.HemisphereLight('#FFF6E8', '#6A5A48', 0.9);
+    const key = new THREE.DirectionalLight('#FFF6EA', 2.1); key.position.set(3, 6, 5);
+    const hemi = new THREE.HemisphereLight('#FFFBF4', '#C8BCA8', 1.25);
     // The Thread: one orange crease in the floor that survives every restyle.
     const thread = new THREE.Mesh(new THREE.BoxGeometry(31, 0.025, 0.07), new THREE.MeshBasicMaterial({ color: new THREE.Color(C.signal).multiplyScalar(2.2) }));
     thread.position.set(0, 0.075, 1.6);
@@ -225,7 +225,8 @@ export default class A7Paper extends Scene {
     const [swT, st] = swAt(T);
     const light = st === 0 || st === 2 || st === 3;
     const ink = light ? '#141418' : C.bone, halo = light ? 'rgba(240,234,222,0.85)' : 'rgba(5,5,6,0.85)';
-    typeLine(g, `world.style = "${NAMES[st]}"`, 120, 1000, T, Math.max(swT, bar(67)), { size: 52, color: st === 0 ? '#141418' : ink, cps: 40 });
+    if (T > bar(67)) { g.fillStyle = 'rgba(248,243,233,0.94)'; g.fillRect(96, 946, 64 + 30 * (15 + NAMES[st]!.length), 74); }
+    typeLine(g, `world.style = "${NAMES[st]}"`, 120, 1000, T, Math.max(swT, bar(67)), { size: 52, color: '#141418', cps: 40 });
     const cap = clamp((T - bar(67.5)) / 0.4) * (1 - clamp((T - bar(70.5)) / 0.4));
     if (cap > 0) { g.save(); g.globalAlpha = cap; g.font = `italic 58px "${F.serif(500, true)}"`; g.fillStyle = '#141418'; g.textAlign = 'center'; g.fillText('the paper stays paper.', 960, 960); g.restore(); }
     const fam = F.archivo(115, 900);

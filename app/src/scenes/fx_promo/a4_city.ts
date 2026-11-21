@@ -20,13 +20,14 @@ interface Bld { x: number; z: number; v: number; n: number; rot: number; sc: num
 // Palette keys (bar, look). Colours are sRGB hex; THREE.Color converts to linear.
 interface Look { top: string; bot: string; fog: string; fogD: number; sun: string; sunI: number; elev: number; hemi: string; gnd: string; hemiI: number; body: string; exp: number; bloom: number }
 const LOOKS: [number, Look][] = [
-  [27, { top: '#6F9BD8', bot: '#F6B27E', fog: '#D9C2B8', fogD: 0.002, sun: '#FFD2A8', sunI: 3.8, elev: 8, hemi: '#BFD4E6', gnd: '#5E5450', hemiI: 1.0, body: '#F2EEE8', exp: 1.0, bloom: 0.25 }],
+  [27, { top: '#4F7FCC', bot: '#FFB07A', fog: '#AFC2E0', fogD: 0.0016, sun: '#FFB880', sunI: 4.2, elev: 7, hemi: '#9FB8E0', gnd: '#3A4458', hemiI: 1.0, body: '#F2EEE8', exp: 1.0, bloom: 0.25 }],
   [33, { top: '#8FB4DC', bot: '#F6DCC0', fog: '#EAD8C6', fogD: 0.0018, sun: '#FFF0DC', sunI: 3.2, elev: 24, hemi: '#BFD4E6', gnd: '#8A7A6A', hemiI: 1.0, body: '#ECE7DF', exp: 1.0, bloom: 0.25 }],
   [34.6, { top: '#2A2D5A', bot: '#FF9A5A', fog: '#6A4A5A', fogD: 0.008, sun: '#FF7A3A', sunI: 1.6, elev: 3, hemi: '#5A4A7A', gnd: '#2A1A1A', hemiI: 0.6, body: '#D8C8C0', exp: 1.0, bloom: 0.5 }],
   [35.6, { top: '#03060F', bot: '#0A1430', fog: '#0A1430', fogD: 0.007, sun: '#6A8AFF', sunI: 0.35, elev: 40, hemi: '#1A2650', gnd: '#050505', hemiI: 0.35, body: '#B8BCC8', exp: 1.05, bloom: 0.9 }],
   [40.6, { top: '#03060F', bot: '#0A1430', fog: '#0A1430', fogD: 0.007, sun: '#6A8AFF', sunI: 0.35, elev: 40, hemi: '#1A2650', gnd: '#050505', hemiI: 0.35, body: '#B8BCC8', exp: 1.05, bloom: 0.9 }],
   [42, { top: '#4A5654', bot: '#7A8682', fog: '#5F6E6A', fogD: 0.009, sun: '#C8D2CC', sunI: 0.5, elev: 50, hemi: '#8A9894', gnd: '#3A3E36', hemiI: 0.9, body: '#9A9C94', exp: 0.95, bloom: 0.35 }],
-  [45, { top: '#6A5A44', bot: '#B9A07A', fog: '#A08A68', fogD: 0.005, sun: '#E0C090', sunI: 1.0, elev: 18, hemi: '#B9A07A', gnd: '#3A3026', hemiI: 0.8, body: '#8A8070', exp: 0.95, bloom: 0.35 }],
+  [45, { top: '#5A6E8C', bot: '#FFD29A', fog: '#E8B880', fogD: 0.0008, sun: '#FFC07A', sunI: 1.4, elev: 6, hemi: '#B9A07A', gnd: '#2A241E', hemiI: 0.45, body: '#4A4038', exp: 1.0, bloom: 0.35 }],
+  [48.9, { top: '#4A5A78', bot: '#FFC888', fog: '#E0A870', fogD: 0.0008, sun: '#FFB06A', sunI: 1.3, elev: 4, hemi: '#9A8468', gnd: '#221C16', hemiI: 0.4, body: '#3E362E', exp: 1.0, bloom: 0.38 }],
   [49, { top: '#2A2622', bot: '#6A5A44', fog: '#4A4034', fogD: 0.007, sun: '#E0C090', sunI: 0.4, elev: 6, hemi: '#6A5A44', gnd: '#1A1612', hemiI: 0.5, body: '#5A5248', exp: 0.9, bloom: 0.4 }],
 ];
 const ca = new THREE.Color(), cb = new THREE.Color();
@@ -60,10 +61,16 @@ const CUTS: [number, number, CamKey, CamKey][] = [
   [43, 45, { pos: [0, 2.4, 26], tgt: [-5, 9, 0], fov: 56 }, { pos: [0, 3.0, 14], tgt: [5, 10, -4], fov: 60 }],
   [45, 46, { pos: [-36, 2.2, 8], tgt: [0, 7, 0], fov: 40 }, { pos: [-33, 2.4, 4], tgt: [0, 7, 0], fov: 42 }],
   [46, 47, { pos: [0, 1.8, -2], tgt: [9, 9, 5], fov: 64 }, { pos: [0, 2.2, 3], tgt: [9, 10, 2], fov: 66 }],
-  [47, 48, { pos: [34, 1.6, -6], tgt: [0, 8, 0], fov: 44 }, { pos: [31, 1.8, -2], tgt: [0, 8, 0], fov: 46 }],
+  [47, 47.5, { pos: [34, 1.6, -6], tgt: [0, 8, 0], fov: 44 }, { pos: [32, 1.8, -3], tgt: [0, 8, 0], fov: 46 }],
 ];
+export const TALL = { x: 0, z: 0, h: 30 };
 function camAt(T: number): CamKey {
   const b = (T - B0) / BAR + 1;
+  if (b >= 47.5 && b < 49.05) {
+    const k = (b - 47.5) / 1.55, d = 40 - 6 * k;
+    const fov = (2 * Math.atan(TALL.h / 0.62 / 2 / d) * 180) / Math.PI;
+    return { pos: [TALL.x - d * 0.94, 1.3 + 0.6 * k, TALL.z + d * 0.34], tgt: [TALL.x, TALL.h * 0.48, TALL.z], fov };
+  }
   for (const [b0, b1, A, B] of CUTS) if (b >= b0 && b < b1) return mixKey(A, B, (b - b0) / (b1 - b0));
   if (b <= CAM[0]![0]) return CAM[0]![1];
   for (let i = 0; i < CAM.length - 1; i++) {
@@ -127,6 +134,8 @@ export default class A4City extends Scene {
     const order = this.B.map((b, i) => ({ i, k: h(i, 12) + (b.n / 44) * 0.9 + (i === this.tallest ? 9 : 0) })).sort((a, b) => a.k - b.k);
     order.forEach((o, rank) => { this.B[o.i]!.tc = qBeat(bar(45) + (rank / Math.max(1, order.length - 1)) * 3.0 * BAR); });
     this.B[this.tallest]!.falls = true;
+    this.B[this.tallest]!.psi = Math.atan2(0.94, 0.34);
+    { const t = this.B[this.tallest]!; TALL.x = t.x; TALL.z = t.z; TALL.h = t.n * FH; }
     [...this.B].sort((a, b) => b.n - a.n).slice(0, 9).forEach((b) => (b.crane = true));
 
     const inst = await model(this.ctx, 'city_kit');
@@ -281,8 +290,8 @@ export default class A4City extends Scene {
       if (age <= 0) { aA.setX(i, 0); continue; }
       const ang = h(i, 31) * Math.PI * 2, spread = (1.5 + 5 * h(i, 32)) * (1 - Math.exp(-age * 0.9));
       pos.setXYZ(i, b.x + Math.cos(ang) * spread + age * 0.9, 0.3 + b.n * FH * 0.6 * h(i, 33) * (1 - Math.exp(-age * 0.7)) + age * 0.25, b.z + Math.sin(ang) * spread);
-      aA.setX(i, 0.11 * clamp(age / 0.4) * (0.5 + 0.5 * h(i, 34)));
-      aS.setX(i, 2 + 6 * h(i, 35) + age * 1.6);
+      aA.setX(i, 0.15 * clamp(age / 0.25) * Math.exp(-age * 0.5) * (0.5 + 0.5 * h(i, 34)));
+      aS.setX(i, 2 + 5 * h(i, 35) + age * 0.8);
     }
     pos.needsUpdate = true; aA.needsUpdate = true; aS.needsUpdate = true;
     this.dustMat.uniforms.uCol!.value.copy(L.fog).lerp(ochre, 0.5);

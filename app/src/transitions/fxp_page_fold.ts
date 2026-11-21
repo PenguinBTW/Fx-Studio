@@ -10,17 +10,17 @@ const FRAG = `void main(){
   vec2 p = vec2(vUv.x * uAsp, vUv.y);
   vec2 n = normalize(vec2(-1.0, -0.6));
   vec2 o = vec2(uAsp, 1.0) + n * (u * 2.6);
-  float d = dot(p - o, n);
+  float s = dot(p - o, n);
   vec3 c;
-  if (d > 0.0) { c = texture2D(texB, vUv).rgb * (0.65 + 0.35 * smoothstep(0.0, 0.25, d)); }
+  if (s < 0.0) { c = texture2D(texB, vUv).rgb * (0.65 + 0.35 * smoothstep(0.0, 0.25, -s)); }
   else {
-    vec2 m = p - 2.0 * d * n;
+    vec2 m = p - 2.0 * s * n;
     vec2 mu = vec2(m.x / uAsp, m.y);
-    bool onFlap = m.x >= 0.0 && m.x <= uAsp && m.y >= 0.0 && m.y <= 1.0 && dot(m - o, n) > 0.0;
-    c = texture2D(texA, vUv).rgb;
-    if (onFlap) c = mix(vec3(0.88, 0.85, 0.78) * (0.75 + 0.25 * smoothstep(0.0, 0.3, -d)), texture2D(texA, mu).rgb, 0.12);
+    bool onFlap = m.x >= 0.0 && m.x <= uAsp && m.y >= 0.0 && m.y <= 1.0;
+    c = texture2D(texA, vUv).rgb * (1.0 - 0.35 * exp(-s * 18.0) * step(0.001, u));
+    if (onFlap) c = mix(vec3(0.94, 0.91, 0.85) * (0.78 + 0.22 * smoothstep(0.0, 0.3, s)), texture2D(texA, mu).rgb, 0.1);
   }
-  c += SIGNAL * smoothstep(0.004, 0.0, abs(d)) * 2.5 * sin(3.14159 * u);
+  c += SIGNAL * smoothstep(0.012, 0.0, abs(s)) * 1.2 * sin(3.14159 * u);
   gl_FragColor = vec4(c, 1.0);
 }`;
 
