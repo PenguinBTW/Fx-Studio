@@ -108,7 +108,7 @@ export function overworld(renderer: THREE.WebGLRenderer): World & { plant(part: 
       float rd = abs(wp.x - (18.0 * sin(wp.z * 0.011) + 9.0 * sin(wp.z * 0.027 + 1.3)));
       float rw = 1.0 + 0.5 * sin(wp.z * 0.019 + 0.7);
       float fm = smoothstep(0.82, 0.98, rd / (7.0 * rw) + (fbm2(wp.xz * 0.8 + vec2(0.0, t * 0.8)) - 0.5) * 0.3) * smoothstep(0.42, 0.72, fbm2(wp.xz * 1.7 + vec2(0.0, t * 0.9)));
-      c = mix(c, vec3(1.15, 1.08, 1.0), fm * 0.5);
+      c = mix(c, vec3(0.75, 0.85, 0.88), fm * 0.32);
       return vec4(c, 1.0);
     }`, { uSun: { value: SUN } }, fog);
   water.receiveShadow = true;
