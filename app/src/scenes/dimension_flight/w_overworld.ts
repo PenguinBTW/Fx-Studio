@@ -34,7 +34,7 @@ export function owHeight(x: number, z: number) {
   // soft terracing: hints of stacked layers without hard voxels
   const L = 3.2, q = h / L, fq = q - Math.floor(q);
   h = THREE.MathUtils.lerp(h, (Math.floor(q) + Math.pow(sstep(0.35, 0.65, fq), 1.0)) * L, 0.55 * sstep(6, 14, d));
-  h -= 3.2 * Math.exp(-Math.pow(d / 6, 2));
+  h -= 3.2 * Math.exp(-Math.pow(d / (6 * (1 + 0.5 * Math.sin(z * 0.019 + 0.7))), 2));
   const kd = Math.hypot(x - KNOLL.x, (z - KNOLL.y) * 0.8);
   h = Math.max(h, 6.2 - Math.pow(kd / 26, 2) * 6 + fbm2c(x * 0.08, z * 0.08, 3, 5) * 0.6 * sstep(4, 12, kd));
   return h;
@@ -105,6 +105,10 @@ export function overworld(renderer: THREE.WebGLRenderer): World & { plant(part: 
       vec3 sky = mix(vec3(1.2, 0.75, 0.5), vec3(0.15, 0.3, 0.6), pow(clamp(R.y, 0.0, 1.0), 0.5));
       vec3 deep = vec3(0.02, 0.07, 0.08);
       vec3 c = mix(deep, sky, fr) + vec3(30.0, 18.0, 9.0) * pow(max(dot(R, uSun), 0.0), 900.0);
+      float rd = abs(wp.x - (18.0 * sin(wp.z * 0.011) + 9.0 * sin(wp.z * 0.027 + 1.3)));
+      float rw = 1.0 + 0.5 * sin(wp.z * 0.019 + 0.7);
+      float fm = smoothstep(0.82, 0.98, rd / (7.0 * rw) + (fbm2(wp.xz * 0.8 + vec2(0.0, t * 0.8)) - 0.5) * 0.3) * smoothstep(0.42, 0.72, fbm2(wp.xz * 1.7 + vec2(0.0, t * 0.9)));
+      c = mix(c, vec3(1.15, 1.08, 1.0), fm * 0.5);
       return vec4(c, 1.0);
     }`, { uSun: { value: SUN } }, fog);
   water.receiveShadow = true;
