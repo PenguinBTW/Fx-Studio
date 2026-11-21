@@ -35,6 +35,7 @@ export default class S3Type extends Scene {
   override async init() {
     const inst = await model(this.ctx, 'type_words');
     this.scene.add(inst.root);
+    inst.root.traverse((o) => { if (o.name.startsWith('word_') && !ORDER.slice(0, BLENDER).includes(o.name.slice(5))) o.visible = false; });
     this.scene.environment = studioEnv(this.ctx.renderer);
     this.scene.environmentIntensity = 0.22;
     this.scene.fog = new THREE.FogExp2(0x050506, 0.014);
