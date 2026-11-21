@@ -135,23 +135,23 @@ export function overworld(renderer: THREE.WebGLRenderer): World & { plant(part: 
   }
   {
     const src: THREE.Vector3[] = [], v = new THREE.Vector3();
-    for (const m of cherryM) { v.setFromMatrixPosition(m); if (nearPath(v.x, v.y + 6, v.z) < 70 && src.length < 140) src.push(v.clone()); }
-    const per = 40, n = src.length * per, rp = rng(404);
+    for (const m of cherryM) { v.setFromMatrixPosition(m); if (nearPath(v.x, v.y + 6, v.z) < 70 && src.length < 220) src.push(v.clone()); }
+    const per = 70, n = src.length * per, rp = rng(404);
     const g = new THREE.InstancedBufferGeometry().copy(new THREE.PlaneGeometry(0.9, 0.65) as unknown as THREE.InstancedBufferGeometry);
     const off = new Float32Array(n * 4);
     for (let k = 0; k < n; k++) { const c = src[Math.floor(k / per)]; off.set([c.x + (rp() - 0.5) * 14, c.y + 2 + rp() * 7, c.z + (rp() - 0.5) * 14, rp()], k * 4); }
     g.setAttribute('aOff', new THREE.InstancedBufferAttribute(off, 4)); g.instanceCount = n;
     const pm = new THREE.ShaderMaterial({
       uniforms: { uT: petalT }, side: THREE.DoubleSide, transparent: true, depthWrite: false,
-      vertexShader: `attribute vec4 aOff; uniform float uT; varying float vS;
+      vertexShader: `attribute vec4 aOff; uniform float uT; varying float vS; varying vec2 vUv;
         void main() {
-          float s = aOff.w, ph = fract(s * 13.7 + uT * (0.07 + 0.04 * s));
+          vUv = uv; float s = aOff.w, ph = fract(s * 13.7 + uT * (0.07 + 0.04 * s));
           float a = uT * (1.5 + 2.0 * s) + s * 40.0;
           mat3 R = mat3(cos(a), sin(a) * 0.6, sin(a) * 0.8, -sin(a), cos(a) * 0.6, cos(a) * 0.8, 0.0, -0.8, 0.6);
           vec3 p = aOff.xyz + vec3(sin(uT * 0.9 + s * 20.0) * 1.6 + ph * 6.0, -ph * 9.0, cos(uT * 0.7 + s * 17.0) * 1.2);
           vS = 0.75 + 0.25 * (R * vec3(0.0, 0.0, 1.0)).y;
           gl_Position = projectionMatrix * viewMatrix * vec4(p + R * (position * (0.45 + 0.9 * fract(s * 7.31))), 1.0); vS *= 0.7 + 0.5 * fract(s * 3.17); }`,
-      fragmentShader: `varying float vS; void main() { gl_FragColor = vec4(vec3(0.82, 0.38, 0.52) * vS, 0.9); }`,
+      fragmentShader: `varying float vS; varying vec2 vUv; void main() { vec2 q = vUv * 2.0 - 1.0; q.x *= 1.0 + 0.35 * q.y; if (dot(q, q) > 1.0) discard; gl_FragColor = vec4(vec3(0.82, 0.38, 0.52) * vS, 0.9); }`,
     });
     const pts = new THREE.Mesh(g, pm); pts.frustumCulled = false; scene.add(pts);
   }
