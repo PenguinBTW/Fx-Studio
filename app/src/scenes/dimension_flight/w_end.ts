@@ -117,6 +117,28 @@ export function theEnd(renderer: THREE.WebGLRenderer): World & { plant(part: (id
     im.castShadow = true; scene.add(im);
   });
 
+  // ---- distant End City: slender tapering spires with flared caps and lit windows on its own isle
+  {
+    const C = new THREE.Vector3(-110, -55, -820), rc = rng(44);
+    const isle = new THREE.Mesh(islandGeometry({ radius: 34, depth: 60, seed: 61, rings: 40, segs: 90, top: (_x, _z, r01) => 1.5 * (1 - r01), color: (_x, _y, _z, _s, under, out) => { out.set(under ? '#8f8670' : '#d8d2a8'); } }), stoneMat);
+    isle.position.copy(C); isle.castShadow = isle.receiveShadow = true; scene.add(isle);
+    const wall = pbr(fog, { vertexColors: false, color: '#8c6c9c', roughness: 0.7, flatShading: true });
+    const win = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 1.8, 2.6), fog: false });
+    const seg = new THREE.CylinderGeometry(0.78, 1, 1, 6), cap = new THREE.ConeGeometry(1, 1, 6), wg = new THREE.BoxGeometry(0.5, 1.1, 0.5);
+    for (let i = 0; i < 7; i++) {
+      const a = rc() * Math.PI * 2, d = i === 0 ? 0 : 8 + rc() * 16, x = C.x + Math.cos(a) * d, z = C.z + Math.sin(a) * d;
+      let y = C.y + 2, w = (i === 0 ? 6 : 3.5 + rc() * 2.5);
+      const tiers = i === 0 ? 5 : 2 + Math.floor(rc() * 3);
+      for (let k = 0; k < tiers; k++) {
+        const h = w * (2.2 + rc() * 1.4);
+        const m = new THREE.Mesh(seg, wall); m.scale.set(w, h, w); m.position.set(x, y + h / 2, z); scene.add(m);
+        const c = new THREE.Mesh(cap, wall); c.scale.set(w * 1.6, w * 0.7, w * 1.6); c.position.set(x, y + h + w * 0.35, z); scene.add(c);
+        for (let j = 0; j < 3; j++) { const wa = rc() * Math.PI * 2, wm = new THREE.Mesh(wg, win); wm.position.set(x + Math.cos(wa) * w * 0.86, y + h * (0.3 + rc() * 0.5), z + Math.sin(wa) * w * 0.86); wm.scale.setScalar(w * 0.25); scene.add(wm); }
+        y += h + w * 0.5; w *= 0.72;
+      }
+      const sp = new THREE.Mesh(cap, wall); sp.scale.set(w * 1.2, w * 4, w * 1.2); sp.position.set(x, y + w * 2, z); scene.add(sp);
+    }
+  }
   // ---- purpur towers flanking the gate, lit by end rods
   const purpur = pbr(fog, { vertexColors: false, color: '#a77fa8', roughness: 0.75 });
   const rod = pbr(fog, { vertexColors: false, color: '#ffffff', emissive: new THREE.Color('#fff4ff'), emissiveIntensity: 5 });
