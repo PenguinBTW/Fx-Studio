@@ -29,12 +29,18 @@
       "scene": "fx_promo/s1_boot",
       "id": "s1_boot_d",
       "start": 13.747,
-      "end": 20.213
+      "end": 16.325
+    },
+    {
+      "scene": "fx_promo/s2b_prism",
+      "id": "s2b_prism",
+      "start": 15.345,
+      "end": 28.967
     },
     {
       "scene": "fx_promo/s2_surface",
       "id": "s2_surface",
-      "start": 19.233,
+      "start": 28.467,
       "end": 36.985
     },
     {
@@ -182,12 +188,20 @@
       "dur": 0.4
     },
     {
-      "id": "t-s1_boot-s2_surface",
-      "transition": "fxp_ink_bleed",
+      "id": "t-s1_boot-prism",
+      "transition": "fxp_prism_slit",
       "from": "s1_boot_d",
-      "to": "s2_surface",
-      "at": 19.233,
+      "to": "s2b_prism",
+      "at": 15.345,
       "dur": 0.97
+    },
+    {
+      "id": "t-prism-s2_surface",
+      "transition": "fxp_glass_shatter",
+      "from": "s2b_prism",
+      "to": "s2_surface",
+      "at": 28.467,
+      "dur": 0.49
     },
     {
       "id": "t-s2_surface-s3_type",

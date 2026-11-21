@@ -1,4 +1,4 @@
-// s2_surface (bars 11-18, 21.18 - 36.73 s): the kick drops. The boot curve becomes the front row of a wireframe
+// s2_surface (bars 15-18, 28.95 - 36.73 s; scene time unchanged so the recap can still sample bars 11-14): the kick drops. The boot curve becomes the front row of a wireframe
 // landscape; every beat sends a ripple out from the origin. Low flyover travelling +x.
 import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
@@ -12,7 +12,7 @@ const ROWS = 46, COLS = 70, SEG = 110;
 const T0 = bar(11);
 const SPEED = 2.4;
 
-const WORDS: [string, string][] = [['CODE', 'IT'], ['PLOT', 'IT'], ['SYNC', 'IT'], ['SHIP', 'IT'], ['SCRUB', 'IT'], ['RENDER', 'IT'], ['LOOP', 'IT'], ['SHIP', 'IT']];
+const WORDS: [string, string][] = [['CODE', 'IT'], ['PLOT', 'IT'], ['SYNC', 'IT'], ['SHIP', 'IT'], ['PLOT', 'IT'], ['SYNC', 'IT'], ['RENDER', 'IT'], ['SHIP', 'IT']];
 
 export default class S2Surface extends Scene {
   private scene = new THREE.Scene();
