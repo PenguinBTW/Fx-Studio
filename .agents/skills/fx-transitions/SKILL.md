@@ -34,23 +34,20 @@ Transitions bridge scenes across a defined temporal window in `project.json`:
 
 ```json
 {
-  "scenes": [
-    { "id": "scene_a", "file": "scene_a.ts", "start": 0.0, "end": 6.5 },
-    { "id": "scene_b", "file": "scene_b.ts", "start": 6.0, "end": 12.0 }
+  "project": "my_film",
+  "entries": [
+    { "scene": "my_film/scene_a", "id": "scene_a", "start": 0.0, "end": 6.5 },
+    { "scene": "my_film/scene_b", "id": "scene_b", "start": 6.0, "end": 12.0 }
   ],
   "transitions": [
-    {
-      "from": "scene_a",
-      "to": "scene_b",
-      "type": "kinetic_whip",
-      "at": 6.25,
-      "duration": 0.50
-    }
+    { "id": "t-whip", "transition": "kinetic_whip", "from": "scene_a", "to": "scene_b", "at": 6.0, "dur": 0.5 }
   ]
 }
 ```
 
-- **Temporal Seam Window:** Evaluates across the interval $[t_{\text{at}} - \frac{\text{duration}}{2}, t_{\text{at}} + \frac{\text{duration}}{2}]$.
+- **Custom per project:** `transition` names a module in `app/src/transitions/` (file name without `.ts`) whose default export implements `Transition`. Write a new one for each look you need; it renders and manipulates both scenes.
+
+- **Temporal Seam Window:** Runs from `at` to `at + dur` (song seconds), as built by `buildTransitionEntries` in `app/src/engine/projects.ts`.
 - **Scene Overlap:** Outgoing Scene A and incoming Scene B must both overlap during this entire window.
 - **Normalized Progress $u$:** The engine maps timeline time $t$ to normalized transition progress $u \in [0.0, 1.0]$.
 
@@ -74,9 +71,22 @@ Bespoke Transition Class     Scene-Internal (f.under)        Physical Depth / Di
 
 ### Paradigm 1: Bespoke Standalone Transitions (Primary Pattern)
 - Extends the `Transition` base class in `app/src/transitions/`.
-- Owns the temporal seam externally between $[t_{\text{at}} - \text{dur}/2, t_{\text{at}} + \text{dur}/2]$.
+- Owns the temporal seam externally between `at` and `at + dur`.
 - Receives pre-rendered HalfFloat textures of Scene A (`texA`) and Scene B (`texB`), normalized progress $u \in [0, 1]$, and access to `api.sampleScene()`.
 - Used for match-cuts, velocity warps, directional push-glides, and shader fragmentations.
+- Minimal block (`app/src/transitions/dissolve.ts`):
+
+```typescript
+export default class Dissolve implements Transition {
+  constructor(private ctx: TransitionCtx) {}
+  render(_f: Frame, out: THREE.WebGLRenderTarget, a: THREE.Texture, b: THREE.Texture, api: TransitionAPI) {
+    const { renderer, comp } = this.ctx;
+    comp.draw(renderer, a, out, { mode: 'replace' });
+    if (api.u > 0) comp.draw(renderer, b, out, { mode: 'normal', opacity: Math.min(1, api.u) });
+    renderer.resetState();
+  }
+}
+```
 
 ### Paradigm 2: Diegetic 3D Handoffs (`handlesTransition = true`)
 - Set `handlesTransition = true` in the incoming scene definition.
