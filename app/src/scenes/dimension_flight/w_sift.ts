@@ -115,7 +115,7 @@ export function sift(renderer: THREE.WebGLRenderer): World & { plant(part: (id: 
       new THREE.MeshBasicMaterial({ color: new THREE.Color(0.25, 0.85, 1.4), transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
     beam.position.set(LAND.x, LAND.y - 300, LAND.z); scene.add(beam);
     {
-      const N = 420, pos = new Float32Array(N * 3), sd = new Float32Array(N);
+      const N = 1800, pos = new Float32Array(N * 3), sd = new Float32Array(N);
       for (let k = 0; k < N; k++) { sd[k] = k / N; pos[k * 3] = LAND.x; pos[k * 3 + 1] = LAND.y; pos[k * 3 + 2] = LAND.z; }
       const g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
@@ -126,11 +126,11 @@ export function sift(renderer: THREE.WebGLRenderer): World & { plant(part: (id: 
           void main() {
             float ph = fract(seed * 7.13 + uT * 0.08);
             float ang = seed * 61.0 + uT * (0.6 + seed * 0.5) + ph * 9.0;
-            float rad = 40.0 + 45.0 * fract(seed * 3.7) * (1.0 - ph * 0.4);
+            float rad = 30.0 + 30.0 * pow(fract(seed * 3.7), 2.0) * (1.0 - ph * 0.5);
             vec3 p = position + vec3(cos(ang) * rad, -100.0 + ph * 190.0, sin(ang) * rad);
             vA = sin(ph * 3.1416) * smoothstep(73.0, 78.0, uT);
             vec4 mv = modelViewMatrix * vec4(p, 1.0);
-            gl_PointSize = (5.0 + 8.0 * fract(seed * 11.3)) * 300.0 / -mv.z;
+            gl_PointSize = (6.0 + 10.0 * fract(seed * 11.3)) * 300.0 / -mv.z;
             gl_Position = projectionMatrix * mv; }`,
         fragmentShader: `varying float vA;
           void main() { float d = length(gl_PointCoord - 0.5); float a = smoothstep(0.5, 0.0, d);
