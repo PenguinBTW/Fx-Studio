@@ -84,7 +84,7 @@ export default class S3Type extends Scene {
       const zW = -i * SP;
       // Word stands on the path at its own z, offset so the lens slips past it; a slow twist reads the extrusion.
       const tPass = T0 + (LEAD + i * SP) / V;
-      const u = i === 3 && inDZ ? Math.min(T - tPass, -1.1) : T - tPass;
+      const u = i === 3 && inDZ ? -1.1 : T - tPass;
       const pp = this.camPath(tPass);
       // Just before the pass the word is flung outward past the frame edge instead of filling the lens.
       const fling = 1 + 2.6 * ease.inCubic(clamp((u + 1.1) / 1.1));
@@ -102,9 +102,12 @@ export default class S3Type extends Scene {
     const roll = 0.1 * Math.sin(lt * 0.6) + 0.05 * k;
     let focus = 20;
     if (inDZ) {
-      const w = this.words[3]!.position;
+      // Solve against the word's real front face so its screen size holds while the background stretches.
+      const o3 = this.words[3]!;
+      o3.updateMatrixWorld(true);
+      const bb = new THREE.Box3().setFromObject(o3), w = bb.getCenter(new THREE.Vector3());
       const fov = 26 + 62 * ease.inOutCubic(clamp((T - DZ0) / (DZ1 - DZ0)));
-      const dz = solveDollyZoom([w.x, w.y, w.z], [0, 0, -1], this.w3, fov, 0.95);
+      const dz = solveDollyZoom([w.x, w.y, bb.max.z], [0, 0, -1], bb.max.x - bb.min.x, fov, 0.8);
       applyCam(this.cam, { pos: dz.position, tgt: [w.x, w.y, w.z], fov: dz.fov, roll: 0.04 * Math.sin(lt * 2) }, 0);
       focus = dz.position[2] - w.z;
     } else {
