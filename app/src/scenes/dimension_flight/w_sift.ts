@@ -127,9 +127,9 @@ export function sift(renderer: THREE.WebGLRenderer): World & { plant(part: (id: 
   }
 
   // ---- souls: engine GPU particles rising off the meadows as glowing streaks; spores drift around the camera
-  const souls = new LargeParticles(9000, 2027);
+  const souls = new LargeParticles(3600, 2027);
   souls.configure({
-    mode: 'fall', style: 'disc', size: [0.3, 0.75], life: [6, 14],
+    mode: 'fall', style: 'disc', size: [0.2, 0.5], life: [6, 14],
     color: { mode: 'flat', rgb: [0.3, 0.7, 1.0] }, intensity: 4.5, brightnessVariance: 0.7, fade: [0.15, 0.3],
     turbulence: { amp: 1.6, freq: 0.06, drift: 0.2 },
     fall: { center: [0, -95, -1150], box: [260, 10, 300], velocity: [0.6, 4.2, -0.4], drag: 0 },
