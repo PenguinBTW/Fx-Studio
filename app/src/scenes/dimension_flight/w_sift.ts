@@ -147,7 +147,7 @@ export function sift(renderer: THREE.WebGLRenderer): World & { plant(part: (id: 
     turbulence: { amp: 1.6, freq: 0.06, drift: 0.2 },
     fall: { center: [0, -95, -1150], box: [260, 10, 300], velocity: [0.6, 4.2, -0.4], drag: 0 },
   });
-  scene.add(makeMotes({ count: 800, box: [70, 36, 70], color: new THREE.Color(0.6, 1.6, 2.8), color2: new THREE.Color(2.4, 1.2, 1.2), size: 0.03, vel: [0.6, 0.5, 0.2], swirl: 0.8, flicker: 0.5 }));
+  scene.add(makeMotes({ count: 450, box: [70, 36, 70], color: new THREE.Color(0.35, 1.3, 3.0), color2: new THREE.Color(0.5, 2.2, 2.6), size: 0.03, vel: [0.6, 0.5, 0.2], swirl: 0.8, flicker: 0.5 }));
 
   const lightPos = new THREE.Vector3();
   return {
