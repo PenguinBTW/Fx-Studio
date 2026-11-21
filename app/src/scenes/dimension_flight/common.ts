@@ -44,7 +44,17 @@ export const fogUniforms = (f: FogSpec) => ({
 });
 
 /** Patch a built-in material so it uses the same height fog as the custom shaders. */
-export function withFog<M extends THREE.Material>(m: M, f: FogSpec): M {
+/** World-space surface grain (two octaves of value noise) + its gradient, so flat fills read as weathered stone/soil. */
+const DETAIL_GLSL = /* glsl */ `
+float h3(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+float vn3(vec3 x) { vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(mix(h3(i), h3(i + vec3(1,0,0)), f.x), mix(h3(i + vec3(0,1,0)), h3(i + vec3(1,1,0)), f.x), f.y),
+             mix(mix(h3(i + vec3(0,0,1)), h3(i + vec3(1,0,1)), f.x), mix(h3(i + vec3(0,1,1)), h3(i + vec3(1,1,1)), f.x), f.y), f.z); }
+float grain(vec3 p) { return vn3(p * 0.33) * 0.55 + vn3(p * 1.7) * 0.3 + vn3(p * 6.1) * 0.15; }
+vec3 grainGrad(vec3 p) { const float e = 0.08; float g = grain(p);
+  return vec3(grain(p + vec3(e,0,0)) - g, grain(p + vec3(0,e,0)) - g, grain(p + vec3(0,0,e)) - g) / e * 0.12; }`;
+
+export function withFog<M extends THREE.Material>(m: M, f: FogSpec, detail = true): M {
   m.onBeforeCompile = (s) => {
     Object.assign(s.uniforms, fogUniforms(f));
     s.vertexShader = s.vertexShader
@@ -53,8 +63,12 @@ export function withFog<M extends THREE.Material>(m: M, f: FogSpec): M {
     s.fragmentShader = s.fragmentShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vFogWP;\n' + FOG_GLSL)
       .replace('#include <fog_fragment>', 'gl_FragColor.rgb = applyFog(gl_FragColor.rgb, vFogWP);');
+    if (detail) s.fragmentShader = s.fragmentShader
+      .replace('#include <common>', '#include <common>\n' + DETAIL_GLSL)
+      .replace('#include <color_fragment>', '#include <color_fragment>\n{ float g = grain(vFogWP); diffuseColor.rgb *= mix(0.72, 1.14, g); }')
+      .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n{ vec3 gr = grainGrad(vFogWP); normal = normalize(normal - (viewMatrix * vec4(gr, 0.0)).xyz * 0.55); }');
   };
-  m.customProgramCacheKey = () => `bofog${f.density}${f.height}`;
+  m.customProgramCacheKey = () => `bofog${f.density}${f.height}${detail ? 'd' : ''}`;
   return m;
 }
 
@@ -190,9 +204,11 @@ export function islandGeometry(o: IslandOpts): THREE.BufferGeometry {
         y = o.top(x, z, s) * (1 - lip) - lip * 0.6;
       } else {
         under = 1;
-        const s = (j - R) / R, r = (1 - Math.pow(s, 0.75)) * o.radius * e * (1 - 0.04 * Math.sin(17 * a + 9 * s));
+        // stepped rock strata: ledges every ~1/9 of the depth, plus vertical fluting
+        const s = (j - R) / R, ledge = 1 + 0.045 * Math.tanh(4 * Math.sin(s * 28 + ph[0]! + 0.6 * Math.sin(3 * a)));
+        const r = (1 - Math.pow(s, 1.35)) * o.radius * e * (1 - 0.05 * Math.abs(Math.sin(17 * a + 9 * s))) * ledge;
         x = Math.cos(a) * r; z = Math.sin(a) * r;
-        const crag = 0.75 + 0.5 * Math.abs(Math.sin(7 * a + ph[1]! + s * 3)) * Math.abs(Math.sin(4 * a + ph[2]!));
+        const crag = 0.5 + 0.55 * Math.pow(Math.abs(Math.sin(3 * a + ph[1]! + s * 2)), 3) + 0.45 * Math.abs(Math.sin(7 * a + ph[2]! + s * 3)) * Math.abs(Math.sin(4 * a + ph[0]!));  // hanging spurs, not a single cone
         y = -0.6 - o.depth * Math.pow(s, 1.25) * crag;
       }
       const k = j * (S + 1) + i;

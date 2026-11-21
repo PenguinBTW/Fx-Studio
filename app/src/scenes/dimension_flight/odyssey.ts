@@ -6,6 +6,8 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { W, H, PW, PH, makeRT } from '../../engine/gl';
 import { smoothstep } from '../../engine/util';
 import { Swallow } from './swallow';
+import { PLUMAGE_RIM } from './materials/plumage';
+const RIM_BY_WORLD = ['#34446a', '#b08870', '#9a88ff', '#7a6a50', '#8a6050'];
 import { DepthDoFPass } from '../../engine/dof';
 import { GLTFManager } from '../../engine/gltf';
 import { resolveAsset } from '../../engine/assets';
@@ -16,7 +18,32 @@ import { overworld } from './w_overworld';
 import { nether } from './w_nether';
 import { theEnd } from './w_end';
 import { aether } from './w_aether';
-import { sift } from './w_sift';
+import { sift, siftH } from './w_sift';
+import { owHeight } from './w_overworld';
+
+/** Composed hero shots: the trailing camera cranes out to a fixed dolly (a→b) mid-world, away from every portal window. */
+type Shot = { t0: number; t1: number; a: [number, number, number]; b: [number, number, number]; fov: number; ground?: (x: number, z: number) => number };
+const SHOTS: Shot[] = [
+  { t0: -3, t1: 5.6, a: [-6, 40, 64], b: [-14, 20, -14], fov: 36, ground: owHeight },
+  { t0: 19.6, t1: 24.4, a: [-26, 14, -318], b: [-14, 18, -352], fov: 40 },
+  { t0: 25.6, t1: 29.8, a: [4, 64, -408], b: [-2, 72, -434], fov: 44 },
+  { t0: 32.4, t1: 43, a: [12, -26, -488], b: [26, -64, -572], fov: 38 },
+  { t0: 51.8, t1: 58.8, a: [-20, -56, -805], b: [-26, -50, -868], fov: 38 },
+  { t0: 66.6, t1: 74.2, a: [20, -42, -1040], b: [22, -44, -1084], fov: 40, ground: siftH },
+  { t0: 76.2, t1: 86, a: [-14, -40, -1140], b: [-75, -62, -1090], fov: 56, ground: siftH },
+];
+const SHOT_RAMP = 1.6, _hp = new THREE.Vector3(), _hb = new THREE.Vector3();
+function heroAt(t: number): { w: number; fov: number; p: THREE.Vector3 } {
+  for (const s of SHOTS) {
+    if (t <= s.t0 || t >= s.t1) continue;
+    const w = smoothstep(s.t0, s.t0 + SHOT_RAMP, t) * (1 - smoothstep(s.t1 - SHOT_RAMP, s.t1, t));
+    const k = smoothstep(s.t0, s.t1, t);
+    _hp.fromArray(s.a).lerp(_hb.fromArray(s.b), k);
+    if (s.ground) _hp.y = Math.max(_hp.y, s.ground(_hp.x, _hp.z) + 4);
+    return { w: w * w * (3 - 2 * w), fov: s.fov, p: _hp };
+  }
+  return { w: 0, fov: 0, p: _hp };
+}
 
 const V = () => new THREE.Vector3();
 const UP = new THREE.Vector3(0, 1, 0), DOWNZ = new THREE.Vector3(0, 0, -1);
@@ -38,7 +65,8 @@ export default class Odyssey extends Scene {
     const nw = nether(r);
     const ew = theEnd(r);
     const aw = aether(r);
-    this.worlds = [ow, nw, ew, aw, sift(r)];
+    const sw = sift(r);
+    this.worlds = [ow, nw, ew, aw, sw];
     const trees = resolveAsset('trees', this.ctx.project ?? 'dimension_flight');
     const treeInst = await GLTFManager.instantiate(trees.url, {});
     ow.plant((id) => treeInst.part(id));
@@ -51,6 +79,9 @@ export default class Odyssey extends Scene {
     const sk = resolveAsset('skyroot', this.ctx.project ?? 'dimension_flight');
     const skInst = await GLTFManager.instantiate(sk.url, {});
     aw.plant((id) => skInst.part(id));
+    const sf = resolveAsset('sift_flora', this.ctx.project ?? 'dimension_flight');
+    const sfInst = await GLTFManager.instantiate(sf.url, {});
+    sw.plant((id) => sfInst.part(id));
     const res = new THREE.Vector2(PW, PH);
     PORTALS.forEach((p, i) => {
       const portal = new Portal(p.kind, new THREE.Vector3(...p.c), new THREE.Vector3(...p.n), this.rt.texture, res);
@@ -72,8 +103,9 @@ export default class Odyssey extends Scene {
   }
 
   private camPos(t: number, out: THREE.Vector3) {
-    BIRD.at(t - CAM_LAG.at(t), out);
-    return out.add(CAM_OFF.at(t, this.tmp.f));
+    BIRD.at(t - CAM_LAG.at(t), out).add(CAM_OFF.at(t, this.tmp.f));
+    const h = heroAt(t);
+    return h.w > 0 ? out.lerp(h.p, h.w) : out;
   }
 
   private poseBird(t: number) {
@@ -111,12 +143,24 @@ export default class Odyssey extends Scene {
     const birdP = this.poseBird(t).clone();
     const look = birdP.clone().addScaledVector(BIRD.vel(t, V()), 0.12);
     cam.up.copy(UP).lerp(DOWNZ, DIVE.at(t - 0.2)).normalize();
-    cam.fov = CAM_FOV.at(t); cam.updateProjectionMatrix();
+    { const h = heroAt(t); cam.fov = THREE.MathUtils.lerp(CAM_FOV.at(t), h.fov, h.w); }
+    // keep the swallow's wingspan between ~18% and ~50% of frame height (portal windows excluded so crossings stay exact)
+    {
+      const gap = Math.min(...PORTALS.map((P) => Math.abs(t - P.t)));
+      const cw = smoothstep(2.6, 3.8, gap);
+      if (cw > 0) {
+        const span = 3.4, tf = 2 * Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2);
+        const v = cam.position.clone().sub(birdP), d = v.length();
+        const dc = THREE.MathUtils.lerp(d, THREE.MathUtils.clamp(d, span / (tf * 0.6), span / (tf * 0.3)), cw);
+        if (Math.abs(dc - d) > 1e-3) cam.position.copy(birdP).addScaledVector(v.normalize(), dc);
+      }
+    } cam.updateProjectionMatrix();
     cam.lookAt(look); cam.updateMatrixWorld();
 
     let k = 0; while (k < this.camCross.length && t >= this.camCross[k]!) k++;
     let bw = 0; while (bw < PORTALS.length && t >= PORTALS[bw]!.t) bw++;
     this.worlds[bw]!.scene.add(this.bird.group);
+    PLUMAGE_RIM.value.set(RIM_BY_WORLD[bw] ?? '#b8d0ff');
 
     const cur = this.worlds[k]!;
     cur.update(t, cam, birdP);
@@ -144,18 +188,23 @@ export default class Odyssey extends Scene {
     r.render(cur.scene, cam);
     cur.overlay?.(r, cam, main, t);
     r.resetState();
-    this.dof.render(r, main.texture, main.depthTexture!, { enabled: true, focusDistance: cam.position.distanceTo(birdP), aperture: 3, maxRadius: 5, blades: 0, near: cam.near, far: cam.far, samples: 32 }, out);
+    this.dof.render(r, main.texture, main.depthTexture!, { enabled: true, focusDistance: cam.position.distanceTo(birdP), aperture: 2.2, maxRadius: 3.5, blades: 0, near: cam.near, far: cam.far, samples: 32 }, out);
     r.resetState();
 
     // post
     let flash = 0;
-    for (const tc of this.camCross) flash += Math.exp(-Math.pow((t - tc) / 0.09, 2)) * 0.35;
+    for (const tc of this.camCross) flash += Math.exp(-Math.pow((t - tc) / 0.09, 2)) * 0.12;
     const post: PostOverrides = {
-      hud: 0, frame: 0, metricReadout: 0, volumetricSteps: 48, volumetricJitter: 1, toneMap: 'agx', grain: 0.025, ca: 0.7, halation: 0.15, vignette: 0.32,
+      hud: 0, frame: 0, metricReadout: 0, volumetricSteps: 48, volumetricJitter: 1, toneMap: 'aces', grain: 0.025, ca: 0.7, halation: 0.15, vignette: 0.32,
       bloom: 0.6, bloomThreshold: 1.0, bloomRadius: 0.8, flash,
-      fade: Math.max(1 - smoothstep(0, 1.6, t), smoothstep(80.2, 82, t)),
+      fade: Math.max(1 - smoothstep(0, 1.6, t), smoothstep(81, 82, t)),
       ...cur.post(t),
     };
+    // portal beat: chromatic split + bloom surge either side of each membrane crossing
+    let beat = 0;
+    for (const tc of this.camCross) beat += Math.exp(-Math.pow((t - tc) / 0.12, 2));
+    post.ca = (post.ca ?? 0.7) + beat * 3;
+    post.bloom = (post.bloom ?? 0.6) + beat * 0.15;
     if (cur.lightPos) {
       const s = cur.lightPos.clone().project(cam);
       const inFront = cur.lightPos.clone().sub(cam.position).dot(cam.getWorldDirection(V())) > 0;

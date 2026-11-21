@@ -20,14 +20,14 @@ def branch(pts, r0, r1, m):
     o = bpy.data.objects.new('b', cu); bpy.context.scene.collection.objects.link(o)
     bpy.context.view_layer.objects.active = o; o.select_set(True); bpy.ops.object.convert(target='MESH'); o.select_set(False)
     o.data.materials.append(m); return o
-def blob(c, r, m, seed):
+def blob(c, r, m, seed, amp=0.28):
     bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=3, radius=r, location=c); o = bpy.context.object
     for v in o.data.vertices:
         d = v.co.normalized(); n = noise.noise(d * 2.2 + Vector((seed, seed * 1.3, 0)))
-        v.co = d * r * (1 + 0.28 * n) * Vector((1, 1, 0.78))
+        v.co = d * r * (1 + amp * n) * Vector((1, 1, 0.78))
     for p in o.data.polygons: p.use_smooth = True
     o.data.materials.append(m); return o
-def tree(name, seed, bark, foliage, spread, lobes):
+def tree(name, seed, bark, foliage, spread, lobes, rs=(0.13, 0.2), amp=0.28, crown=0.24):
     random.seed(seed); objs = []
     trunk = [Vector((0, 0, 0)), Vector((0.02, 0.01, 0.25)), Vector((-0.02, 0.03, 0.5))]
     objs.append(branch(trunk, 0.06, 0.035, bark))
@@ -39,13 +39,13 @@ def tree(name, seed, bark, foliage, spread, lobes):
         objs.append(branch([p0, p1, p2], 0.03, 0.012, bark)); tips.append(p2)
     for i in range(lobes):
         c = random.choice(tips) + Vector((random.uniform(-0.12, 0.12), random.uniform(-0.12, 0.12), random.uniform(-0.02, 0.14)))
-        objs.append(blob(c, random.uniform(0.13, 0.2), foliage, seed + i))
-    objs.append(blob(trunk[-1] + Vector((0, 0, 0.26)), 0.24, foliage, seed + 99))
+        objs.append(blob(c, random.uniform(*rs), foliage, seed + i, amp))
+    objs.append(blob(trunk[-1] + Vector((0, 0, 0.26)), crown, foliage, seed + 99, amp))
     bpy.ops.object.select_all(action='DESELECT')
     for o in objs: o.select_set(True)
     bpy.context.view_layer.objects.active = objs[0]; bpy.ops.object.join()
     t = bpy.context.object; t.name = name; t['fx_part'] = name.lower(); return t
 oak = tree('Oak', 3, BARK, LEAF, 0.34, 16)
-cherry = tree('Cherry', 8, CHBARK, BLOSSOM, 0.42, 14); cherry.location.x = 2
+cherry = tree('Cherry', 8, CHBARK, BLOSSOM, 0.46, 44, rs=(0.06, 0.11), amp=0.5, crown=0.15); cherry.location.x = 2
 bpy.ops.export_scene.gltf(filepath=os.path.join(HERE, 'model.glb'), export_format='GLB', export_extras=True, export_yup=True)
 print('[export] ok', len(oak.data.polygons), len(cherry.data.polygons))
