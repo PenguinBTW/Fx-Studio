@@ -75,11 +75,14 @@ const resolveOut = (p?: string, def?: string) => {
 };
 async function loadProject() {
   const projName: string = opt('project') ?? JSON.parse(await Bun.file(path.join(APP, 'src/scenes/active.json')).text()).project;
-  const dir = path.join(APP, 'src/scenes', projName);
-  const manifest = await Bun.file(path.join(dir, 'project.json')).json();
+  // Mirrors timeline.ts: _prereq_demos/<name>/project.json is addressed as project <name>.
+  const top = path.join(APP, 'src/scenes', projName);
+  const dir = existsSync(path.join(top, 'project.json')) ? top : path.join(APP, 'src/scenes/_prereq_demos', projName);
+  const mf = path.join(dir, 'project.json');
+  const manifest = existsSync(mf) ? await Bun.file(mf).json() : { project: projName, entries: [] };
   /** Manifest paths are project-folder-relative; app-relative paths (e.g. public/audio/x.mp3) are accepted as a fallback. */
   const at = (p?: string) => !p ? undefined : path.isAbsolute(p) ? p : !existsSync(path.join(dir, p)) && existsSync(path.join(APP, p)) ? path.join(APP, p) : path.join(dir, p);
-  return { projName, manifest, at };
+  return { projName, dir, manifest, at };
 }
 const SCALE = Math.max(1, Math.round(numOpt('scale', 1, 1, 4)));
 const OW = 1920 * SCALE, OH = 1080 * SCALE; // output size
@@ -264,10 +267,11 @@ async function sheet(page: Page, times: number[], cols: number, out: string) {
   await Bun.write(out, Buffer.from(dataUrl.split(',')[1]!, 'base64'));
 }
 
-async function audioOnly(page: Page, from: number, to: number, outOpt?: string) {
+async function audioOnly(page: Page, from: number, to: number, outOpt: string | undefined, fullRange: boolean) {
   const evMod = await import('../src/engine/events');
-  const { projName, manifest, at } = await loadProject();
-  const out = outOpt ? resolveOut(outOpt) : at(manifest.audio) ?? path.join(ROOT, 'out/audio.wav');
+  const { dir, manifest, at } = await loadProject();
+  // Only a full-length export may replace the project soundtrack; excerpts go to out/audio.wav.
+  const out = outOpt ? resolveOut(outOpt) : (fullRange && at(manifest.audio)) || path.join(ROOT, 'out/audio.wav');
   const outDir = path.dirname(path.resolve(out));
   if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
   const toMp3 = out.endsWith('.mp3');
@@ -289,7 +293,7 @@ async function audioOnly(page: Page, from: number, to: number, outOpt?: string) 
 
   let mixPath = opt('mix');
   if (!mixPath) {
-    const candidateSceneMix = path.join(APP, 'src/scenes', projName, 'mix.json');
+    const candidateSceneMix = path.join(dir, 'mix.json');
     const candidatePublicMix = path.join(APP, 'public/data/mix.json');
     if (existsSync(candidateSceneMix)) mixPath = candidateSceneMix;
     else if (existsSync(candidatePublicMix)) mixPath = candidatePublicMix;
@@ -351,7 +355,7 @@ async function video(page: Page, from: number, to: number, fps: number, out: str
   const defaultAudio = path.join(APP, 'public/audio/audio.mp3');
   let audio = explicitAudio ? resolveOut(explicitAudio) : (existsSync(defaultAudio) ? defaultAudio : '');
   let mixPath = opt('mix');
-  if (!explicitAudio && !mixPath) {
+  if (!explicitAudio && !mixPath && !flag('noaudio')) {
     const { manifest, at } = await loadProject();
     const master = at(manifest.audio);
     if (master && existsSync(master)) { audio = master; console.log(`[render] audio: ${master} (project.json "audio")`); }
@@ -362,8 +366,7 @@ async function video(page: Page, from: number, to: number, fps: number, out: str
   const eventsOut = opt('events-out');
   if (eventsOut || (mixPath && !flag('noaudio'))) {
     const evMod = await import('../src/engine/events');
-    const projName = opt('project') ?? JSON.parse(await Bun.file(path.join(APP, 'src/scenes/active.json')).text()).project;
-    const manifest = await Bun.file(path.join(APP, 'src/scenes', projName, 'project.json')).json();
+    const { manifest } = await loadProject();
     const analysisPath = opt('analysis') ? resolveOut(opt('analysis')) : path.join(APP, 'public/data/audio.json');
     const analysis = existsSync(analysisPath) ? await Bun.file(analysisPath).json() : null;
     const registry = new evMod.EventRegistry();
@@ -1058,7 +1061,7 @@ try {
     const aFrom = numOpt('from', 0, 0);
     let aTo = numOpt('to', dur, 0);
     if (aTo <= aFrom) { console.warn(`[audio] Empty window (to<=from), expanding to from+1s`); aTo = aFrom + 1; }
-    await audioOnly(page, aFrom, aTo, opt('out'));
+    await audioOnly(page, aFrom, aTo, opt('out'), aFrom === 0 && aTo >= dur - 1e-3);
   } else if (mode === 'video') {
     const dur: number = await page.evaluate(() => (window as any).__motion?.duration ?? (window as any).__pdoom?.duration ?? 5.0);
     const vFrom = numOpt('from', 0, 0);

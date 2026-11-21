@@ -100,7 +100,7 @@ Each project folder defines its scenes and transitions in a `project.json` manif
 
 
 - `mix`: the project's mix manifest (`mix.json`), relative to the project folder.
-- `audio`: the final soundtrack, relative to the project folder (app-relative paths such as `public/audio/x.mp3` also resolve). `render.ts audio` writes the mixdown here when `--out` is not given (a `.mp3` target is encoded at 320 kbps from the mixdown WAV), and `render.ts video` muxes it when neither `--audio` nor `--mix` is passed. If the file does not exist yet, `video` falls back to a mixdown of `mix`.
+- `audio`: the final soundtrack, relative to the project folder (app-relative paths such as `public/audio/x.mp3` also resolve). `render.ts audio` writes a full-length mixdown here when `--out` is not given (partial `--from`/`--to` ranges go to `out/audio.wav`) (a `.mp3` target is encoded at 320 kbps from the mixdown WAV), and `render.ts video` muxes it when neither `--audio` nor `--mix` is passed. If the file does not exist yet, `video` falls back to a mixdown of `mix`.
 
 ---
 
