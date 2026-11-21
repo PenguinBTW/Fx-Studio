@@ -121,7 +121,7 @@ Transitions are declared in the project manifest:
 }
 ```
 
-- **Window Span**: Starts at $\text{at} - \frac{\text{dur}}{2}$ (or $\text{at}$ depending on alignment) and spans $\text{dur}$ seconds.
+- **Window Span**: Starts at `at` and spans `dur` seconds (`start = at`, `end = at + dur`).
 - **Normalized Progress $u(t)$**:
   $$u(t) = \text{clamp}\left(\frac{t - \text{start}}{\text{dur}}, 0, 1\right)$$
   - At start: $u = 0.0$ (100% Scene A).

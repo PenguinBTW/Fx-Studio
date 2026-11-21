@@ -94,6 +94,20 @@ const results: { name: string; ok: boolean; detail: string }[] = await page.eval
     add('colour gradient, default post', maxErr <= 1, `max error ${maxErr} LSB`);
   }
 
+  // 3b. gradeStage: a warm tint on HDR white survives ACES only when graded after the tone map
+  fill('fragColor = vec4(4.0, 4.0, 4.0, 1.0);');
+  {
+    const warm = { tint: [1, 0.8, 0.6] as [number, number, number] };
+    const split = (b: Uint8Array) => { const q = px(b, W >> 1, H >> 1); return q[0]! - q[2]!; };
+    const sc = split(run({ ...clean, toneMap: 'aces', grade: warm }));
+    const ds = split(run({ ...clean, toneMap: 'aces', grade: warm, gradeStage: 'display' }));
+    add('gradeStage display keeps a tint on HDR white', ds > sc + 20, `R-B split: scene ${sc}, display ${ds}`);
+    const z = run({ ...clean, toneMap: 'aces', clipView: 1 });
+    let mag = 0, n = 0;
+    for (let y = 4; y < H; y += 37) for (let x = 4; x < W; x += 41) { const q = px(z, x, y); n++; if (q[1]! < 40 && (q[0]! > 200 || q[0]! < 40)) mag++; }
+    add('clipView stripes pixels above 1', mag === n, `${mag}/${n} sampled pixels striped`);
+  }
+
   // 4. hue of clipped violet-white under each tone map (oklab hue of the output, vs the input's)
   const oklab = (r8: number[]) => {
     const l = r8.map((v) => { const c = v / 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); });
