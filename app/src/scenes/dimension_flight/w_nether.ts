@@ -37,7 +37,7 @@ const ceilH = (x: number, z: number) => 150 - 26 * fbm2c(x * 0.012, z * 0.012, 5
 
 export function nether(renderer: THREE.WebGLRenderer): World & { plant(part: (id: string) => THREE.Object3D): void } {
   const scene = new THREE.Scene();
-  const fog: FogSpec = { color: new THREE.Color(0.16, 0.028, 0.014), density: 0.0014, height: 6, falloff: 0.032 };
+  const fog: FogSpec = { color: new THREE.Color(0.16, 0.028, 0.014), density: 0.0009, height: 6, falloff: 0.032 };
   scene.add(makeSky(SKY));
   scene.environment = envFromSky(renderer, SKY);
   scene.environmentIntensity = 0.3;
@@ -162,7 +162,7 @@ export function nether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
     if (nearPath(p[0], p[1], p[2]) < sz + 12) continue;
     smoke.push({ p, s: sz, seed });
   }
-  scene.add(makePuffs(smoke, { lit: new THREE.Color(0.9, 0.18, 0.04), shade: new THREE.Color(0.03, 0.01, 0.01), sunDir: new THREE.Vector3(0, -1, 0), fog, opacity: 0.32, drift: [0.3, 1.2, 0], nearFade: 12 }));
+  scene.add(makePuffs(smoke, { lit: new THREE.Color(0.9, 0.18, 0.04), shade: new THREE.Color(0.03, 0.01, 0.01), sunDir: new THREE.Vector3(0, -1, 0), fog, opacity: 0.2, drift: [0.3, 1.2, 0], nearFade: 12 }));
   scene.add(makeMotes({ count: 2600, box: [80, 50, 80], color: new THREE.Color(6, 1.8, 0.3), color2: new THREE.Color(4, 0.7, 0.1), size: 0.05, vel: [0.3, 2.2, 0.2], swirl: 1.4, flicker: 0.7 }));
   // basalt stalactites and glowing seams framing the climb to the End frame
   const stM: THREE.Matrix4[] = [], seamM: THREE.Matrix4[] = [];

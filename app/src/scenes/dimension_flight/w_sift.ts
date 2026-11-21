@@ -15,7 +15,7 @@ vec3 skyColor(vec3 d) {
   float h = d.y, s = max(dot(d, uSun), 0.0);
   vec3 c = mix(vec3(0.75, 1.05, 0.88), vec3(0.03, 0.42, 0.55), pow(clamp(h, 0.0, 1.0), 0.45));
   c = mix(c, vec3(0.70, 0.55, 0.58), smoothstep(0.02, -0.25, h));
-  c += vec3(1.3, 0.8, 0.7) * pow(s, 6.0) * 0.6 + vec3(6.0, 5.6, 4.6) * smoothstep(0.9985, 0.9992, s);
+  c += vec3(1.3, 0.8, 0.7) * pow(s, 6.0) * 0.6 + vec3(2.2, 2.0, 1.7) * smoothstep(0.9985, 0.9992, s);
   vec2 p = d.xz / max(d.y + 0.08, 0.03);
   float cl = smoothstep(0.55, 0.85, fbm2(p * 0.35 + t * 0.004)) * smoothstep(0.02, 0.2, h);
   c = mix(c, vec3(1.15, 1.05, 1.08) + vec3(0.3, 0.2, 0.1) * pow(s, 3.0), cl * 0.55);
@@ -34,7 +34,7 @@ export const siftH = (x: number, z: number) => {
   return -88 + terr + lumps + 22 * sstep(160, 460, Math.abs(x)) - 26 * (1 - ravine(x, z));
 };
 
-export function sift(renderer: THREE.WebGLRenderer): World {
+export function sift(renderer: THREE.WebGLRenderer): World & { plant(part: (id: string) => THREE.Object3D): void } {
   const scene = new THREE.Scene();
   const fog: FogSpec = { color: new THREE.Color(0.42, 0.86, 0.8), density: 0.00014, height: -84, falloff: 0.03 };
   const skyU = { uSun: { value: SUN } };
@@ -69,15 +69,14 @@ export function sift(renderer: THREE.WebGLRenderer): World {
   const coralG = mergeGeometries(branches)!;
   const frondG = new THREE.ConeGeometry(0.22, 2.2, 5, 1).translate(0, 1.1, 0);
   const coralMs: THREE.Matrix4[] = [], coralCs: THREE.Color[] = [], frondMs: THREE.Matrix4[] = [];
-  for (let i = 0; i < 60000 && coralMs.length < 11000; i++) {
+  for (let i = 0; i < 60000 && coralMs.length < 3400; i++) {
     const x = (r() - 0.5) * 520, z = -900 - r() * 640, y = siftH(x, z);
     if (ravine(x, z) < 0.85 || nearPath(x, y, z) < 5) continue;
     const s = 0.8 + r() * 2.2, m = mat4([x, y - 0.2, z], [s, s * (0.8 + r() * 0.6), s], [0, r() * 6, 0]);
-    if (r() < 0.72) { coralMs.push(m); coralCs.push(new THREE.Color().setHSL(0.99 + r() * 0.03, 0.62, 0.62 + r() * 0.12)); }
+    if (r() < 0.72) { if (nearPath(x, y + 6 * s, z) < 6 * s + 4) continue; coralMs.push(mat4([x, y - 0.3, z], [s * 3.2, s * (2.4 + r() * 1.6), s * 3.2], [0, r() * 6, 0])); coralCs.push(new THREE.Color().setHSL(0.99 + r() * 0.03, 0.62, 0.62 + r() * 0.12)); }
     else frondMs.push(m);
   }
   const coralMat = pbr(fog, { vertexColors: false, color: '#ffffff', roughness: 0.6, emissive: new THREE.Color('#ff6f6a'), emissiveIntensity: 0.12 });
-  const coral = instanced(coralG, coralMat, coralMs, coralCs); coral.castShadow = true; scene.add(coral);
   const fronds = instanced(frondG, pbr(fog, { vertexColors: false, color: '#27b3a6', roughness: 0.55, emissive: new THREE.Color('#0f6b66'), emissiveIntensity: 0.25 }), frondMs);
   fronds.castShadow = true; scene.add(fronds);
 
@@ -91,14 +90,10 @@ export function sift(renderer: THREE.WebGLRenderer): World {
   const pos = canopyG.attributes.position!;
   for (let i = 0; i < pos.count; i++) { const x = pos.getX(i), z = pos.getZ(i), d = Math.hypot(x, z); pos.setY(i, pos.getY(i) * 0.35 - d * d * 0.25 + 0.06 * Math.sin(Math.atan2(z, x) * 7) * d); }
   canopyG.computeVertexNormals();
+  const treeMs: THREE.Matrix4[] = [];
   const tree = (x: number, z: number, s: number) => {
-    const g = new THREE.Group(), y = siftH(x, z);
-    const tr = new THREE.Mesh(trunkG, bark); tr.castShadow = tr.receiveShadow = true; g.add(tr);
-    for (let k = 0; k < 3; k++) {
-      const c = new THREE.Mesh(canopyG, leaf), w = 16 - k * 4.5;
-      c.scale.set(w, w * 0.9, w); c.position.set((r() - 0.5) * 3, 30 + k * 6, (r() - 0.5) * 3); c.castShadow = true; g.add(c);
-    }
-    g.position.set(x, y - 1, z); g.scale.setScalar(s); g.rotation.y = r() * 6; scene.add(g);
+    const y = siftH(x, z), k = 46 * s;
+    treeMs.push(mat4([x, y - 1, z], [k * (0.9 + r() * 0.25), k, k * (0.9 + r() * 0.25)], [0, r() * 6, 0]));
   };
   for (let i = 0, n = 0; i < 400 && n < 16; i++) {
     const x = (r() - 0.5) * 640, z = -960 - r() * 600, s = 0.7 + r() * 0.8, y = siftH(x, z);
@@ -107,6 +102,17 @@ export function sift(renderer: THREE.WebGLRenderer): World {
   }
   tree(TREE.x, TREE.z, 3.2);
 
+  /** Blender sculk coral + pale drooping giants (assets/sift_flora), instanced over the placements above. */
+  const plant = (part: (id: string) => THREE.Object3D) => {
+    const put = (id: string, ms: THREE.Matrix4[], cs?: THREE.Color[]) => part(id).traverse((o) => {
+      const m = o as THREE.Mesh; if (!m.isMesh) return;
+      const om = m.material as THREE.MeshStandardMaterial;
+      const mt = om.name === 'SiftCoral' ? coralMat : om.name === 'PaleBark' ? bark : om.name === 'PaleLeaf' ? leaf
+        : pbr(fog, { vertexColors: false, color: '#b8f4e4', roughness: 0.5, emissive: new THREE.Color('#5fe8d0'), emissiveIntensity: 0.9 });
+      const im = instanced(m.geometry, mt, ms, om.name === 'SiftCoral' ? cs : undefined); im.castShadow = true; scene.add(im);
+    });
+    put('coral', coralMs, coralCs); put('paletree', treeMs);
+  };
   // ---- glowing ichor pools on the ravine floors
   const ichor = /* glsl */ `vec4 surface(vec3 wp, vec3 n, vec2 uv) {
       float f = fbm(vec3(wp.xz * 0.08, t * 0.25)), g = fbm(vec3(wp.xz * 0.3 + t * 0.2, 3.0));
@@ -132,7 +138,7 @@ export function sift(renderer: THREE.WebGLRenderer): World {
 
   const lightPos = new THREE.Vector3();
   return {
-    name: 'sift', scene, fog, lightPos,
+    name: 'sift', scene, fog, lightPos, plant,
     update(t, cam, bird) { sun.follow(bird); setTime(scene, t); lightPos.copy(cam.position).addScaledVector(SUN, 4000); },
     overlay(rd, cam, target, t) { souls.render(rd, cam, target, t); },
     post: () => ({ grade: { saturation: 1.45, gamma: 0.82, gain: 1.06 }, exposure: 0.95, bloom: 0.6, bloomThreshold: 1.2, volumetric: 0.18, volumetricDecay: 0.93, halation: 0.1, ca: 0.5 }),

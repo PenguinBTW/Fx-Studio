@@ -11,7 +11,7 @@ const SKY = /* glsl */ `
 vec3 skyColor(vec3 d) {
   float n = fbm(d * 2.2 + vec3(0.0, 0.0, t * 0.004)), m = fbm(d * 5.0 + n * 1.5);
   vec3 c = vec3(0.006, 0.003, 0.014);
-  c += vec3(0.10, 0.03, 0.18) * smoothstep(0.45, 0.85, n) * (0.5 + m);
+  c += vec3(0.05, 0.016, 0.095) * smoothstep(0.5, 0.9, n) * (0.5 + m);
   c += vec3(0.02, 0.09, 0.10) * smoothstep(0.55, 0.9, m) * smoothstep(0.4, 0.7, n);
   vec3 g = floor(d * 420.0); float h = bh31(g);
   c += vec3(1.4, 1.2, 1.8) * step(0.9975, h) * (0.6 + 0.4 * sin(t * 2.0 + h * 90.0));
@@ -32,7 +32,7 @@ export function theEnd(renderer: THREE.WebGLRenderer): World & { plant(part: (id
   const key = new Sun(scene, new THREE.Vector3(0.3, 1, 0.25), '#ffe6c4', 2.4, 110);
   scene.add(new THREE.HemisphereLight('#6a4aa0', '#1a1020', 0.7));
   const r = rng(1234);
-  const stoneTop = new THREE.Color(0.78, 0.74, 0.5), stonePit = new THREE.Color(0.2, 0.17, 0.12), under = new THREE.Color(0.30, 0.26, 0.24);
+  const stoneTop = new THREE.Color(0.95, 0.9, 0.62), stonePit = new THREE.Color(0.2, 0.17, 0.12), under = new THREE.Color(0.30, 0.26, 0.24);
   const stoneColor = (x: number, _y: number, z: number, slope: number, u: boolean, c: THREE.Color) => {
     const pits = sstep(0.2, 0.5, fbm2c(x * 0.35, z * 0.35, 3, 7));
     c.copy(stoneTop).lerp(stonePit, Math.min(1, pits * 1.1 + slope * 0.6));

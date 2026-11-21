@@ -56,10 +56,13 @@ def wing_outline(s):
     span = 1.05
     x = 0.07 + s * span
     sweep = 0.34 * s ** 1.6                             # tip swept back (+Y)
-    chord = 0.30 * (1 - s) ** 0.55 * (1 - 0.25 * s) + 0.015
+    chord = 0.34 * (1 - s) ** 0.5 * (1 - 0.2 * s) + 0.02
     lead = -0.10 + sweep - 0.04 * math.sin(math.pi * s)
-    return x, lead, lead + chord
-SN, CN = 22, 6
+    # scalloped trailing edge: secondaries inboard, longer separated primaries outboard
+    n = 7 if s < 0.45 else 10
+    scallop = (0.025 + 0.05 * s) * (1 - abs(math.sin(math.pi * s * n))) ** 2 * (1 - s ** 6)
+    return x, lead, lead + chord + scallop
+SN, CN = 90, 7
 wv, wf, ws = [], [], []
 for i in range(SN + 1):
     s = i / SN; x, l, t = wing_outline(s)
@@ -79,8 +82,8 @@ for i in range(TS + 1):
     for side in (-1, 1):
         pass
 def tail_pts(s):  # half-tail (x>=0): inner edge, outer edge
-    y = 0.36 + 0.62 * s
-    outer = 0.05 + 0.20 * s ** 0.8
+    y = 0.36 + 0.82 * s
+    outer = 0.05 + 0.22 * s ** 0.8
     inner = 0.0 if s < 0.35 else 0.16 * ((s - 0.35) / 0.65) ** 0.9 + 0.0
     width = max(0.012, 0.11 * (1 - s) ** 1.2)
     inner = max(inner, outer - width)
