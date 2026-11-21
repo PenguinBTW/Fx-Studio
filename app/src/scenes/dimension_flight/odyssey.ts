@@ -6,6 +6,8 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { W, H, PW, PH, makeRT } from '../../engine/gl';
 import { smoothstep } from '../../engine/util';
 import { Swallow } from './swallow';
+import { PLUMAGE_RIM } from './materials/plumage';
+const RIM_BY_WORLD = ['#3a4a70', '#ff7a30', '#8a78ff', '#4a4030', '#2a8070'];
 import { DepthDoFPass } from '../../engine/dof';
 import { GLTFManager } from '../../engine/gltf';
 import { resolveAsset } from '../../engine/assets';
@@ -147,6 +149,7 @@ export default class Odyssey extends Scene {
     let k = 0; while (k < this.camCross.length && t >= this.camCross[k]!) k++;
     let bw = 0; while (bw < PORTALS.length && t >= PORTALS[bw]!.t) bw++;
     this.worlds[bw]!.scene.add(this.bird.group);
+    PLUMAGE_RIM.value.set(RIM_BY_WORLD[bw] ?? '#b8d0ff');
 
     const cur = this.worlds[k]!;
     cur.update(t, cam, birdP);

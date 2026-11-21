@@ -1,8 +1,12 @@
 import * as THREE from 'three';
 
-// Swallow back plumage: deep navy with a thin-film sheen that shifts blue→violet with view angle.
-export default () =>
-  new THREE.MeshPhysicalMaterial({
+/** Camera-facing rim (kicker) light colour for the swallow; the scene sets it per world. */
+export const PLUMAGE_RIM = { value: new THREE.Color('#b8d0ff') };
+
+// Swallow back plumage: deep navy with a thin-film sheen that shifts blue→violet with view angle,
+// plus a fresnel rim so the silhouette separates from dark backgrounds from any angle.
+export default () => {
+  const m = new THREE.MeshPhysicalMaterial({
     color: '#0b1838',
     roughness: 0.68,
     specularIntensity: 0.35,
@@ -18,3 +22,12 @@ export default () =>
     envMapIntensity: 0.25,
     side: THREE.DoubleSide,
   });
+  m.onBeforeCompile = (s) => {
+    s.uniforms.uRim = PLUMAGE_RIM;
+    s.fragmentShader = s.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform vec3 uRim;')
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n{ float fr = pow(1.0 - abs(dot(normalize(normal), normalize(vViewPosition))), 3.5); totalEmissiveRadiance += uRim * fr * 0.6; }');
+  };
+  m.customProgramCacheKey = () => 'plumage-rim';
+  return m;
+};
