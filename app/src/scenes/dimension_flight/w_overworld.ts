@@ -49,7 +49,7 @@ function nearPath(x: number, y: number, z: number) {
 
 export function overworld(renderer: THREE.WebGLRenderer): World & { plant(part: (id: string) => THREE.Object3D): void } {
   const scene = new THREE.Scene();
-  const fog: FogSpec = { color: new THREE.Color(0.82, 0.64, 0.55), density: 0.00105, height: 4, falloff: 0.03 };
+  const fog: FogSpec = { color: new THREE.Color(0.9, 0.7, 0.52), density: 0.0006, height: 4, falloff: 0.03 };
   const skyU = { uSun: { value: SUN } };
   scene.add(makeSky(SKY, skyU));
   scene.environment = envFromSky(renderer, SKY, skyU);
@@ -145,7 +145,7 @@ export function overworld(renderer: THREE.WebGLRenderer): World & { plant(part: 
       sun.follow(bird); setTime(scene, t);
       lightPos.copy(cam.position).addScaledVector(SUN, 4000);
     },
-    post: () => ({ volumetric: 0.32, volumetricDecay: 0.94, exposure: 1.0, bloom: 0.5, bloomThreshold: 1.2 }),
+    post: () => ({ grade: { saturation: 1.25, gamma: 0.85, gain: 1.05 }, volumetric: 0.32, volumetricDecay: 0.94, exposure: 1.0, bloom: 0.5, bloomThreshold: 1.2 }),
     dispose() { disposeTree(scene); disposeEnv(scene); },
   };
 }

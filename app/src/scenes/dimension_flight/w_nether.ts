@@ -37,7 +37,7 @@ const ceilH = (x: number, z: number) => 150 - 26 * fbm2c(x * 0.012, z * 0.012, 5
 
 export function nether(renderer: THREE.WebGLRenderer): World & { plant(part: (id: string) => THREE.Object3D): void } {
   const scene = new THREE.Scene();
-  const fog: FogSpec = { color: new THREE.Color(0.16, 0.028, 0.014), density: 0.00216, height: 6, falloff: 0.015 };
+  const fog: FogSpec = { color: new THREE.Color(0.16, 0.028, 0.014), density: 0.0014, height: 6, falloff: 0.015 };
   scene.add(makeSky(SKY));
   scene.environment = envFromSky(renderer, SKY);
   scene.environmentIntensity = 0.3;
@@ -102,7 +102,7 @@ export function nether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
   for (const [c, warped] of [[CRIMSON, false], [WARPED, true]] as const) for (let i = 0; i < 70; i++) {
     const a = r() * Math.PI * 2, d = Math.sqrt(r()) * 34, x = c.x + Math.cos(a) * d, z = c.y + Math.sin(a) * d;
     const y = floorH(x, z), h = 7 + r() * 16 + (d < 12 ? 10 : 0), cw = 4 + h * 0.35 + r() * 3;
-    if (nearPath(x, y + h + 3, z) < 9) continue;
+    if (nearPath(x, y + h + 3, z) < 16) continue;
     const lean = (r() - 0.5) * 0.25;
     stemM.push(M(x, y + h / 2, z, 0.9 + h * 0.04, h, 0.9 + h * 0.04, 0, lean, (r() - 0.5) * 0.25));
     stemC.push(warped ? new THREE.Color(0.06, 0.12, 0.16) : new THREE.Color(0.32, 0.06, 0.09));

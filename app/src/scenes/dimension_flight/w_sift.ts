@@ -68,7 +68,7 @@ export function sift(renderer: THREE.WebGLRenderer): World {
   const coralG = mergeGeometries(branches)!;
   const frondG = new THREE.ConeGeometry(0.22, 2.2, 5, 1).translate(0, 1.1, 0);
   const coralMs: THREE.Matrix4[] = [], coralCs: THREE.Color[] = [], frondMs: THREE.Matrix4[] = [];
-  for (let i = 0; i < 26000 && coralMs.length < 5200; i++) {
+  for (let i = 0; i < 60000 && coralMs.length < 11000; i++) {
     const x = (r() - 0.5) * 520, z = -900 - r() * 640, y = siftH(x, z);
     if (ravine(x, z) < 0.85 || nearPath(x, y, z) < 5) continue;
     const s = 0.8 + r() * 2.2, m = mat4([x, y - 0.2, z], [s, s * (0.8 + r() * 0.6), s], [0, r() * 6, 0]);
@@ -134,7 +134,7 @@ export function sift(renderer: THREE.WebGLRenderer): World {
     name: 'sift', scene, fog, lightPos,
     update(t, cam, bird) { sun.follow(bird); setTime(scene, t); lightPos.copy(cam.position).addScaledVector(SUN, 4000); },
     overlay(rd, cam, target, t) { souls.render(rd, cam, target, t); },
-    post: () => ({ grade: { saturation: 1.35, gamma: 0.86, gain: 1.05 }, exposure: 0.95, bloom: 0.6, bloomThreshold: 1.2, volumetric: 0.18, volumetricDecay: 0.93, halation: 0.1, ca: 0.5 }),
+    post: () => ({ grade: { saturation: 1.45, gamma: 0.82, gain: 1.06 }, exposure: 0.95, bloom: 0.6, bloomThreshold: 1.2, volumetric: 0.18, volumetricDecay: 0.93, halation: 0.1, ca: 0.5 }),
     dispose() { souls.dispose(); disposeTree(scene); disposeEnv(scene); },
   };
 }

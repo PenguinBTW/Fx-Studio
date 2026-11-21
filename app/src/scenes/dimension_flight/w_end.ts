@@ -146,7 +146,7 @@ export function theEnd(renderer: THREE.WebGLRenderer): World & { plant(part: (id
       egg.position.y = EGG.y + Math.sin(t * 0.8) * 0.8;
       void nearPath;
     },
-    post: () => ({ grade: { saturation: 1.15, gamma: 0.9 }, exposure: 1.05, bloom: 0.9, bloomThreshold: 0.9, volumetric: 0.25, volumetricDecay: 0.93, halation: 0.2, ca: 1.0 }),
+    post: () => ({ grade: { saturation: 1.25, gamma: 0.85 }, exposure: 1.05, bloom: 0.9, bloomThreshold: 0.9, volumetric: 0.25, volumetricDecay: 0.93, halation: 0.2, ca: 1.0 }),
     dispose() { disposeTree(scene); disposeEnv(scene); },
   };
 }
