@@ -13,12 +13,12 @@ const SKY = /* glsl */ `
 uniform vec3 uSun;
 vec3 skyColor(vec3 d) {
   float h = d.y, s = max(dot(d, uSun), 0.0);
-  vec3 c = mix(vec3(0.75, 1.05, 0.88), vec3(0.03, 0.42, 0.55), pow(clamp(h, 0.0, 1.0), 0.45));
+  vec3 c = mix(vec3(0.22, 0.86, 0.74), vec3(0.02, 0.46, 0.58), pow(clamp(h, 0.0, 1.0), 0.5));
   c = mix(c, vec3(0.70, 0.55, 0.58), smoothstep(0.02, -0.25, h));
-  c += vec3(1.3, 0.8, 0.7) * pow(s, 6.0) * 0.6 + vec3(2.2, 2.0, 1.7) * smoothstep(0.9985, 0.9992, s);
+  c += vec3(1.2, 0.85, 0.7) * pow(s, 6.0) * 0.3 + vec3(0.7, 0.65, 0.55) * smoothstep(0.9985, 0.9992, s);
   vec2 p = d.xz / max(d.y + 0.08, 0.03);
   float cl = smoothstep(0.55, 0.85, fbm2(p * 0.35 + t * 0.004)) * smoothstep(0.02, 0.2, h);
-  c = mix(c, vec3(1.15, 1.05, 1.08) + vec3(0.3, 0.2, 0.1) * pow(s, 3.0), cl * 0.55);
+  c = mix(c, vec3(0.95, 1.0, 0.98) + vec3(0.3, 0.2, 0.1) * pow(s, 3.0), cl * 0.35);
   return c;
 }`;
 const TREE = new THREE.Vector3(30, -95, -1360);
@@ -36,7 +36,7 @@ export const siftH = (x: number, z: number) => {
 
 export function sift(renderer: THREE.WebGLRenderer): World & { plant(part: (id: string) => THREE.Object3D): void } {
   const scene = new THREE.Scene();
-  const fog: FogSpec = { color: new THREE.Color(0.42, 0.86, 0.8), density: 0.00014, height: -84, falloff: 0.03 };
+  const fog: FogSpec = { color: new THREE.Color(0.24, 0.78, 0.7), density: 0.0001, height: -84, falloff: 0.03 };
   const skyU = { uSun: { value: SUN } };
   scene.add(makeSky(SKY, skyU));
   scene.environment = envFromSky(renderer, SKY, skyU);
@@ -73,7 +73,7 @@ export function sift(renderer: THREE.WebGLRenderer): World & { plant(part: (id: 
     const x = (r() - 0.5) * 520, z = -900 - r() * 640, y = siftH(x, z);
     if (ravine(x, z) < 0.85 || nearPath(x, y, z) < 5) continue;
     const s = 0.8 + r() * 2.2, m = mat4([x, y - 0.2, z], [s, s * (0.8 + r() * 0.6), s], [0, r() * 6, 0]);
-    if (r() < 0.72) { if (nearPath(x, y + 6 * s, z) < 6 * s + 4) continue; coralMs.push(mat4([x, y - 0.3, z], [s * 3.2, s * (2.4 + r() * 1.6), s * 3.2], [0, r() * 6, 0])); coralCs.push(new THREE.Color().setHSL(0.99 + r() * 0.03, 0.62, 0.62 + r() * 0.12)); }
+    if (r() < 0.72) { if (nearPath(x, y + 6 * s, z) < 6 * s + 4) continue; coralMs.push(mat4([x, y - 0.3, z], [s * 3.2, s * (2.4 + r() * 1.6), s * 3.2], [0, r() * 6, 0])); coralCs.push(new THREE.Color().setHSL(0.99 + r() * 0.03, 0.8, 0.56 + r() * 0.1)); }
     else frondMs.push(m);
   }
   const coralMat = pbr(fog, { vertexColors: false, color: '#ffffff', roughness: 0.6, emissive: new THREE.Color('#ff6f6a'), emissiveIntensity: 0.12 });
@@ -81,8 +81,8 @@ export function sift(renderer: THREE.WebGLRenderer): World & { plant(part: (id: 
   fronds.castShadow = true; scene.add(fronds);
 
   // ---- pale giant trees: flared bone-white trunks carrying stacked, drooping mint-white canopies
-  const bark = pbr(fog, { vertexColors: false, color: '#e4ded6', roughness: 0.75 });
-  const leaf = pbr(fog, { vertexColors: false, color: '#d8f4ec', roughness: 0.55, emissive: new THREE.Color('#7fd8c8'), emissiveIntensity: 0.18, side: THREE.DoubleSide });
+  const bark = pbr(fog, { vertexColors: false, color: '#3e3840', roughness: 0.8 });
+  const leaf = pbr(fog, { vertexColors: false, color: '#eef1ee', roughness: 0.6, emissive: new THREE.Color('#c8e8e0'), emissiveIntensity: 0.1, side: THREE.DoubleSide });
   const trunkProf: THREE.Vector2[] = [];
   for (let i = 0; i <= 24; i++) { const k = i / 24; trunkProf.push(new THREE.Vector2(0.9 + 3.2 * Math.pow(1 - k, 6) + 0.25 * Math.sin(k * 9), k * 40)); }
   const trunkG = new THREE.LatheGeometry(trunkProf, 18);
@@ -130,7 +130,7 @@ export function sift(renderer: THREE.WebGLRenderer): World & { plant(part: (id: 
   const souls = new LargeParticles(9000, 2027);
   souls.configure({
     mode: 'fall', style: 'disc', size: [0.14, 0.42], life: [6, 14],
-    color: { mode: 'flat', rgb: [0.55, 1.0, 0.92] }, intensity: 2.6, brightnessVariance: 0.7, fade: [0.15, 0.3],
+    color: { mode: 'flat', rgb: [0.4, 0.82, 1.0] }, intensity: 3.4, brightnessVariance: 0.7, fade: [0.15, 0.3],
     turbulence: { amp: 1.6, freq: 0.06, drift: 0.2 },
     fall: { center: [0, -95, -1150], box: [260, 10, 300], velocity: [0.6, 4.2, -0.4], drag: 0 },
   });

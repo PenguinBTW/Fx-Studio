@@ -56,11 +56,12 @@ def wing_outline(s):
     span = 1.05
     x = 0.07 + s * span
     sweep = 0.34 * s ** 1.6                             # tip swept back (+Y)
-    chord = 0.34 * (1 - s) ** 0.5 * (1 - 0.2 * s) + 0.02
-    lead = -0.10 + sweep - 0.04 * math.sin(math.pi * s)
-    # scalloped trailing edge: secondaries inboard, longer separated primaries outboard
-    n = 7 if s < 0.45 else 10
-    scallop = (0.025 + 0.05 * s) * (1 - abs(math.sin(math.pi * s * n))) ** 2 * (1 - s ** 6)
+    # broad inner wing/wrist (reads as a wing from behind and head-on), tapering to a pointed hand
+    chord = 0.46 * (1 - s) ** 0.62 * (1 - 0.15 * s) + 0.03 + 0.06 * math.exp(-((s - 0.38) / 0.16) ** 2)
+    lead = -0.10 + sweep - 0.05 * math.sin(math.pi * s)
+    # separated primaries: 6 fingers on the outer hand only
+    f = max(0.0, (s - 0.68) / 0.32)
+    scallop = 0.07 * f * (1 - abs(math.sin(math.pi * f * 6))) ** 3 * (1 - f ** 4)
     return x, lead, lead + chord + scallop
 SN, CN = 90, 7
 wv, wf, ws = [], [], []
