@@ -143,7 +143,14 @@ export default class Odyssey extends Scene {
     const birdP = this.poseBird(t).clone();
     const look = birdP.clone().addScaledVector(BIRD.vel(t, V()), 0.12);
     cam.up.copy(UP).lerp(DOWNZ, DIVE.at(t - 0.2)).normalize();
-    { const h = heroAt(t); cam.fov = THREE.MathUtils.lerp(CAM_FOV.at(t), h.fov, h.w); } cam.updateProjectionMatrix();
+    { const h = heroAt(t); cam.fov = THREE.MathUtils.lerp(CAM_FOV.at(t), h.fov, h.w); }
+    // keep the swallow's wingspan between ~18% and ~50% of frame height (portal windows excluded so crossings stay exact)
+    if (!PORTALS.some((P) => Math.abs(t - P.t) < 2.6)) {
+      const span = 3.4, tf = 2 * Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2);
+      const v = cam.position.clone().sub(birdP), d = v.length();
+      const dc = THREE.MathUtils.clamp(d, span / (tf * 0.6), span / (tf * 0.3));
+      if (Math.abs(dc - d) > 1e-3) cam.position.copy(birdP).addScaledVector(v.normalize(), dc);
+    } cam.updateProjectionMatrix();
     cam.lookAt(look); cam.updateMatrixWorld();
 
     let k = 0; while (k < this.camCross.length && t >= this.camCross[k]!) k++;
