@@ -94,7 +94,7 @@
           54.0
         ],
         "notext": 1,
-        "caption": "t → −t   ·   any frame, any order"
+        "caption": "t \u00e2\u2020\u2019 \u00e2\u02c6\u2019t   \u00c2\u00b7   any frame, any order"
       }
     },
     {
@@ -128,7 +128,7 @@
           85.5
         ],
         "notext": 1,
-        "caption": "speed = 4×"
+        "caption": "speed = 4\u00c3\u2014"
       }
     },
     {
@@ -153,6 +153,12 @@
       "scene": "fx_promo/s10_finale",
       "id": "s10_finale",
       "start": 195.18,
+      "end": 214.5
+    },
+    {
+      "scene": "fx_promo/s11_mark",
+      "id": "s11_mark",
+      "start": 203.9,
       "end": 214.5
     }
   ],
@@ -308,6 +314,14 @@
       "to": "s10_finale",
       "at": 196.15,
       "dur": 7.771
+    },
+    {
+      "id": "t-portal-mark",
+      "transition": "fxp_portal_mark",
+      "from": "s10_finale",
+      "to": "s11_mark",
+      "at": 203.921,
+      "dur": 10.56
     }
   ]
 }
