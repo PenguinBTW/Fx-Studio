@@ -77,6 +77,12 @@ export default class S7Tunnel extends Scene {
     const off = [[0, 0], [0.75, -0.6], [0, 0], [-0.7, 0.65]][shot]!;
     const look = shot === 2 ? 30 : -30;
     const sub = Math.floor(lt / BAR) % 2, rollK = sub ? (shot % 2 ? -0.32 : 0.32) : 0;
+    // Mid-drop breather: two bars outside the corridor, tracking alongside it as it streams through the void.
+    const ext = lt >= 10 * BAR && lt < 12 * BAR;
+    if (ext) {
+      const e = (lt - 10 * BAR) / (2 * BAR);
+      applyCam(this.cam, { pos: [7.5 - 2.5 * e, 2.6 + 1.2 * e, camZ + 4 - 6 * e], tgt: [0, 0, camZ - 16], fov: 58, roll: -0.12 }, k * 0.8);
+    } else
     applyCam(this.cam, { pos: [sway + off[0]!, 0.15 * Math.sin(lt * 0.9) + off[1]!, camZ], tgt: [sway * 0.3 + off[0]! * 0.2, off[1]! * 0.2, camZ + look], fov: 74 + 10 * prog(T, bar(65), bar(67), ease.inCubic), roll: roll + rollK }, k * 1.6);
     this.head.position.set(0, 0, camZ - 6);
     this.head.color.copy(col);
