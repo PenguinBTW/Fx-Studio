@@ -104,6 +104,57 @@ In f(x) Studio v0.8.0, mixing configurations are authored in type-safe TypeScrip
 | **`ambient`** | Environmental room tones & beds. | Pressurized room drones, space station hums, planetary winds. |
 | **`foley_guide`** | Timing clicks & foley references. | Auxiliary guide stems rendered strictly for sound designers. |
 
+### Manifest Schema (`mix.json`)
+```json
+{
+  "sampleRate": 48000,
+  "buses": {
+    "music": { "gainDb": 0.0 },
+    "sfx": { "gainDb": -1.5 },
+    "sub": { "gainDb": -3.0 }
+  },
+  "stems": [
+    {
+      "id": "soundtrack",
+      "file": "audio/soundtrack.mp3",
+      "bus": "music",
+      "gainDb": 0.0
+    },
+    {
+      "id": "seam_shatter_hit",
+      "file": "sfx/shatter.wav",
+      "bus": "sfx",
+      "eventId": "T2.speedo_shatter",
+      "onset": 0.12,
+      "gainDb": 1.0
+    }
+  ],
+  "duck": {
+    "bus": "music",
+    "cues": ["seam_shatter_hit"],
+    "amountDb": -6.0,
+    "attack": 0.08,
+    "hold": 0.25,
+    "release": 0.35
+  },
+  "mutes": [
+    {
+      "id": "void_blackout",
+      "fromEvent": "T0.void_start",
+      "toEvent": "T0.void_end"
+    }
+  ],
+  "master": {
+    "normalize": true,
+    "lufs": -14.0,
+    "truePeak": -1.5,
+    "fadeOut": { "at": 211.4, "dur": 3.1 }
+  }
+}
+```
+
+`master.fadeOut` applies a linear fade over `[at, at + dur]` (project seconds) after loudness normalization.
+
 ### Mix Manifest Example (`mix.ts`)
 ```typescript
 import { defineMix } from '@/engine/audio';

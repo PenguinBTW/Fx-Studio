@@ -76,7 +76,8 @@ export interface MixManifest {
   };
   vocalSanctuary?: { centerHz?: number; q?: number; cutDb?: number };
   mutes?: MixMute[];
-  master?: { lufs?: number; truePeak?: number; normalize?: boolean; limiterLookaheadMs?: number; limiter?: boolean };
+  /** fadeOut: linear master fade over [at, at + dur] in project time (s), applied after loudnorm. */
+  master?: { lufs?: number; truePeak?: number; normalize?: boolean; limiterLookaheadMs?: number; limiter?: boolean; fadeOut?: { at: number; dur: number } };
   /** Optional second output: foley_guide bus only. */
   foleyGuide?: { out?: string };
 }
@@ -501,6 +502,14 @@ export async function mixdown(o: MixOptions): Promise<MixReport> {
       master = applyLookaheadLimiter(master, tpCeiling, lookaheadMs, sr);
     }
     applyGate(master, regions);
+    if (m.fadeOut && m.fadeOut.dur > 0) {
+      const { at, dur: fd } = m.fadeOut;
+      for (let i = 0; i < frames; i++) {
+        const g = Math.min(1, Math.max(0, 1 - (from + i / sr - at) / fd));
+        if (g < 1) { master[i * CH] *= g; master[i * CH + 1] *= g; }
+      }
+      log(`[mixdown] master fade-out ${at.toFixed(2)}s +${fd.toFixed(2)}s`);
+    }
     writeWav(o.out, master, sr, 24);
     log(`[mixdown] wrote ${o.out} (${frames} samples @ ${sr} Hz, ${dur.toFixed(3)} s)`);
 

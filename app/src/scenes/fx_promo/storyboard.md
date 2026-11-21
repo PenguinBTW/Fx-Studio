@@ -8,8 +8,9 @@ b101–114 final run · b115 tail.
 | # | Act | Bars | Time (s) | World / palette | Camera vector (exit) | Key beats |
 |---|---|---|---|---|---|---|
 | A0 | Cold open | 0–1 | 0.00–3.68 | void + Thread | static → push in | Thread pen-draws a single tick on the first vocal |
-| A1 | Plot | 2–10 | 3.68–21.18 | bone paper / graphite | top-down → tilt to +z low angle (exit +x) | pen plots y=sin(x−t); curve lifts into a 3D ribbon sheaf; "every frame / is a function / of time." → `Frame = f(t)` |
-| A2 | Signal field | 11–18 | 21.18–36.73 | indigo / ice wire, Thread crest | travel +x, low | drums enter = terrain wakes; ripples on kicks; CODE IT · PLOT IT · SYNC IT · SHIP IT on vocal hits |
+| A1 | Plot | 2–8 | 3.68–15.39 | bone paper / graphite | top-down → tilt to +z low angle (exit +x) | pen plots y=sin(x−t); curve lifts into a 3D ribbon sheaf; "every frame / is a function / of time." → `Frame = f(t)` |
+| A1.5 | Prism | 8–14 | 15.39–28.95 | cold bone/ice → one palette per beat (infrared, acid, ultraviolet, gold, ice) | push down the nave, then orbit / low wide / dolly-zoom, one per bar | raymarched KIFS cathedral + pillar ring + grid floor around a glass f(x) (MeshPhysical transmission + dispersion); Thread enters as orange, leaves as a 7-ray spectrum fan; fractal refolds each bar, each kick sends a shockwave through seams and floor; REFRACT · RECOLOUR · REFOLD · REPEAT |
+| A2 | Signal field | 15–18 | 28.95–36.73 | indigo / ice wire, Thread crest | travel +x, low | 4-bar punch (scene time unchanged so the recap still samples bars 11–14); PLOT IT · SYNC IT · RENDER IT · SHIP IT |
 | A3 | Type canyon | 19–26 | 36.73–52.28 | concrete noon, hard sun shadows | fly −z through Blender words; exit: tilt down to ground | KINETIC · TYPE · IN · 3D as monolithic Blender letters casting shadows; whip pans on snares |
 | A4a | City: rise | 27–34 | 52.28–67.83 | dawn sky blue→peach, off-white towers | aerial descending orbit | city assembles floor-by-floor on every beat from the Blender kit; cranes swing on the hook; "BUILT ON THE BEAT" |
 | A4b | City: night | 35–40 | 67.83–79.50 | navy / sodium / cyan | street-level fly-through | sunset in 2 bars; windows become the equaliser (each facade one band: low/bass/mid/high/vocal); "LIT BY THE MIX" |
@@ -27,7 +28,8 @@ b101–114 final run · b115 tail.
 | Seam | At (s) | Dur | Name | Idea |
 |---|---|---|---|---|
 | A0→A1 | in-scene | — | — | the Thread tick becomes the pen's first stroke |
-| A1→A2 | 21.18 | 1 bar | `fxp_ink_bleed` | paper soaks to indigo outward from the plotted curve; the curve stays as the terrain crest (line-match) |
+| A1→A1.5 | 15.39 | ½ bar | `fxp_prism_slit` | the collapsed plot line splits open as a dispersing spectral slit onto the cathedral |
+| A1.5→A2 | 28.47 | ¼ bar | `fxp_glass_shatter` | the frame cracks into Voronoi glass shards that refract and slide away onto the terrain |
 | A2→A3 | 36.73 | ½ bar | `fxp_crest_shear` | A sliced into vertical letter-width bands that shear upward like terrain peaks becoming monoliths, revealing B underneath |
 | A3→A4 | 52.28 | 1 bar | `fxp_block_drop` | A breaks into a city-block grid; tiles fall away on 8th notes (with shadow edge) revealing the dawn city plan from above |
 | A4→A5 | 95.05 | ½ bar | `fxp_vacuum_pull` | A's pixels compress vertically into the horizon line with luminance smear; only the line remains |
@@ -62,3 +64,8 @@ Adopted:
 8. **Kick sidechain**: exposure/bloom pump on kicks; flash decays instead of white flash frames; logo albedo < 1, high bloom threshold.
 9. Diegetic seams where possible (type footprints → city foundations; pop-up diorama folds shut into the carbon sheet).
 10. Real PCFSoft shadows in city/paper; multi-tap transitions capped at ≤ 4 samples.
+
+
+## v3 — Prism + intro tightening
+- A1 runs content bars 1–4 at 2× (real bars 1–3) and then holds a 2-bar offset, so the pen act ends at bar 8 instead of 10.
+- A2 is cut to 4 bars; the freed 6.5 bars (≈13.6 s) are the Prism showpiece.

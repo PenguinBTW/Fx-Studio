@@ -55,8 +55,24 @@
       "id": "ink_bleed",
       "file": "sfx/ink_bleed.wav",
       "bus": "sfx",
-      "at": 20.7,
+      "at": 15.74,
       "gainDb": -14,
+      "pan": 0
+    },
+    {
+      "id": "prism_drop",
+      "file": "sfx/multiverse_hit.wav",
+      "bus": "sfx",
+      "at": 21.16,
+      "gainDb": -19,
+      "pan": 0
+    },
+    {
+      "id": "prism_shatter",
+      "file": "sfx/logo_shimmer.wav",
+      "bus": "sfx",
+      "at": 28.47,
+      "gainDb": -16,
       "pan": 0
     },
     {
@@ -227,6 +243,10 @@
   "master": {
     "normalize": true,
     "lufs": -14.0,
-    "truePeak": -1.5
+    "truePeak": -1.5,
+    "fadeOut": {
+      "at": 211.4,
+      "dur": 3.1
+    }
   }
 }

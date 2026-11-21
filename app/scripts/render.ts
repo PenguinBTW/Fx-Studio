@@ -73,6 +73,17 @@ const resolveOut = (p?: string, def?: string) => {
   const raw = p ?? def!;
   return path.isAbsolute(raw) ? path.resolve(raw) : path.join(ROOT, raw);
 };
+async function loadProject() {
+  const projName: string = opt('project') ?? JSON.parse(await Bun.file(path.join(APP, 'src/scenes/active.json')).text()).project;
+  // Mirrors timeline.ts: _prereq_demos/<name>/project.json is addressed as project <name>.
+  const top = path.join(APP, 'src/scenes', projName);
+  const dir = existsSync(path.join(top, 'project.json')) ? top : path.join(APP, 'src/scenes/_prereq_demos', projName);
+  const mf = path.join(dir, 'project.json');
+  const manifest = existsSync(mf) ? await Bun.file(mf).json() : { project: projName, entries: [] };
+  /** Manifest paths are project-folder-relative; app-relative paths (e.g. public/audio/x.mp3) are accepted as a fallback. */
+  const at = (p?: string) => !p ? undefined : path.isAbsolute(p) ? p : !existsSync(path.join(dir, p)) && existsSync(path.join(APP, p)) ? path.join(APP, p) : path.join(dir, p);
+  return { projName, dir, manifest, at };
+}
 const SCALE = Math.max(1, Math.round(numOpt('scale', 1, 1, 4)));
 const OW = 1920 * SCALE, OH = 1080 * SCALE; // output size
 // --samples N (fixed) or --samples auto [--min-samples 4] [--max-samples 324] [--tol 3] (adaptive, see Engine.render)
@@ -256,13 +267,16 @@ async function sheet(page: Page, times: number[], cols: number, out: string) {
   await Bun.write(out, Buffer.from(dataUrl.split(',')[1]!, 'base64'));
 }
 
-async function audioOnly(page: Page, from: number, to: number, out: string) {
+async function audioOnly(page: Page, from: number, to: number, outOpt: string | undefined, fullRange: boolean) {
+  const evMod = await import('../src/engine/events');
+  const { dir, manifest, at } = await loadProject();
+  // Only a full-length export may replace the project soundtrack; excerpts go to out/audio.wav.
+  const out = outOpt ? resolveOut(outOpt) : (fullRange && at(manifest.audio)) || path.join(ROOT, 'out/audio.wav');
   const outDir = path.dirname(path.resolve(out));
   if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
-
-  const evMod = await import('../src/engine/events');
-  const projName = opt('project') ?? JSON.parse(await Bun.file(path.join(APP, 'src/scenes/active.json')).text()).project;
-  const manifest = await Bun.file(path.join(APP, 'src/scenes', projName, 'project.json')).json();
+  const toMp3 = out.endsWith('.mp3');
+  const wavOut = toMp3 ? path.join(ROOT, 'out', path.basename(out).replace(/\.mp3$/, '.mix.wav')) : out;
+  if (toMp3) mkdirSync(path.dirname(wavOut), { recursive: true });
   const analysisPath = opt('analysis') ? resolveOut(opt('analysis')) : path.join(APP, 'public/data/audio.json');
   const analysis = existsSync(analysisPath) ? await Bun.file(analysisPath).json() : null;
 
@@ -279,11 +293,11 @@ async function audioOnly(page: Page, from: number, to: number, out: string) {
 
   let mixPath = opt('mix');
   if (!mixPath) {
-    const candidateSceneMix = path.join(APP, 'src/scenes', projName, 'mix.json');
+    const candidateSceneMix = path.join(dir, 'mix.json');
     const candidatePublicMix = path.join(APP, 'public/data/mix.json');
     if (existsSync(candidateSceneMix)) mixPath = candidateSceneMix;
     else if (existsSync(candidatePublicMix)) mixPath = candidatePublicMix;
-    else if (manifest.mix) mixPath = path.isAbsolute(manifest.mix) ? manifest.mix : path.join(APP, 'src/scenes', projName, manifest.mix);
+    else if (manifest.mix) mixPath = at(manifest.mix);
   }
 
   if (mixPath && existsSync(resolveOut(mixPath))) {
@@ -295,10 +309,14 @@ async function audioOnly(page: Page, from: number, to: number, out: string) {
       events: { events },
       from,
       to,
-      out: resolveOut(out),
+      out: wavOut,
       foleyOut: foley ? resolveOut(foley) : undefined,
       log: (m) => console.log(`[mixdown] ${m}`),
     });
+    if (toMp3) {
+      const p = Bun.spawn(['ffmpeg', '-y', '-v', 'error', '-i', wavOut, '-c:a', 'libmp3lame', '-b:a', '320k', out]);
+      if (await p.exited !== 0) throw new Error(`[audio] MP3 encode failed for ${out}`);
+    }
 
     console.log(`\n[audio] Success! Master audio written to: ${out}`);
     console.log(`- Sample rate: ${report.sampleRate} Hz`);
@@ -312,7 +330,7 @@ async function audioOnly(page: Page, from: number, to: number, out: string) {
       throw new Error(`[audio] No mix manifest found (pass --mix path/to/mix.json) and no audio track at ${defaultAudio}`);
     }
     console.log(`[audio] Extracting audio range (${from.toFixed(2)}s to ${to.toFixed(2)}s) from ${audioTrack}...`);
-    const p = Bun.spawn(['ffmpeg', '-y', '-v', 'error', '-i', audioTrack, '-ss', String(from), '-to', String(to), resolveOut(out)]);
+    const p = Bun.spawn(['ffmpeg', '-y', '-v', 'error', '-i', audioTrack, '-ss', String(from), '-to', String(to), out]);
     const exitCode = await p.exited;
     if (exitCode !== 0) throw new Error(`[audio] FFmpeg export failed with code ${exitCode}`);
     console.log(`\n[audio] Success! Exported audio track to: ${out}`);
@@ -321,7 +339,7 @@ async function audioOnly(page: Page, from: number, to: number, out: string) {
   if (flag('mp3') && !out.endsWith('.mp3')) {
     const mp3Out = out.replace(/\.[^.]+$/, '') + '.mp3';
     console.log(`[audio] Encoding MP3 (320 kbps): ${mp3Out}...`);
-    const p = Bun.spawn(['ffmpeg', '-y', '-v', 'error', '-i', resolveOut(out), '-b:a', '320k', resolveOut(mp3Out)]);
+    const p = Bun.spawn(['ffmpeg', '-y', '-v', 'error', '-i', out, '-b:a', '320k', mp3Out]);
     await p.exited;
     console.log(`[audio] Wrote ${mp3Out}`);
   }
@@ -336,14 +354,19 @@ async function video(page: Page, from: number, to: number, fps: number, out: str
   const explicitAudio = opt('audio');
   const defaultAudio = path.join(APP, 'public/audio/audio.mp3');
   let audio = explicitAudio ? resolveOut(explicitAudio) : (existsSync(defaultAudio) ? defaultAudio : '');
+  let mixPath = opt('mix');
+  if (!explicitAudio && !mixPath && !flag('noaudio')) {
+    const { manifest, at } = await loadProject();
+    const master = at(manifest.audio);
+    if (master && existsSync(master)) { audio = master; console.log(`[render] audio: ${master} (project.json "audio")`); }
+    else if (manifest.mix) { mixPath = at(manifest.mix); console.log(`[render] audio: mixdown of ${mixPath} (project.json "mix")`); }
+  }
   let hasAudio = !flag('noaudio') && existsSync(audio);
   let mixedAudio = false;
-  const mixPath = opt('mix');
   const eventsOut = opt('events-out');
   if (eventsOut || (mixPath && !flag('noaudio'))) {
     const evMod = await import('../src/engine/events');
-    const projName = opt('project') ?? JSON.parse(await Bun.file(path.join(APP, 'src/scenes/active.json')).text()).project;
-    const manifest = await Bun.file(path.join(APP, 'src/scenes', projName, 'project.json')).json();
+    const { manifest } = await loadProject();
     const analysisPath = opt('analysis') ? resolveOut(opt('analysis')) : path.join(APP, 'public/data/audio.json');
     const analysis = existsSync(analysisPath) ? await Bun.file(analysisPath).json() : null;
     const registry = new evMod.EventRegistry();
@@ -1038,7 +1061,7 @@ try {
     const aFrom = numOpt('from', 0, 0);
     let aTo = numOpt('to', dur, 0);
     if (aTo <= aFrom) { console.warn(`[audio] Empty window (to<=from), expanding to from+1s`); aTo = aFrom + 1; }
-    await audioOnly(page, aFrom, aTo, resolveOut(opt('out'), path.join(ROOT, 'out/audio.wav')));
+    await audioOnly(page, aFrom, aTo, opt('out'), aFrom === 0 && aTo >= dur - 1e-3);
   } else if (mode === 'video') {
     const dur: number = await page.evaluate(() => (window as any).__motion?.duration ?? (window as any).__pdoom?.duration ?? 5.0);
     const vFrom = numOpt('from', 0, 0);

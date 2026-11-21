@@ -153,7 +153,7 @@ bun scripts/render.ts audio --mix mix.ts --events out/events.jsonl --from 0 --to
 | `--mix <path>` | file path | Auto-detected | Multi-stem mix manifest (`mix.ts` or `mix.json`). |
 | `--from <seconds>` | float | `0.0` | Start of audio timeline. |
 | `--to <seconds>` | float | Duration | End of audio timeline. |
-| `--out <path>` | file path | `../out/audio.wav` | Master 48kHz / 24-bit WAV destination. |
+| `--out <path>` | file path | project.json `audio`, else `../out/audio.wav` | Master destination (`.mp3` is encoded from the mixdown WAV). |
 | `--foley-out <path>`| file path | None | Auxiliary foley guide stem destination. |
 | `--events-out <path>`| file path | Auto-detected | Destination for resolved event timestamp table or `events.jsonl`. |
 | `--mp3` | flag | `false` | Also encodes a 320 kbps MP3 alongside the master WAV. |

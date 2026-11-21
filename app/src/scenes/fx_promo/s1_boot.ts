@@ -1,4 +1,4 @@
-// s1_boot (bars 1-10, 0 - 21.18 s): the filtered intro loop. A Blender plotter pen draws y = sin(x) in the void;
+// s1_boot (bars 1-8, 0 - 15.39 s; content bars 1-10 with the first four at 2x): the filtered intro loop. A Blender plotter pen draws y = sin(x) in the void;
 // the curve multiplies into a ribbon sheaf, then collapses to a single line for the kick drop.
 import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
@@ -54,7 +54,9 @@ export default class S1Boot extends Scene {
   }
 
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
-    const T = sceneTime(this.ctx, f.t);
+    const Tr = sceneTime(this.ctx, f.t);
+    // The intro runs its first four bars at 2x (bars 1-3 real), then holds a whole-bar offset so cuts stay on the grid.
+    const T = Tr < B0 ? Tr : Tr < bar(3) ? B0 + 2 * (Tr - B0) : Tr + 2 * BAR;
     const hx = this.headX(T);
     const spread = prog(T, bar(4), bar(5), ease.inOutCubic);
     const collapse = prog(T, bar(9.4), bar(10.85), ease.inCubic);
@@ -123,7 +125,7 @@ export default class S1Boot extends Scene {
     const FX = ['y = sin(x - t)', 'y = tanh(3 sin x)', 'y = saw(x - t)', 'y = sin x cos(t)'];
     for (let b = 0; b < 4; b++) slam(g, FX[b]!, 960, 190, T, { t0: bar(5 + b), t1: bar(6 + b) - 0.05, size: 72, family: F.mono(600), from: 1.3, shake: 3, out: 0.12, color: b % 2 ? C.signal : C.bone });
     slam(g, 'Frame = f(t)', 960, 300, T, { t0: bar(9), t1: bar(10.3), size: 150, family: F.mono(600), from: 1.45, shake: 5, out: 0.25 });
-    if (T > 1.0 && fade > 0) typeLine(g, `t = ${T.toFixed(2)}`, 1728, 1010, T, 1.0, { size: 26, color: C.ash, align: 'right', cursor: false, cps: 200, t1: bar(10.8) });
+    if (T > 1.0 && fade > 0) typeLine(g, `t = ${Tr.toFixed(2)}`, 1728, 1010, T, 1.0, { size: 26, color: C.ash, align: 'right', cursor: false, cps: 200, t1: bar(10.8) });
 
     present(this.ctx, out, this.scene, this.cam, this.layer, () => L.render(this.ctx.renderer, out, this.cam));
 
