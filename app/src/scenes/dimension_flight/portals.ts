@@ -88,7 +88,7 @@ export class Portal {
     this.group.position.copy(center);
     this.plane = new THREE.Plane().setFromNormalAndCoplanarPoint(normal, center);
     const lc = { nether: '#a040ff', end: '#40ffc0', aether: '#ffd27a', sift: '#40e0ff' }[kind];
-    this.light = new THREE.PointLight(lc, kind === 'end' ? 60 : 120, 60, 1.6);
+    this.light = new THREE.PointLight(lc, kind === 'end' ? 14 : 120, 60, 1.6);
     this.light.position.set(0, 0, -1.5);
     this.group.add(this.light);
     this.buildFrame();
@@ -107,7 +107,7 @@ export class Portal {
   update(t: number, open: number) {
     this.mat.uniforms.t!.value = t; this.mat.uniforms.uOpen!.value = open;
     (this.motes.material as THREE.ShaderMaterial).uniforms.t!.value = t;
-    this.light.intensity = (this.kind === 'end' ? 60 : 120) * (0.85 + 0.15 * Math.sin(t * 3.1));
+    this.light.intensity = (this.kind === 'end' ? 14 : 120) * (0.85 + 0.15 * Math.sin(t * 3.1));
   }
 
   /** Aether and Deep Dark frames are Blender assets (assets/portal_aether, assets/portal_deepdark). */
@@ -147,18 +147,19 @@ export class Portal {
         add(geo, mats[mi]!, [p[0] + (r() - 0.5) * 0.08, p[1] + (r() - 0.5) * 0.08, (r() - 0.5) * 0.15], 0.96 + r() * 0.08, [(r() - 0.5) * 0.06, (r() - 0.5) * 0.06, (r() - 0.5) * 0.06]);
       }
     } else if (this.kind === 'end') {
-      const stone = new THREE.MeshStandardMaterial({ color: '#aeb894', roughness: 0.85 });
-      const inlay = new THREE.MeshPhysicalMaterial({ color: '#0c2f2b', roughness: 0.2, clearcoat: 1, metalness: 0.3 });
-      const eye = new THREE.MeshStandardMaterial({ color: '#0b3', emissive: new THREE.Color('#2dffb0'), emissiveIntensity: 3.0, roughness: 0.2 });
-      const pupil = new THREE.MeshStandardMaterial({ color: '#020604', roughness: 0.1 });
-      const body = new RoundedBoxGeometry(3.0, 3.0, 1.8, 3, 0.18), top = new RoundedBoxGeometry(2.5, 2.5, 0.3, 2, 0.08);
-      const eg = new THREE.SphereGeometry(0.62, 24, 16), pg = new THREE.SphereGeometry(0.3, 16, 10);
+      const stone = new THREE.MeshStandardMaterial({ color: '#cfc9a2', roughness: 0.92, flatShading: true });
+      const band = new THREE.MeshStandardMaterial({ color: '#2a3a34', roughness: 0.55, metalness: 0.2 });
+      const eye = new THREE.MeshPhysicalMaterial({ color: '#0a3a34', emissive: new THREE.Color('#22e0b0'), emissiveIntensity: 1.6, roughness: 0.12, metalness: 0.1, clearcoat: 1, flatShading: true });
+      const body = new RoundedBoxGeometry(3.0, 3.0, 1.8, 2, 0.05), top = new RoundedBoxGeometry(2.6, 2.6, 0.22, 1, 0.03);
+      const lip = new RoundedBoxGeometry(3.15, 3.15, 0.25, 1, 0.03);
+      const eg = new THREE.IcosahedronGeometry(0.55, 0);
       const c = 3.07, o = hx + 1.55;
       const spots: [number, number][] = [];
       for (const k of [-1, 0, 1]) spots.push([k * c, o], [k * c, -o], [o, k * c], [-o, k * c]);
       for (const [x, y] of spots) {
-        add(body, stone, [x, y, 0.4]); add(top, inlay, [x, y, -0.55]);
-        add(eg, eye, [x, y, -0.75], [1, 1, 0.7]); add(pg, pupil, [x + (r() - 0.5) * 0.2, y + (r() - 0.5) * 0.2, -1.08], [0.6, 1.2, 0.5]);
+        const tilt: [number, number, number] = [(r() - 0.5) * 0.05, (r() - 0.5) * 0.05, (r() - 0.5) * 0.08];
+        add(body, stone, [x, y, 0.4], 1, tilt); add(lip, band, [x, y, -0.4]); add(top, stone, [x, y, -0.58]);
+        add(eg, eye, [x, y, -0.8], [1, 1, 0.55], [r() * 3, r() * 3, r() * 3]);
       }
     } else {
       const sand = new THREE.MeshStandardMaterial({ color: '#d9b17a', roughness: 0.88 });

@@ -161,7 +161,7 @@ export function nether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
     const a = (i / 8) * Math.PI * 2 + 0.2, p = new THREE.Mesh(new RoundedBoxGeometry(1.4, 2 + r() * 3, 1.4, 2, 0.1), brick);
     p.position.set(PYLON.x + Math.cos(a) * 10.2, 30, PYLON.y + Math.sin(a) * 10.2); p.castShadow = true; scene.add(p);
   }
-  const eyeL = new THREE.PointLight('#3dffc0', 300, 40, 1.6); eyeL.position.set(PYLON.x, 34, PYLON.y); scene.add(eyeL);
+  const eyeL = new THREE.PointLight('#5fe0c0', 45, 30, 1.8); eyeL.position.set(PYLON.x, 34, PYLON.y); scene.add(eyeL);
 
   // ---- smoke, embers, ash
   const smoke: PuffItem[] = [];
