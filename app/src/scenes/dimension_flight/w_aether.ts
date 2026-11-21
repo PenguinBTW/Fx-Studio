@@ -117,7 +117,7 @@ export function aether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
     const n = 5 + Math.floor(r() * 7), gold = r() < 0.18;
     for (let j = 0; j < n; j++) cl.push({ p: [cx + (r() - 0.5) * 50, cy + r() * 16, cz + (r() - 0.5) * 40], s: 12 + r() * 16, seed: r() * 100, tint: gold ? 1 : 0 });
   }
-  scene.add(makePuffs(cl, { lit: new THREE.Color(1.2, 0.96, 0.68), shade: new THREE.Color(0.3, 0.33, 0.42), sunDir: SUN, fog, opacity: 0.6, drift: [1.0, 0, 0], nearFade: 45 }));
+  scene.add(makePuffs(cl, { lit: new THREE.Color(1.3, 1.0, 0.62), shade: new THREE.Color(0.58, 0.52, 0.5), sunDir: SUN, fog, opacity: 0.6, drift: [1.0, 0, 0], nearFade: 45 }));
   scene.add(makeMotes({ count: 1600, box: [70, 40, 70], color: new THREE.Color(2.6, 2.2, 1.2), color2: new THREE.Color(1.6, 2.2, 2.6), size: 0.04, vel: [0.6, 0.3, 0], swirl: 1.0, flicker: 0.6 }));
 
   const lightPos = new THREE.Vector3();
