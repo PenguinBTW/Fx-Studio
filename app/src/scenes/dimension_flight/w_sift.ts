@@ -107,7 +107,7 @@ export function sift(renderer: THREE.WebGLRenderer): World & { plant(part: (id: 
     const isle = new THREE.Mesh(islandGeometry({ radius: 46, depth: 90, seed: 27, rings: 44, segs: 110,
       top: (x, z, r01) => 4 * fbm2c(x * 0.04, z * 0.04, 3, 5) * (1 - r01),
       color: (_x, y, _z, _s, under, out) => { if (under) out.copy(shade).lerp(rock, 0.45 + 0.35 * Math.sin(y * 0.25)); else out.copy(moss); } }),
-      pbr(fog, { roughness: 0.92 }));
+      pbr(fog, { roughness: 0.92, side: THREE.DoubleSide }));
     isle.position.copy(LAND); isle.castShadow = true; scene.add(isle);
     const beam = new THREE.Mesh(new THREE.CylinderGeometry(5, 16, 420, 40, 1, true),
       new THREE.MeshBasicMaterial({ color: new THREE.Color(0.25, 0.85, 1.4), transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
