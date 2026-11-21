@@ -24,13 +24,13 @@ const nearPath = (x: number, y: number, z: number) => { let m = 1e9; for (const 
 
 export function aether(renderer: THREE.WebGLRenderer): World & { plant(part: (id: string) => THREE.Object3D): void } {
   const scene = new THREE.Scene();
-  const fog: FogSpec = { color: new THREE.Color(0.66, 0.78, 1.0), density: 0.00035, height: -100, falloff: 0.02 };
+  const fog: FogSpec = { color: new THREE.Color(0.66, 0.78, 1.0), density: 0.00017, height: -100, falloff: 0.02 };
   const skyU = { uSun: { value: SUN } };
   scene.add(makeSky(SKY, skyU));
   scene.environment = envFromSky(renderer, SKY, skyU);
   scene.environmentIntensity = 0.7;
-  const sun = new Sun(scene, SUN.clone(), '#ffd9a0', 3.8, 90);
-  scene.add(new THREE.HemisphereLight('#bcd8ff', '#8a9a80', 0.5));
+  const sun = new Sun(scene, SUN.clone(), '#ffbf6a', 4.4, 90);
+  scene.add(new THREE.HemisphereLight('#8fb4ff', '#9a8060', 0.55));
   const r = rng(777);
 
   // ---- the sea of clouds
@@ -122,7 +122,7 @@ export function aether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
   return {
     name: 'aether', scene, fog, lightPos, plant,
     update(t, cam, bird) { sun.follow(bird); setTime(scene, t); lightPos.copy(cam.position).addScaledVector(SUN, 4000); },
-    post: () => ({ grade: { saturation: 1.38, gamma: 0.76, gain: 1.0 }, exposure: 0.86, bloom: 0.55, bloomThreshold: 1.3, volumetric: 0.3, volumetricDecay: 0.94, halation: 0.12, ca: 0.6 }),
+    post: () => ({ grade: { saturation: 1.42, gamma: 0.82, gain: 1.0 }, exposure: 0.84, bloom: 0.55, bloomThreshold: 1.3, volumetric: 0.3, volumetricDecay: 0.94, halation: 0.12, ca: 0.6 }),
     dispose() { disposeTree(scene); disposeEnv(scene); },
   };
 }
