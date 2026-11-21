@@ -1,9 +1,9 @@
 // s9_plotter (bars 83-86, 161.16 - 168.93 s): the palette inverts. Top-down on bone paper, the Blender pen writes
-// three words; on the last bar the clock scrubs back and replays — the page is a function of t, so it rewinds clean.
+// three words in a real single-stroke script (engine stroke.ts, EMS Allure) — the nib is the stroke head; on the last bar the clock scrubs back and replays — the page is a function of t, so it rewinds clean.
 import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { Layer2D } from '../../engine/gl';
-import { F, font } from '../../engine/type';
+import { strokeText, drawStrokeText, type StrokeText } from '../../engine/stroke';
 import { clamp, ease, prog } from '../../engine/util';
 import type { GLTFInstance } from '../../engine/gltf';
 import { C, bar, sceneTime, model, studioEnv, present, typeLine } from './kit';
@@ -29,7 +29,7 @@ export default class S9Plotter extends Scene {
   private paper = new Layer2D();
   private hud = new Layer2D();
   private pen!: GLTFInstance;
-  private widths: number[] = [];
+  private sts: StrokeText[] = [];
 
   override async init() {
     this.pen = await model(this.ctx, 'pen');
@@ -48,8 +48,7 @@ export default class S9Plotter extends Scene {
     this.cam.position.set(0, 20, 0);
     this.cam.up.set(0, 0, -1);
     this.cam.lookAt(0, 0, 0);
-    const g = this.paper.ctx;
-    for (const l of LINES) { g.font = font(F.serif(600, true), l.size); this.widths.push(g.measureText(l.text).width); }
+    for (const l of LINES) this.sts.push(strokeText(l.text, 'script', l.size * 1.35));
   }
 
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
@@ -67,15 +66,17 @@ export default class S9Plotter extends Scene {
     LINES.forEach((l, i) => {
       const p = prog(W, l.t0, l.t0 + l.dur, ease.inOutQuad);
       if (p <= 0) return;
-      const wv = this.widths[i]! * p;
+      const st = this.sts[i]!;
+      const by = l.y + st.capHeight * 0.5;
       g.save();
-      g.beginPath(); g.rect(X0 - 40, l.y - l.size, wv + 40, l.size * 1.6); g.clip();
-      g.font = font(F.serif(600, true), l.size);
-      g.textBaseline = 'middle';
-      g.fillStyle = l.col;
-      g.fillText(l.text, X0, l.y);
+      g.translate(X0, by);
+      g.strokeStyle = l.col;
+      g.lineWidth = i === 2 ? 12 : 8.5;
+      g.lineCap = 'round';
+      g.lineJoin = 'round';
+      const head = drawStrokeText(g, st, st.total * p);
       g.restore();
-      if (p < 1 || i === LINES.length - 1 || W < LINES[i + 1]!.t0) { penX = X0 + wv; penY = l.y + Math.sin(W * 40) * l.size * 0.18; }
+      if (head && (p < 1 || i === LINES.length - 1 || W < LINES[i + 1]!.t0)) { penX = X0 + head.x; penY = by + head.y; }
     });
     // Rail the plotter rides on.
     g.fillStyle = 'rgba(5,5,6,0.12)';
