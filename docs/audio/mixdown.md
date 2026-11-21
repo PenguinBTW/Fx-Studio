@@ -110,10 +110,13 @@ Stems are assigned to one of four dedicated mixing buses:
   "master": {
     "normalize": true,
     "lufs": -14.0,
-    "truePeak": -1.5
+    "truePeak": -1.5,
+    "fadeOut": { "at": 211.4, "dur": 3.1 }
   }
 }
 ```
+
+`master.fadeOut` applies a linear fade over `[at, at + dur]` (project seconds) after loudness normalization.
 
 ---
 

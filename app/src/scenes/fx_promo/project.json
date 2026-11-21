@@ -1,5 +1,7 @@
 {
   "project": "fx_promo",
+  "mix": "mix.json",
+  "audio": "master/fx_promo_mix.mp3",
   "entries": [
     {
       "scene": "fx_promo/s1_boot",
