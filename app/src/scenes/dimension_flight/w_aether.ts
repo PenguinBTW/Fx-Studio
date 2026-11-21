@@ -43,7 +43,7 @@ export function aether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
       float a = fbm2(p), b = fbm2(p * 3.1 + a * 2.0 + vec2(0.0, t * 0.02));
       float h = a * 0.65 + b * 0.35;
       float lit = smoothstep(0.3, 0.8, h + 0.15 * (fbm2(p * 3.1 + a * 2.0 + vec2(0.06, t * 0.02)) - b) * 8.0);
-      vec3 c = mix(vec3(0.26, 0.29, 0.4), vec3(1.0, 0.9, 0.76), lit) * mix(0.6, 1.05, h);
+      vec3 c = mix(vec3(0.56, 0.6, 0.72), vec3(1.0, 0.9, 0.76), lit) * mix(0.6, 1.05, h);
       return vec4(c, 1.0);
     }`, { uSun: { value: SUN } }, fog);
   scene.add(sea);
