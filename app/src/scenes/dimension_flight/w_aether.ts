@@ -24,7 +24,7 @@ const nearPath = (x: number, y: number, z: number) => { let m = 1e9; for (const 
 
 export function aether(renderer: THREE.WebGLRenderer): World & { plant(part: (id: string) => THREE.Object3D): void } {
   const scene = new THREE.Scene();
-  const fog: FogSpec = { color: new THREE.Color(0.66, 0.78, 1.0), density: 0.00017, height: -100, falloff: 0.02 };
+  const fog: FogSpec = { color: new THREE.Color(1.0, 0.82, 0.6), density: 0.00012, height: -100, falloff: 0.02 };
   const skyU = { uSun: { value: SUN } };
   scene.add(makeSky(SKY, skyU));
   scene.environment = envFromSky(renderer, SKY, skyU);

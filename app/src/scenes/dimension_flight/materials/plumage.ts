@@ -26,7 +26,7 @@ export default () => {
     s.uniforms.uRim = PLUMAGE_RIM;
     s.fragmentShader = s.fragmentShader
       .replace('#include <common>', '#include <common>\nuniform vec3 uRim;')
-      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n{ float fr = pow(1.0 - abs(dot(normalize(normal), normalize(vViewPosition))), 2.5); totalEmissiveRadiance += uRim * fr * 1.1; }');
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n{ float fr = pow(1.0 - abs(dot(normalize(normal), normalize(vViewPosition))), 3.0); totalEmissiveRadiance += uRim * fr * 0.75; }');
   };
   m.customProgramCacheKey = () => 'plumage-rim';
   return m;
