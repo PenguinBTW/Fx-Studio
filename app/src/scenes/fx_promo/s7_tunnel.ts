@@ -120,4 +120,9 @@ export default class S7Tunnel extends Scene {
     const drop = T >= T0 ? 0.22 * Math.max(0, 1 - (T - T0) / 0.35) : 0;
     return { exposure: 1.05, bloom: 0.85 + 0.4 * k, bloomThreshold: 0.72, vignette: 0.55, ca: 0.8 + 2.2 * k, grain: 0.05, flash: drop, invert: shot === 2 && T > T0 + 2 * BAR ? 1 : 0, zoom: 1 + 0.04 * k + 0.12 * drop, shake: [0.25 * k, -0.6 * (0.25 * k)] };
   }
+
+  override dispose(): void {
+    for (const g of [this.mods.group, this.mods2.group]) g.traverse((m) => { const im = m as THREE.InstancedMesh; if (im.isInstancedMesh) { im.dispose(); if (im.material instanceof THREE.MeshBasicMaterial) im.material.dispose(); } });
+    this.sign.traverse((m) => { const mm = m as THREE.Mesh; if (mm.isMesh) { mm.geometry.dispose(); (mm.material as THREE.Material).dispose(); } });
+  }
 }

@@ -164,5 +164,6 @@ export default class S3Type extends Scene {
 
   override dispose(): void {
     this.dof.dispose();
+    this.words.slice(BLENDER).forEach((o) => o?.traverse((m) => { const mm = m as THREE.Mesh; if (mm.isMesh) { mm.geometry.dispose(); (mm.material as THREE.Material).dispose(); } }));
   }
 }
