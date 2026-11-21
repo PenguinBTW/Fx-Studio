@@ -29,7 +29,7 @@ export function theEnd(renderer: THREE.WebGLRenderer): World & { plant(part: (id
   scene.add(makeSky(SKY));
   scene.environment = envFromSky(renderer, SKY);
   scene.environmentIntensity = 1.5;
-  const key = new Sun(scene, new THREE.Vector3(0.3, 1, 0.25), '#ffe6c4', 2.4, 110);
+  const key = new Sun(scene, new THREE.Vector3(0.3, 1, 0.25), '#ffe6c4', 3.0, 110);
   scene.add(new THREE.HemisphereLight('#6a4aa0', '#1a1020', 0.7));
   const r = rng(1234);
   const stoneTop = new THREE.Color(0.95, 0.9, 0.62), stonePit = new THREE.Color(0.2, 0.17, 0.12), under = new THREE.Color(0.30, 0.26, 0.24);
@@ -100,7 +100,7 @@ export function theEnd(renderer: THREE.WebGLRenderer): World & { plant(part: (id
     for (let i = 0; i < count; i++) {
       const a = r() * Math.PI * 2, d = Math.sqrt(r()) * rad, x = cx + Math.cos(a) * d, z = cz + Math.sin(a) * d;
       if (nearPathXZ(x, z) < 10) continue;
-      const k = 24 + r() * 16; chorusM.push(new THREE.Matrix4().compose(new THREE.Vector3(x, y - 0.4, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), r() * 6.28), new THREE.Vector3(k, k * (0.85 + r() * 0.3), k)));
+      const k = 14 + r() * 10; chorusM.push(new THREE.Matrix4().compose(new THREE.Vector3(x, y - 0.4, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), r() * 6.28), new THREE.Vector3(k, k * (0.85 + r() * 0.3), k)));
     }
   };
   grove(MAIN.x, MAIN.z, 95, MAIN.y + 2, 26);

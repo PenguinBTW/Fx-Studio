@@ -25,9 +25,10 @@ const SHOTS: Shot[] = [
   { t0: -3, t1: 5.6, a: [-6, 40, 64], b: [-14, 20, -14], fov: 36, ground: owHeight },
   { t0: 19.6, t1: 25.4, a: [-26, 14, -318], b: [-14, 18, -352], fov: 40 },
   { t0: 26.2, t1: 29.8, a: [10, 62, -412], b: [8, 72, -440], fov: 42 },
-  { t0: 33.0, t1: 43, a: [22, -24, -492], b: [30, -56, -585], fov: 38 },
+  { t0: 32.6, t1: 43, a: [6, 0, -462], b: [30, -56, -585], fov: 38 },
   { t0: 51.8, t1: 58.8, a: [-20, -56, -805], b: [-26, -50, -868], fov: 38 },
   { t0: 68, t1: 74.2, a: [16, -38, -1046], b: [18, -40, -1088], fov: 38, ground: siftH },
+  { t0: 76.2, t1: 86, a: [-14, -40, -1140], b: [-6, -33, -1174], fov: 40, ground: siftH },
 ];
 const SHOT_RAMP = 1.6, _hp = new THREE.Vector3(), _hb = new THREE.Vector3();
 function heroAt(t: number): { w: number; fov: number; p: THREE.Vector3 } {
@@ -185,6 +186,11 @@ export default class Odyssey extends Scene {
       fade: Math.max(1 - smoothstep(0, 1.6, t), smoothstep(80.2, 82, t)),
       ...cur.post(t),
     };
+    // portal beat: chromatic split + bloom surge either side of each membrane crossing
+    let beat = 0;
+    for (const tc of this.camCross) beat += Math.exp(-Math.pow((t - tc) / 0.32, 2));
+    post.ca = (post.ca ?? 0.7) + beat * 5;
+    post.bloom = (post.bloom ?? 0.6) + beat * 0.9;
     if (cur.lightPos) {
       const s = cur.lightPos.clone().project(cam);
       const inFront = cur.lightPos.clone().sub(cam.position).dot(cam.getWorldDirection(V())) > 0;

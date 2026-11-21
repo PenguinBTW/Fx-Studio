@@ -129,10 +129,10 @@ export function sift(renderer: THREE.WebGLRenderer): World & { plant(part: (id: 
   // ---- souls: engine GPU particles rising off the meadows as glowing streaks; spores drift around the camera
   const souls = new LargeParticles(9000, 2027);
   souls.configure({
-    mode: 'fall', style: 'disc', size: [0.05, 0.16], life: [6, 14],
-    color: { mode: 'flat', rgb: [0.55, 1.0, 0.92] }, intensity: 1.4, brightnessVariance: 0.7, fade: [0.15, 0.3],
+    mode: 'fall', style: 'disc', size: [0.14, 0.42], life: [6, 14],
+    color: { mode: 'flat', rgb: [0.55, 1.0, 0.92] }, intensity: 2.6, brightnessVariance: 0.7, fade: [0.15, 0.3],
     turbulence: { amp: 1.6, freq: 0.06, drift: 0.2 },
-    fall: { center: [0, -150, -1180], box: [320, 45, 360], velocity: [0.6, 3.5, -0.4], drag: 0 },
+    fall: { center: [0, -95, -1150], box: [260, 10, 300], velocity: [0.6, 4.2, -0.4], drag: 0 },
   });
   scene.add(makeMotes({ count: 2200, box: [70, 36, 70], color: new THREE.Color(1.6, 2.4, 2.2), color2: new THREE.Color(2.4, 1.2, 1.2), size: 0.03, vel: [0.6, 0.5, 0.2], swirl: 0.8, flicker: 0.5 }));
 
@@ -141,7 +141,7 @@ export function sift(renderer: THREE.WebGLRenderer): World & { plant(part: (id: 
     name: 'sift', scene, fog, lightPos, plant,
     update(t, cam, bird) { sun.follow(bird); setTime(scene, t); lightPos.copy(cam.position).addScaledVector(SUN, 4000); },
     overlay(rd, cam, target, t) { souls.render(rd, cam, target, t); },
-    post: () => ({ grade: { saturation: 1.45, gamma: 0.82, gain: 1.06 }, exposure: 0.95, bloom: 0.6, bloomThreshold: 1.2, volumetric: 0.18, volumetricDecay: 0.93, halation: 0.1, ca: 0.5 }),
+    post: (t) => ({ grade: { saturation: 1.45, gamma: 0.82, gain: 1.06 }, exposure: 0.95 + 0.18 * sstep(76, 80.5, t), bloom: 0.6 + 0.7 * sstep(76, 80.5, t), bloomThreshold: 1.2, volumetric: 0.18, volumetricDecay: 0.93, halation: 0.1, ca: 0.5 }),
     dispose() { souls.dispose(); disposeTree(scene); disposeEnv(scene); },
   };
 }
