@@ -56,3 +56,6 @@ keys.txt
 */keys.txt
 testing/keys.txt
 proxy/keys.txt
+# Local sync scripts
+sync_nightly.*
+scripts/sync_nightly.*
