@@ -12,7 +12,7 @@ const ROWS = 46, COLS = 70, SEG = 110;
 const T0 = bar(11);
 const SPEED = 2.4;
 
-const WORDS: [string, string][] = [['CODE', 'IT'], ['PLOT', 'IT'], ['SYNC', 'IT'], ['SHIP', 'IT'], ['PLOT', 'IT'], ['SYNC', 'IT'], ['RENDER', 'IT'], ['SHIP', 'IT']];
+const WORDS: [string, string][] = [['CODE', 'IT'], ['PLOT', 'IT'], ['SYNC', 'IT'], ['CODE', 'IT'], ['PLOT', 'IT'], ['SYNC', 'IT'], ['RENDER', 'IT'], ['SHIP', 'IT']];
 
 export default class S2Surface extends Scene {
   private scene = new THREE.Scene();

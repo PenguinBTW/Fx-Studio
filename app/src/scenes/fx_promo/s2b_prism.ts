@@ -29,10 +29,11 @@ const VERBS = ['REFRACT', 'RECOLOUR', 'REFOLD', 'REPEAT'];
 const MAP = /* glsl */ `
 uniform float uFold; uniform float uRing; uniform float uRingK; uniform float uEmit;
 uniform vec3 uBase; uniform vec3 uGlow;
-float gTrap;
+float gTrap; float gArch;
 mat2 pRot(float a) { float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 float sdBox(vec3 p, vec3 b) { vec3 q = abs(p) - b; return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0); }
 float map(vec3 p) {
+  gArch = 0.0;
   vec3 q = p;
   q.z = mod(q.z + 6.0, 12.0) - 6.0;
   float s = 1.0, trap = 1e9;
@@ -51,8 +52,16 @@ float map(vec3 p) {
   gTrap = trap / s;
   float d = sdBox(q, vec3(2.6, 0.35, 2.6)) / s;
   float nave = 2.5 - length(p.xy * vec2(0.8, 1.0));
-  float room = 4.6 - length(p);
-  return max(d, max(nave, room));
+  float room = 5.3 - length(p);
+  d = max(d, max(nave, room));
+  // Architecture around the glass: a gridded floor and a ring of 12 pillars, offset so none blocks the nave.
+  float fl = p.y + 2.4;
+  float sec = 6.28318 / 12.0;
+  float an = mod(atan(p.z, p.x) + sec, sec) - 0.5 * sec;
+  float pil = length(length(p.xz) * vec2(cos(an), sin(an)) - vec2(6.0, 0.0)) - 0.34;
+  if (fl < d && fl < pil) { vec2 g = abs(fract(p.xz * 0.5) - 0.5); gTrap = min(g.x, g.y) * 0.9; gArch = 1.0; return fl; }
+  if (pil < d) { gTrap = abs(fract(p.y * 0.7) - 0.5) * 0.6; gArch = 1.0; return pil; }
+  return d;
 }`;
 
 const SHADE = /* glsl */ `
@@ -66,7 +75,7 @@ vec4 rmShade(vec3 ro, vec3 rd, out float vd) {
     vec3 p = ro + rd * h.t;
     vec3 n = rmNormal(p, rmEps(h.t));
     map(p);
-    float trap = gTrap;
+    float trap = gTrap, arch = gArch;
     float ao = rmAO(p, n, 0.9, 1.0);
     vec3 L = normalize(-p);
     float dif = max(dot(n, L), 0.0) / (1.0 + 0.004 * dot(p, p));
@@ -75,7 +84,7 @@ vec4 rmShade(vec3 ro, vec3 rd, out float vd) {
     float r = length(p);
     float seam = smoothstep(0.035, 0.0, trap);
     float wave = exp(-abs(r - uRing) * 1.6) * uRingK;
-    float idle = 0.18 + 0.12 * sin(r * 0.9 - rmTime * 2.0);
+    float idle = (0.18 + 0.12 * sin(r * 0.9 - rmTime * 2.0)) * mix(1.0, 0.12, arch);
     col += uGlow * seam * (idle + 6.0 * wave) * uEmit;
     col = mix(col, fogC, 1.0 - exp(-h.t * 0.045));
     vd = h.t;
@@ -104,7 +113,7 @@ export default class S2bPrism extends Scene {
   private glass = new THREE.MeshPhysicalMaterial({ color: 0xffffff, metalness: 0, roughness: 0.03, transmission: 1, thickness: 0.6, ior: 1.52, dispersion: 7, envMapIntensity: 0.7, specularIntensity: 1, clearcoat: 1 });
   private logo = new THREE.Group();
   private width = 4;
-  private kl = new THREE.PointLight(0xffffff, 0, 30, 1.5);
+  private kl = new THREE.PointLight(0xffffff, 0, 9, 2);
 
   override async init() {
     const inst = await model(this.ctx, 'fx_logo');
@@ -134,10 +143,10 @@ export default class S2bPrism extends Scene {
     }
     const k = Math.min(3, Math.floor((T - DROP) / BAR)), d = T - DROP - k * BAR;
     if (k === 0) return { pos: [1.2 * Math.sin(d * 1.3), 0.4, 22 - 6.5 * d], tgt: [0, 0, 0], fov: 52, roll: 0.12 * Math.sin(d * 2) };
-    if (k === 1) { const a = 0.7 + 0.55 * d; return { pos: [3.9 * Math.sin(a), 0.9, 3.9 * Math.cos(a)], tgt: [0, 0, 0], fov: 46 }; }
+    if (k === 1) { const a = 0.4 - 0.45 * d; return { pos: [4.3 * Math.sin(a), 0.7, 4.3 * Math.cos(a)], tgt: [0, 0, 0], fov: 66 }; }
     if (k === 2) return { pos: [-2.2 + 0.6 * d, -2.1, 8.5 - 0.8 * d], tgt: [0, 1.4, 0], fov: 64, roll: -0.1 };
     const fov = 28 + 54 * ease.inOutCubic(d / BAR);
-    const dz = solveDollyZoom([0, 0, 0.3], [0, 0, -1], this.width, fov, 0.62);
+    const dz = solveDollyZoom([0, 0, 0.3], [-0.09, -0.06, -1], this.width, fov, 0.62);
     return { pos: dz.position, tgt: [0, 0, 0], fov: dz.fov };
   }
 
