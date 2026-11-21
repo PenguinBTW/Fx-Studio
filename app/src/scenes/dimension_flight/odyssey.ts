@@ -193,7 +193,7 @@ export default class Odyssey extends Scene {
 
     // post
     let flash = 0;
-    for (const tc of this.camCross) flash += Math.exp(-Math.pow((t - tc) / 0.09, 2)) * 0.35;
+    for (const tc of this.camCross) flash += Math.exp(-Math.pow((t - tc) / 0.09, 2)) * 0.12;
     const post: PostOverrides = {
       hud: 0, frame: 0, metricReadout: 0, volumetricSteps: 48, volumetricJitter: 1, toneMap: 'aces', grain: 0.025, ca: 0.7, halation: 0.15, vignette: 0.32,
       bloom: 0.6, bloomThreshold: 1.0, bloomRadius: 0.8, flash,
@@ -204,7 +204,7 @@ export default class Odyssey extends Scene {
     let beat = 0;
     for (const tc of this.camCross) beat += Math.exp(-Math.pow((t - tc) / 0.12, 2));
     post.ca = (post.ca ?? 0.7) + beat * 3;
-    post.bloom = (post.bloom ?? 0.6) + beat * 0.45;
+    post.bloom = (post.bloom ?? 0.6) + beat * 0.15;
     if (cur.lightPos) {
       const s = cur.lightPos.clone().project(cam);
       const inFront = cur.lightPos.clone().sub(cam.position).dot(cam.getWorldDirection(V())) > 0;
