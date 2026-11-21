@@ -75,7 +75,19 @@ export function overworld(renderer: THREE.WebGLRenderer): World & { plant(part: 
       c.lerp(scorch, sstep(20, 9, kd));
     },
   });
-  const ground = new THREE.Mesh(terr, pbr(fog, { roughness: 0.95 }));
+  const gm = pbr(fog, { roughness: 0.95 }), gmBase = gm.onBeforeCompile;
+  gm.onBeforeCompile = (sh, rd) => {
+    gmBase.call(gm, sh, rd);
+    sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+      { vec3 wn = normalize((vec4(normal, 0.0) * viewMatrix).xyz);
+        float steep = smoothstep(0.86, 0.58, wn.y) * smoothstep(16.0, 40.0, vFogWP.y);
+        float wy = vFogWP.y + vFogWP.x * 0.08 + 3.0 * sin(vFogWP.x * 0.013 + vFogWP.z * 0.009) + 2.0 * sin(vFogWP.z * 0.021 + 1.3);
+        float st = sin(wy * 0.42) * 0.6 + sin(wy * 1.13 + 2.0) * 0.4;
+        vec3 rockc = vec3(0.36, 0.33, 0.3) * mix(0.55, 1.2, smoothstep(-0.3, 0.6, st));
+        diffuseColor.rgb = mix(diffuseColor.rgb, rockc, steep * 0.85); }`);
+  };
+  gm.customProgramCacheKey = () => 'owground-strata';
+  const ground = new THREE.Mesh(terr, gm);
   ground.receiveShadow = true; ground.castShadow = true;
   scene.add(ground);
 
