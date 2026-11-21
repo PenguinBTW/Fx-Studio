@@ -97,11 +97,6 @@ export default class S7Tunnel extends Scene {
       typeLine(g, sub, 960, 650, T, t0 + 2 * BEAT, { size: 34, align: 'center', t1: tm, cps: 40 });
       slam(g, sub, 960, 540, T, { t0: tm + 0.06, t1, size: 130, family: fam, from: 1.6, shake: 6, color: shot === 2 ? '#FFFFFF' : i === 3 ? C.bone : C.signal });
     });
-    // Beat words: each bar's off-beats get a quick mono stamp in the corners.
-    const stamps = ['kick', 'snare', 'hat', 'bar ' + (nb - 49)];
-    const sb = Math.floor(beatPh * 4);
-    if (lt > 0) typeLine(g, `${stamps[sb % 4]}`, 192, 160, T, T - beatPh * BEAT, { size: 28, color: C.ash, cps: 200, cursor: false });
-    typeLine(g, `z = -${V}·t = ${camZ.toFixed(1)}`, 1728, 160, T, T0 + 0.3, { size: 28, color: C.ash, align: 'right', cps: 200, cursor: false });
 
     present(this.ctx, out, this.scene, this.cam, this.layer);
     const drop = T >= T0 ? 0.22 * Math.max(0, 1 - (T - T0) / 0.35) : 0;
