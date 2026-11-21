@@ -325,7 +325,7 @@ export default class A4City extends Scene {
       const yr = 2026 + Math.round(100 * prog(T, bar(41.5), bar(45.2), ease.inOutCubic));
       typeLine(g, `year ${yr}`, 960, 960, T, bar(41.3), { size: 44, align: 'center', cps: 30, color: '#D8DCD6', cursor: false });
     }
-    slam(g, 'EVERYTHING IS f(t)', 960, 250, T, { t0: bar(46.5), t1: bar(48.2), size: 150, family: fam, from: 2.0, shake: 8, color: C.bone });
+    slam(g, 'EVERYTHING IS f(t)', 960, 250, T, { t0: bar(46.5), t1: bar(48.2), size: 122, family: fam, from: 1.45, shake: 8, color: C.bone });
 
     const ashK = prog(T, bar(44.5), bar(46), ease.inOutCubic) * (1 - prog(T, bar(49), bar(49.6)));
     this.ash.u.uIntensity!.value = 3 * ashK * (1 + 0.6 * a.kick);
