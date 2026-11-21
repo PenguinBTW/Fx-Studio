@@ -124,7 +124,7 @@ export function overworld(renderer: THREE.WebGLRenderer): World & { plant(part: 
     }
   };
 
-  // ---- clouds: towering dawn cumulus + river mist
+  // ---- clouds: towering dawn cumulus
   const cl: PuffItem[] = [];
   for (let c = 0; c < 46; c++) {
     const cx = (r() - 0.5) * 1100, cz = 200 - r() * 1200, cy = 75 + r() * 45;
@@ -133,9 +133,6 @@ export function overworld(renderer: THREE.WebGLRenderer): World & { plant(part: 
     for (let j = 0; j < n; j++) cl.push({ p: [cx + (r() - 0.5) * 70, cy + r() * 22 * (1 - j / n), cz + (r() - 0.5) * 45], s: 16 + r() * 18, seed: r() * 100 });
   }
   scene.add(makePuffs(cl, { lit: new THREE.Color(1.7, 1.15, 0.85), shade: new THREE.Color(0.38, 0.36, 0.5), sunDir: SUN, fog, opacity: 0.95, drift: [0.6, 0, -0.3], nearFade: 14 }));
-  const mist: PuffItem[] = [];
-  for (let j = 0; j < 60; j++) { const z = 120 - r() * 520; mist.push({ p: [riverX(z) + (r() - 0.5) * 50, 5 + r() * 4, z], s: 9 + r() * 9, seed: r() * 100 }); }
-  scene.add(makePuffs(mist, { lit: new THREE.Color(1.5, 1.15, 0.9), shade: new THREE.Color(0.5, 0.48, 0.55), sunDir: SUN, fog, opacity: 0.12, drift: [0.4, 0, 0], soft: 2.4, nearFade: 10 }));
 
   // ---- drifting pollen & blossom petals in the low sun
   scene.add(makeMotes({ count: 2200, box: [70, 36, 70], color: new THREE.Color(2.4, 1.7, 0.9), color2: new THREE.Color(2.2, 1.0, 1.3), size: 0.045, vel: [0.5, -0.15, 0.2], swirl: 0.8, flicker: 0.4 }));
