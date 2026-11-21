@@ -17,6 +17,10 @@ export class Swallow {
     const inst = await GLTFManager.instantiate(a.url, { ...a.manifest.load });
     inst.clipDefaults = { ...a.manifest.clips };
     if (a.manifest.materials) applyMaterialSlots(inst, a.manifest.materials, await loadMaterialLibrary(a.project));
+    inst.root.traverse((o) => {
+      const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined;
+      if (m && 'emissive' in m && !m.customProgramCacheKey().includes('plumage')) { m.emissive.copy(m.color).multiplyScalar(0.22); }
+    });
     inst.root.scale.setScalar(this.scale);
     this.group.add(inst.root);
     this.inst = inst;

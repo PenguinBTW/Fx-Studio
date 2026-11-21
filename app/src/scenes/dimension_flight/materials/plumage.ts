@@ -7,7 +7,7 @@ export const PLUMAGE_RIM = { value: new THREE.Color('#b8d0ff') };
 // plus a fresnel rim so the silhouette separates from dark backgrounds from any angle.
 export default () => {
   const m = new THREE.MeshPhysicalMaterial({
-    color: '#0b1838',
+    color: '#14286a',
     roughness: 0.68,
     specularIntensity: 0.35,
     metalness: 0.0,
@@ -26,7 +26,7 @@ export default () => {
     s.uniforms.uRim = PLUMAGE_RIM;
     s.fragmentShader = s.fragmentShader
       .replace('#include <common>', '#include <common>\nuniform vec3 uRim;')
-      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n{ float fr = pow(1.0 - abs(dot(normalize(normal), normalize(vViewPosition))), 3.0); totalEmissiveRadiance += uRim * fr * 0.75; }');
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n{ float fr = pow(1.0 - abs(dot(normalize(normal), normalize(vViewPosition))), 3.0); totalEmissiveRadiance += uRim * fr * 0.75 + diffuseColor.rgb * 0.35; }');
   };
   m.customProgramCacheKey = () => 'plumage-rim';
   return m;
