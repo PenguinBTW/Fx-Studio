@@ -10,9 +10,9 @@ const SUN = new THREE.Vector3(0.45, 0.26, -0.7).normalize();
 const SKY = /* glsl */ `
 uniform vec3 uSun;
 vec3 skyColor(vec3 d) {
-  vec3 zen = vec3(0.10, 0.30, 0.95), hor = vec3(0.75, 0.9, 1.25);
+  vec3 zen = vec3(0.07, 0.25, 0.88), hor = vec3(1.25, 0.98, 0.72);
   vec3 c = mix(hor, zen, pow(clamp(d.y, 0.0, 1.0), 0.45));
-  c = mix(c, vec3(0.95, 0.97, 1.1), smoothstep(0.05, -0.2, d.y));
+  c = mix(c, vec3(1.05, 0.95, 0.86), smoothstep(0.05, -0.2, d.y));
   float s = max(dot(d, uSun), 0.0);
   c += vec3(1.4, 1.2, 0.9) * pow(s, 12.0) * 0.6 + vec3(80.0, 70.0, 55.0) * smoothstep(0.9993, 0.9996, s);
   return c;
@@ -41,7 +41,7 @@ export function aether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
       float a = fbm2(p), b = fbm2(p * 3.1 + a * 2.0 + vec2(0.0, t * 0.02));
       float h = a * 0.65 + b * 0.35;
       float lit = smoothstep(0.3, 0.8, h + 0.15 * (fbm2(p * 3.1 + a * 2.0 + vec2(0.06, t * 0.02)) - b) * 8.0);
-      vec3 c = mix(vec3(0.42, 0.52, 0.8), vec3(1.25, 1.22, 1.2), lit) * mix(0.8, 1.05, h);
+      vec3 c = mix(vec3(0.34, 0.44, 0.78), vec3(1.4, 1.18, 0.92), lit) * mix(0.8, 1.05, h);
       return vec4(c, 1.0);
     }`, { uSun: { value: SUN } }, fog);
   scene.add(sea);
@@ -122,7 +122,7 @@ export function aether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
   return {
     name: 'aether', scene, fog, lightPos, plant,
     update(t, cam, bird) { sun.follow(bird); setTime(scene, t); lightPos.copy(cam.position).addScaledVector(SUN, 4000); },
-    post: () => ({ grade: { saturation: 1.42, gamma: 0.82, gain: 1.0 }, exposure: 0.84, bloom: 0.55, bloomThreshold: 1.3, volumetric: 0.3, volumetricDecay: 0.94, halation: 0.12, ca: 0.6 }),
+    post: () => ({ grade: { saturation: 1.42, gamma: 0.82, gain: 1.0 }, exposure: 0.84, bloom: 0.45, bloomThreshold: 1.3, volumetric: 0.12, volumetricDecay: 0.94, halation: 0.12, ca: 0.6 }),
     dispose() { disposeTree(scene); disposeEnv(scene); },
   };
 }
