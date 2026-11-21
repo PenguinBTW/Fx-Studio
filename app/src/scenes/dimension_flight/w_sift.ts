@@ -1,0 +1,140 @@
+// THE SIFT — Minecraft Dungeons II's new dimension, restyled: salmon "healthy sculk" meadows and pale cliffs
+// under a mint sky, teal flora, glowing ichor pools in the ravines, pale giant trees and souls rising on the tide.
+import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { LargeParticles } from '../../engine/particles_large';
+import type { World } from './world';
+import { Sun } from './world';
+import { BIRD } from './path';
+import { makeSky, envFromSky, disposeEnv, terrainGeometry, pbr, makeMotes, makeSurface, disposeTree, setTime, fbm2c, ridged, sstep, rng, instanced, mat4, type FogSpec } from './common';
+
+const SUN = new THREE.Vector3(-0.35, 0.42, -0.84).normalize();
+const SKY = /* glsl */ `
+uniform vec3 uSun;
+vec3 skyColor(vec3 d) {
+  float h = d.y, s = max(dot(d, uSun), 0.0);
+  vec3 c = mix(vec3(0.62, 1.05, 0.9), vec3(0.08, 0.62, 0.66), pow(clamp(h, 0.0, 1.0), 0.6));
+  c = mix(c, vec3(0.70, 0.55, 0.58), smoothstep(0.02, -0.25, h));
+  c += vec3(1.0, 0.95, 0.8) * pow(s, 12.0) * 0.5 + vec3(6.0, 5.6, 4.6) * smoothstep(0.9985, 0.9992, s);
+  vec2 p = d.xz / max(d.y + 0.08, 0.03);
+  float cl = smoothstep(0.55, 0.85, fbm2(p * 0.35 + t * 0.004)) * smoothstep(0.02, 0.2, h);
+  c = mix(c, vec3(1.15, 1.05, 1.08) + vec3(0.3, 0.2, 0.1) * pow(s, 3.0), cl * 0.55);
+  return c;
+}`;
+const TREE = new THREE.Vector3(30, -95, -1360);
+const PATH_PTS: THREE.Vector3[] = [];
+for (let t = 63.5; t <= 84; t += 0.08) PATH_PTS.push(BIRD.at(t));
+const nearPath = (x: number, y: number, z: number) => { let m = 1e9; for (const p of PATH_PTS) m = Math.min(m, Math.hypot(p.x - x, p.y - y, p.z - z)); return m; };
+/** ravine field: 0 on a ravine floor, 1 on the meadows */
+const ravine = (x: number, z: number) => sstep(0.02, 0.16, Math.abs(fbm2c(x * 0.0035, z * 0.0035, 3, 21) - 0.02));
+export const siftH = (x: number, z: number) => {
+  const hills = 10 * fbm2c(x * 0.005, z * 0.005, 4, 8) + 6 * ridged(x * 0.009, z * 0.009, 3, 3);
+  const terr = Math.round(hills / 4) * 4 * 0.55 + hills * 0.45;  // soft terraces → cliff bands
+  return -88 + terr + 22 * sstep(160, 460, Math.abs(x)) - 26 * (1 - ravine(x, z));
+};
+
+export function sift(renderer: THREE.WebGLRenderer): World {
+  const scene = new THREE.Scene();
+  const fog: FogSpec = { color: new THREE.Color(0.55, 0.84, 0.8), density: 0.00022, height: -84, falloff: 0.03 };
+  const skyU = { uSun: { value: SUN } };
+  scene.add(makeSky(SKY, skyU));
+  scene.environment = envFromSky(renderer, SKY, skyU);
+  scene.environmentIntensity = 0.35;
+  const sun = new Sun(scene, SUN, '#fff2e0', 3.6, 90);
+  scene.add(new THREE.HemisphereLight('#9ff0e4', '#c0605a', 0.55));
+  const r = rng(9091);
+
+  // ---- salmon sculk meadows, darker veins, teal moss on the flats, pale stone on cliffs, red-black ravine floors
+  const sal = new THREE.Color(0.95, 0.42, 0.42), vein = new THREE.Color(0.55, 0.14, 0.18), teal = new THREE.Color(0.14, 0.62, 0.58);
+  const stone = new THREE.Color(0.86, 0.84, 0.8), deep = new THREE.Color(0.25, 0.06, 0.1);
+  const ground = new THREE.Mesh(terrainGeometry({
+    x0: -900, x1: 900, z0: -1750, z1: -850, nx: 460, nz: 320, height: siftH,
+    color: (x, y, z, slope, c) => {
+      const v = Math.abs(fbm2c(x * 0.05, z * 0.05, 3, 4));
+      c.copy(sal).lerp(vein, sstep(0.06, 0.0, v) * 0.7);
+      c.lerp(teal, sstep(0.55, 0.8, fbm2c(x * 0.012, z * 0.012, 3, 9) + 0.5) * (1 - sstep(0.2, 0.4, slope)) * 0.8);
+      c.lerp(stone, sstep(0.3, 0.55, slope));
+      c.lerp(deep, 1 - sstep(-110, -96, y));
+    },
+  }), pbr(fog, { roughness: 0.92 }));
+  ground.receiveShadow = ground.castShadow = true; scene.add(ground);
+
+  // ---- coral-like sculk tufts (salmon) and teal fronds carpeting the meadows
+  const branches: THREE.BufferGeometry[] = [];
+  for (let i = 0; i < 6; i++) {
+    const h = 1.2 + (i % 3) * 0.5, g = new THREE.CylinderGeometry(0.04, 0.16, h, 5, 1).translate(0, h / 2, 0);
+    g.rotateZ(((i * 2.4) % 1.2) - 0.6).rotateY(i * 1.05); branches.push(g);
+  }
+  const coralG = mergeGeometries(branches)!;
+  const frondG = new THREE.ConeGeometry(0.22, 2.2, 5, 1).translate(0, 1.1, 0);
+  const coralMs: THREE.Matrix4[] = [], coralCs: THREE.Color[] = [], frondMs: THREE.Matrix4[] = [];
+  for (let i = 0; i < 26000 && coralMs.length < 5200; i++) {
+    const x = (r() - 0.5) * 520, z = -900 - r() * 640, y = siftH(x, z);
+    if (ravine(x, z) < 0.85 || nearPath(x, y, z) < 5) continue;
+    const s = 0.8 + r() * 2.2, m = mat4([x, y - 0.2, z], [s, s * (0.8 + r() * 0.6), s], [0, r() * 6, 0]);
+    if (r() < 0.72) { coralMs.push(m); coralCs.push(new THREE.Color().setHSL(0.99 + r() * 0.03, 0.62, 0.62 + r() * 0.12)); }
+    else frondMs.push(m);
+  }
+  const coralMat = pbr(fog, { vertexColors: false, color: '#ffffff', roughness: 0.6, emissive: new THREE.Color('#ff6f6a'), emissiveIntensity: 0.12 });
+  const coral = instanced(coralG, coralMat, coralMs, coralCs); coral.castShadow = true; scene.add(coral);
+  const fronds = instanced(frondG, pbr(fog, { vertexColors: false, color: '#27b3a6', roughness: 0.55, emissive: new THREE.Color('#0f6b66'), emissiveIntensity: 0.25 }), frondMs);
+  fronds.castShadow = true; scene.add(fronds);
+
+  // ---- pale giant trees: flared bone-white trunks carrying stacked, drooping mint-white canopies
+  const bark = pbr(fog, { vertexColors: false, color: '#e4ded6', roughness: 0.75 });
+  const leaf = pbr(fog, { vertexColors: false, color: '#d8f4ec', roughness: 0.55, emissive: new THREE.Color('#7fd8c8'), emissiveIntensity: 0.18, side: THREE.DoubleSide });
+  const trunkProf: THREE.Vector2[] = [];
+  for (let i = 0; i <= 24; i++) { const k = i / 24; trunkProf.push(new THREE.Vector2(0.9 + 3.2 * Math.pow(1 - k, 6) + 0.25 * Math.sin(k * 9), k * 40)); }
+  const trunkG = new THREE.LatheGeometry(trunkProf, 18);
+  const canopyG = new THREE.SphereGeometry(1, 28, 10, 0, Math.PI * 2, 0, Math.PI * 0.55);
+  const pos = canopyG.attributes.position!;
+  for (let i = 0; i < pos.count; i++) { const x = pos.getX(i), z = pos.getZ(i), d = Math.hypot(x, z); pos.setY(i, pos.getY(i) * 0.35 - d * d * 0.25 + 0.06 * Math.sin(Math.atan2(z, x) * 7) * d); }
+  canopyG.computeVertexNormals();
+  const tree = (x: number, z: number, s: number) => {
+    const g = new THREE.Group(), y = siftH(x, z);
+    const tr = new THREE.Mesh(trunkG, bark); tr.castShadow = tr.receiveShadow = true; g.add(tr);
+    for (let k = 0; k < 3; k++) {
+      const c = new THREE.Mesh(canopyG, leaf), w = 16 - k * 4.5;
+      c.scale.set(w, w * 0.9, w); c.position.set((r() - 0.5) * 3, 30 + k * 6, (r() - 0.5) * 3); c.castShadow = true; g.add(c);
+    }
+    g.position.set(x, y - 1, z); g.scale.setScalar(s); g.rotation.y = r() * 6; scene.add(g);
+  };
+  for (let i = 0, n = 0; i < 400 && n < 16; i++) {
+    const x = (r() - 0.5) * 640, z = -960 - r() * 600, s = 0.7 + r() * 0.8, y = siftH(x, z);
+    if (ravine(x, z) < 0.9 || nearPath(x, y + 30 * s, z) < 22 * s + 8 || nearPath(x, y + 10, z) < 12) continue;
+    tree(x, z, s); n++;
+  }
+  tree(TREE.x, TREE.z, 3.2);
+
+  // ---- glowing ichor pools on the ravine floors
+  const ichor = /* glsl */ `vec4 surface(vec3 wp, vec3 n, vec2 uv) {
+      float f = fbm(vec3(wp.xz * 0.08, t * 0.25)), g = fbm(vec3(wp.xz * 0.3 + t * 0.2, 3.0));
+      float tide = 0.75 + 0.25 * sin(t * 0.7);
+      vec3 c = mix(vec3(0.02, 0.9, 1.0), vec3(0.6, 4.0, 3.6), smoothstep(0.35, 0.8, f * 0.8 + g * 0.3)) * tide;
+      return vec4(c, 1.0); }`;
+  for (let i = 0, n = 0; i < 4000 && n < 26; i++) {
+    const x = (r() - 0.5) * 560, z = -920 - r() * 620;
+    if (ravine(x, z) > 0.12) continue;
+    const rad = 7 + r() * 16, p = makeSurface(new THREE.CircleGeometry(rad, 40).rotateX(-Math.PI / 2), ichor, {}, fog, {});
+    p.position.set(x, siftH(x, z) + 3.2, z); scene.add(p); n++;
+  }
+
+  // ---- souls: engine GPU particles rising off the meadows as glowing streaks; spores drift around the camera
+  const souls = new LargeParticles(9000, 2027);
+  souls.configure({
+    mode: 'fall', style: 'disc', size: [0.05, 0.16], life: [6, 14],
+    color: { mode: 'flat', rgb: [0.55, 1.0, 0.92] }, intensity: 1.4, brightnessVariance: 0.7, fade: [0.15, 0.3],
+    turbulence: { amp: 1.6, freq: 0.06, drift: 0.2 },
+    fall: { center: [0, -150, -1180], box: [320, 45, 360], velocity: [0.6, 3.5, -0.4], drag: 0 },
+  });
+  scene.add(makeMotes({ count: 2200, box: [70, 36, 70], color: new THREE.Color(1.6, 2.4, 2.2), color2: new THREE.Color(2.4, 1.2, 1.2), size: 0.03, vel: [0.6, 0.5, 0.2], swirl: 0.8, flicker: 0.5 }));
+
+  const lightPos = new THREE.Vector3();
+  return {
+    name: 'sift', scene, fog, lightPos,
+    update(t, cam, bird) { sun.follow(bird); setTime(scene, t); lightPos.copy(cam.position).addScaledVector(SUN, 4000); },
+    overlay(rd, cam, target, t) { souls.render(rd, cam, target, t); },
+    post: () => ({ exposure: 0.95, bloom: 0.6, bloomThreshold: 1.2, volumetric: 0.18, volumetricDecay: 0.93, halation: 0.1, ca: 0.5 }),
+    dispose() { souls.dispose(); disposeTree(scene); disposeEnv(scene); },
+  };
+}
