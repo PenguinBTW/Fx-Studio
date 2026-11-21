@@ -124,17 +124,18 @@ export function sift(renderer: THREE.WebGLRenderer): World & { plant(part: (id: 
         uniforms: { uT: soulT }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
         vertexShader: `attribute float seed; uniform float uT; varying float vA;
           void main() {
-            float ph = fract(seed * 7.13 + uT * 0.08);
-            float ang = seed * 61.0 + uT * (0.6 + seed * 0.5) + ph * 9.0;
-            float rad = 30.0 + 30.0 * pow(fract(seed * 3.7), 2.0) * (1.0 - ph * 0.5);
+            float h1 = fract(sin(seed * 917.3) * 43758.5), h2 = fract(sin(seed * 373.1) * 24634.6), h3 = fract(sin(seed * 155.7) * 11743.2);
+            float ph = fract(h1 + uT * (0.05 + 0.05 * h3));
+            float ang = h2 * 6.2832 + uT * (0.4 + h3 * 0.5) + ph * 7.0;
+            float rad = 30.0 + 30.0 * pow(h3, 2.0) * (1.0 - ph * 0.5);
             vec3 p = position + vec3(cos(ang) * rad, -100.0 + ph * 190.0, sin(ang) * rad);
             vA = sin(ph * 3.1416) * smoothstep(73.0, 78.0, uT);
             vec4 mv = modelViewMatrix * vec4(p, 1.0);
-            gl_PointSize = (6.0 + 10.0 * fract(seed * 11.3)) * 300.0 / -mv.z;
+            gl_PointSize = (5.0 + 11.0 * h2 * h2) * 300.0 / -mv.z;
             gl_Position = projectionMatrix * mv; }`,
         fragmentShader: `varying float vA;
           void main() { float d = length(gl_PointCoord - 0.5); float a = smoothstep(0.5, 0.0, d);
-            gl_FragColor = vec4(vec3(0.6, 2.2, 4.0) * a * vA, a * vA); }`,
+            gl_FragColor = vec4(vec3(1.6, 2.6, 3.4) * a * vA, a * vA); }`,
       });
       const pts = new THREE.Points(g, sm); pts.frustumCulled = false; scene.add(pts);
     }
