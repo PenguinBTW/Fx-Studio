@@ -29,7 +29,7 @@ export default class Odyssey extends Scene {
 
   override init() {
     const r = this.ctx.renderer;
-    r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
+    r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFShadowMap;
     this.worlds = [overworld(r), nether(r), theEnd(r), aether(r), sift(r)];
     const res = new THREE.Vector2(PW, PH);
     PORTALS.forEach((p, i) => {
