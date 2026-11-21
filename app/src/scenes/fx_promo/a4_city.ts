@@ -324,6 +324,7 @@ export default class A4City extends Scene {
     slam(g, 'EVERYTHING IS f(t)', 960, 250, T, { t0: bar(46.5), t1: bar(48.2), size: 150, family: fam, from: 2.0, shake: 8, color: C.bone });
 
     present(this.ctx, out, this.scene, this.cam, this.layer, undefined, 0x050506, overlayTextDuck(f.tin, f.tout));
-    return { exposure: L.exp, bloom: L.bloom + 0.3 * a.kick * night, bloomThreshold: 0.9, vignette: 0.45 + 0.2 * decay, grain: 0.045 + 0.03 * decay, ca: 0.4 + 1.2 * dustK * a.kick, zoom: 1 + 0.015 * a.kick };
+    const tImp = this.B[this.tallest]!.tc + 0.91, imp = T > tImp ? Math.exp(-(T - tImp) * 9) : 0;
+    return { shake: [0.9 * imp, -0.6 * imp], flash: 0.12 * imp, exposure: L.exp, bloom: L.bloom + 0.3 * a.kick * night, bloomThreshold: 0.9, vignette: 0.45 + 0.2 * decay, grain: 0.045 + 0.03 * decay, ca: 0.4 + 1.2 * dustK * a.kick, zoom: 1 + 0.015 * a.kick };
   }
 }

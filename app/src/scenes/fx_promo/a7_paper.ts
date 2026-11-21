@@ -226,7 +226,7 @@ export default class A7Paper extends Scene {
     const light = st === 0 || st === 2 || st === 3;
     const ink = light ? '#141418' : C.bone, halo = light ? 'rgba(240,234,222,0.85)' : 'rgba(5,5,6,0.85)';
     if (T > bar(67)) { g.fillStyle = 'rgba(248,243,233,0.94)'; g.fillRect(96, 946, 64 + 30 * (15 + NAMES[st]!.length), 74); }
-    typeLine(g, `world.style = "${NAMES[st]}"`, 120, 1000, T, Math.max(swT, bar(67)), { size: 52, color: '#141418', cps: 40 });
+    typeLine(g, `world.style = "${NAMES[st]}"`, 120, 1000, T, Math.max(swT, bar(67)), { size: 48, color: '#141418', cps: 40, family: F.mono(500) });
     const cap = clamp((T - bar(67.5)) / 0.4) * (1 - clamp((T - bar(70.5)) / 0.4));
     if (cap > 0) { g.save(); g.globalAlpha = cap; g.font = `italic 58px "${F.serif(500, true)}"`; g.fillStyle = '#141418'; g.textAlign = 'center'; g.fillText('the paper stays paper.', 960, 960); g.restore(); }
     const fam = F.archivo(115, 900);
