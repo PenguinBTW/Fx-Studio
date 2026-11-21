@@ -28,7 +28,7 @@ const SHOTS: Shot[] = [
   { t0: 32.4, t1: 43, a: [12, -26, -488], b: [26, -56, -574], fov: 38 },
   { t0: 51.8, t1: 58.8, a: [-20, -56, -805], b: [-26, -50, -868], fov: 38 },
   { t0: 68, t1: 74.2, a: [26, -50, -1040], b: [28, -52, -1084], fov: 38, ground: siftH },
-  { t0: 76.2, t1: 82.6, a: [-14, -40, -1140], b: [0, -30, -1182], fov: 40, ground: siftH },
+  { t0: 76.2, t1: 86, a: [-14, -40, -1140], b: [-26, -58, -1150], fov: 44, ground: siftH },
 ];
 const SHOT_RAMP = 1.6, _hp = new THREE.Vector3(), _hb = new THREE.Vector3();
 function heroAt(t: number): { w: number; fov: number; p: THREE.Vector3 } {
@@ -183,7 +183,7 @@ export default class Odyssey extends Scene {
     const post: PostOverrides = {
       hud: 0, frame: 0, metricReadout: 0, volumetricSteps: 48, volumetricJitter: 1, toneMap: 'agx', grain: 0.025, ca: 0.7, halation: 0.15, vignette: 0.32,
       bloom: 0.6, bloomThreshold: 1.0, bloomRadius: 0.8, flash,
-      fade: Math.max(1 - smoothstep(0, 1.6, t), smoothstep(80.2, 82, t)),
+      fade: Math.max(1 - smoothstep(0, 1.6, t), smoothstep(81, 82, t)),
       ...cur.post(t),
     };
     // portal beat: chromatic split + bloom surge either side of each membrane crossing
