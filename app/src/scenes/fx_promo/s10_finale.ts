@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { Layer2D } from '../../engine/gl';
 import { LineBatch } from '../../engine/lines';
+import { RibbonGeometry, RibbonMesh } from '../../engine/ribbon';
 import { F } from '../../engine/type';
 import { clamp, ease, prog, springStep, hash } from '../../engine/util';
 import { C, BAR, B0, BEAT, bar, sceneTime, model, present, slam, typeLine, applyCam, lin, train, type Cue } from './kit';
@@ -18,6 +19,9 @@ export default class S10Finale extends Scene {
   private envScene = new THREE.Scene();
   private cam = new THREE.PerspectiveCamera(34, 16 / 9, 0.02, 200);
   private layer = new Layer2D();
+  // The Thread, as three twist-free Bishop-frame ribbons (engine ribbon.ts) spiralling into the logo.
+  private ribbons: RibbonMesh[] = [];
+  private ribMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(C.signal).convertSRGBToLinear().multiplyScalar(2.6), side: THREE.DoubleSide, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
   private lines = new LineBatch(NP + 8, { screen2D: false, worldWidth: true, blend: 'add', depthTest: true });
   private cubeRT = new THREE.WebGLCubeRenderTarget(256, { type: THREE.HalfFloatType, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter });
   private cubeCam = new THREE.CubeCamera(0.1, 100, this.cubeRT);
@@ -69,10 +73,24 @@ export default class S10Finale extends Scene {
 
     // Vortex: closed-form spiral orbits whose radius collapses into the logo over bars 105-106.
     const collapse = prog(T, bar(105), bar(106.5), ease.inCubic);
+    if (!this.ribbons.length) for (let j = 0; j < 3; j++) {
+      const spine = (t: number, u: number): [number, number, number] => {
+        const cl = prog(t, bar(105), bar(106.5), ease.inCubic);
+        const a = u * Math.PI * 5 + t * 1.3 + (j * Math.PI * 2) / 3;
+        const r = (0.5 + 5.5 * (1 - u)) * (1 - cl) + 0.06;
+        return [Math.cos(a) * r, (u - 0.5) * 4.5 * (1 - cl) + 0.4 * Math.sin(a * 0.7 + j), Math.sin(a) * r];
+      };
+      const m = new RibbonMesh(new RibbonGeometry({ segments: 220, spine, width: (u: number) => 0.11 * Math.sin(Math.PI * u) ** 0.6, twist: 0, time: T }), this.ribMat);
+      m.frustumCulled = false;
+      this.ribbons.push(m);
+      this.scene.add(m);
+    }
     const L = this.lines;
     L.clear();
     const bone = lin(C.bone, 1.3), sig = lin(C.signal, 3), ice = lin(C.ice, 1.5);
     const vis = 1 - prog(T, bar(106.4), bar(107.2));
+    this.ribMat.opacity = vis * (0.75 + 0.25 * f.a.kick);
+    for (const m of this.ribbons) { m.visible = vis > 0; if (vis > 0) m.update(T); }
     if (vis > 0) for (let i = 0; i < NP; i++) {
       const h1 = hash(i, 11), h2 = hash(i, 12), h3 = hash(i, 13);
       const r = (0.8 + h1 * 6) * (1 - collapse) + 0.05;
