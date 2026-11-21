@@ -56,6 +56,13 @@ export function theEnd(renderer: THREE.WebGLRenderer): World & { plant(part: (id
     if (nearPathXZ(p.x, p.z) < 40) continue;
     island(p, 14 + r() * 26, 14 + r() * 22, 20 + i, 2); outer.push(p);
   }
+  const rh = rng(77);
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2 + rh() * 0.3, d = 480 + rh() * 360;
+    const p = new THREE.Vector3(MAIN.x + Math.cos(a) * d, MAIN.y + 10 + rh() * 170, MAIN.z + Math.sin(a) * d);
+    if (nearPathXZ(p.x, p.z) < 80) continue;
+    island(p, 34 + rh() * 50, 40 + rh() * 50, 60 + i, 3);
+  }
 
   // ---- obsidian spires with caged crystals, beams converging on the levitating egg
   const obs = new THREE.MeshPhysicalMaterial({ color: '#0a0710', roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.1, iridescence: 0.8, iridescenceIOR: 1.8, metalness: 0.3 });
