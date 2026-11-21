@@ -70,9 +70,11 @@ export function nether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
     vec4 surface(vec3 wp, vec3 n, vec2 uv) {
       vec2 p = wp.xz * 0.045;
       float a = fbm2(p + vec2(t * 0.05, t * 0.03)), b = fbm2(p * 2.3 - vec2(t * 0.08, 0.0) + a * 1.7);
-      float crack = smoothstep(0.5, 0.36, abs(b - 0.5) * 2.0 + a * 0.45);
+      float v = abs(b - 0.5) * 2.0, fine = fbm2(p * 7.0 + a * 3.0);
+      float vein = smoothstep(0.16, 0.02, v + fine * 0.08), river = smoothstep(0.42, 0.3, a + fine * 0.12);
+      float crack = max(vein, river);
       float pulse = 0.75 + 0.25 * sin(t * 1.3 + a * 12.0);
-      vec3 crust = vec3(0.05, 0.012, 0.008) * (0.6 + a);
+      vec3 crust = vec3(0.06, 0.016, 0.012) * (0.45 + fine) + vec3(0.7, 0.09, 0.01) * smoothstep(0.35, 0.05, v) * 0.35;
       vec3 hot = mix(vec3(2.2, 0.32, 0.03), vec3(7.0, 2.6, 0.45), smoothstep(0.7, 1.0, crack * b * 1.4));
       vec3 c = mix(crust, hot * pulse, crack);
       c += vec3(0.9, 0.12, 0.015) * (1.0 - crack) * smoothstep(0.45, 0.85, b) * 0.45;
