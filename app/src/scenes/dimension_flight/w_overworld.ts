@@ -26,6 +26,7 @@ vec3 skyColor(vec3 d) {
 
 const riverX = (z: number) => 18 * Math.sin(z * 0.011) + 9 * Math.sin(z * 0.027 + 1.3);
 const KNOLL = new THREE.Vector2(0, -236);
+const petalT = { value: 0 };
 export function owHeight(x: number, z: number) {
   const d = Math.abs(x - riverX(z));
   let h = Math.pow(d / 42, 1.5) * 16 + fbm2c(x * 0.012, z * 0.012, 5, 3) * 22 * sstep(8, 70, d);
@@ -132,6 +133,28 @@ export function overworld(renderer: THREE.WebGLRenderer): World & { plant(part: 
     e.set((r() - 0.5) * 0.2, r() * Math.PI * 2, (r() - 0.5) * 0.2); q.setFromEuler(e); const k = (hgt + s) * (cherry ? 1.05 : 1.0) * (0.65 + r() * 0.75);
     (cherry ? cherryM : oakM).push(new THREE.Matrix4().compose(pos.set(x, y - 0.3, z), q, scl.set(k, k * (birch ? 1.25 : 1), k)));
   }
+  {
+    const src: THREE.Vector3[] = [], v = new THREE.Vector3();
+    for (const m of cherryM) { v.setFromMatrixPosition(m); if (nearPath(v.x, v.y + 6, v.z) < 70 && src.length < 140) src.push(v.clone()); }
+    const per = 40, n = src.length * per, rp = rng(404);
+    const g = new THREE.InstancedBufferGeometry().copy(new THREE.PlaneGeometry(0.9, 0.65) as unknown as THREE.InstancedBufferGeometry);
+    const off = new Float32Array(n * 4);
+    for (let k = 0; k < n; k++) { const c = src[Math.floor(k / per)]; off.set([c.x + (rp() - 0.5) * 14, c.y + 2 + rp() * 7, c.z + (rp() - 0.5) * 14, rp()], k * 4); }
+    g.setAttribute('aOff', new THREE.InstancedBufferAttribute(off, 4)); g.instanceCount = n;
+    const pm = new THREE.ShaderMaterial({
+      uniforms: { uT: petalT }, side: THREE.DoubleSide, transparent: true, depthWrite: false,
+      vertexShader: `attribute vec4 aOff; uniform float uT; varying float vS;
+        void main() {
+          float s = aOff.w, ph = fract(s * 13.7 + uT * (0.07 + 0.04 * s));
+          float a = uT * (1.5 + 2.0 * s) + s * 40.0;
+          mat3 R = mat3(cos(a), sin(a) * 0.6, sin(a) * 0.8, -sin(a), cos(a) * 0.6, cos(a) * 0.8, 0.0, -0.8, 0.6);
+          vec3 p = aOff.xyz + vec3(sin(uT * 0.9 + s * 20.0) * 1.6 + ph * 6.0, -ph * 9.0, cos(uT * 0.7 + s * 17.0) * 1.2);
+          vS = 0.75 + 0.25 * (R * vec3(0.0, 0.0, 1.0)).y;
+          gl_Position = projectionMatrix * viewMatrix * vec4(p + R * position, 1.0); }`,
+      fragmentShader: `varying float vS; void main() { gl_FragColor = vec4(vec3(1.0, 0.66, 0.78) * vS, 0.92); }`,
+    });
+    const pts = new THREE.Mesh(g, pm); pts.frustumCulled = false; scene.add(pts);
+  }
   /** Blender tree asset (assets/trees: meshes Oak, Cherry) -> one fogged InstancedMesh per material primitive. */
   const plant = (part: (id: string) => THREE.Object3D) => {
     for (const [name, ms] of [['oak', oakM], ['cherry', cherryM]] as const) {
@@ -161,7 +184,7 @@ export function overworld(renderer: THREE.WebGLRenderer): World & { plant(part: 
   const lightPos = new THREE.Vector3();
   return {
     name: 'overworld', scene, fog, lightPos, plant,
-    update(t, cam, bird) {
+    update(t, cam, bird) { petalT.value = t;
       sun.follow(bird); setTime(scene, t);
       lightPos.copy(cam.position).addScaledVector(SUN, 4000);
     },
