@@ -23,7 +23,7 @@ for (let t = 31; t <= 49; t += 0.08) PATH_PTS.push(BIRD.at(t));
 const nearPath = (x: number, y: number, z: number) => { let m = 1e9; for (const p of PATH_PTS) m = Math.min(m, Math.hypot(p.x - x, p.y - y, p.z - z)); return m; };
 const nearPathXZ = (x: number, z: number) => { let m = 1e9; for (const p of PATH_PTS) m = Math.min(m, Math.hypot(p.x - x, p.z - z)); return m; };
 
-export function theEnd(renderer: THREE.WebGLRenderer): World {
+export function theEnd(renderer: THREE.WebGLRenderer): World & { plant(part: (id: string) => THREE.Object3D): void } {
   const scene = new THREE.Scene();
   const fog: FogSpec = { color: new THREE.Color(0.035, 0.016, 0.06), density: 0.0019, height: -60, falloff: 0.01 };
   scene.add(makeSky(SKY));
@@ -95,35 +95,24 @@ export function theEnd(renderer: THREE.WebGLRenderer): World {
   const eggL = new THREE.PointLight('#c060ff', 900, 120, 1.5); eggL.position.copy(EGG); scene.add(eggL);
 
   // ---- chorus groves: branching stalks of rounded segments tipped with pale flowers
-  const segM: THREE.Matrix4[] = [], segC: THREE.Color[] = [], flM: THREE.Matrix4[] = [];
-  const v = new THREE.Vector3(), q = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1);
-  const grow = (p: THREE.Vector3, dir: THREE.Vector3, depth: number, s: number) => {
-    const n = 2 + Math.floor(r() * 3);
-    for (let i = 0; i < n; i++) {
-      p = p.clone().addScaledVector(dir, s);
-      segM.push(new THREE.Matrix4().compose(p, q.identity(), one.clone().multiplyScalar(s * 0.95)));
-      const k = r(); segC.push(new THREE.Color(0.36 + k * 0.1, 0.2 + k * 0.08, 0.38 + k * 0.12));
-    }
-    if (depth <= 0) { flM.push(new THREE.Matrix4().compose(p.clone().addScaledVector(dir, s * 0.9), q.identity(), one.clone().multiplyScalar(s * 1.1))); return; }
-    const kids = 1 + Math.floor(r() * 3);
-    for (let i = 0; i < kids; i++) {
-      const d = dir.y > 0.5 ? new THREE.Vector3([1, -1, 0, 0][Math.floor(r() * 4)]!, 0, 0) : new THREE.Vector3(0, 1, 0);
-      if (dir.y > 0.5 && d.x === 0) d.set(0, 0, r() < 0.5 ? 1 : -1);
-      grow(p, d, depth - 1, s * 0.9);
-    }
-  };
-  const plant = (cx: number, cz: number, rad: number, y: number, count: number) => {
+  const chorusM: THREE.Matrix4[] = [];
+  const grove = (cx: number, cz: number, rad: number, y: number, count: number) => {
     for (let i = 0; i < count; i++) {
       const a = r() * Math.PI * 2, d = Math.sqrt(r()) * rad, x = cx + Math.cos(a) * d, z = cz + Math.sin(a) * d;
       if (nearPathXZ(x, z) < 10) continue;
-      grow(v.set(x, y, z), new THREE.Vector3(0, 1, 0), 3 + Math.floor(r() * 2), 1.1 + r() * 0.5);
+      const k = 24 + r() * 16; chorusM.push(new THREE.Matrix4().compose(new THREE.Vector3(x, y - 0.4, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), r() * 6.28), new THREE.Vector3(k, k * (0.85 + r() * 0.3), k)));
     }
   };
-  plant(MAIN.x, MAIN.z, 95, MAIN.y + 2, 26);
-  for (const p of outer) plant(p.x, p.z, 10, p.y + 1, 4);
-  plant(GATE.x, GATE.z, 26, GATE.y + 0.5, 8);
-  scene.add(instanced(new RoundedBoxGeometry(1, 1, 1, 2, 0.18), pbr(fog, { vertexColors: false, roughness: 0.7, color: '#ffffff' }), segM, segC));
-  scene.add(instanced(new THREE.IcosahedronGeometry(0.75, 1), pbr(fog, { vertexColors: false, color: '#f0e0ff', emissive: new THREE.Color('#d8b0ff'), emissiveIntensity: 2.4, flatShading: true }), flM));
+  grove(MAIN.x, MAIN.z, 95, MAIN.y + 2, 26);
+  for (const p of outer) grove(p.x, p.z, 10, p.y + 1, 4);
+  grove(GATE.x, GATE.z, 26, GATE.y + 0.5, 8);
+  /** Blender chorus plant (assets/chorus) instanced over the grove placements. */
+  const plant = (part: (id: string) => THREE.Object3D) => part('chorus').traverse((o) => {
+    const m = o as THREE.Mesh; if (!m.isMesh) return;
+    const om = m.material as THREE.MeshStandardMaterial;
+    const im = instanced(m.geometry, pbr(fog, { vertexColors: false, color: om.color, roughness: om.roughness, emissive: om.emissive, emissiveIntensity: om.emissiveIntensity }), chorusM);
+    im.castShadow = true; scene.add(im);
+  });
 
   // ---- purpur towers flanking the gate, lit by end rods
   const purpur = pbr(fog, { vertexColors: false, color: '#a77fa8', roughness: 0.75 });
@@ -150,14 +139,14 @@ export function theEnd(renderer: THREE.WebGLRenderer): World {
 
   const lightPos = EGG.clone();
   return {
-    name: 'end', scene, fog, lightPos,
+    name: 'end', scene, fog, plant, lightPos,
     update(t, _cam, bird) {
       key.follow(bird); setTime(scene, t);
       crystals.forEach((g, i) => { g.children[0]!.rotation.set(t * 0.7 + i, t * 1.1, 0); g.children[1]!.rotation.set(t * 0.4, t * 0.6 + i, t * 0.3); g.position.y += 0; });
       egg.position.y = EGG.y + Math.sin(t * 0.8) * 0.8;
       void nearPath;
     },
-    post: () => ({ exposure: 1.1, bloom: 0.9, bloomThreshold: 0.9, volumetric: 0.25, volumetricDecay: 0.93, halation: 0.2, ca: 1.0 }),
+    post: () => ({ grade: { saturation: 1.15, gamma: 0.9 }, exposure: 1.05, bloom: 0.9, bloomThreshold: 0.9, volumetric: 0.25, volumetricDecay: 0.93, halation: 0.2, ca: 1.0 }),
     dispose() { disposeTree(scene); disposeEnv(scene); },
   };
 }

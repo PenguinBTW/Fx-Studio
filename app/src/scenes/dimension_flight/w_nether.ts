@@ -1,6 +1,7 @@
 // NETHER — a cathedral cavern over a breathing lava sea: basalt deltas, a crimson grove and a warped grove,
 // lavafalls from the roof, glowstone chandeliers and, on an ancient stone pylon, the frame of the End gate.
 import * as THREE from 'three';
+import { LargeParticles } from '../../engine/particles_large';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import type { World } from './world';
 import { Sun } from './world';
@@ -34,9 +35,9 @@ function floorH(x: number, z: number) {
 }
 const ceilH = (x: number, z: number) => 150 - 26 * fbm2c(x * 0.012, z * 0.012, 5, 51) - 40 * Math.pow(Math.max(0, ridged(x * 0.03, z * 0.03, 3, 5) - 0.45), 2) * 6 - sstep(60, 200, Math.abs(x)) * 60;
 
-export function nether(renderer: THREE.WebGLRenderer): World {
+export function nether(renderer: THREE.WebGLRenderer): World & { plant(part: (id: string) => THREE.Object3D): void } {
   const scene = new THREE.Scene();
-  const fog: FogSpec = { color: new THREE.Color(0.16, 0.028, 0.014), density: 0.0036, height: 6, falloff: 0.015 };
+  const fog: FogSpec = { color: new THREE.Color(0.16, 0.028, 0.014), density: 0.00216, height: 6, falloff: 0.015 };
   scene.add(makeSky(SKY));
   scene.environment = envFromSky(renderer, SKY);
   scene.environmentIntensity = 0.3;
@@ -96,6 +97,7 @@ export function nether(renderer: THREE.WebGLRenderer): World {
   scene.add(instanced(new THREE.CylinderGeometry(1, 1, 1, 6), pbr(fog, { vertexColors: false, roughness: 0.6, metalness: 0.1, color: '#ffffff', flatShading: true }), colM, colC));
 
   // ---- giant fungi on the two plateaus
+  const crimsonM: THREE.Matrix4[] = [], warpedM: THREE.Matrix4[] = [];
   const stemM: THREE.Matrix4[] = [], stemC: THREE.Color[] = [], capM: THREE.Matrix4[] = [], capC: THREE.Color[] = [], lightM: THREE.Matrix4[] = [], lightC: THREE.Color[] = [];
   for (const [c, warped] of [[CRIMSON, false], [WARPED, true]] as const) for (let i = 0; i < 70; i++) {
     const a = r() * Math.PI * 2, d = Math.sqrt(r()) * 34, x = c.x + Math.cos(a) * d, z = c.y + Math.sin(a) * d;
@@ -104,6 +106,7 @@ export function nether(renderer: THREE.WebGLRenderer): World {
     const lean = (r() - 0.5) * 0.25;
     stemM.push(M(x, y + h / 2, z, 0.9 + h * 0.04, h, 0.9 + h * 0.04, 0, lean, (r() - 0.5) * 0.25));
     stemC.push(warped ? new THREE.Color(0.06, 0.12, 0.16) : new THREE.Color(0.32, 0.06, 0.09));
+    (warped ? warpedM : crimsonM).push(new THREE.Matrix4().compose(new THREE.Vector3(x, y - 0.3, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, r() * 6.28, lean)), new THREE.Vector3(cw / 0.62, h, cw / 0.62)));
     const cy = y + h + cw * 0.08;
     capM.push(M(x, cy, z, cw, cw * (0.45 + r() * 0.2), cw, r() * 6));
     capC.push(warped ? new THREE.Color(0.02, 0.32 + r() * 0.1, 0.3) : new THREE.Color(0.26 + r() * 0.1, 0.008, 0.018));
@@ -113,10 +116,6 @@ export function nether(renderer: THREE.WebGLRenderer): World {
       lightC.push(warped ? new THREE.Color(1.0, 0.7, 0.35) : new THREE.Color(1.0, 0.55, 0.22));
     }
   }
-  scene.add(instanced(new THREE.CylinderGeometry(0.5, 0.7, 1, 10), pbr(fog, { vertexColors: false, roughness: 0.8, color: '#ffffff' }), stemM, stemC));
-  scene.add(instanced(new THREE.SphereGeometry(1, 28, 14, 0, Math.PI * 2, 0, Math.PI * 0.55), pbr(fog, { vertexColors: false, roughness: 0.55, color: '#ffffff', side: THREE.DoubleSide }), capM, capC));
-  const shroom = pbr(fog, { vertexColors: false, color: '#ffb060', emissive: new THREE.Color('#ff7a20'), emissiveIntensity: 3.2, roughness: 0.5 });
-  scene.add(instanced(new RoundedBoxGeometry(0.9, 0.9, 0.9, 2, 0.15), shroom, lightM, lightC));
   for (const c of [CRIMSON, WARPED]) { const l = new THREE.PointLight(c === CRIMSON ? '#ff5030' : '#30ffd8', 900, 90, 1.6); l.position.set(c.x, 30, c.y); scene.add(l); }
 
   // ---- glowstone chandeliers hanging from the roof
@@ -126,7 +125,6 @@ export function nether(renderer: THREE.WebGLRenderer): World {
     for (let j = 0; j < 14; j++) { const s = 1.5 + r() * 2.2; gsM.push(M(x + (r() - 0.5) * 6, y - r() * 9 - 1, z + (r() - 0.5) * 6, s, s, s, r() * 3, r() * 3)); gsC.push(new THREE.Color(1, 0.9, 0.6)); }
     if (i % 4 === 0) { const l = new THREE.PointLight('#ffc070', 500, 70, 1.8); l.position.set(x, y - 12, z); scene.add(l); }
   }
-  scene.add(instanced(new RoundedBoxGeometry(1, 1, 1, 2, 0.16), pbr(fog, { vertexColors: false, color: '#ffd890', emissive: new THREE.Color('#ffb040'), emissiveIntensity: 2.6 }), gsM, gsC));
 
   // ---- lavafalls pouring from the roof
   const fallMat = /* glsl */ `
@@ -162,12 +160,33 @@ export function nether(renderer: THREE.WebGLRenderer): World {
   for (let i = 0; i < 160; i++) smoke.push({ p: [(r() - 0.5) * 300, LAVA_Y + 4 + r() * 30, -230 - r() * 380], s: 14 + r() * 20, seed: r() * 50 });
   scene.add(makePuffs(smoke, { lit: new THREE.Color(0.9, 0.18, 0.04), shade: new THREE.Color(0.03, 0.01, 0.01), sunDir: new THREE.Vector3(0, -1, 0), fog, opacity: 0.45, drift: [0.3, 1.2, 0], nearFade: 12 }));
   scene.add(makeMotes({ count: 2600, box: [80, 50, 80], color: new THREE.Color(6, 1.8, 0.3), color2: new THREE.Color(4, 0.7, 0.1), size: 0.05, vel: [0.3, 2.2, 0.2], swirl: 1.4, flicker: 0.7 }));
+  // engine GPU embers boiling off the lava sea
+  const embers = new LargeParticles(14000, 666);
+  embers.configure({
+    mode: 'fall', style: 'streak', streak: 0.1, size: [0.015, 0.05], life: [3, 8],
+    color: { mode: 'flat', rgb: [1.0, 0.42, 0.1] }, intensity: 3.0, brightnessVariance: 0.8, fade: [0.1, 0.4],
+    turbulence: { amp: 2.2, freq: 0.08, drift: 0.4 },
+    fall: { center: [0, LAVA_Y - 20, -420], box: [150, 20, 200], velocity: [0.4, 3.2, 0.2], drag: 0 },
+  });
+  /** Blender fungi + glowstone (assets/nether_props) instanced over the matrices placed above. */
+  const plant = (part: (id: string) => THREE.Object3D) => {
+    const gsBig = gsM.map((m) => m.clone().multiply(new THREE.Matrix4().makeScale(1.5, 1.5, 1.5)));
+    for (const [id, ms] of [['crimson', crimsonM], ['warped', warpedM], ['glowstone', gsBig]] as const) {
+      part(id).traverse((o) => {
+        const m = o as THREE.Mesh; if (!m.isMesh) return;
+        const om = m.material as THREE.MeshStandardMaterial;
+        const im = instanced(m.geometry, pbr(fog, { vertexColors: false, color: om.color, roughness: om.roughness, emissive: om.emissive, emissiveIntensity: om.emissiveIntensity }), ms);
+        im.castShadow = true; scene.add(im);
+      });
+    }
+  };
   scene.add(makeMotes({ count: 1400, box: [60, 40, 60], color: new THREE.Color(0.25, 0.2, 0.2), size: 0.05, vel: [0.2, -0.6, 0.1], swirl: 0.6, additive: false, seed: 9 }));
 
   return {
-    name: 'nether', scene, fog,
+    name: 'nether', scene, fog, plant,
+    overlay(rd, cam, target, t) { embers.render(rd, cam, target, t); },
     update(t, _cam, bird) { key.follow(bird); setTime(scene, t); },
-    post: () => ({ exposure: 1.0, bloom: 0.75, bloomThreshold: 1.0, halation: 0.35, volumetric: 0, ca: 0.9 }),
-    dispose() { disposeTree(scene); disposeEnv(scene); },
+    post: () => ({ grade: { saturation: 1.2, gamma: 0.85 }, exposure: 0.85, bloom: 0.75, bloomThreshold: 1.0, halation: 0.35, volumetric: 0, ca: 0.9 }),
+    dispose() { embers.dispose(); disposeTree(scene); disposeEnv(scene); },
   };
 }

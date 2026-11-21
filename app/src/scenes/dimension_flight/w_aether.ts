@@ -1,7 +1,6 @@
 // AETHER — high, bright and weightless: an endless sea of cloud, mint-grassed isles of pale holystone,
 // waterfalls unspooling into the void and golden skyroot groves; a sandstone ring waits on the last isle.
 import * as THREE from 'three';
-import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import type { World } from './world';
 import { Sun } from './world';
 import { BIRD } from './path';
@@ -23,7 +22,7 @@ const PATH_PTS: THREE.Vector3[] = [];
 for (let t = 47.5; t <= 65; t += 0.08) PATH_PTS.push(BIRD.at(t));
 const nearPath = (x: number, y: number, z: number) => { let m = 1e9; for (const p of PATH_PTS) m = Math.min(m, Math.hypot(p.x - x, (p.y - y) * 1.3, p.z - z)); return m; };
 
-export function aether(renderer: THREE.WebGLRenderer): World {
+export function aether(renderer: THREE.WebGLRenderer): World & { plant(part: (id: string) => THREE.Object3D): void } {
   const scene = new THREE.Scene();
   const fog: FogSpec = { color: new THREE.Color(0.66, 0.78, 1.0), density: 0.00055, height: -100, falloff: 0.02 };
   const skyU = { uSun: { value: SUN } };
@@ -69,7 +68,7 @@ export function aether(renderer: THREE.WebGLRenderer): World {
   }
 
   // ---- skyroot groves (golden and teal) on the isles
-  const trM: THREE.Matrix4[] = [], trC: THREE.Color[] = [], lfM: THREE.Matrix4[] = [], lfC: THREE.Color[] = [];
+  const skyM: THREE.Matrix4[] = [], goldM: THREE.Matrix4[] = [];
   const q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), s3 = new THREE.Vector3();
   for (const { p, rad } of isles) {
     const n = Math.floor(rad * 0.35);
@@ -78,16 +77,19 @@ export function aether(renderer: THREE.WebGLRenderer): World {
       const y = p.y + rad * 0.12 * (1 - (d / rad) ** 2) - 0.3, h = 3 + r() * 3, s = 2.2 + r() * 1.6;
       if (nearPath(x, y + h + s, z) < 6 || (p === LAST && d < 13)) continue;
       const gold = r() < 0.4;
-      trM.push(new THREE.Matrix4().compose(v.set(x, y + h / 2, z), q.identity(), s3.set(0.5, h, 0.5))); trC.push(new THREE.Color(0.55, 0.5, 0.45));
-      for (let j = 0; j < 4; j++) {
-        e.set(r(), r() * 3, r()); q.setFromEuler(e); const k = j ? 0.6 + r() * 0.3 : 1;
-        lfM.push(new THREE.Matrix4().compose(v.set(x + (r() - 0.5) * s * (j ? 1 : 0), y + h + s * 0.2 + (r() - 0.4) * s * (j ? 0.7 : 0), z + (r() - 0.5) * s * (j ? 1 : 0)), q, s3.setScalar(s * k)));
-        lfC.push(gold ? new THREE.Color(1.0, 0.72 + r() * 0.1, 0.22) : new THREE.Color(0.3, 0.75, 0.62));
-      }
+      e.set(0, r() * Math.PI * 2, 0); q.setFromEuler(e); const k = (h + s) * 1.15;
+      (gold ? goldM : skyM).push(new THREE.Matrix4().compose(v.set(x, y - 0.2, z), q, s3.set(k, k * (gold ? 1 : 1.2), k)));
     }
   }
-  scene.add(instanced(new THREE.CylinderGeometry(0.3, 0.45, 1, 7), pbr(fog, { vertexColors: false, color: '#ffffff', roughness: 0.8 }), trM, trC));
-  scene.add(instanced(new RoundedBoxGeometry(1, 1, 1, 2, 0.22), pbr(fog, { vertexColors: false, color: '#ffffff', roughness: 0.6, emissive: new THREE.Color('#402800'), emissiveIntensity: 0.4 }), lfM, lfC));
+  /** Blender Skyroot + Golden Oak (assets/skyroot) instanced over the grove placements. */
+  const plant = (part: (id: string) => THREE.Object3D) => {
+    for (const [id, ms] of [['skyroot', skyM], ['golden', goldM]] as const) part(id).traverse((o) => {
+      const m = o as THREE.Mesh; if (!m.isMesh) return;
+      const om = m.material as THREE.MeshStandardMaterial, glow = om.name === 'GoldenLeaves';
+      const im = instanced(m.geometry, pbr(fog, { vertexColors: false, color: om.color, roughness: om.roughness, emissive: glow ? new THREE.Color('#6a3a00') : new THREE.Color(0), emissiveIntensity: glow ? 0.6 : 0 }), ms);
+      im.castShadow = true; scene.add(im);
+    });
+  };
 
   // ---- waterfalls spilling off isle rims into the cloud sea
   const fall = /* glsl */ `vec4 surface(vec3 wp, vec3 n, vec2 uv) {
@@ -118,9 +120,9 @@ export function aether(renderer: THREE.WebGLRenderer): World {
 
   const lightPos = new THREE.Vector3();
   return {
-    name: 'aether', scene, fog, lightPos,
+    name: 'aether', scene, fog, lightPos, plant,
     update(t, cam, bird) { sun.follow(bird); setTime(scene, t); lightPos.copy(cam.position).addScaledVector(SUN, 4000); },
-    post: () => ({ exposure: 0.95, bloom: 0.55, bloomThreshold: 1.3, volumetric: 0.3, volumetricDecay: 0.94, halation: 0.12, ca: 0.6 }),
+    post: () => ({ grade: { saturation: 1.3, gamma: 0.82, gain: 1.02 }, exposure: 0.9, bloom: 0.55, bloomThreshold: 1.3, volumetric: 0.3, volumetricDecay: 0.94, halation: 0.12, ca: 0.6 }),
     dispose() { disposeTree(scene); disposeEnv(scene); },
   };
 }
