@@ -150,8 +150,8 @@ export function overworld(renderer: THREE.WebGLRenderer): World & { plant(part: 
           mat3 R = mat3(cos(a), sin(a) * 0.6, sin(a) * 0.8, -sin(a), cos(a) * 0.6, cos(a) * 0.8, 0.0, -0.8, 0.6);
           vec3 p = aOff.xyz + vec3(sin(uT * 0.9 + s * 20.0) * 1.6 + ph * 6.0, -ph * 9.0, cos(uT * 0.7 + s * 17.0) * 1.2);
           vS = 0.75 + 0.25 * (R * vec3(0.0, 0.0, 1.0)).y;
-          gl_Position = projectionMatrix * viewMatrix * vec4(p + R * position, 1.0); }`,
-      fragmentShader: `varying float vS; void main() { gl_FragColor = vec4(vec3(1.0, 0.66, 0.78) * vS, 0.92); }`,
+          gl_Position = projectionMatrix * viewMatrix * vec4(p + R * (position * (0.45 + 0.9 * fract(s * 7.31))), 1.0); vS *= 0.7 + 0.5 * fract(s * 3.17); }`,
+      fragmentShader: `varying float vS; void main() { gl_FragColor = vec4(vec3(0.82, 0.38, 0.52) * vS, 0.9); }`,
     });
     const pts = new THREE.Mesh(g, pm); pts.frustumCulled = false; scene.add(pts);
   }
