@@ -82,8 +82,10 @@ export function overworld(renderer: THREE.WebGLRenderer): World & { plant(part: 
       { vec3 wn = normalize((vec4(normal, 0.0) * viewMatrix).xyz);
         float steep = smoothstep(0.86, 0.58, wn.y) * smoothstep(16.0, 40.0, vFogWP.y);
         float wy = vFogWP.y + vFogWP.x * 0.08 + 3.0 * sin(vFogWP.x * 0.013 + vFogWP.z * 0.009) + 2.0 * sin(vFogWP.z * 0.021 + 1.3);
-        float st = sin(wy * 0.42) * 0.6 + sin(wy * 1.13 + 2.0) * 0.4;
-        vec3 rockc = vec3(0.36, 0.33, 0.3) * mix(0.55, 1.2, smoothstep(-0.3, 0.6, st));
+        float wy2 = wy + 5.0 * sin(wy * 0.13 + vFogWP.x * 0.004);
+        float st = sin(wy2 * 0.37) * 0.5 + sin(wy2 * 0.91 + 2.0) * 0.3 + sin(wy2 * 2.3 + vFogWP.z * 0.03) * 0.2;
+        float hue = smoothstep(0.2, 0.8, sin(wy2 * 0.19 + 1.0) * 0.5 + 0.5);
+        vec3 rockc = mix(vec3(0.33, 0.32, 0.31), vec3(0.42, 0.34, 0.25), hue) * mix(0.45, 1.25, smoothstep(-0.45, 0.55, st));
         diffuseColor.rgb = mix(diffuseColor.rgb, rockc, steep * 0.85); }`);
   };
   gm.customProgramCacheKey = () => 'owground-strata';
