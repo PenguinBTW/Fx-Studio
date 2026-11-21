@@ -1,0 +1,18 @@
+{
+  "id": "block_land",
+  "eventId": null,
+  "recipe": "subHit",
+  "seed": 270,
+  "file": "block_land.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 1.4,
+  "hitOffsetSec": 0,
+  "peak": 0.8912509381337456,
+  "peakDb": -0.9999999999999997,
+  "rms": 0.24242122305146246,
+  "rmsDb": -12.308587240389897,
+  "eventTime": null,
+  "startTime": null
+}

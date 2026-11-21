@@ -1,0 +1,18 @@
+{
+  "id": "crest_shear",
+  "eventId": null,
+  "recipe": "whoosh",
+  "seed": 196,
+  "file": "crest_shear.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 0.6,
+  "hitOffsetSec": 0.3,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.08177579870708249,
+  "rmsDb": -21.747504108257814,
+  "eventTime": null,
+  "startTime": null
+}
