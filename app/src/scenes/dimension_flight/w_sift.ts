@@ -73,7 +73,7 @@ export function sift(renderer: THREE.WebGLRenderer): World & { plant(part: (id: 
     const x = (r() - 0.5) * 520, z = -900 - r() * 640, y = siftH(x, z);
     if (ravine(x, z) < 0.85 || nearPath(x, y, z) < 5) continue;
     const s = 0.8 + r() * 2.2, m = mat4([x, y - 0.2, z], [s, s * (0.8 + r() * 0.6), s], [0, r() * 6, 0]);
-    if (r() < 0.72) { if (nearPath(x, y + 6 * s, z) < 6 * s + 4) continue; coralMs.push(mat4([x, y - 0.3, z], [s * 3.2, s * (2.4 + r() * 1.6), s * 3.2], [0, r() * 6, 0])); coralCs.push(new THREE.Color().setHSL(0.99 + r() * 0.03, 0.8, 0.56 + r() * 0.1)); }
+    if (r() < 0.72) { if (nearPath(x, y + 6 * s, z) < 6 * s + 4) continue; coralMs.push(mat4([x, y - 0.3, z], [s * 3.2, s * (2.4 + r() * 1.6), s * 3.2], [0, r() * 6, 0])); coralCs.push(new THREE.Color().setHSL(0.975 + r() * 0.02, 0.75, 0.64 + r() * 0.08)); }
     else frondMs.push(m);
   }
   const coralMat = pbr(fog, { vertexColors: false, color: '#ffffff', roughness: 0.6, emissive: new THREE.Color('#ff6f6a'), emissiveIntensity: 0.12 });
@@ -129,8 +129,8 @@ export function sift(renderer: THREE.WebGLRenderer): World & { plant(part: (id: 
   // ---- souls: engine GPU particles rising off the meadows as glowing streaks; spores drift around the camera
   const souls = new LargeParticles(9000, 2027);
   souls.configure({
-    mode: 'fall', style: 'disc', size: [0.14, 0.42], life: [6, 14],
-    color: { mode: 'flat', rgb: [0.4, 0.82, 1.0] }, intensity: 3.4, brightnessVariance: 0.7, fade: [0.15, 0.3],
+    mode: 'fall', style: 'disc', size: [0.3, 0.75], life: [6, 14],
+    color: { mode: 'flat', rgb: [0.3, 0.7, 1.0] }, intensity: 4.5, brightnessVariance: 0.7, fade: [0.15, 0.3],
     turbulence: { amp: 1.6, freq: 0.06, drift: 0.2 },
     fall: { center: [0, -95, -1150], box: [260, 10, 300], velocity: [0.6, 4.2, -0.4], drag: 0 },
   });
