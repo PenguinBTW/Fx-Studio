@@ -122,7 +122,7 @@ export function aether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
   return {
     name: 'aether', scene, fog, lightPos, plant,
     update(t, cam, bird) { sun.follow(bird); setTime(scene, t); lightPos.copy(cam.position).addScaledVector(SUN, 4000); },
-    post: () => ({ toneMap: 'aces', grade: { saturation: 1.35, gamma: 0.86, gain: 1.0, tint: [1.14, 1.02, 0.8], lift: [-0.03, -0.026, -0.02] }, exposure: 0.84, bloom: 0.45, bloomThreshold: 1.3, volumetric: 0.12, volumetricDecay: 0.94, halation: 0.12, ca: 0.6 }),
+    post: () => ({ toneMap: 'aces', grade: { saturation: 1.55, gamma: 0.9, gain: 1.0, tint: [1.14, 1.02, 0.8], lift: [-0.015, -0.012, -0.008] }, exposure: 0.74, bloom: 0.45, bloomThreshold: 1.3, volumetric: 0.12, volumetricDecay: 0.94, halation: 0.12, ca: 0.6 }),
     dispose() { disposeTree(scene); disposeEnv(scene); },
   };
 }
