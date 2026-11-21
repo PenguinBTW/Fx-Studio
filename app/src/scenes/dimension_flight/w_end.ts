@@ -32,10 +32,10 @@ export function theEnd(renderer: THREE.WebGLRenderer): World & { plant(part: (id
   const key = new Sun(scene, new THREE.Vector3(0.3, 1, 0.25), '#ffe6c4', 3.0, 110);
   scene.add(new THREE.HemisphereLight('#9a8cc0', '#2a2030', 0.9));
   const r = rng(1234);
-  const stoneTop = new THREE.Color(0.95, 0.9, 0.62), stonePit = new THREE.Color(0.2, 0.17, 0.12), under = new THREE.Color(0.30, 0.26, 0.24);
+  const stoneTop = new THREE.Color(1.0, 0.97, 0.72), stonePit = new THREE.Color(0.32, 0.27, 0.18), under = new THREE.Color(0.30, 0.26, 0.24);
   const stoneColor = (x: number, _y: number, z: number, slope: number, u: boolean, c: THREE.Color) => {
     const pits = Math.max(sstep(0.2, 0.5, fbm2c(x * 0.35, z * 0.35, 3, 7)) * 0.7, sstep(0.5, 0.72, fbm2c(x * 1.3, z * 1.3, 2, 9)));
-    c.copy(stoneTop).lerp(stonePit, Math.min(1, pits * 1.1 + slope * 0.6));
+    c.copy(stoneTop).lerp(stonePit, Math.min(1, pits * 1.35 + slope * 0.6));
     if (u) c.copy(under).lerp(stonePit, sstep(-0.2, 0.5, fbm2c(x * 0.1, z * 0.1 + _y * 0.1, 3, 2)) * 0.5);
   };
   const stoneMat = pbr(fog, { roughness: 0.96, side: THREE.DoubleSide });
