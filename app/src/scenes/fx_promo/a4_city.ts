@@ -3,6 +3,7 @@
 // Every state is a closed-form function of T; params.remap = [s0, s1, e0, e1] maps song time s0..s1 onto city time
 // e0..e1 (e0 > e1 plays it backwards: the rewind in A9a).
 import * as THREE from 'three';
+import { LargeParticles } from '../../engine/particles_large';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { Layer2D } from '../../engine/gl';
 import { overlayTextDuck } from '../../engine/transition';
@@ -105,6 +106,9 @@ export default class A4City extends Scene {
   private thread!: THREE.MeshBasicMaterial;
   private ground!: THREE.MeshStandardMaterial;
   private tallest = 0;
+  // Engine GPU particles: blackbody embers and ash drifting through the backlit collapse.
+  private ash = new LargeParticles(9000, 4512);
+  private embers = new LargeParticles(1500, 9127);
   private nFloors = 0;
   private v = new THREE.Vector3(); private q = new THREE.Quaternion(); private q2 = new THREE.Quaternion(); private s = new THREE.Vector3();
   private c = new THREE.Color(); private ax = new THREE.Vector3(); private up = new THREE.Vector3(0, 1, 0); private e = new THREE.Euler();
@@ -173,6 +177,9 @@ export default class A4City extends Scene {
     dg.setAttribute('aS', new THREE.BufferAttribute(new Float32Array(ND), 1));
     this.dustMat = new THREE.ShaderMaterial({ vertexShader: DUST_VS, fragmentShader: DUST_FS, transparent: true, depthWrite: false, uniforms: { uCol: { value: new THREE.Color(C.ash) }, uScale: { value: 900 } } });
     this.dust = new THREE.Points(dg, this.dustMat); this.dust.frustumCulled = false;
+    // Dark ash flecks against the bright backlit sky, plus a sparse ember layer that flares on every tower impact.
+    this.ash.configure({ count: 3000, mode: 'fall', style: 'disc', opaque: true, size: [0.05, 0.16], life: [6, 12], temperature: [0, 1], color: { mode: 'flat', rgb: [0.035, 0.032, 0.03] }, intensity: 1, fade: [0.15, 0.25], turbulence: { amp: 2.2, freq: 0.07, drift: 0.4 }, fall: { center: [0, 14, 0], box: [120, 30, 120], velocity: [1.3, -1.7, 0.5], drag: 0 } });
+    this.embers.configure({ count: 500, mode: 'fall', style: 'disc', size: [0.07, 0.2], life: [3, 6], temperature: [0, 1], color: { mode: 'blackbody', range: [1700, 3300] }, intensity: 0, brightnessVariance: 0.7, fade: [0.2, 0.4], turbulence: { amp: 1.6, freq: 0.1, drift: 0.5 }, fall: { center: [0, 6, 0], box: [90, 14, 90], velocity: [0.5, 2.4, 0.2], drag: 0 } });
     this.scene.add(skyM, gnd, tube, this.sun, this.sun.target, this.hemi, this.dust);
     this.scene.fog = new THREE.FogExp2(0xffffff, 0.01);
   }
@@ -302,10 +309,18 @@ export default class A4City extends Scene {
     applyCam(this.cam, camAt(T), a.kick * 0.5 * (1 - night * 0.5) + dustK * a.kick * 2);
     this.dustMat.uniforms.uScale!.value = 1080 / (2 * Math.tan((this.cam.fov * Math.PI) / 360));
 
+    // Ash clears out of the sky before the tallest tower's fall so its silhouette reads; embers burst on each landing.
+    const ashK = prog(T, bar(44.5), bar(46), ease.inOutCubic) * (1 - prog(T, bar(48.1), bar(48.5)));
+    let hit = 0;
+    this.B.forEach((b, bi) => { const d = T - (b.tc + (bi === this.tallest ? 0.91 : 1.98)); if (b.falls && d > 0) hit = Math.max(hit, Math.exp(-d * 2.2)); });
+    const emK = prog(T, bar(44.5), bar(45.5)) * (1 - prog(T, bar(49.2), bar(49.8)));
+    this.embers.u.uIntensity!.value = emK * (0.35 + 5 * hit);
+    const R = this.ctx.renderer;
+    const fx = ashK > 0.001 || emK > 0.001 ? () => { if (ashK > 0.001) { this.ash.u.uSize!.value = ashK; this.ash.render(R, this.cam, out, T); } if (emK > 0.001) this.embers.render(R, this.cam, out, T); } : undefined;
     const g = this.layer.ctx; this.layer.clear();
     const cap = this.ctx.params?.caption as string | undefined;
     if (cap) typeLine(g, cap, 960, 980, f.t, (f.start ?? f.t) + 0.3, { size: 34, align: 'center', color: C.bone });
-    if (this.ctx.params?.notext) { present(this.ctx, out, this.scene, this.cam, this.layer, undefined, 0x050506, overlayTextDuck(f.tin, f.tout)); return { exposure: L.exp, bloom: L.bloom + 0.3 * a.kick, bloomThreshold: 0.9, vignette: 0.5, grain: 0.05, ca: 0.6 + 1.5 * a.kick, zoom: 1 + 0.02 * a.kick }; }
+    if (this.ctx.params?.notext) { present(this.ctx, out, this.scene, this.cam, this.layer, fx, 0x050506, overlayTextDuck(f.tin, f.tout)); return { exposure: L.exp, bloom: L.bloom + 0.3 * a.kick, bloomThreshold: 0.9, vignette: 0.5, grain: 0.05, ca: 0.6 + 1.5 * a.kick, zoom: 1 + 0.02 * a.kick }; }
     const fam = F.archivo(115, 900);
     const words = ['BUILT', 'ON', 'THE', 'BEAT'];
     g.font = font(fam, 150);
@@ -321,10 +336,15 @@ export default class A4City extends Scene {
       const yr = 2026 + Math.round(100 * prog(T, bar(41.5), bar(45.2), ease.inOutCubic));
       typeLine(g, `year ${yr}`, 960, 960, T, bar(41.3), { size: 44, align: 'center', cps: 30, color: '#D8DCD6', cursor: false });
     }
-    slam(g, 'EVERYTHING IS f(t)', 960, 250, T, { t0: bar(46.5), t1: bar(48.2), size: 150, family: fam, from: 2.0, shake: 8, color: C.bone });
+    slam(g, 'EVERYTHING IS f(t)', 960, 250, T, { t0: bar(46.5), t1: bar(48.2), size: 122, family: fam, from: 1.45, shake: 8, color: C.bone });
 
-    present(this.ctx, out, this.scene, this.cam, this.layer, undefined, 0x050506, overlayTextDuck(f.tin, f.tout));
+    present(this.ctx, out, this.scene, this.cam, this.layer, fx, 0x050506, overlayTextDuck(f.tin, f.tout));
     const tImp = this.B[this.tallest]!.tc + 0.91, imp = T > tImp ? Math.exp(-(T - tImp) * 9) : 0;
     return { shake: [0.9 * imp, -0.6 * imp], flash: 0.12 * imp, exposure: L.exp, bloom: L.bloom + 0.3 * a.kick * night, bloomThreshold: 0.9, vignette: 0.45 + 0.2 * decay, grain: 0.045 + 0.03 * decay, ca: 0.4 + 1.2 * dustK * a.kick, zoom: 1 + 0.015 * a.kick };
+  }
+
+  override dispose(): void {
+    this.ash.dispose();
+    this.embers.dispose();
   }
 }
