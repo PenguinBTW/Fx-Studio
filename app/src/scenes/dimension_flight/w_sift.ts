@@ -102,7 +102,7 @@ export function sift(renderer: THREE.WebGLRenderer): World {
   };
   for (let i = 0, n = 0; i < 400 && n < 16; i++) {
     const x = (r() - 0.5) * 640, z = -960 - r() * 600, s = 0.7 + r() * 0.8, y = siftH(x, z);
-    if (ravine(x, z) < 0.9 || nearPath(x, y + 30 * s, z) < 22 * s + 8 || nearPath(x, y + 10, z) < 12) continue;
+    if (ravine(x, z) < 0.9 || nearPath(x, y + 30 * s, z) < 30 * s + 16 || nearPath(x, y + 40 * s, z) < 26 * s + 16 || nearPath(x, y + 10, z) < 12) continue;
     tree(x, z, s); n++;
   }
   tree(TREE.x, TREE.z, 3.2);
