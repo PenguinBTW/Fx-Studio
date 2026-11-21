@@ -125,7 +125,7 @@ export function sift(renderer: THREE.WebGLRenderer): World {
     mode: 'fall', style: 'disc', size: [0.05, 0.16], life: [6, 14],
     color: { mode: 'flat', rgb: [0.55, 1.0, 0.92] }, intensity: 1.4, brightnessVariance: 0.7, fade: [0.15, 0.3],
     turbulence: { amp: 1.6, freq: 0.06, drift: 0.2 },
-    fall: { center: [0, -70, -1180], box: [320, 45, 360], velocity: [0.6, 3.5, -0.4], drag: 0 },
+    fall: { center: [0, -150, -1180], box: [320, 45, 360], velocity: [0.6, 3.5, -0.4], drag: 0 },
   });
   scene.add(makeMotes({ count: 2200, box: [70, 36, 70], color: new THREE.Color(1.6, 2.4, 2.2), color2: new THREE.Color(2.4, 1.2, 1.2), size: 0.03, vel: [0.6, 0.5, 0.2], swirl: 0.8, flicker: 0.5 }));
 
