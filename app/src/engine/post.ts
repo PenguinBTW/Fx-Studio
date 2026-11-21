@@ -391,9 +391,12 @@ ${SCALE === 1 ? `        c += texture(src, vUv + texel * vec2(-1, -1)).rgb; c +=
         // HUD is composited in linear space before the shoulder so it gets grain & vignette too
         vec4 h = texture(hudTex, vUv);
         if (toneMap == 0) {
-          col = mix(col, h.rgb / max(h.a, 1e-4), h.a * hud);
-          col = shoulder(col);
-          if (grade == 5 && gradeStage == 1) col = liftGammaGain(col);
+          if (grade == 5 && gradeStage == 1) { // display grade before the HUD, as on the aces/agx path
+            col = mix(liftGammaGain(shoulder(col)), h.rgb / max(h.a, 1e-4), h.a * hud);
+          } else {
+            col = mix(col, h.rgb / max(h.a, 1e-4), h.a * hud);
+            col = shoulder(col);
+          }
         } else {
           // aces/agx are not identity below 1, so the HUD goes on after them (display-linear, unshifted)
           col = toneMapAlt(col, toneMap, toneMapHue);
