@@ -43,6 +43,7 @@ Colour: Blender previews with Filmic (3.x) or AgX (4.x). The engine uses its own
 ## 3. Naming parts and materials
 
 - **Parts:** give any object a custom property `fx_part = "rotor"` (a property literally named `fx.part` also works). It becomes `inst.part('rotor')` and the SceneGraph entity `<assetId>.rotor` with per-frame world and screen bounds (telemetry, notes and selectors can target it). Renaming the Blender object no longer breaks code; a missing part throws with the list of available parts. Parts register with SceneGraph role `background` unless you pass `role`. `manifest.parts` and `node()` accept Blender object names (`Rotor.001`) as well as three's sanitized names (`Rotor001`).
+- **Instanced or rebuilt parts:** if a scene copies a part's geometry into its own mesh (e.g. an `InstancedMesh` for scattering), the copy has no name. Set `mesh.name` and `userData.fx_entity` (`<assetId>.<part>/<mesh>`), as `instanced(…, name)` does in `scenes/dimension_flight/common.ts`, so review picks ([fx-feedback-gui](../feedback/review-gui.md)) and telemetry can name it.
 - **Materials:** name Blender materials meaningfully (`Hull`, `Glass`). Map them to project library entries in `manifest.json` to restyle every asset from one place. Factory exports run once per asset instance, so per-instance uniform tweaks don't leak; exporting a Material instance shares it on purpose.
 
 ## 4. `manifest.json`
