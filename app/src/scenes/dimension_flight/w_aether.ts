@@ -41,7 +41,7 @@ export function aether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
       float a = fbm2(p), b = fbm2(p * 3.1 + a * 2.0 + vec2(0.0, t * 0.02));
       float h = a * 0.65 + b * 0.35;
       float lit = smoothstep(0.3, 0.8, h + 0.15 * (fbm2(p * 3.1 + a * 2.0 + vec2(0.06, t * 0.02)) - b) * 8.0);
-      vec3 c = mix(vec3(0.34, 0.44, 0.78), vec3(1.4, 1.18, 0.92), lit) * mix(0.8, 1.05, h);
+      vec3 c = mix(vec3(0.42, 0.4, 0.82), vec3(1.55, 1.2, 0.82), lit) * mix(0.8, 1.05, h);
       return vec4(c, 1.0);
     }`, { uSun: { value: SUN } }, fog);
   scene.add(sea);
@@ -95,7 +95,7 @@ export function aether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
   const fall = /* glsl */ `vec4 surface(vec3 wp, vec3 n, vec2 uv) {
       float f = fbm(vec3(uv.x * 9.0, uv.y * 2.0 + t * 1.8, 1.0)), g = fbm(vec3(uv.x * 23.0, uv.y * 6.0 + t * 3.0, 4.0));
       float edge = smoothstep(0.0, 0.3, uv.x) * smoothstep(1.0, 0.7, uv.x) * smoothstep(0.0, 0.15, uv.y);
-      vec3 c = mix(vec3(0.45, 0.65, 0.95), vec3(1.7, 1.8, 1.9), smoothstep(0.4, 0.75, f * 0.6 + g * 0.5));
+      vec3 c = mix(vec3(0.7, 0.68, 0.86), vec3(1.95, 1.62, 1.2), smoothstep(0.4, 0.75, f * 0.6 + g * 0.5));
       float a = edge * smoothstep(0.25, 0.55, f + g * 0.3) * 0.9;
       return vec4(c * a, a); }`;
   const mist: PuffItem[] = [];
