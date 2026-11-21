@@ -29,7 +29,7 @@ export function theEnd(renderer: THREE.WebGLRenderer): World & { plant(part: (id
   scene.add(makeSky(SKY));
   scene.environment = envFromSky(renderer, SKY);
   scene.environmentIntensity = 1.5;
-  const key = new Sun(scene, new THREE.Vector3(0.3, 1, 0.25), '#c8b8ff', 1.6, 110);
+  const key = new Sun(scene, new THREE.Vector3(0.3, 1, 0.25), '#ffe6c4', 2.4, 110);
   scene.add(new THREE.HemisphereLight('#6a4aa0', '#1a1020', 0.7));
   const r = rng(1234);
   const stoneTop = new THREE.Color(0.78, 0.74, 0.5), stonePit = new THREE.Color(0.2, 0.17, 0.12), under = new THREE.Color(0.30, 0.26, 0.24);
