@@ -115,7 +115,7 @@ export function nether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
       totalEmissiveRadiance += vec3(0.9, 0.2, 0.03) * exp(-max(vFogWP.y - (${LAVA_Y.toFixed(1)}), 0.0) * 1.1);`);
   };
   bm.customProgramCacheKey = () => 'nbasalt';
-  scene.add(instanced(hexG, bm, colM, colC));
+  scene.add(instanced(hexG, bm, colM, colC, 'nether.basalt_columns'));
 
   // ---- giant fungi on the two plateaus
   const crimsonM: THREE.Matrix4[] = [], warpedM: THREE.Matrix4[] = [];
@@ -195,9 +195,9 @@ export function nether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
     if (r() < 0.45) seamM.push(new THREE.Matrix4().compose(new THREE.Vector3(x, top - len * 0.9, z), new THREE.Quaternion(), new THREE.Vector3(w * 0.5, w * 0.5, w * 0.5)));
     n++;
   }
-  const stal = instanced(new THREE.ConeGeometry(0.5, 1, 6, 3), pbr(fog, { vertexColors: false, color: '#1c1517', roughness: 0.85, flatShading: true }), stM);
+  const stal = instanced(new THREE.ConeGeometry(0.5, 1, 6, 3), pbr(fog, { vertexColors: false, color: '#1c1517', roughness: 0.85, flatShading: true }), stM, undefined, 'nether.stalactites');
   stal.castShadow = true; scene.add(stal);
-  scene.add(instanced(new THREE.IcosahedronGeometry(1, 0), pbr(fog, { vertexColors: false, color: '#ffb050', emissive: new THREE.Color('#ff7a20'), emissiveIntensity: 4, flatShading: true }), seamM));
+  scene.add(instanced(new THREE.IcosahedronGeometry(1, 0), pbr(fog, { vertexColors: false, color: '#ffb050', emissive: new THREE.Color('#ff7a20'), emissiveIntensity: 4, flatShading: true }), seamM, undefined, 'nether.glow_seams'));
   // engine GPU embers boiling off the lava sea
   const embers = new LargeParticles(14000, 666);
   embers.configure({
@@ -215,7 +215,7 @@ export function nether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
         const om = m.material as THREE.MeshStandardMaterial;
         // caps carry a little self-glow so crimson/warped hues survive the orange lava key light
         const capGlow = om.name === 'CrimsonCap' ? new THREE.Color(0.55, 0.02, 0.05) : om.name === 'WarpedCap' ? new THREE.Color(0.015, 0.34, 0.31) : null;
-        const im = instanced(m.geometry, pbr(fog, { vertexColors: false, color: om.color, roughness: om.roughness, emissive: capGlow ?? om.emissive, emissiveIntensity: capGlow ? 0.55 : om.emissiveIntensity }), ms);
+        const im = instanced(m.geometry, pbr(fog, { vertexColors: false, color: om.color, roughness: om.roughness, emissive: capGlow ?? om.emissive, emissiveIntensity: capGlow ? 0.55 : om.emissiveIntensity }), ms, undefined, `nether_props.${id}/${om.name || m.name}`);
         im.castShadow = true; scene.add(im);
       });
     }

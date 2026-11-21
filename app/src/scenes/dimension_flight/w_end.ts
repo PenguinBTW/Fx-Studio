@@ -135,7 +135,7 @@ export function theEnd(renderer: THREE.WebGLRenderer): World & { plant(part: (id
   const plant = (part: (id: string) => THREE.Object3D) => part('chorus').traverse((o) => {
     const m = o as THREE.Mesh; if (!m.isMesh) return;
     const om = m.material as THREE.MeshStandardMaterial;
-    const im = instanced(m.geometry, pbr(fog, { vertexColors: false, color: om.color, roughness: om.roughness, emissive: om.emissive, emissiveIntensity: om.emissiveIntensity }), chorusM);
+    const im = instanced(m.geometry, pbr(fog, { vertexColors: false, color: om.color, roughness: om.roughness, emissive: om.emissive, emissiveIntensity: om.emissiveIntensity }), chorusM, undefined, `chorus.chorus/${om.name || m.name}`);
     im.castShadow = true; scene.add(im);
   });
 

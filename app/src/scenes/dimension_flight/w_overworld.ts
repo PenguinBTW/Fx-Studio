@@ -162,7 +162,7 @@ export function overworld(renderer: THREE.WebGLRenderer): World & { plant(part: 
       node.traverse((o) => {
         const m = o as THREE.Mesh; if (!m.isMesh) return;
         const om = m.material as THREE.MeshStandardMaterial;
-        const im = instanced(m.geometry, withFogStd(fog, { color: om.color, roughness: om.roughness }), ms);
+        const im = instanced(m.geometry, withFogStd(fog, { color: om.color, roughness: om.roughness }), ms, undefined, `trees.${name}/${om.name || m.name}`);
         im.castShadow = im.receiveShadow = true; scene.add(im);
       });
     }

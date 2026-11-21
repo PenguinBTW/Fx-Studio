@@ -396,8 +396,10 @@ export function makeSurface(geo: THREE.BufferGeometry, frag: string, uniforms: R
   return new THREE.Mesh(geo, mat);
 }
 
-export function instanced(geo: THREE.BufferGeometry, mat: THREE.Material, mats: THREE.Matrix4[], colors?: THREE.Color[]): THREE.InstancedMesh {
+/** `name` labels the mesh for picking and review tools (sets `name` and `userData.fx_entity`). */
+export function instanced(geo: THREE.BufferGeometry, mat: THREE.Material, mats: THREE.Matrix4[], colors?: THREE.Color[], name?: string): THREE.InstancedMesh {
   const m = new THREE.InstancedMesh(geo, mat, Math.max(1, mats.length));
+  if (name) { m.name = name; m.userData.fx_entity = name; }
   m.count = mats.length;
   mats.forEach((x, i) => m.setMatrixAt(i, x));
   if (colors) colors.forEach((c, i) => m.setColorAt(i, c));
