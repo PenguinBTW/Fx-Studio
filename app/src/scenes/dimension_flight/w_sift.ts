@@ -104,14 +104,14 @@ export function sift(renderer: THREE.WebGLRenderer): World & { plant(part: (id: 
   // finale landmark: a pale floating cliff isle the swallow climbs toward, with souls streaming up past it
   {
     const LAND = new THREE.Vector3(225, 15, -1420), rock = new THREE.Color('#e4e6e0'), shade = new THREE.Color('#b0b8b4'), moss = new THREE.Color('#e9ece4');
-    const isle = new THREE.Mesh(islandGeometry({ radius: 46, depth: 90, seed: 27, rings: 44, segs: 110,
+    const isle = new THREE.Mesh(islandGeometry({ radius: 66, depth: 120, seed: 27, rings: 44, segs: 110,
       top: (x, z, r01) => 4 * fbm2c(x * 0.04, z * 0.04, 3, 5) * (1 - r01),
       color: (_x, y, _z, _s, under, out) => { if (under) out.copy(shade).lerp(rock, 0.45 + 0.35 * Math.sin(y * 0.25)); else out.copy(moss); } }),
       pbr(fog, { roughness: 0.92, side: THREE.DoubleSide }));
     isle.position.copy(LAND); isle.castShadow = true; scene.add(isle);
-    for (const [dx, dz, ks] of [[-10, 6, 0.55], [14, -8, 0.42], [2, -20, 0.34]]) treeMs.push(mat4([LAND.x + dx, LAND.y + 1, LAND.z + dz], [46 * ks, 46 * ks, 46 * ks], [0, dx, 0]));
+    for (const [dx, dz, ks] of [[-16, 8, 0.9], [22, -12, 0.7], [4, -30, 0.55]]) treeMs.push(mat4([LAND.x + dx, LAND.y + 1, LAND.z + dz], [46 * ks, 46 * ks, 46 * ks], [0, dx, 0]));
     const beam = new THREE.Mesh(new THREE.CylinderGeometry(3, 10, 420, 40, 1, true),
-      new THREE.MeshBasicMaterial({ color: new THREE.Color(0.25, 0.85, 1.4), transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+      new THREE.MeshBasicMaterial({ color: new THREE.Color(0.25, 0.85, 1.4), transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
     beam.position.set(LAND.x, LAND.y - 300, LAND.z); scene.add(beam);
   }
 
