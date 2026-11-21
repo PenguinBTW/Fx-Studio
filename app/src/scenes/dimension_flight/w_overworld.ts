@@ -30,7 +30,7 @@ export function owHeight(x: number, z: number) {
   const d = Math.abs(x - riverX(z));
   let h = Math.pow(d / 42, 1.5) * 16 + fbm2c(x * 0.012, z * 0.012, 5, 3) * 22 * sstep(8, 70, d);
   h += sstep(140, 420, d) * (70 + 160 * ridged(x * 0.004, z * 0.004, 5, 9));
-  h += sstep(120, 300, d) * 7 * ridged(x * 0.028, z * 0.028, 3, 4);  // rocky crags on the high slopes
+  h += sstep(120, 300, d) * 14 * ridged(x * 0.028, z * 0.028, 3, 4);  // rocky crags on the high slopes
   // soft terracing: hints of stacked layers without hard voxels
   const L = 3.2, q = h / L, fq = q - Math.floor(q);
   h = THREE.MathUtils.lerp(h, (Math.floor(q) + Math.pow(sstep(0.35, 0.65, fq), 1.0)) * L, 0.55 * sstep(6, 14, d));
@@ -60,14 +60,17 @@ export function overworld(renderer: THREE.WebGLRenderer): World & { plant(part: 
 
   // ---- terrain
   const grassA = new THREE.Color(0.10, 0.24, 0.05), grassB = new THREE.Color(0.24, 0.36, 0.07), rock = new THREE.Color(0.30, 0.27, 0.24);
-  const snow = new THREE.Color(0.95, 0.93, 0.98), sand = new THREE.Color(0.55, 0.48, 0.33), scorch = new THREE.Color(0.22, 0.035, 0.03);
+  const _rk = new THREE.Color(), snow = new THREE.Color(0.95, 0.93, 0.98), sand = new THREE.Color(0.55, 0.48, 0.33), scorch = new THREE.Color(0.22, 0.035, 0.03);
   const terr = terrainGeometry({
     x0: -900, x1: 900, z0: -1000, z1: 300, nx: 420, nz: 330, height: owHeight,
     color: (x, y, z, slope, c) => {
       c.copy(grassA).lerp(grassB, sstep(-0.4, 0.6, fbm2c(x * 0.03, z * 0.03, 3, 1)));
-      c.lerp(rock, sstep(0.18, 0.42, slope + fbm2c(x * 0.1, z * 0.1, 2, 2) * 0.1));
+      const band = 0.62 + 0.5 * (0.5 + 0.5 * Math.sin(y * 0.55 + fbm2c(x * 0.02, z * 0.02, 2, 7) * 3.0));
+      _rk.copy(rock).multiplyScalar(band);
+      c.lerp(_rk, sstep(0.12, 0.34, slope + fbm2c(x * 0.1, z * 0.1, 2, 2) * 0.1) * sstep(20, 45, y));
+      c.lerp(rock, sstep(0.3, 0.5, slope) * (1 - sstep(20, 45, y)));
       c.lerp(sand, sstep(1.6, 0.2, y));
-      c.lerp(snow, sstep(95, 130, y + fbm2c(x * 0.02, z * 0.02, 3, 4) * 25) * sstep(0.6, 0.3, slope));
+      c.lerp(snow, sstep(80, 105, y + fbm2c(x * 0.02, z * 0.02, 3, 4) * 25) * sstep(0.75, 0.35, slope));
       const kd = Math.hypot(x - KNOLL.x, z - KNOLL.y) + fbm2c(x * 0.15, z * 0.15, 3, 6) * 6;
       c.lerp(scorch, sstep(20, 9, kd));
     },
