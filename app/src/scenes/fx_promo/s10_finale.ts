@@ -80,8 +80,8 @@ export default class S10Finale extends Scene {
         const cl = prog(t, bar(105), bar(106.5), ease.inCubic);
         const s = 1 - u;
         const a = s * Math.PI * 8 - t * 2.2 + (j * Math.PI * 2) / 3;
-        const r = (0.12 + 3.0 * s ** 1.1) * (1 - cl) + 0.03;
-        return [Math.cos(a) * r, -5.5 * s * (1 - 0.85 * cl) + 0.25 * Math.sin(a * 0.5 + j), Math.sin(a) * r];
+        const r = (0.1 + 2.3 * s ** 1.1) * (1 - cl) + 0.03;
+        return [Math.cos(a) * r, -3.4 * s * (1 - 0.85 * cl) + 0.25 * Math.sin(a * 0.5 + j), Math.sin(a) * r];
       };
       const W = [0.17, 0.1, 0.065][j]!;
       for (const [w, mat] of [[W, this.ribMat], [W * 0.28, this.ribCore]] as const) {

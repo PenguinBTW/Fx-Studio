@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { Layer2D } from '../../engine/gl';
 import { F } from '../../engine/type';
+import { createInWorldText } from '../../engine/text_lighting';
 import { clamp, ease, prog } from '../../engine/util';
 import { C, BAR, BEAT, B0, bar, sceneTime, model, studioEnv, present, slam, typeLine, applyCam, Instanced } from './kit';
 
@@ -19,6 +20,9 @@ export default class S7Tunnel extends Scene {
   private cam = new THREE.PerspectiveCamera(70, 16 / 9, 0.05, 400);
   private layer = new Layer2D();
   private mods!: Instanced;
+  // A second, lower corridor in the distance, only seen from the exterior tracking shot.
+  private mods2!: Instanced;
+  private sign = new THREE.Group();
   private v = new THREE.Vector3();
   private q = new THREE.Quaternion();
   private s = new THREE.Vector3(1, 1, 1);
@@ -30,6 +34,13 @@ export default class S7Tunnel extends Scene {
     const inst = await model(this.ctx, 'tunnel_module');
     this.mods = new Instanced(inst, NM, (name, m) => (name.toLowerCase().includes('strip') ? new THREE.MeshBasicMaterial({ color: 0xffffff }) : m));
     for (let i = 0; i < NM; i++) this.mods.color(i, this.c.set(0xffffff));
+    this.mods2 = new Instanced(inst, NM, (name, m) => (name.toLowerCase().includes('strip') ? new THREE.MeshBasicMaterial({ color: 0xffffff }) : m));
+    this.scene.add(this.mods2.group);
+    const sm = new THREE.MeshStandardMaterial({ color: new THREE.Color(C.signal), emissive: new THREE.Color(C.signal), emissiveIntensity: 1.6, metalness: 0.3, roughness: 0.4 });
+    const st = createInWorldText('SEEK ANYWHERE', { size: 1.5, depth: 0.25, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.02, letterSpacing: 0.08, material: sm });
+    st.position.sub(new THREE.Box3().setFromObject(st).getCenter(new THREE.Vector3()));
+    this.sign.add(st);
+    this.scene.add(this.sign);
     this.scene.add(this.mods.group, this.head, new THREE.AmbientLight(0xffffff, 0.05));
     this.scene.environment = studioEnv(this.ctx.renderer);
     this.scene.environmentIntensity = 0.3;
@@ -50,6 +61,8 @@ export default class S7Tunnel extends Scene {
 
     // Modules on a fixed world grid; the visible window slides with the camera.
     const j0 = Math.floor(-camZ / SP) - 2;
+    const extW = lt >= 10 * BAR && lt < 12 * BAR;
+    this.mods2.group.visible = extW;
     for (let i = 0; i < NM; i++) {
       const j = j0 + i;
       const z = -j * SP;
@@ -68,8 +81,10 @@ export default class S7Tunnel extends Scene {
       this.c.copy(col).multiplyScalar(b);
       if (gate > 0) this.c.lerp(new THREE.Color(1.5, 1.5, 1.5), 0.5);
       this.mods.color(i, this.c, 'strip');
+      if (extW) { this.v.set(19, -5.5, z - 30); this.mods2.set(i, this.v, this.q, this.s); this.mods2.color(i, this.c, 'strip'); }
     }
     this.mods.commit();
+    if (extW) this.mods2.commit();
 
     const sway = 0.25 * Math.sin(lt * 0.7);
     // Shot grammar: a new angle every 2 bars (centre / low rail / reverse / high rail), cut on the downbeat.
@@ -98,7 +113,10 @@ export default class S7Tunnel extends Scene {
       slam(g, sub, 960, 540, T, { t0: tm + 0.06, t1, size: 130, family: fam, from: 1.6, shake: 6, color: shot === 2 ? '#FFFFFF' : i === 3 ? C.bone : C.signal });
     });
 
-    present(this.ctx, out, this.scene, this.cam, this.layer);
+    // Exterior shot: the copy lives in-world, mounted on the outside of the lattice, instead of flat on screen.
+    this.sign.visible = ext;
+    if (ext) { this.sign.position.set(5.2, 4.4, camZ - 24); this.sign.lookAt(this.cam.position); }
+    present(this.ctx, out, this.scene, this.cam, this.layer, undefined, 0x050506, ext ? 0 : 1);
     const drop = T >= T0 ? 0.22 * Math.max(0, 1 - (T - T0) / 0.35) : 0;
     return { exposure: 1.05, bloom: 0.85 + 0.4 * k, bloomThreshold: 0.72, vignette: 0.55, ca: 0.8 + 2.2 * k, grain: 0.05, flash: drop, invert: shot === 2 && T > T0 + 2 * BAR ? 1 : 0, zoom: 1 + 0.04 * k + 0.12 * drop, shake: [0.25 * k, -0.6 * (0.25 * k)] };
   }
