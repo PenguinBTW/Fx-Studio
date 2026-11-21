@@ -30,18 +30,19 @@ export function theEnd(renderer: THREE.WebGLRenderer): World & { plant(part: (id
   scene.environment = envFromSky(renderer, SKY);
   scene.environmentIntensity = 1.5;
   const key = new Sun(scene, new THREE.Vector3(0.3, 1, 0.25), '#ffe6c4', 3.0, 110);
-  scene.add(new THREE.HemisphereLight('#6a4aa0', '#1a1020', 0.7));
+  scene.add(new THREE.HemisphereLight('#9a8cc0', '#2a2030', 0.9));
   const r = rng(1234);
   const stoneTop = new THREE.Color(0.95, 0.9, 0.62), stonePit = new THREE.Color(0.2, 0.17, 0.12), under = new THREE.Color(0.30, 0.26, 0.24);
   const stoneColor = (x: number, _y: number, z: number, slope: number, u: boolean, c: THREE.Color) => {
-    const pits = sstep(0.2, 0.5, fbm2c(x * 0.35, z * 0.35, 3, 7));
+    const pits = Math.max(sstep(0.2, 0.5, fbm2c(x * 0.35, z * 0.35, 3, 7)) * 0.7, sstep(0.5, 0.72, fbm2c(x * 1.3, z * 1.3, 2, 9)));
     c.copy(stoneTop).lerp(stonePit, Math.min(1, pits * 1.1 + slope * 0.6));
     if (u) c.copy(under).lerp(stonePit, sstep(-0.2, 0.5, fbm2c(x * 0.1, z * 0.1 + _y * 0.1, 3, 2)) * 0.5);
   };
   const stoneMat = pbr(fog, { roughness: 0.96, side: THREE.DoubleSide });
   const island = (p: THREE.Vector3, radius: number, depth: number, seed: number, bump = 5) => {
     const g = islandGeometry({ radius, depth, seed, rings: 56, segs: 120,
-      top: (x, z, s) => bump * (1 - s * s) + fbm2c(x * 0.04 + seed, z * 0.04, 4, seed) * bump * 0.6, color: stoneColor });
+      top: (x, z, s) => bump * (1 - s * s) + fbm2c(x * 0.04 + seed, z * 0.04, 4, seed) * bump * 0.6
+        - 1.4 * sstep(0.55, 0.78, fbm2c(x * 0.11, z * 0.11, 2, seed + 5)) + 0.5 * fbm2c(x * 0.6, z * 0.6, 2, seed + 2), color: stoneColor });
     const m = new THREE.Mesh(g, stoneMat); m.position.copy(p); m.castShadow = m.receiveShadow = true; scene.add(m); return m;
   };
   island(MAIN, 108, 80, 3, 7);

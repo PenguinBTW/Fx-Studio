@@ -47,7 +47,7 @@ export function aether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
   scene.add(sea);
 
   // ---- floating isles
-  const grass = new THREE.Color(0.1, 0.42, 0.16), grass2 = new THREE.Color(0.28, 0.58, 0.2), holy = new THREE.Color(0.62, 0.66, 0.72), holy2 = new THREE.Color(0.28, 0.32, 0.42);
+  const meadow = new THREE.Color(0.62, 0.72, 0.24), grass = new THREE.Color(0.08, 0.38, 0.15), grass2 = new THREE.Color(0.28, 0.58, 0.2), holy = new THREE.Color(0.62, 0.66, 0.72), holy2 = new THREE.Color(0.28, 0.32, 0.42);
   const mat = pbr(fog, { roughness: 0.9, side: THREE.DoubleSide });
   const isles: { p: THREE.Vector3; rad: number }[] = [];
   const isle = (p: THREE.Vector3, rad: number, seed: number) => {
@@ -55,7 +55,7 @@ export function aether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
       top: (x, z, s) => rad * 0.12 * (1 - s * s) + fbm2c(x * 0.08 + seed, z * 0.08, 3, seed) * rad * 0.06,
       color: (x, y, z, sl0, u, c) => { const slope = Math.min(sl0, 2 - sl0);
         if (u) { c.copy(holy).lerp(holy2, sstep(-0.3, 0.5, fbm2c(x * 0.15, y * 0.15 + z * 0.1, 3, 4))); return; }
-        c.copy(grass).lerp(grass2, sstep(-0.3, 0.5, fbm2c(x * 0.1, z * 0.1, 3, 2))).lerp(holy, sstep(0.6, 0.85, slope));
+        c.copy(grass).lerp(grass2, sstep(-0.3, 0.5, fbm2c(x * 0.1, z * 0.1, 3, 2))).lerp(meadow, sstep(0.45, 0.8, fbm2c(x * 0.35, z * 0.35, 2, 5)) * 0.55).lerp(holy, sstep(0.6, 0.85, slope));
       } });
     const m = new THREE.Mesh(g, mat); m.position.copy(p); m.castShadow = m.receiveShadow = true; scene.add(m);
     isles.push({ p, rad });
