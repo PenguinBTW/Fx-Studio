@@ -6,15 +6,17 @@ import { Sun } from './world';
 import { BIRD } from './path';
 import { makeSky, envFromSky, disposeEnv, islandGeometry, pbr, makePuffs, makeMotes, makeSurface, instanced, disposeTree, setTime, fbm2c, sstep, rng, type FogSpec, type PuffItem } from './common';
 
-const SUN = new THREE.Vector3(0.45, 0.55, -0.7).normalize();
+const SUN = new THREE.Vector3(0.45, 0.26, -0.7).normalize();
 const SKY = /* glsl */ `
 uniform vec3 uSun;
 vec3 skyColor(vec3 d) {
-  vec3 zen = vec3(0.10, 0.30, 0.95), hor = vec3(0.75, 0.9, 1.25);
-  vec3 c = mix(hor, zen, pow(clamp(d.y, 0.0, 1.0), 0.45));
-  c = mix(c, vec3(0.95, 0.97, 1.1), smoothstep(0.05, -0.2, d.y));
+  vec3 zen = vec3(0.07, 0.25, 0.88), hor = vec3(0.95, 0.62, 0.36);
+  vec3 mid = vec3(0.18, 0.42, 1.0);
+  vec3 c = mix(hor, mid, smoothstep(0.0, 0.14, d.y));
+  c = mix(c, zen, smoothstep(0.1, 0.65, d.y));
+  c = mix(c, vec3(0.62, 0.6, 0.66), smoothstep(0.05, -0.2, d.y));
   float s = max(dot(d, uSun), 0.0);
-  c += vec3(1.4, 1.2, 0.9) * pow(s, 12.0) * 0.6 + vec3(80.0, 70.0, 55.0) * smoothstep(0.9993, 0.9996, s);
+  c += vec3(1.4, 1.2, 0.9) * pow(s, 48.0) * 0.7 + vec3(0.5, 0.35, 0.2) * pow(s, 5.0) * 0.25 + vec3(80.0, 70.0, 55.0) * smoothstep(0.9993, 0.9996, s);
   return c;
 }`;
 const SEA_Y = -112, LAST = new THREE.Vector3(0, -50.2, -961);
@@ -24,13 +26,13 @@ const nearPath = (x: number, y: number, z: number) => { let m = 1e9; for (const 
 
 export function aether(renderer: THREE.WebGLRenderer): World & { plant(part: (id: string) => THREE.Object3D): void } {
   const scene = new THREE.Scene();
-  const fog: FogSpec = { color: new THREE.Color(0.66, 0.78, 1.0), density: 0.00055, height: -100, falloff: 0.02 };
+  const fog: FogSpec = { color: new THREE.Color(1.0, 0.82, 0.6), density: 0.00008, height: -100, falloff: 0.02 };
   const skyU = { uSun: { value: SUN } };
   scene.add(makeSky(SKY, skyU));
   scene.environment = envFromSky(renderer, SKY, skyU);
   scene.environmentIntensity = 0.7;
-  const sun = new Sun(scene, SUN.clone(), '#fff2dc', 3.6, 90);
-  scene.add(new THREE.HemisphereLight('#bcd8ff', '#8a9a80', 0.5));
+  const sun = new Sun(scene, SUN.clone(), '#ffbf6a', 4.4, 90);
+  scene.add(new THREE.HemisphereLight('#8fb4ff', '#9a8060', 0.55));
   const r = rng(777);
 
   // ---- the sea of clouds
@@ -41,13 +43,13 @@ export function aether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
       float a = fbm2(p), b = fbm2(p * 3.1 + a * 2.0 + vec2(0.0, t * 0.02));
       float h = a * 0.65 + b * 0.35;
       float lit = smoothstep(0.3, 0.8, h + 0.15 * (fbm2(p * 3.1 + a * 2.0 + vec2(0.06, t * 0.02)) - b) * 8.0);
-      vec3 c = mix(vec3(0.42, 0.52, 0.8), vec3(1.25, 1.22, 1.2), lit) * mix(0.8, 1.05, h);
+      vec3 c = mix(vec3(0.56, 0.6, 0.72), vec3(1.0, 0.9, 0.76), lit) * mix(0.85, 1.2, h);
       return vec4(c, 1.0);
     }`, { uSun: { value: SUN } }, fog);
   scene.add(sea);
 
   // ---- floating isles
-  const grass = new THREE.Color(0.1, 0.42, 0.16), grass2 = new THREE.Color(0.28, 0.58, 0.2), holy = new THREE.Color(0.62, 0.66, 0.72), holy2 = new THREE.Color(0.42, 0.46, 0.54);
+  const meadow = new THREE.Color(0.62, 0.72, 0.24), grass = new THREE.Color(0.08, 0.38, 0.15), grass2 = new THREE.Color(0.28, 0.58, 0.2), holy = new THREE.Color(0.62, 0.66, 0.72), holy2 = new THREE.Color(0.28, 0.32, 0.42);
   const mat = pbr(fog, { roughness: 0.9, side: THREE.DoubleSide });
   const isles: { p: THREE.Vector3; rad: number }[] = [];
   const isle = (p: THREE.Vector3, rad: number, seed: number) => {
@@ -55,7 +57,7 @@ export function aether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
       top: (x, z, s) => rad * 0.12 * (1 - s * s) + fbm2c(x * 0.08 + seed, z * 0.08, 3, seed) * rad * 0.06,
       color: (x, y, z, sl0, u, c) => { const slope = Math.min(sl0, 2 - sl0);
         if (u) { c.copy(holy).lerp(holy2, sstep(-0.3, 0.5, fbm2c(x * 0.15, y * 0.15 + z * 0.1, 3, 4))); return; }
-        c.copy(grass).lerp(grass2, sstep(-0.3, 0.5, fbm2c(x * 0.1, z * 0.1, 3, 2))).lerp(holy, sstep(0.6, 0.85, slope));
+        c.copy(grass).lerp(grass2, sstep(-0.3, 0.5, fbm2c(x * 0.1, z * 0.1, 3, 2))).lerp(meadow, sstep(0.45, 0.8, fbm2c(x * 0.35, z * 0.35, 2, 5)) * 0.55).lerp(holy, sstep(0.6, 0.85, slope));
       } });
     const m = new THREE.Mesh(g, mat); m.position.copy(p); m.castShadow = m.receiveShadow = true; scene.add(m);
     isles.push({ p, rad });
@@ -95,16 +97,16 @@ export function aether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
   const fall = /* glsl */ `vec4 surface(vec3 wp, vec3 n, vec2 uv) {
       float f = fbm(vec3(uv.x * 9.0, uv.y * 2.0 + t * 1.8, 1.0)), g = fbm(vec3(uv.x * 23.0, uv.y * 6.0 + t * 3.0, 4.0));
       float edge = smoothstep(0.0, 0.3, uv.x) * smoothstep(1.0, 0.7, uv.x) * smoothstep(0.0, 0.15, uv.y);
-      vec3 c = mix(vec3(0.45, 0.65, 0.95), vec3(1.7, 1.8, 1.9), smoothstep(0.4, 0.75, f * 0.6 + g * 0.5));
+      vec3 c = mix(vec3(0.7, 0.68, 0.86), vec3(1.95, 1.62, 1.2), smoothstep(0.4, 0.75, f * 0.6 + g * 0.5));
       float a = edge * smoothstep(0.25, 0.55, f + g * 0.3) * 0.9;
       return vec4(c * a, a); }`;
   const mist: PuffItem[] = [];
   isles.slice(1, 9).forEach(({ p, rad }, i) => {
-    const a = i * 2.1, x = p.x + Math.cos(a) * rad * 0.95, z = p.z + Math.sin(a) * rad * 0.95, w = 2 + rad * 0.15;
+    const a = i * 2.1, x = p.x + Math.cos(a) * rad * 0.95, z = p.z + Math.sin(a) * rad * 0.95, w = 5 + rad * 0.35;
     const top = p.y + 0.2, len = top - SEA_Y + 4;
     const m = makeSurface(new THREE.PlaneGeometry(w, len, 1, 1).translate(0, -len / 2, 0), fall, {}, fog, { transparent: true, side: THREE.DoubleSide });
     m.position.set(x, top, z); m.rotation.y = -a + Math.PI / 2; scene.add(m);
-    for (let j = 0; j < 4; j++) mist.push({ p: [x + (r() - 0.5) * 8, SEA_Y + 6 + r() * 6, z + (r() - 0.5) * 8], s: 8 + r() * 6, seed: r() * 40 });
+    for (let j = 0; j < 7; j++) mist.push({ p: [x + (r() - 0.5) * 14, SEA_Y + 6 + r() * 10, z + (r() - 0.5) * 14], s: 10 + r() * 9, seed: r() * 40 });
   });
 
   // ---- billowing cumulus, golden aerclouds
@@ -115,14 +117,14 @@ export function aether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
     const n = 5 + Math.floor(r() * 7), gold = r() < 0.18;
     for (let j = 0; j < n; j++) cl.push({ p: [cx + (r() - 0.5) * 50, cy + r() * 16, cz + (r() - 0.5) * 40], s: 12 + r() * 16, seed: r() * 100, tint: gold ? 1 : 0 });
   }
-  scene.add(makePuffs(cl, { lit: new THREE.Color(2.0, 1.95, 1.85), shade: new THREE.Color(0.55, 0.65, 0.9), sunDir: SUN, fog, opacity: 0.95, drift: [1.0, 0, 0], nearFade: 14 }));
+  scene.add(makePuffs(cl, { lit: new THREE.Color(1.3, 1.25, 1.15), shade: new THREE.Color(0.6, 0.6, 0.64), sunDir: SUN, fog, opacity: 0.6, drift: [1.0, 0, 0], nearFade: 45 }));
   scene.add(makeMotes({ count: 1600, box: [70, 40, 70], color: new THREE.Color(2.6, 2.2, 1.2), color2: new THREE.Color(1.6, 2.2, 2.6), size: 0.04, vel: [0.6, 0.3, 0], swirl: 1.0, flicker: 0.6 }));
 
   const lightPos = new THREE.Vector3();
   return {
     name: 'aether', scene, fog, lightPos, plant,
     update(t, cam, bird) { sun.follow(bird); setTime(scene, t); lightPos.copy(cam.position).addScaledVector(SUN, 4000); },
-    post: () => ({ grade: { saturation: 1.3, gamma: 0.82, gain: 1.02 }, exposure: 0.9, bloom: 0.55, bloomThreshold: 1.3, volumetric: 0.3, volumetricDecay: 0.94, halation: 0.12, ca: 0.6 }),
+    post: () => ({ toneMap: 'aces', grade: { saturation: 1.55, gamma: 0.78, gain: 1.0, tint: [1.14, 1.02, 0.8], lift: [-0.015, -0.012, -0.008] }, exposure: 0.62, bloom: 0.2, bloomThreshold: 1.3, volumetric: 0.12, volumetricDecay: 0.94, halation: 0.12, ca: 0.6 }),
     dispose() { disposeTree(scene); disposeEnv(scene); },
   };
 }

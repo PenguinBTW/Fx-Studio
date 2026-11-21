@@ -56,10 +56,14 @@ def wing_outline(s):
     span = 1.05
     x = 0.07 + s * span
     sweep = 0.34 * s ** 1.6                             # tip swept back (+Y)
-    chord = 0.30 * (1 - s) ** 0.55 * (1 - 0.25 * s) + 0.015
-    lead = -0.10 + sweep - 0.04 * math.sin(math.pi * s)
-    return x, lead, lead + chord
-SN, CN = 22, 6
+    # broad inner wing/wrist (reads as a wing from behind and head-on), tapering to a pointed hand
+    chord = 0.46 * (1 - s) ** 0.62 * (1 - 0.15 * s) + 0.03 + 0.06 * math.exp(-((s - 0.38) / 0.16) ** 2)
+    lead = -0.10 + sweep - 0.05 * math.sin(math.pi * s)
+    # separated primaries: 6 fingers on the outer hand only
+    f = max(0.0, (s - 0.68) / 0.32)
+    scallop = 0.07 * f * (1 - abs(math.sin(math.pi * f * 6))) ** 3 * (1 - f ** 4)
+    return x, lead, lead + chord + scallop
+SN, CN = 90, 7
 wv, wf, ws = [], [], []
 for i in range(SN + 1):
     s = i / SN; x, l, t = wing_outline(s)
@@ -79,8 +83,8 @@ for i in range(TS + 1):
     for side in (-1, 1):
         pass
 def tail_pts(s):  # half-tail (x>=0): inner edge, outer edge
-    y = 0.36 + 0.62 * s
-    outer = 0.05 + 0.20 * s ** 0.8
+    y = 0.36 + 0.82 * s
+    outer = 0.05 + 0.22 * s ** 0.8
     inner = 0.0 if s < 0.35 else 0.16 * ((s - 0.35) / 0.65) ** 0.9 + 0.0
     width = max(0.012, 0.11 * (1 - s) ** 1.2)
     inner = max(inner, outer - width)
