@@ -102,7 +102,20 @@ export function nether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
     new THREE.CylinderGeometry(1, 1, 0.94, 6, 1, true).translate(0, -0.03, 0),
     new THREE.CylinderGeometry(0.8, 1, 0.06, 6, 1, false).translate(0, 0.47, 0),
   ].map((g) => g.toNonIndexed()))!;
-  scene.add(instanced(hexG, pbr(fog, { vertexColors: false, roughness: 0.45, metalness: 0.15, color: '#ffffff', flatShading: true }), colM, colC));
+  const bm = pbr(fog, { vertexColors: false, roughness: 0.45, metalness: 0.15, color: '#ffffff', flatShading: true }), bmBase = bm.onBeforeCompile;
+  bm.onBeforeCompile = (sh, rd) => {
+    bmBase.call(bm, sh, rd);
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <color_fragment>', `#include <color_fragment>
+      { float jy = vFogWP.y * 0.42 + sin(vFogWP.x * 1.3) * 0.6 + sin(vFogWP.z * 1.7) * 0.6;
+        float joint = smoothstep(0.9, 0.97, fract(jy));
+        diffuseColor.rgb *= mix(1.0, 0.35, joint) * mix(0.8, 1.25, fract(sin(floor(jy) * 12.9898) * 43758.5));
+      }`)
+      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+      totalEmissiveRadiance += vec3(0.9, 0.2, 0.03) * exp(-max(vFogWP.y - (${LAVA_Y.toFixed(1)}), 0.0) * 1.1);`);
+  };
+  bm.customProgramCacheKey = () => 'nbasalt';
+  scene.add(instanced(hexG, bm, colM, colC));
 
   // ---- giant fungi on the two plateaus
   const crimsonM: THREE.Matrix4[] = [], warpedM: THREE.Matrix4[] = [];
