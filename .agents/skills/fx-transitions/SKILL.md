@@ -40,7 +40,7 @@ Transitions bridge scenes across a defined temporal window in `project.json`:
     { "scene": "my_film/scene_b", "id": "scene_b", "start": 6.0, "end": 12.0 }
   ],
   "transitions": [
-    { "id": "t-whip", "transition": "kinetic_whip", "from": "scene_a", "to": "scene_b", "at": 6.0, "dur": 0.5 }
+    { "id": "t-dissolve", "transition": "dissolve", "from": "scene_a", "to": "scene_b", "at": 6.0, "dur": 0.5 }
   ]
 }
 ```
