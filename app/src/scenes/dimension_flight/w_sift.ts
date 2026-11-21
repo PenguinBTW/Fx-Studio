@@ -35,7 +35,7 @@ export const siftH = (x: number, z: number) => {
 
 export function sift(renderer: THREE.WebGLRenderer): World {
   const scene = new THREE.Scene();
-  const fog: FogSpec = { color: new THREE.Color(0.55, 0.84, 0.8), density: 0.00022, height: -84, falloff: 0.03 };
+  const fog: FogSpec = { color: new THREE.Color(0.42, 0.86, 0.8), density: 0.00014, height: -84, falloff: 0.03 };
   const skyU = { uSun: { value: SUN } };
   scene.add(makeSky(SKY, skyU));
   scene.environment = envFromSky(renderer, SKY, skyU);
@@ -134,7 +134,7 @@ export function sift(renderer: THREE.WebGLRenderer): World {
     name: 'sift', scene, fog, lightPos,
     update(t, cam, bird) { sun.follow(bird); setTime(scene, t); lightPos.copy(cam.position).addScaledVector(SUN, 4000); },
     overlay(rd, cam, target, t) { souls.render(rd, cam, target, t); },
-    post: () => ({ exposure: 0.95, bloom: 0.6, bloomThreshold: 1.2, volumetric: 0.18, volumetricDecay: 0.93, halation: 0.1, ca: 0.5 }),
+    post: () => ({ grade: { saturation: 1.35, gamma: 0.86, gain: 1.05 }, exposure: 0.95, bloom: 0.6, bloomThreshold: 1.2, volumetric: 0.18, volumetricDecay: 0.93, halation: 0.1, ca: 0.5 }),
     dispose() { souls.dispose(); disposeTree(scene); disposeEnv(scene); },
   };
 }

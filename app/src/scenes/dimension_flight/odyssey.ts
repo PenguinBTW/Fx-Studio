@@ -6,6 +6,7 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { W, H, PW, PH, makeRT } from '../../engine/gl';
 import { smoothstep } from '../../engine/util';
 import { Swallow } from './swallow';
+import { DepthDoFPass } from '../../engine/dof';
 import { GLTFManager } from '../../engine/gltf';
 import { resolveAsset } from '../../engine/assets';
 import { Portal } from './portals';
@@ -34,10 +35,18 @@ export default class Odyssey extends Scene {
     r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
     await this.bird.load(this.ctx.project ?? 'dimension_flight');
     const ow = overworld(r);
-    this.worlds = [ow, nether(r), theEnd(r), aether(r), sift(r)];
+    const nw = nether(r);
+    const ew = theEnd(r);
+    this.worlds = [ow, nw, ew, aether(r), sift(r)];
     const trees = resolveAsset('trees', this.ctx.project ?? 'dimension_flight');
     const treeInst = await GLTFManager.instantiate(trees.url, {});
     ow.plant((id) => treeInst.part(id));
+    const np = resolveAsset('nether_props', this.ctx.project ?? 'dimension_flight');
+    const npInst = await GLTFManager.instantiate(np.url, {});
+    nw.plant((id) => npInst.part(id));
+    const ch = resolveAsset('chorus', this.ctx.project ?? 'dimension_flight');
+    const chInst = await GLTFManager.instantiate(ch.url, {});
+    ew.plant((id) => chInst.part(id));
     const res = new THREE.Vector2(PW, PH);
     PORTALS.forEach((p, i) => {
       const portal = new Portal(p.kind, new THREE.Vector3(...p.c), new THREE.Vector3(...p.n), this.rt.texture, res);
@@ -81,6 +90,15 @@ export default class Odyssey extends Scene {
     return p;
   }
 
+  private dof = new DepthDoFPass();
+  private main: THREE.WebGLRenderTarget | null = null;
+  private mainRT(out: THREE.WebGLRenderTarget) {
+    if (this.main && this.main.width === out.width && this.main.height === out.height) return this.main;
+    this.main?.dispose();
+    this.main = new THREE.WebGLRenderTarget(out.width, out.height, { type: THREE.HalfFloatType, depthTexture: new THREE.DepthTexture(out.width, out.height) });
+    return this.main;
+  }
+
   override render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
     const t = f.t, r = this.ctx.renderer;
     // camera
@@ -116,16 +134,20 @@ export default class Odyssey extends Scene {
         P.mat.uniforms.uView!.value = 1;
       }
     }
-    r.setRenderTarget(out); r.setClearColor(0x000000, 1); r.clear();
+    // world + overlays into a depth-textured target, then physical DoF focused on the bird into `out`
+    const main = this.mainRT(out);
+    r.setRenderTarget(main); r.setClearColor(0x000000, 1); r.clear();
     r.render(cur.scene, cam);
-    cur.overlay?.(r, cam, out, t);
+    cur.overlay?.(r, cam, main, t);
+    r.resetState();
+    this.dof.render(r, main.texture, main.depthTexture!, { enabled: true, focusDistance: cam.position.distanceTo(birdP), aperture: 3, maxRadius: 5, blades: 0, near: cam.near, far: cam.far, samples: 32 }, out);
     r.resetState();
 
     // post
     let flash = 0;
     for (const tc of this.camCross) flash += Math.exp(-Math.pow((t - tc) / 0.09, 2)) * 0.35;
     const post: PostOverrides = {
-      hud: 0, frame: 0, metricReadout: 0, toneMap: 'agx', grain: 0.025, ca: 0.7, halation: 0.15, vignette: 0.32,
+      hud: 0, frame: 0, metricReadout: 0, volumetricSteps: 48, volumetricJitter: 1, toneMap: 'agx', grain: 0.025, ca: 0.7, halation: 0.15, vignette: 0.32,
       bloom: 0.6, bloomThreshold: 1.0, bloomRadius: 0.8, flash,
       fade: Math.max(1 - smoothstep(0, 1.6, t), smoothstep(80.2, 82, t)),
       ...cur.post(t),
@@ -142,7 +164,7 @@ export default class Odyssey extends Scene {
   override dispose() {
     for (const w of this.worlds) w.dispose();
     for (const p of this.portals) p.dispose();
-    this.bird.dispose();
+    this.bird.dispose(); this.dof.dispose(); this.main?.dispose();
     this.rt.dispose();
   }
 }
