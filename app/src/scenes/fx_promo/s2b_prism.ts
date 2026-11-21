@@ -194,6 +194,8 @@ export default class S2bPrism extends Scene {
     U.uFold!.value = fold + 0.03 * ringK;
     U.uRing!.value = (pre ? T - pre[0] : sinceK) * 24;
     U.uRingK!.value = ringK;
+    const fanK = prog(T, bar(9.5), bar(10.5), ease.outCubic);
+    (U.uCaus!.value as THREE.Vector3).set(2.1 + 2.4 / Math.tan(0.61), -0.12, 1.6 * fanK * (post ? 1 + ringK : 0.6));
     U.uEmit!.value = post ? 1.6 : 0.25 + 0.75 * prog(T, bar(10), DROP, ease.inCubic) + 1.2 * preK;
     (U.uBase!.value as THREE.Vector3).set(...base);
     (U.uGlow!.value as THREE.Vector3).set(...glow);
@@ -223,7 +225,6 @@ export default class S2bPrism extends Scene {
     // Inside the glass the beam kinks at each letter face (f | ( | x | )).
     const KINK: [number, number, number][] = [[-2.05, 0.15, 0.2], [-1.25, 0.02, 0.16], [-0.55, 0.2, 0.12], [0.55, -0.08, 0.08], [1.35, 0.1, 0.04], [2.1, 0, 0]];
     if (inK >= 1) for (let i = 0; i < KINK.length - 1; i++) { const [a0, a1, a2] = KINK[i]!, [b0, b1, b2] = KINK[i + 1]!; L.seg(a0, a1, a2, b0, b1, b2, 0.03, 0.9, 0.8, 0.7, 1); }
-    const fanK = prog(T, bar(9.5), bar(10.5), ease.outCubic);
     if (fanK > 0) {
       const spread = 0.12 + 0.1 * Math.sin(T * 0.6) + (post ? 0.18 * ringK + 0.08 : 0);
       for (let i = 0; i < 7; i++) {
@@ -235,7 +236,6 @@ export default class S2bPrism extends Scene {
       }
     }
 
-    (U.uCaus!.value as THREE.Vector3).set(2.1 + 2.4 / Math.tan(0.61), -0.12, 1.6 * fanK * (post ? 1 + ringK : 0.6));
     const g = this.layer.ctx; this.layer.clear();
     typeLine(g, 'one line in.', 960, 900, T, bar(8.75), { size: 104, align: 'center', family: F.archivo(100, 800), t1: bar(9.9), cps: 40 });
     typeLine(g, 'every colour out.', 960, 900, T, bar(10), { size: 104, align: 'center', family: F.archivo(100, 800), color: C.signal, t1: DROP - 0.05, cps: 40 });
@@ -248,6 +248,6 @@ export default class S2bPrism extends Scene {
   }
 
   override dispose(): void {
-    this.rm.dispose(); this.rmRT?.dispose(); this.bgMat.dispose(); this.bg.geometry.dispose(); this.glass.dispose(); this.lines.dispose();
+    this.rm.dispose(); this.rmRT?.dispose(); this.bgMat.dispose(); this.bg.geometry.dispose(); this.glass.dispose(); this.lines.dispose(); this.layer.texture.dispose();
   }
 }
