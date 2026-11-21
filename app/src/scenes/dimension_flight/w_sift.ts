@@ -34,6 +34,7 @@ export const siftH = (x: number, z: number) => {
   return -88 + terr + lumps + 22 * sstep(160, 460, Math.abs(x)) - 26 * (1 - ravine(x, z));
 };
 
+const soulT = { value: 0 };
 export function sift(renderer: THREE.WebGLRenderer): World & { plant(part: (id: string) => THREE.Object3D): void } {
   const scene = new THREE.Scene();
   const fog: FogSpec = { color: new THREE.Color(0.24, 0.78, 0.7), density: 0.0001, height: -84, falloff: 0.03 };
@@ -113,6 +114,30 @@ export function sift(renderer: THREE.WebGLRenderer): World & { plant(part: (id: 
     const beam = new THREE.Mesh(new THREE.CylinderGeometry(3, 10, 420, 40, 1, true),
       new THREE.MeshBasicMaterial({ color: new THREE.Color(0.25, 0.85, 1.4), transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
     beam.position.set(LAND.x, LAND.y - 300, LAND.z); scene.add(beam);
+    {
+      const N = 420, pos = new Float32Array(N * 3), sd = new Float32Array(N);
+      for (let k = 0; k < N; k++) { sd[k] = k / N; pos[k * 3] = LAND.x; pos[k * 3 + 1] = LAND.y; pos[k * 3 + 2] = LAND.z; }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      g.setAttribute('seed', new THREE.BufferAttribute(sd, 1));
+      const sm = new THREE.ShaderMaterial({
+        uniforms: { uT: soulT }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+        vertexShader: `attribute float seed; uniform float uT; varying float vA;
+          void main() {
+            float ph = fract(seed * 7.13 + uT * 0.08);
+            float ang = seed * 61.0 + uT * (0.6 + seed * 0.5) + ph * 9.0;
+            float rad = 40.0 + 45.0 * fract(seed * 3.7) * (1.0 - ph * 0.4);
+            vec3 p = position + vec3(cos(ang) * rad, -100.0 + ph * 190.0, sin(ang) * rad);
+            vA = sin(ph * 3.1416) * smoothstep(73.0, 78.0, uT);
+            vec4 mv = modelViewMatrix * vec4(p, 1.0);
+            gl_PointSize = (5.0 + 8.0 * fract(seed * 11.3)) * 300.0 / -mv.z;
+            gl_Position = projectionMatrix * mv; }`,
+        fragmentShader: `varying float vA;
+          void main() { float d = length(gl_PointCoord - 0.5); float a = smoothstep(0.5, 0.0, d);
+            gl_FragColor = vec4(vec3(0.6, 2.2, 4.0) * a * vA, a * vA); }`,
+      });
+      const pts = new THREE.Points(g, sm); pts.frustumCulled = false; scene.add(pts);
+    }
   }
 
   /** Blender sculk coral + pale drooping giants (assets/sift_flora), instanced over the placements above. */
@@ -152,7 +177,7 @@ export function sift(renderer: THREE.WebGLRenderer): World & { plant(part: (id: 
   const lightPos = new THREE.Vector3();
   return {
     name: 'sift', scene, fog, lightPos, plant,
-    update(t, cam, bird) { sun.follow(bird); setTime(scene, t); lightPos.copy(cam.position).addScaledVector(SUN, 4000); },
+    update(t, cam, bird) { soulT.value = t; sun.follow(bird); setTime(scene, t); lightPos.copy(cam.position).addScaledVector(SUN, 4000); },
     overlay(rd, cam, target, t) { souls.render(rd, cam, target, t); },
     post: (t) => ({ toneMap: 'aces', grade: { saturation: 1.62, gamma: 0.8, gain: 1.06, lift: [-0.03, -0.025, -0.02] }, exposure: 0.95 + 0.08 * sstep(76, 80.5, t), bloom: 0.6 + 0.7 * sstep(76, 80.5, t), bloomThreshold: 1.2, volumetric: 0.1, volumetricDecay: 0.93, halation: 0.1, ca: 0.5 }),
     dispose() { souls.dispose(); disposeTree(scene); disposeEnv(scene); },
