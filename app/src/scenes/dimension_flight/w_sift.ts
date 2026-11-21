@@ -30,7 +30,8 @@ const ravine = (x: number, z: number) => sstep(0.02, 0.16, Math.abs(fbm2c(x * 0.
 export const siftH = (x: number, z: number) => {
   const hills = 10 * fbm2c(x * 0.005, z * 0.005, 4, 8) + 6 * ridged(x * 0.009, z * 0.009, 3, 3);
   const terr = Math.round(hills / 4) * 4 * 0.55 + hills * 0.45;  // soft terraces → cliff bands
-  return -88 + terr + 22 * sstep(160, 460, Math.abs(x)) - 26 * (1 - ravine(x, z));
+  const lumps = 1.8 * fbm2c(x * 0.045, z * 0.045, 3, 2);  // knobbly sculk surface
+  return -88 + terr + lumps + 22 * sstep(160, 460, Math.abs(x)) - 26 * (1 - ravine(x, z));
 };
 
 export function sift(renderer: THREE.WebGLRenderer): World {
@@ -110,9 +111,9 @@ export function sift(renderer: THREE.WebGLRenderer): World {
   const ichor = /* glsl */ `vec4 surface(vec3 wp, vec3 n, vec2 uv) {
       float f = fbm(vec3(wp.xz * 0.08, t * 0.25)), g = fbm(vec3(wp.xz * 0.3 + t * 0.2, 3.0));
       float tide = 0.75 + 0.25 * sin(t * 0.7);
-      vec3 c = mix(vec3(0.02, 0.9, 1.0), vec3(0.6, 4.0, 3.6), smoothstep(0.35, 0.8, f * 0.8 + g * 0.3)) * tide;
+      vec3 c = mix(vec3(0.02, 0.9, 1.0), vec3(0.6, 4.0, 3.6), smoothstep(0.35, 0.8, f * 0.8 + g * 0.3)) * tide * 1.7;
       return vec4(c, 1.0); }`;
-  for (let i = 0, n = 0; i < 4000 && n < 26; i++) {
+  for (let i = 0, n = 0; i < 6000 && n < 40; i++) {
     const x = (r() - 0.5) * 560, z = -920 - r() * 620;
     if (ravine(x, z) > 0.12) continue;
     const rad = 7 + r() * 16, p = makeSurface(new THREE.CircleGeometry(rad, 40).rotateX(-Math.PI / 2), ichor, {}, fog, {});
