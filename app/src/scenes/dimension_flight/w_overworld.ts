@@ -82,11 +82,11 @@ export function overworld(renderer: THREE.WebGLRenderer): World & { plant(part: 
     vec4 surface(vec3 wp, vec3 n, vec2 uv) {
       vec2 g = vec2(fbm2(wp.xz * 0.35 + vec2(0.0, t * 0.6)), fbm2(wp.xz * 0.35 + vec2(5.2, t * 0.5))) - 0.5;
       vec2 g2 = vec2(fbm2(wp.xz * vec2(1.6, 0.5) + vec2(0.0, t * 1.4)), fbm2(wp.xz * vec2(1.6, 0.5) + vec2(3.1, t * 1.2))) - 0.5;
-      vec3 N = normalize(vec3(g.x * 0.4 + g2.x * 0.25, 1.0, g.y * 0.4 + g2.y * 0.25));
+      vec3 N = normalize(vec3(g.x * 0.22 + g2.x * 0.1, 1.0, g.y * 0.22 + g2.y * 0.1));
       vec3 V = normalize(cameraPosition - wp), R = reflect(-V, N);
-      float fr = 0.04 + 0.96 * pow(1.0 - max(dot(N, V), 0.0), 5.0);
+      float fr = 0.12 + 0.88 * pow(1.0 - max(dot(N, V), 0.0), 3.0);
       vec3 sky = mix(vec3(1.2, 0.75, 0.5), vec3(0.15, 0.3, 0.6), pow(clamp(R.y, 0.0, 1.0), 0.5));
-      vec3 deep = vec3(0.01, 0.035, 0.045) + vec3(0.6, 0.55, 0.45) * smoothstep(0.3, 0.48, g2.x + g.y * 0.5) * 0.12;
+      vec3 deep = vec3(0.02, 0.07, 0.08);
       vec3 c = mix(deep, sky, fr) + vec3(30.0, 18.0, 9.0) * pow(max(dot(R, uSun), 0.0), 900.0);
       return vec4(c, 1.0);
     }`, { uSun: { value: SUN } }, fog);
