@@ -40,7 +40,7 @@ vec3 surf(int s, vec3 N, vec3 W, vec2 uv, float seed, vec3 V){
   float edge = 1.0 - smoothstep(0.0, fwidth(e) * 1.5 + 0.025, e);
   float top = step(0.5, N.y);
   if (s == 0) { float side = 1.0 - top; float fold = side * step(0.5, uv.x);
-    vec3 base = mix(vec3(0.97, 0.95, 0.90), vec3(0.86, 0.80, 0.70), seed * 0.6);
+    vec3 base = mix(vec3(0.70, 0.58, 0.44), vec3(0.56, 0.47, 0.37), seed * 0.7);
     vec3 c = base * (0.55 + 0.45 * dif) * (1.0 - 0.13 * fold);
     c *= 0.9 + 0.1 * vnoise(W.xz * 61.0 + W.y * 67.0) * vnoise(W.yx * 9.0);
     float crease = side * (1.0 - smoothstep(0.0, fwidth(uv.x) * 1.5, abs(uv.x - 0.5)));
@@ -178,7 +178,7 @@ export default class A7Paper extends Scene {
     const b = (T - B0) / BAR + 1 - 67;
     let sh: Shot, u: number;
     if (b >= 12 && b < 14) { const k = Math.floor((b - 12) * 2); return lockShot(STUT_SHOTS[k % 4]!, (b - 12) * 2 - k); }
-    else if (b >= 14) { sh = { a: [8, 5, 9], b: [0.5, 15, 3.5], tgt: [0, 0.8, 0], fov: 40 }; u = ease.inOutCubic(clamp((b - 14) / 2)); }
+    else if (b >= 14) { sh = { a: [7, 4.4, 8], b: [0.4, 8.6, 2.4], tgt: [0, 0.9, 0], fov: 40 }; u = ease.inOutCubic(clamp((b - 14) / 2)); }
     else { const k = clamp(Math.floor(b), 0, 11); return lockShot(BAR_SHOTS[k]!, ease.inOutCubic(clamp(b - k))); }
     return { pos: new THREE.Vector3().fromArray(sh.a).lerp(new THREE.Vector3().fromArray(sh.b), u), tgt: new THREE.Vector3().fromArray(sh.tgt), fov: sh.fov };
   }

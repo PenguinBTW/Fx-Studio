@@ -125,7 +125,7 @@ export default class A4City extends Scene {
       const rot = v === 2 ? (h(id, 6) < 0.5 ? 0 : Math.PI / 2) : v === 1 ? Math.PI / 8 : 0;
       const sc = v === 0 ? 1.6 + 0.6 * h(id, 7) : v === 1 ? 2.0 + 0.4 * h(id, 7) : 1.5;
       const tb = qBeat(bar(27) + (rr / 32) * 5 * BAR + h(id, 8) * BAR * 0.5, 2);
-      this.B.push({ x, z, v, n, rot, sc, r: rr, tb, tc: 0, band: Math.floor(h(id, 9) * 5), psi: h(id, 10) * Math.PI * 2, fo: cnt[v]!, falls: h(id, 11) < 0.88, crane: false });
+      this.B.push({ x, z, v, n, rot, sc, r: rr, tb, tc: 0, band: Math.floor(h(id, 9) * 5), psi: h(id, 10) * Math.PI * 2, fo: cnt[v]!, falls: true, crane: false });
       cnt[v]! += n;
       if (n > best) { best = n; this.tallest = this.B.length - 1; }
     }
@@ -135,6 +135,7 @@ export default class A4City extends Scene {
     order.forEach((o, rank) => { this.B[o.i]!.tc = qBeat(bar(45) + (rank / Math.max(1, order.length - 1)) * 3.0 * BAR); });
     this.B[this.tallest]!.falls = true;
     this.B[this.tallest]!.psi = Math.atan2(0.94, 0.34);
+    this.B[this.tallest]!.tc = qBeat(bar(48.5));
     { const t = this.B[this.tallest]!; TALL.x = t.x; TALL.z = t.z; TALL.h = t.n * FH; }
     [...this.B].sort((a, b) => b.n - a.n).slice(0, 9).forEach((b) => (b.crane = true));
 
@@ -211,7 +212,7 @@ export default class A4City extends Scene {
     this.B.forEach((b, bi) => {
       const I = this.fl[b.v]!;
       const tau = b.falls ? T - b.tc : -1;
-      const theta = tau > 0 ? Math.min(1.25, 0.32 * tau * tau) : 0;
+      const theta = tau > 0 ? Math.min(1.25, (bi === this.tallest ? 1.5 : 0.32) * tau * tau) : 0;
       const drop = tau > 0.15 ? 0.5 * 6.5 * (tau - 0.15) ** 2 : 0;
       const tauK = Math.min(1, Math.max(0, tau));
       this.ax.set(-Math.sin(b.psi), 0, Math.cos(b.psi));
@@ -290,7 +291,7 @@ export default class A4City extends Scene {
       if (age <= 0) { aA.setX(i, 0); continue; }
       const ang = h(i, 31) * Math.PI * 2, spread = (1.5 + 5 * h(i, 32)) * (1 - Math.exp(-age * 0.9));
       pos.setXYZ(i, b.x + Math.cos(ang) * spread + age * 0.9, 0.3 + b.n * FH * 0.6 * h(i, 33) * (1 - Math.exp(-age * 0.7)) + age * 0.25, b.z + Math.sin(ang) * spread);
-      aA.setX(i, 0.15 * clamp(age / 0.25) * Math.exp(-age * 0.5) * (0.5 + 0.5 * h(i, 34)));
+      aA.setX(i, 0.1 * clamp(age / 0.25) * Math.exp(-age * 0.5) * (0.5 + 0.5 * h(i, 34)));
       aS.setX(i, 2 + 5 * h(i, 35) + age * 0.8);
     }
     pos.needsUpdate = true; aA.needsUpdate = true; aS.needsUpdate = true;
@@ -320,7 +321,7 @@ export default class A4City extends Scene {
       const yr = 2026 + Math.round(100 * prog(T, bar(41.5), bar(45.2), ease.inOutCubic));
       typeLine(g, `year ${yr}`, 960, 960, T, bar(41.3), { size: 44, align: 'center', cps: 30, color: '#D8DCD6', cursor: false });
     }
-    slam(g, 'EVERYTHING IS f(t)', 960, 250, T, { t0: bar(46.5), t1: bar(48.7), size: 150, family: fam, from: 2.0, shake: 8, color: C.bone });
+    slam(g, 'EVERYTHING IS f(t)', 960, 250, T, { t0: bar(46.5), t1: bar(48.2), size: 150, family: fam, from: 2.0, shake: 8, color: C.bone });
 
     present(this.ctx, out, this.scene, this.cam, this.layer, undefined, 0x050506, overlayTextDuck(f.tin, f.tout));
     return { exposure: L.exp, bloom: L.bloom + 0.3 * a.kick * night, bloomThreshold: 0.9, vignette: 0.45 + 0.2 * decay, grain: 0.045 + 0.03 * decay, ca: 0.4 + 1.2 * dustK * a.kick, zoom: 1 + 0.015 * a.kick };

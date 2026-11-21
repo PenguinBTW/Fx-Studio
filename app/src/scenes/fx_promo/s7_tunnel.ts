@@ -76,7 +76,8 @@ export default class S7Tunnel extends Scene {
     const shot = Math.floor(lt / (2 * BAR)) % 4;
     const off = [[0, 0], [0.75, -0.6], [0, 0], [-0.7, 0.65]][shot]!;
     const look = shot === 2 ? 30 : -30;
-    applyCam(this.cam, { pos: [sway + off[0]!, 0.15 * Math.sin(lt * 0.9) + off[1]!, camZ], tgt: [sway * 0.3 + off[0]! * 0.2, off[1]! * 0.2, camZ + look], fov: 74 + 10 * prog(T, bar(65), bar(67), ease.inCubic), roll }, k * 1.6);
+    const sub = Math.floor(lt / BAR) % 2, rollK = sub ? (shot % 2 ? -0.32 : 0.32) : 0;
+    applyCam(this.cam, { pos: [sway + off[0]!, 0.15 * Math.sin(lt * 0.9) + off[1]!, camZ], tgt: [sway * 0.3 + off[0]! * 0.2, off[1]! * 0.2, camZ + look], fov: 74 + 10 * prog(T, bar(65), bar(67), ease.inCubic), roll: roll + rollK }, k * 1.6);
     this.head.position.set(0, 0, camZ - 6);
     this.head.color.copy(col);
     this.head.intensity = 25 + 80 * f.a.snare;

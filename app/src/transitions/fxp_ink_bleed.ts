@@ -14,7 +14,7 @@ const FRAG = `void main(){
   float m = smoothstep(front, front - 0.03, d);
   float ring = smoothstep(0.05, 0.0, abs(d - front)) * (1.0 - u);
   vec3 A = texture2D(texA, vUv).rgb, B = texture2D(texB, vUv).rgb;
-  vec3 ink = vec3(0.04, 0.05, 0.22);
+  vec3 ink = vec3(0.025, 0.02, 0.018);
   vec3 c = mix(A, ink, ring * 0.9);
   c = mix(c, B, m);
   float thread = smoothstep(0.006, 0.0, abs(line)) * sin(3.14159 * u) * 2.4;
