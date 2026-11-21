@@ -30,7 +30,7 @@ const SHOTS: Shot[] = [
   { t0: 32.4, t1: 43, a: [12, -26, -488], b: [26, -64, -572], fov: 38 },
   { t0: 51.8, t1: 58.8, a: [-20, -56, -805], b: [-26, -50, -868], fov: 38 },
   { t0: 66.6, t1: 74.2, a: [20, -42, -1040], b: [22, -44, -1084], fov: 40, ground: siftH },
-  { t0: 76.2, t1: 86, a: [-14, -40, -1140], b: [-70, -38, -1105], fov: 52, ground: siftH },
+  { t0: 76.2, t1: 86, a: [-14, -40, -1140], b: [-75, -62, -1090], fov: 56, ground: siftH },
 ];
 const SHOT_RAMP = 1.6, _hp = new THREE.Vector3(), _hb = new THREE.Vector3();
 function heroAt(t: number): { w: number; fov: number; p: THREE.Vector3 } {
