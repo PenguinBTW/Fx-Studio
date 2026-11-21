@@ -88,8 +88,10 @@ async function reachable(url: string) {
 function killTree(proc: { pid: number; kill: () => void }) {
   try {
     if (process.platform === 'win32') Bun.spawnSync(['taskkill', '/pid', String(proc.pid), '/T', '/F'], { stdout: 'ignore', stderr: 'ignore' });
-    else { Bun.spawnSync(['pkill', '-TERM', '-P', String(proc.pid)], { stdout: 'ignore', stderr: 'ignore' }); proc.kill(); }
+    else Bun.spawnSync(['pkill', '-TERM', '-P', String(proc.pid)], { stdout: 'ignore', stderr: 'ignore' });
   } catch {}
+  // always signal the server itself too, in case the tree kill is unavailable (no pkill / taskkill)
+  try { proc.kill(); } catch {}
 }
 const exitHooks: (() => void)[] = [];
 const runExitHooks = () => { while (exitHooks.length) exitHooks.pop()!(); };
@@ -111,11 +113,11 @@ async function ensureServer(): Promise<{ url: string; stop: () => void }> {
   const node = Bun.which('node');
   const cmd = node && existsSync(viteBin) ? [node, viteBin] : [process.execPath, 'x', 'vite'];
   const proc = Bun.spawn([...cmd, '--port', String(port), '--strictPort'], { cwd: APP, stdout: 'ignore', stderr: 'ignore', env: { ...process.env, MOTION_NO_HMR: '1', PDOOM_NO_HMR: '1' } });
-  const u = `http://localhost:${port}`;
-  for (let i = 0; i < 100 && !(await reachable(u)); i++) await Bun.sleep(100);
   let stopped = false;
   const stop = () => { if (!stopped) { stopped = true; killTree(proc); } };
   exitHooks.push(stop);
+  const u = `http://localhost:${port}`;
+  for (let i = 0; i < 100 && !(await reachable(u)); i++) await Bun.sleep(100);
   if (!(await reachable(u))) {
     stop();
     throw new Error(`[server] Vite failed to start at ${u} (port busy or missing dep) — killed proc`);
