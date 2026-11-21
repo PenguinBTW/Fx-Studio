@@ -78,7 +78,7 @@ export function sift(renderer: THREE.WebGLRenderer): World & { plant(part: (id: 
     else frondMs.push(m);
   }
   const coralMat = pbr(fog, { vertexColors: false, color: '#ffffff', roughness: 0.6, emissive: new THREE.Color('#ff6f6a'), emissiveIntensity: 0.12 });
-  const fronds = instanced(frondG, pbr(fog, { vertexColors: false, color: '#27b3a6', roughness: 0.55, emissive: new THREE.Color('#0f6b66'), emissiveIntensity: 0.25 }), frondMs);
+  const fronds = instanced(frondG, pbr(fog, { vertexColors: false, color: '#27b3a6', roughness: 0.55, emissive: new THREE.Color('#0f6b66'), emissiveIntensity: 0.25 }), frondMs, undefined, 'sift.fronds');
   fronds.castShadow = true; scene.add(fronds);
 
   // ---- pale giant trees: flared bone-white trunks carrying stacked, drooping mint-white canopies
@@ -148,7 +148,7 @@ export function sift(renderer: THREE.WebGLRenderer): World & { plant(part: (id: 
       const om = m.material as THREE.MeshStandardMaterial;
       const mt = om.name === 'SiftCoral' ? coralMat : om.name === 'PaleBark' ? bark : om.name === 'PaleLeaf' ? leaf
         : pbr(fog, { vertexColors: false, color: '#b8f4e4', roughness: 0.5, emissive: new THREE.Color('#5fe8d0'), emissiveIntensity: 0.9 });
-      const im = instanced(m.geometry, mt, ms, om.name === 'SiftCoral' ? cs : undefined); im.castShadow = true; scene.add(im);
+      const im = instanced(m.geometry, mt, ms, om.name === 'SiftCoral' ? cs : undefined, `sift_flora.${id}/${om.name || m.name}`); im.castShadow = true; scene.add(im);
     });
     put('coral', coralMs, coralCs); put('paletree', treeMs);
   };

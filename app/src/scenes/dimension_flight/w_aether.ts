@@ -88,7 +88,7 @@ export function aether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
     for (const [id, ms] of [['skyroot', skyM], ['golden', goldM]] as const) part(id).traverse((o) => {
       const m = o as THREE.Mesh; if (!m.isMesh) return;
       const om = m.material as THREE.MeshStandardMaterial, glow = om.name === 'GoldenLeaves';
-      const im = instanced(m.geometry, pbr(fog, { vertexColors: false, color: om.color, roughness: om.roughness, emissive: glow ? new THREE.Color('#6a3a00') : new THREE.Color(0), emissiveIntensity: glow ? 0.6 : 0 }), ms);
+      const im = instanced(m.geometry, pbr(fog, { vertexColors: false, color: om.color, roughness: om.roughness, emissive: glow ? new THREE.Color('#6a3a00') : new THREE.Color(0), emissiveIntensity: glow ? 0.6 : 0 }), ms, undefined, `skyroot.${id}/${om.name || m.name}`);
       im.castShadow = true; scene.add(im);
     });
   };

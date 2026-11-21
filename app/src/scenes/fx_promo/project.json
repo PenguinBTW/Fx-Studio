@@ -1,0 +1,297 @@
+{
+  "project": "fx_promo",
+  "entries": [
+    {
+      "scene": "fx_promo/s1_boot",
+      "id": "cold_open",
+      "start": 0.0,
+      "end": 1.31
+    },
+    {
+      "scene": "fx_promo/s1_boot",
+      "id": "s1_boot",
+      "start": 0.0,
+      "end": 6.39
+    },
+    {
+      "scene": "fx_promo/s1_boot",
+      "id": "s1_boot_b",
+      "start": 5.97,
+      "end": 10.278
+    },
+    {
+      "scene": "fx_promo/s1_boot",
+      "id": "s1_boot_c",
+      "start": 9.858,
+      "end": 14.167
+    },
+    {
+      "scene": "fx_promo/s1_boot",
+      "id": "s1_boot_d",
+      "start": 13.747,
+      "end": 20.213
+    },
+    {
+      "scene": "fx_promo/s2_surface",
+      "id": "s2_surface",
+      "start": 19.233,
+      "end": 36.985
+    },
+    {
+      "scene": "fx_promo/s3_type",
+      "id": "s3_type",
+      "start": 36.485,
+      "end": 52.289
+    },
+    {
+      "scene": "fx_promo/a4_city",
+      "id": "a4_city",
+      "start": 51.309,
+      "end": 95.305
+    },
+    {
+      "scene": "fx_promo/s6_vacuum",
+      "id": "s6_vacuum",
+      "start": 94.805,
+      "end": 99.07
+    },
+    {
+      "scene": "fx_promo/s7_tunnel",
+      "id": "s7_tunnel",
+      "start": 98.82,
+      "end": 130.545
+    },
+    {
+      "scene": "fx_promo/a7_paper",
+      "id": "a7_paper",
+      "start": 129.565,
+      "end": 161.655
+    },
+    {
+      "scene": "fx_promo/s9_plotter",
+      "id": "s9_plotter",
+      "start": 160.675,
+      "end": 169.423
+    },
+    {
+      "scene": "fx_promo/a4_city",
+      "id": "recap1_rewind",
+      "start": 168.443,
+      "end": 176.834,
+      "params": {
+        "remap": [
+          168.928,
+          176.704,
+          95.0,
+          54.0
+        ],
+        "notext": 1,
+        "caption": "t → −t   ·   any frame, any order"
+      }
+    },
+    {
+      "scene": "fx_promo/a7_paper",
+      "id": "recap3_paper",
+      "start": 176.584,
+      "end": 180.722,
+      "params": {
+        "shift": -23.33
+      }
+    },
+    {
+      "scene": "fx_promo/s2_surface",
+      "id": "recap4_s2_surface",
+      "start": 180.472,
+      "end": 184.61,
+      "params": {
+        "shift": -155.527
+      }
+    },
+    {
+      "scene": "fx_promo/a4_city",
+      "id": "recap5_city",
+      "start": 184.36,
+      "end": 188.499,
+      "params": {
+        "remap": [
+          184.48,
+          188.369,
+          70.0,
+          85.5
+        ],
+        "notext": 1,
+        "caption": "speed = 4×"
+      }
+    },
+    {
+      "scene": "fx_promo/a7_paper",
+      "id": "recap6_paper",
+      "start": 188.249,
+      "end": 192.387,
+      "params": {
+        "shift": -46.66
+      }
+    },
+    {
+      "scene": "fx_promo/s7_tunnel",
+      "id": "recap7_s7_tunnel",
+      "start": 192.137,
+      "end": 203.931,
+      "params": {
+        "shift": -73.875
+      }
+    },
+    {
+      "scene": "fx_promo/s10_finale",
+      "id": "s10_finale",
+      "start": 195.18,
+      "end": 214.5
+    }
+  ],
+  "transitions": [
+    {
+      "id": "t-cold-open",
+      "transition": "fxp_flash_forward",
+      "from": "cold_open",
+      "to": "s1_boot",
+      "at": 0.0,
+      "dur": 1.3
+    },
+    {
+      "id": "t-insert1",
+      "transition": "fxp_flash_insert",
+      "from": "s1_boot",
+      "to": "s1_boot_b",
+      "at": 5.97,
+      "dur": 0.4
+    },
+    {
+      "id": "t-insert2",
+      "transition": "fxp_flash_insert",
+      "from": "s1_boot_b",
+      "to": "s1_boot_c",
+      "at": 9.858,
+      "dur": 0.4
+    },
+    {
+      "id": "t-insert3",
+      "transition": "fxp_flash_insert",
+      "from": "s1_boot_c",
+      "to": "s1_boot_d",
+      "at": 13.747,
+      "dur": 0.4
+    },
+    {
+      "id": "t-s1_boot-s2_surface",
+      "transition": "fxp_ink_bleed",
+      "from": "s1_boot_d",
+      "to": "s2_surface",
+      "at": 19.233,
+      "dur": 0.97
+    },
+    {
+      "id": "t-s2_surface-s3_type",
+      "transition": "fxp_crest_shear",
+      "from": "s2_surface",
+      "to": "s3_type",
+      "at": 36.485,
+      "dur": 0.49
+    },
+    {
+      "id": "t-s3_type-a4_city",
+      "transition": "fxp_block_drop",
+      "from": "s3_type",
+      "to": "a4_city",
+      "at": 51.309,
+      "dur": 0.97
+    },
+    {
+      "id": "t-a4_city-s6_vacuum",
+      "transition": "fxp_vacuum_pull",
+      "from": "a4_city",
+      "to": "s6_vacuum",
+      "at": 94.805,
+      "dur": 0.49
+    },
+    {
+      "id": "t-s6_vacuum-s7_tunnel",
+      "transition": "fxp_octa_snap",
+      "from": "s6_vacuum",
+      "to": "s7_tunnel",
+      "at": 98.82,
+      "dur": 0.24
+    },
+    {
+      "id": "t-s7_tunnel-a7_paper",
+      "transition": "fxp_paper_tear",
+      "from": "s7_tunnel",
+      "to": "a7_paper",
+      "at": 129.565,
+      "dur": 0.97
+    },
+    {
+      "id": "t-a7_paper-s9_plotter",
+      "transition": "fxp_page_fold",
+      "from": "a7_paper",
+      "to": "s9_plotter",
+      "at": 160.675,
+      "dur": 0.97
+    },
+    {
+      "id": "t-s9_plotter-recap1_rewind",
+      "transition": "fxp_rewind_scrub",
+      "from": "s9_plotter",
+      "to": "recap1_rewind",
+      "at": 168.443,
+      "dur": 0.97
+    },
+    {
+      "id": "t-recap1_rewind-recap3_paper",
+      "transition": "fxp_paper_tear",
+      "from": "recap1_rewind",
+      "to": "recap3_paper",
+      "at": 176.584,
+      "dur": 0.24
+    },
+    {
+      "id": "t-recap3_paper-recap4_s2_surface",
+      "transition": "fxp_page_fold",
+      "from": "recap3_paper",
+      "to": "recap4_s2_surface",
+      "at": 180.472,
+      "dur": 0.24
+    },
+    {
+      "id": "t-recap4_s2_surface-recap5_city",
+      "transition": "fxp_block_drop",
+      "from": "recap4_s2_surface",
+      "to": "recap5_city",
+      "at": 184.36,
+      "dur": 0.24
+    },
+    {
+      "id": "t-recap5_city-recap6_paper",
+      "transition": "fxp_ink_bleed",
+      "from": "recap5_city",
+      "to": "recap6_paper",
+      "at": 188.249,
+      "dur": 0.24
+    },
+    {
+      "id": "t-recap6_paper-recap7_s7_tunnel",
+      "transition": "fxp_octa_snap",
+      "from": "recap6_paper",
+      "to": "recap7_s7_tunnel",
+      "at": 192.137,
+      "dur": 0.24
+    },
+    {
+      "id": "t-multiverse",
+      "transition": "fxp_multiverse",
+      "from": "recap7_s7_tunnel",
+      "to": "s10_finale",
+      "at": 196.15,
+      "dur": 7.771
+    }
+  ]
+}

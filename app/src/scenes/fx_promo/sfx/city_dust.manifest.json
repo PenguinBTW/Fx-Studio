@@ -1,0 +1,18 @@
+{
+  "id": "city_dust",
+  "eventId": null,
+  "recipe": "pressure",
+  "seed": 307,
+  "file": "city_dust.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 9.72,
+  "hitOffsetSec": 0,
+  "peak": 0.39810717055349726,
+  "peakDb": -7.999999999999999,
+  "rms": 0.06269884278290416,
+  "rmsDb": -24.0548094952316,
+  "eventTime": null,
+  "startTime": null
+}

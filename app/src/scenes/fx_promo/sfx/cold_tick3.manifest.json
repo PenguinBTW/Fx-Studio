@@ -1,0 +1,18 @@
+{
+  "id": "cold_tick3",
+  "eventId": null,
+  "recipe": "tick",
+  "seed": 122,
+  "file": "cold_tick3.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 0.16,
+  "hitOffsetSec": 0,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.04124008613681398,
+  "rmsDb": -27.69360872581895,
+  "eventTime": null,
+  "startTime": null
+}

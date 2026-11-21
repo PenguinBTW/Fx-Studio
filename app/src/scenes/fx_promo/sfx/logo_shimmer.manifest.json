@@ -1,0 +1,18 @@
+{
+  "id": "logo_shimmer",
+  "eventId": null,
+  "recipe": "shimmer",
+  "seed": 862,
+  "file": "logo_shimmer.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 4.999979166666667,
+  "hitOffsetSec": 0,
+  "peak": 0.31622776601683794,
+  "peakDb": -10,
+  "rms": 0.052746254203787125,
+  "rmsDb": -25.55616753061009,
+  "eventTime": null,
+  "startTime": null
+}

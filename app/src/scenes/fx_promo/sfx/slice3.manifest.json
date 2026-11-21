@@ -1,0 +1,18 @@
+{
+  "id": "slice3",
+  "eventId": null,
+  "recipe": "tick",
+  "seed": 677,
+  "file": "slice3.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 0.22,
+  "hitOffsetSec": 0,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.027417027603216817,
+  "rmsDb": -31.239592614193565,
+  "eventTime": null,
+  "startTime": null
+}

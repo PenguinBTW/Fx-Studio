@@ -1,0 +1,18 @@
+{
+  "id": "page_fold",
+  "eventId": null,
+  "recipe": "whoosh",
+  "seed": 492,
+  "file": "page_fold.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 0.95,
+  "hitOffsetSec": 0.475,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.09033458330350591,
+  "rmsDb": -20.882919088404904,
+  "eventTime": null,
+  "startTime": null
+}

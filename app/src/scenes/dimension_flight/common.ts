@@ -183,9 +183,13 @@ export function terrainGeometry(o: TerrainOpts): THREE.BufferGeometry {
 
 export interface IslandOpts {
   radius: number; depth: number; rings?: number; segs?: number; seed: number;
-  top: (x: number, z: number, r01: number) => number;
-  color: (x: number, y: number, z: number, slope: number, under: boolean, out: THREE.Color) => void;
+  /** Top-cap height at (x, z); r01 is 0 at the centre and 1 at the rim. Default: a low dome. */
+  top?: (x: number, z: number, r01: number) => number;
+  /** Vertex colour; `under` is true on the rock underside. Default: grass top, grey-brown rock. */
+  color?: (x: number, y: number, z: number, slope: number, under: boolean, out: THREE.Color) => void;
 }
+const ISLAND_TOP = (_x: number, _z: number, r01: number) => 0.6 * (1 - r01 * r01);
+const ISLAND_COLOR = (_x: number, _y: number, _z: number, _slope: number, under: boolean, out: THREE.Color) => { out.set(under ? '#6e6458' : '#7d9a5c'); };
 /** A floating island: noisy top cap plus a craggy inverted-cone underside, centred on the origin. */
 export function islandGeometry(o: IslandOpts): THREE.BufferGeometry {
   const R = o.rings ?? 48, S = o.segs ?? 96;
@@ -201,7 +205,7 @@ export function islandGeometry(o: IslandOpts): THREE.BufferGeometry {
         const s = j / R, r = s * o.radius * e;
         x = Math.cos(a) * r; z = Math.sin(a) * r;
         const lip = Math.pow(s, 8);
-        y = o.top(x, z, s) * (1 - lip) - lip * 0.6;
+        y = (o.top ?? ISLAND_TOP)(x, z, s) * (1 - lip) - lip * 0.6;
       } else {
         under = 1;
         // stepped rock strata: ledges every ~1/9 of the depth, plus vertical fluting
@@ -227,7 +231,7 @@ export function islandGeometry(o: IslandOpts): THREE.BufferGeometry {
   const n = g.attributes.normal as THREE.BufferAttribute;
   const col = new Float32Array(P.length), c = new THREE.Color();
   for (let k = 0; k < rows * (S + 1); k++) {
-    o.color(P[k * 3]!, P[k * 3 + 1]!, P[k * 3 + 2]!, 1 - n.getY(k), U[k] === 1, c);
+    (o.color ?? ISLAND_COLOR)(P[k * 3]!, P[k * 3 + 1]!, P[k * 3 + 2]!, 1 - n.getY(k), U[k] === 1, c);
     col[k * 3] = c.r; col[k * 3 + 1] = c.g; col[k * 3 + 2] = c.b;
   }
   g.setAttribute('color', new THREE.BufferAttribute(col, 3));
@@ -396,8 +400,10 @@ export function makeSurface(geo: THREE.BufferGeometry, frag: string, uniforms: R
   return new THREE.Mesh(geo, mat);
 }
 
-export function instanced(geo: THREE.BufferGeometry, mat: THREE.Material, mats: THREE.Matrix4[], colors?: THREE.Color[]): THREE.InstancedMesh {
+/** `name` labels the mesh for picking and review tools (sets `name` and `userData.fx_entity`). */
+export function instanced(geo: THREE.BufferGeometry, mat: THREE.Material, mats: THREE.Matrix4[], colors?: THREE.Color[], name?: string): THREE.InstancedMesh {
   const m = new THREE.InstancedMesh(geo, mat, Math.max(1, mats.length));
+  if (name) { m.name = name; m.userData.fx_entity = name; }
   m.count = mats.length;
   mats.forEach((x, i) => m.setMatrixAt(i, x));
   if (colors) colors.forEach((c, i) => m.setColorAt(i, c));

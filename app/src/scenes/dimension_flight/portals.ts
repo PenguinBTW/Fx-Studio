@@ -80,6 +80,7 @@ export class Portal {
     });
     const mg = new THREE.PlaneGeometry(this.half.x * 2, this.half.y * 2);
     this.membrane = new THREE.Mesh(mg, this.mat);
+    this.membrane.name = this.membrane.userData.fx_entity = `portal.${kind}.membrane`;
     this.group.add(this.membrane, this.frame);
     // orient: local +z = travel direction, local +y = up (or -z for the horizontal End portal)
     const z = normal.clone(), y = Math.abs(z.dot(up)) > 0.9 ? new THREE.Vector3(0, 0, -1) : up.clone();
@@ -124,6 +125,7 @@ export class Portal {
     const r = rng({ nether: 11, end: 12, aether: 13, sift: 14 }[this.kind]);
     const add = (geo: THREE.BufferGeometry, mat: THREE.Material, p: V3, s: V3 | number = 1, rot: V3 = [0, 0, 0]) => {
       const m = new THREE.Mesh(geo, mat); m.position.set(...p);
+      m.name = m.userData.fx_entity = `portal.${this.kind}.frame`;
       if (typeof s === 'number') m.scale.setScalar(s); else m.scale.set(...s);
       m.rotation.set(...rot); m.castShadow = m.receiveShadow = true; this.frame.add(m); return m;
     };
