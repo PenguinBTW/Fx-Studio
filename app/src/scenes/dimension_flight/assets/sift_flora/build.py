@@ -47,8 +47,8 @@ VEIL = mat('Veil', (0.7, 0.95, 0.88), 0.5, (0.4, 0.95, 0.85), 0.6)
 
 # ---- coral: 9 curling flattened blades, most fork once (flame silhouette), height ~1
 cv, cf = [], []
-for bl in range(9):
-    ang = bl / 9 * 2 * math.pi + random.random() * 0.5
+for bl in range(14):
+    ang = bl / 14 * 2 * math.pi + random.random() * 0.5
     lean, h, ph = 0.12 + random.random() * 0.4, 0.55 + random.random() * 0.45, random.random() * 6
     out = Vector((math.cos(ang), math.sin(ang), 0))
     base = out * 0.05
@@ -57,8 +57,8 @@ for bl in range(9):
     for i in range(S + 1):
         u = i / S
         p = base + out * (lean * h * u ** 1.3) + Vector((0, 0, h * u)) + out.cross(Vector((0, 0, 1))) * 0.06 * math.sin(u * 4.5 + ph) * u
-        sp.append(p); rr.append(0.05 * (1 - u) ** 0.75 + 0.004)
-    tube(cv, cf, sp, rr, ring=6, flat=0.45)
+        sp.append(p); rr.append((0.085 * (1 - u) ** 0.6 + 0.005) * (1 + 0.25 * math.sin(u * 17 + ph)))  # ruffled flame edge
+    tube(cv, cf, sp, rr, ring=8, flat=0.28)
     if random.random() < 0.75:
         j = 5; d = (sp[j] - sp[j - 1]).normalized()
         side = out.cross(Vector((0, 0, 1))) * (1 if random.random() < 0.5 else -1)
@@ -67,7 +67,7 @@ for bl in range(9):
             u = i / 6
             br.append(sp[j] + (d * 0.6 + side * 0.5 + Vector((0, 0, 0.4))).normalized() * (0.38 * h * u) + Vector((0, 0, 0.08 * u * u)))
             brr.append(rr[j] * 0.85 * (1 - u) ** 0.8 + 0.003)
-        tube(cv, cf, br, brr, ring=5, flat=0.5)
+        tube(cv, cf, br, brr, ring=6, flat=0.3)
 obj('Coral', [(cv, cf, CORAL)])
 
 # ---- pale giant: flared rooted trunk, three wavy drooping umbrella canopies, hanging glowing veils (height ~1)
