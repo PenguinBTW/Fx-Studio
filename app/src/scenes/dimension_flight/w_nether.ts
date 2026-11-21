@@ -37,7 +37,7 @@ const ceilH = (x: number, z: number) => 150 - 26 * fbm2c(x * 0.012, z * 0.012, 5
 
 export function nether(renderer: THREE.WebGLRenderer): World & { plant(part: (id: string) => THREE.Object3D): void } {
   const scene = new THREE.Scene();
-  const fog: FogSpec = { color: new THREE.Color(0.16, 0.028, 0.014), density: 0.0014, height: 6, falloff: 0.015 };
+  const fog: FogSpec = { color: new THREE.Color(0.16, 0.028, 0.014), density: 0.0014, height: 6, falloff: 0.032 };
   scene.add(makeSky(SKY));
   scene.environment = envFromSky(renderer, SKY);
   scene.environmentIntensity = 0.3;
@@ -157,9 +157,26 @@ export function nether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
 
   // ---- smoke, embers, ash
   const smoke: PuffItem[] = [];
-  for (let i = 0; i < 160; i++) smoke.push({ p: [(r() - 0.5) * 300, LAVA_Y + 4 + r() * 30, -230 - r() * 380], s: 14 + r() * 20, seed: r() * 50 });
-  scene.add(makePuffs(smoke, { lit: new THREE.Color(0.9, 0.18, 0.04), shade: new THREE.Color(0.03, 0.01, 0.01), sunDir: new THREE.Vector3(0, -1, 0), fog, opacity: 0.45, drift: [0.3, 1.2, 0], nearFade: 12 }));
+  for (let i = 0; i < 160; i++) {
+    const p: [number, number, number] = [(r() - 0.5) * 300, LAVA_Y + 4 + r() * 30, -230 - r() * 380], sz = 14 + r() * 20, seed = r() * 50;
+    if (nearPath(p[0], p[1], p[2]) < sz + 12) continue;
+    smoke.push({ p, s: sz, seed });
+  }
+  scene.add(makePuffs(smoke, { lit: new THREE.Color(0.9, 0.18, 0.04), shade: new THREE.Color(0.03, 0.01, 0.01), sunDir: new THREE.Vector3(0, -1, 0), fog, opacity: 0.32, drift: [0.3, 1.2, 0], nearFade: 12 }));
   scene.add(makeMotes({ count: 2600, box: [80, 50, 80], color: new THREE.Color(6, 1.8, 0.3), color2: new THREE.Color(4, 0.7, 0.1), size: 0.05, vel: [0.3, 2.2, 0.2], swirl: 1.4, flicker: 0.7 }));
+  // basalt stalactites and glowing seams framing the climb to the End frame
+  const stM: THREE.Matrix4[] = [], seamM: THREE.Matrix4[] = [];
+  for (let i = 0, n = 0; i < 900 && n < 140; i++) {
+    const x = (r() - 0.5) * 160, z = -390 - r() * 110, top = ceilH(x, z), len = 18 + r() * 40, y = top - len / 2;
+    if (nearPath(x, top - len, z) < 14 || nearPath(x, y, z) < 14) continue;
+    const w = 2 + r() * 4;
+    stM.push(new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI + (r() - 0.5) * 0.2, r() * 6, (r() - 0.5) * 0.2)), new THREE.Vector3(w, len, w)));
+    if (r() < 0.45) seamM.push(new THREE.Matrix4().compose(new THREE.Vector3(x, top - len * 0.9, z), new THREE.Quaternion(), new THREE.Vector3(w * 0.5, w * 0.5, w * 0.5)));
+    n++;
+  }
+  const stal = instanced(new THREE.ConeGeometry(0.5, 1, 6, 3), pbr(fog, { vertexColors: false, color: '#1c1517', roughness: 0.85, flatShading: true }), stM);
+  stal.castShadow = true; scene.add(stal);
+  scene.add(instanced(new THREE.IcosahedronGeometry(1, 0), pbr(fog, { vertexColors: false, color: '#ffb050', emissive: new THREE.Color('#ff7a20'), emissiveIntensity: 4, flatShading: true }), seamM));
   // engine GPU embers boiling off the lava sea
   const embers = new LargeParticles(14000, 666);
   embers.configure({
