@@ -116,7 +116,7 @@ export default class Odyssey extends Scene {
     let flash = 0;
     for (const tc of this.camCross) flash += Math.exp(-Math.pow((t - tc) / 0.09, 2)) * 0.35;
     const post: PostOverrides = {
-      hud: 0, frame: 0, metricReadout: 0, toneMap: 'agx', grain: 0.025, ca: 0.7, halation: 0.15, vignette: 0.32,
+      hud: 0, frame: 0, metricReadout: 0, toneMap: 'agx', volumetricSteps: 48, volumetricJitter: 1, grain: 0.025, ca: 0.7, halation: 0.15, vignette: 0.32,
       bloom: 0.6, bloomThreshold: 1.0, bloomRadius: 0.8, flash,
       fade: Math.max(1 - smoothstep(0, 1.6, t), smoothstep(80.2, 82, t)),
       ...cur.post(t),
