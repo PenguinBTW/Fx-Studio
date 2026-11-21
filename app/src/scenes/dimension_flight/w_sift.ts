@@ -128,7 +128,7 @@ export function sift(renderer: THREE.WebGLRenderer): World & { plant(part: (id: 
             float ph = fract(h1 + uT * (0.05 + 0.05 * h3));
             float ang = h2 * 6.2832 + uT * (0.4 + h3 * 0.5) + ph * 7.0;
             float rad = (seed < 0.3 ? 2.0 + 6.0 * h3 : 30.0 + 30.0 * pow(h3, 2.0)) * (1.0 - ph * 0.5);
-            vec3 p = position + vec3(cos(ang) * rad, seed < 0.3 ? 15.0 + ph * 150.0 : -100.0 + ph * 190.0, sin(ang) * rad);
+            vec3 p = position + vec3(cos(ang) * rad, seed < 0.3 ? 15.0 + ph * 95.0 : -100.0 + ph * 190.0, sin(ang) * rad);
             vA = sin(ph * 3.1416) * smoothstep(73.0, 78.0, uT);
             vec4 mv = modelViewMatrix * vec4(p, 1.0);
             gl_PointSize = (5.0 + 11.0 * h2 * h2) * 300.0 / -mv.z;
@@ -180,7 +180,7 @@ export function sift(renderer: THREE.WebGLRenderer): World & { plant(part: (id: 
     name: 'sift', scene, fog, lightPos, plant,
     update(t, cam, bird) { soulT.value = t; sun.follow(bird); setTime(scene, t); lightPos.copy(cam.position).addScaledVector(SUN, 4000); },
     overlay(rd, cam, target, t) { souls.render(rd, cam, target, t); },
-    post: (t) => ({ toneMap: 'aces', grade: { saturation: 1.62, gamma: 0.8, gain: 1.06, lift: [-0.03, -0.025, -0.02] }, exposure: 0.95 - 0.07 * sstep(76, 80.5, t), bloom: 0.6 + 0.7 * sstep(76, 80.5, t), bloomThreshold: 1.2, volumetric: 0.1, volumetricDecay: 0.93, halation: 0.1, ca: 0.5 }),
+    post: (t) => ({ toneMap: 'aces', grade: { saturation: 1.62, gamma: 0.8, gain: 1.06, lift: [-0.03, -0.025, -0.02] }, exposure: 0.95 - 0.18 * sstep(76, 80.5, t), bloom: 0.6 + 0.15 * sstep(76, 80.5, t), bloomThreshold: 1.2, volumetric: 0.1, volumetricDecay: 0.93, halation: 0.1, ca: 0.5 }),
     dispose() { souls.dispose(); disposeTree(scene); disposeEnv(scene); },
   };
 }
