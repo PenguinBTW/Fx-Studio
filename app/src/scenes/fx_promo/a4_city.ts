@@ -3,6 +3,7 @@
 // Every state is a closed-form function of T; params.remap = [s0, s1, e0, e1] maps song time s0..s1 onto city time
 // e0..e1 (e0 > e1 plays it backwards: the rewind in A9a).
 import * as THREE from 'three';
+import { LargeParticles } from '../../engine/particles_large';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { Layer2D } from '../../engine/gl';
 import { overlayTextDuck } from '../../engine/transition';
@@ -105,6 +106,8 @@ export default class A4City extends Scene {
   private thread!: THREE.MeshBasicMaterial;
   private ground!: THREE.MeshStandardMaterial;
   private tallest = 0;
+  // Engine GPU particles: blackbody embers and ash drifting through the backlit collapse.
+  private ash = new LargeParticles(9000, 4512);
   private nFloors = 0;
   private v = new THREE.Vector3(); private q = new THREE.Quaternion(); private q2 = new THREE.Quaternion(); private s = new THREE.Vector3();
   private c = new THREE.Color(); private ax = new THREE.Vector3(); private up = new THREE.Vector3(0, 1, 0); private e = new THREE.Euler();
@@ -173,6 +176,7 @@ export default class A4City extends Scene {
     dg.setAttribute('aS', new THREE.BufferAttribute(new Float32Array(ND), 1));
     this.dustMat = new THREE.ShaderMaterial({ vertexShader: DUST_VS, fragmentShader: DUST_FS, transparent: true, depthWrite: false, uniforms: { uCol: { value: new THREE.Color(C.ash) }, uScale: { value: 900 } } });
     this.dust = new THREE.Points(dg, this.dustMat); this.dust.frustumCulled = false;
+    this.ash.configure({ count: 4200, mode: 'fall', style: 'disc', size: [0.3, 0.8], life: [5, 11], temperature: [0, 1], color: { mode: 'blackbody', range: [1500, 3400] }, intensity: 0, brightnessVariance: 0.8, fade: [0.2, 0.3], turbulence: { amp: 1.4, freq: 0.08, drift: 0.3 }, fall: { center: [0, 16, 0], box: [130, 34, 130], velocity: [0.9, -3.2, 0.4], drag: 0 } });
     this.scene.add(skyM, gnd, tube, this.sun, this.sun.target, this.hemi, this.dust);
     this.scene.fog = new THREE.FogExp2(0xffffff, 0.01);
   }
@@ -323,7 +327,9 @@ export default class A4City extends Scene {
     }
     slam(g, 'EVERYTHING IS f(t)', 960, 250, T, { t0: bar(46.5), t1: bar(48.2), size: 150, family: fam, from: 2.0, shake: 8, color: C.bone });
 
-    present(this.ctx, out, this.scene, this.cam, this.layer, undefined, 0x050506, overlayTextDuck(f.tin, f.tout));
+    const ashK = prog(T, bar(44.5), bar(46), ease.inOutCubic) * (1 - prog(T, bar(49), bar(49.6)));
+    this.ash.u.uIntensity!.value = 3 * ashK * (1 + 0.6 * a.kick);
+    present(this.ctx, out, this.scene, this.cam, this.layer, ashK > 0.001 ? () => this.ash.render(this.ctx.renderer, this.cam, out, T) : undefined, 0x050506, overlayTextDuck(f.tin, f.tout));
     const tImp = this.B[this.tallest]!.tc + 0.91, imp = T > tImp ? Math.exp(-(T - tImp) * 9) : 0;
     return { shake: [0.9 * imp, -0.6 * imp], flash: 0.12 * imp, exposure: L.exp, bloom: L.bloom + 0.3 * a.kick * night, bloomThreshold: 0.9, vignette: 0.45 + 0.2 * decay, grain: 0.045 + 0.03 * decay, ca: 0.4 + 1.2 * dustK * a.kick, zoom: 1 + 0.015 * a.kick };
   }
