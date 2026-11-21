@@ -30,7 +30,7 @@ const SHOTS: Shot[] = [
   { t0: 32.4, t1: 43, a: [12, -26, -488], b: [26, -64, -572], fov: 38 },
   { t0: 51.8, t1: 58.8, a: [-20, -56, -805], b: [-26, -50, -868], fov: 38 },
   { t0: 66.6, t1: 74.2, a: [20, -42, -1040], b: [22, -44, -1084], fov: 40, ground: siftH },
-  { t0: 76.2, t1: 86, a: [-14, -40, -1140], b: [-58, -28, -1100], fov: 50, ground: siftH },
+  { t0: 76.2, t1: 86, a: [-14, -40, -1140], b: [-30, -50, -1150], fov: 46, ground: siftH },
 ];
 const SHOT_RAMP = 1.6, _hp = new THREE.Vector3(), _hb = new THREE.Vector3();
 function heroAt(t: number): { w: number; fov: number; p: THREE.Vector3 } {
@@ -147,7 +147,7 @@ export default class Odyssey extends Scene {
     // keep the swallow's wingspan between ~18% and ~50% of frame height (portal windows excluded so crossings stay exact)
     {
       const gap = Math.min(...PORTALS.map((P) => Math.abs(t - P.t)));
-      const cw = smoothstep(2.6, 3.8, gap) * (1 - smoothstep(77.5, 79.5, t));
+      const cw = smoothstep(2.6, 3.8, gap);
       if (cw > 0) {
         const span = 3.4, tf = 2 * Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2);
         const v = cam.position.clone().sub(birdP), d = v.length();
