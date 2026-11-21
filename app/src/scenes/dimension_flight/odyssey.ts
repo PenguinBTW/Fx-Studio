@@ -198,9 +198,9 @@ export default class Odyssey extends Scene {
     };
     // portal beat: chromatic split + bloom surge either side of each membrane crossing
     let beat = 0;
-    for (const tc of this.camCross) beat += Math.exp(-Math.pow((t - tc) / 0.32, 2));
-    post.ca = (post.ca ?? 0.7) + beat * 5;
-    post.bloom = (post.bloom ?? 0.6) + beat * 0.9;
+    for (const tc of this.camCross) beat += Math.exp(-Math.pow((t - tc) / 0.2, 2));
+    post.ca = (post.ca ?? 0.7) + beat * 3;
+    post.bloom = (post.bloom ?? 0.6) + beat * 0.45;
     if (cur.lightPos) {
       const s = cur.lightPos.clone().project(cam);
       const inFront = cur.lightPos.clone().sub(cam.position).dot(cam.getWorldDirection(V())) > 0;
