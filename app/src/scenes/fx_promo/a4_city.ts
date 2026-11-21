@@ -296,11 +296,11 @@ export default class A4City extends Scene {
     }
     pos.needsUpdate = true; aA.needsUpdate = true; aS.needsUpdate = true;
     this.dustMat.uniforms.uCol!.value.copy(L.fog).lerp(ochre, 0.5);
-    this.dustMat.uniforms.uScale!.value = 1080 / (2 * Math.tan((this.cam.fov * Math.PI) / 360));
 
     // The Thread brightens with the vocal at night and keeps glowing after everything else dies.
     this.thread.color.set(C.signal).multiplyScalar(1.2 + night * (1 + 1.5 * a.vocal) * (1 - decay * 0.5) + dustK * 2);
     applyCam(this.cam, camAt(T), a.kick * 0.5 * (1 - night * 0.5) + dustK * a.kick * 2);
+    this.dustMat.uniforms.uScale!.value = 1080 / (2 * Math.tan((this.cam.fov * Math.PI) / 360));
 
     const g = this.layer.ctx; this.layer.clear();
     const cap = this.ctx.params?.caption as string | undefined;
