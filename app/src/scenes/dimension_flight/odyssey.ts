@@ -23,11 +23,11 @@ import { owHeight } from './w_overworld';
 type Shot = { t0: number; t1: number; a: [number, number, number]; b: [number, number, number]; fov: number; ground?: (x: number, z: number) => number };
 const SHOTS: Shot[] = [
   { t0: -3, t1: 5.6, a: [-6, 40, 64], b: [-14, 20, -14], fov: 36, ground: owHeight },
-  { t0: 19.6, t1: 25.4, a: [-26, 14, -318], b: [-14, 18, -352], fov: 40 },
-  { t0: 26.2, t1: 29.8, a: [30, 54, -410], b: [22, 66, -442], fov: 42 },
-  { t0: 32.4, t1: 43, a: [12, -26, -488], b: [30, -56, -585], fov: 38 },
+  { t0: 19.6, t1: 24.4, a: [-26, 14, -318], b: [-14, 18, -352], fov: 40 },
+  { t0: 25.6, t1: 29.8, a: [30, 54, -410], b: [22, 66, -442], fov: 42 },
+  { t0: 32.4, t1: 43, a: [12, -26, -488], b: [26, -56, -574], fov: 38 },
   { t0: 51.8, t1: 58.8, a: [-20, -56, -805], b: [-26, -50, -868], fov: 38 },
-  { t0: 68, t1: 74.2, a: [16, -38, -1046], b: [18, -40, -1088], fov: 38, ground: siftH },
+  { t0: 68, t1: 74.2, a: [26, -50, -1040], b: [28, -52, -1084], fov: 38, ground: siftH },
   { t0: 76.2, t1: 82.6, a: [-14, -40, -1140], b: [0, -30, -1182], fov: 40, ground: siftH },
 ];
 const SHOT_RAMP = 1.6, _hp = new THREE.Vector3(), _hb = new THREE.Vector3();

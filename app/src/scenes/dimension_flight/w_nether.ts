@@ -198,7 +198,9 @@ export function nether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
       part(id).traverse((o) => {
         const m = o as THREE.Mesh; if (!m.isMesh) return;
         const om = m.material as THREE.MeshStandardMaterial;
-        const im = instanced(m.geometry, pbr(fog, { vertexColors: false, color: om.color, roughness: om.roughness, emissive: om.emissive, emissiveIntensity: om.emissiveIntensity }), ms);
+        // caps carry a little self-glow so crimson/warped hues survive the orange lava key light
+        const capGlow = om.name === 'CrimsonCap' ? new THREE.Color(0.55, 0.02, 0.05) : om.name === 'WarpedCap' ? new THREE.Color(0.02, 0.5, 0.44) : null;
+        const im = instanced(m.geometry, pbr(fog, { vertexColors: false, color: om.color, roughness: om.roughness, emissive: capGlow ?? om.emissive, emissiveIntensity: capGlow ? 0.55 : om.emissiveIntensity }), ms);
         im.castShadow = true; scene.add(im);
       });
     }
