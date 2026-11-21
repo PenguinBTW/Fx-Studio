@@ -104,7 +104,7 @@ export function overworld(renderer: THREE.WebGLRenderer): World & { plant(part: 
     const kd = Math.hypot(x - KNOLL.x, z - KNOLL.y);
     const dens = sstep(-0.2, 0.35, fbm2c(x * 0.008, z * 0.008, 3, 77));
     if (y < 1.4 || y > 80 || d < 9 || kd < 26 || slope > 2.6 || r() > dens) continue;
-    if (nearPath(x, y + 9, z) < 13) continue;
+    if (nearPath(x, y + 9, z) < 20) continue;
     const cherry = fbm2c(x * 0.005 + 3, z * 0.005, 2, 12) > 0.18, birch = !cherry && r() < 0.22;
     const hgt = (birch ? 5.5 : 3.6) + r() * 2.5, s = (cherry ? 3.4 : 2.7) + r() * 1.4;
     e.set(0, r() * Math.PI * 2, 0); q.setFromEuler(e); const k = (hgt + s) * (cherry ? 1.05 : 1.0);

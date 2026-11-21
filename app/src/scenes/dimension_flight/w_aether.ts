@@ -100,11 +100,11 @@ export function aether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
       return vec4(c * a, a); }`;
   const mist: PuffItem[] = [];
   isles.slice(1, 9).forEach(({ p, rad }, i) => {
-    const a = i * 2.1, x = p.x + Math.cos(a) * rad * 0.95, z = p.z + Math.sin(a) * rad * 0.95, w = 2 + rad * 0.15;
+    const a = i * 2.1, x = p.x + Math.cos(a) * rad * 0.95, z = p.z + Math.sin(a) * rad * 0.95, w = 5 + rad * 0.35;
     const top = p.y + 0.2, len = top - SEA_Y + 4;
     const m = makeSurface(new THREE.PlaneGeometry(w, len, 1, 1).translate(0, -len / 2, 0), fall, {}, fog, { transparent: true, side: THREE.DoubleSide });
     m.position.set(x, top, z); m.rotation.y = -a + Math.PI / 2; scene.add(m);
-    for (let j = 0; j < 4; j++) mist.push({ p: [x + (r() - 0.5) * 8, SEA_Y + 6 + r() * 6, z + (r() - 0.5) * 8], s: 8 + r() * 6, seed: r() * 40 });
+    for (let j = 0; j < 7; j++) mist.push({ p: [x + (r() - 0.5) * 14, SEA_Y + 6 + r() * 10, z + (r() - 0.5) * 14], s: 10 + r() * 9, seed: r() * 40 });
   });
 
   // ---- billowing cumulus, golden aerclouds
