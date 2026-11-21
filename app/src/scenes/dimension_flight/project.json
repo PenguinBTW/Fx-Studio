@@ -1,0 +1,11 @@
+{
+  "project": "dimension_flight",
+  "entries": [
+    {
+      "scene": "dimension_flight/odyssey",
+      "id": "dimension_flight",
+      "start": 0.0,
+      "end": 82.0
+    }
+  ]
+}
