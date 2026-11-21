@@ -154,7 +154,7 @@ export function sift(renderer: THREE.WebGLRenderer): World & { plant(part: (id: 
     name: 'sift', scene, fog, lightPos, plant,
     update(t, cam, bird) { sun.follow(bird); setTime(scene, t); lightPos.copy(cam.position).addScaledVector(SUN, 4000); },
     overlay(rd, cam, target, t) { souls.render(rd, cam, target, t); },
-    post: (t) => ({ toneMap: 'aces', grade: { saturation: 1.62, gamma: 0.88, gain: 1.06 }, exposure: 0.95 + 0.18 * sstep(76, 80.5, t), bloom: 0.6 + 0.7 * sstep(76, 80.5, t), bloomThreshold: 1.2, volumetric: 0.1, volumetricDecay: 0.93, halation: 0.1, ca: 0.5 }),
+    post: (t) => ({ toneMap: 'aces', grade: { saturation: 1.62, gamma: 0.88, gain: 1.06, lift: [-0.03, -0.025, -0.02] }, exposure: 0.95 + 0.08 * sstep(76, 80.5, t), bloom: 0.6 + 0.7 * sstep(76, 80.5, t), bloomThreshold: 1.2, volumetric: 0.1, volumetricDecay: 0.93, halation: 0.1, ca: 0.5 }),
     dispose() { souls.dispose(); disposeTree(scene); disposeEnv(scene); },
   };
 }
