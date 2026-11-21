@@ -61,7 +61,7 @@ export function overworld(renderer: THREE.WebGLRenderer): World & { plant(part: 
 
   // ---- terrain
   const grassA = new THREE.Color(0.10, 0.24, 0.05), grassB = new THREE.Color(0.24, 0.36, 0.07), rock = new THREE.Color(0.30, 0.27, 0.24);
-  const _rk = new THREE.Color(), snow = new THREE.Color(0.95, 0.93, 0.98), sand = new THREE.Color(0.55, 0.48, 0.33), scorch = new THREE.Color(0.22, 0.035, 0.03);
+  const _rk = new THREE.Color(), snow = new THREE.Color(0.95, 0.93, 0.98), sand = new THREE.Color(0.55, 0.48, 0.33), scorch = new THREE.Color(0.07, 0.05, 0.06);
   const terr = terrainGeometry({
     x0: -900, x1: 900, z0: -1000, z1: 300, nx: 420, nz: 330, height: owHeight,
     color: (x, y, z, slope, c) => {
