@@ -48,6 +48,9 @@ docs/
 │   ├── video-export-pipeline.md      # Headless export, WebSocket frame streaming, GPU acceleration
 │   └── testing-and-verification.md   # Automated milestone regression suites & CI testing protocol
 │
+├── feedback/                         # Human review & agent feedback
+│   └── review-gui.md                 # fx-feedback-gui: player, notes, capture verdicts, agent rules
+│
 ├── projects/                         # Project manifests & workspace architecture
 │   └── project-system.md             # Multi-project workspace, active.json, project.json manifests
 │
@@ -97,6 +100,7 @@ docs/
 * [**02. Multi-Exposure Motion Onion**](diagnostics/02-multi-exposure-motion-onion.md): Single composite still blending consecutive frames with a chromatic time-decay gradient (cyan $\to$ natural $\to$ amber) to diagnose easing, springs, and micro-tremors.
 * [**03. Visual A/B Reference Anchor**](diagnostics/03-visual-ab-reference-anchor.md): Automated side-by-side and $45^\circ$ diagonal split-wipe contact plates benchmarking active scenes against Figma artboards and design tokens.
 * [**04. Transition Seam Stitch Inspector**](diagnostics/04-transition-seam-stitch-inspector.md): Split-wipe onion overlay (green outgoing, magenta incoming) and 10-frame filmstrip across transition cut boundaries ($\pm 250\text{ms}$).
+* [**Human Review GUI (fx-feedback-gui)**](feedback/review-gui.md): Recommended companion repo. A live export-path player, range notes with 2D/3D markers, and Good/Needs-work verdicts on agent captures, all handed to agents as files plus the `fx-notes` CLI. Includes the `.fx/captures/<project>/<run>/` filing rule.
 
 ### C. Motion Telemetry & Automated Verification
 * [**60fps Motion Telemetry Engine**](telemetry/telemetry-engine.md): 60fps sampling architecture, 4 engine hooks, 4x4 box downscaling pipeline, Rec.709 luma, 2D FFT Cooley-Tukey optical flow, Sobel edge density, and CIE Lab $\Delta E_{76}$.
