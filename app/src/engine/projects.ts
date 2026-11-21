@@ -36,6 +36,9 @@ export interface ProjectManifest {
   events?: import('./events').EventDef[];
   /** Mix manifest path (relative to this project folder) used by `render.ts video` when --mix is not given. */
   mix?: string;
+  /** Final soundtrack (relative to this project folder, or absolute). `render.ts audio` writes here when --out is not given
+   *  (a .mp3 target is encoded from the mixdown WAV); `render.ts video` muxes it when neither --audio nor --mix is given. */
+  audio?: string;
 }
 
 /** Selection priority: explicit (?project= / --project) > pointer file > fallback. */

@@ -60,7 +60,8 @@ Each project folder defines its scenes and transitions in a `project.json` manif
   "project": "brand_campaign",
   "title": "Brand Kinetic Identity 2026",
   "bpm": 120.0,
-  "audio": "public/audio/soundtrack.mp3",
+  "mix": "mix.json",
+  "audio": "master/soundtrack.mp3",
   "entries": [
     {
       "scene": "brand_campaign/act1_intro",
@@ -96,6 +97,10 @@ Each project folder defines its scenes and transitions in a `project.json` manif
   - `transition`: Matches any of the 16 transition classes in `app/src/transitions/` (e.g. `dissolve`, `portal_dive`, `shutter_wipe`, `chromatic_aberration_whip`, etc.).
   - `at`: Exact center timestamp of the transition cut.
   - `dur`: Total duration of the standalone transition window in seconds.
+
+
+- `mix`: the project's mix manifest (`mix.json`), relative to the project folder.
+- `audio`: the final soundtrack, relative to the project folder (app-relative paths such as `public/audio/x.mp3` also resolve). `render.ts audio` writes the mixdown here when `--out` is not given (a `.mp3` target is encoded at 320 kbps from the mixdown WAV), and `render.ts video` muxes it when neither `--audio` nor `--mix` is passed. If the file does not exist yet, `video` falls back to a mixdown of `mix`.
 
 ---
 
