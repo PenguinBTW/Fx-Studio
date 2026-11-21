@@ -30,6 +30,7 @@ export function owHeight(x: number, z: number) {
   const d = Math.abs(x - riverX(z));
   let h = Math.pow(d / 42, 1.5) * 16 + fbm2c(x * 0.012, z * 0.012, 5, 3) * 22 * sstep(8, 70, d);
   h += sstep(140, 420, d) * (70 + 160 * ridged(x * 0.004, z * 0.004, 5, 9));
+  h += sstep(120, 300, d) * 7 * ridged(x * 0.028, z * 0.028, 3, 4);  // rocky crags on the high slopes
   // soft terracing: hints of stacked layers without hard voxels
   const L = 3.2, q = h / L, fq = q - Math.floor(q);
   h = THREE.MathUtils.lerp(h, (Math.floor(q) + Math.pow(sstep(0.35, 0.65, fq), 1.0)) * L, 0.55 * sstep(6, 14, d));
