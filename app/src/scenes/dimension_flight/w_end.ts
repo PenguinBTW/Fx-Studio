@@ -13,8 +13,10 @@ vec3 skyColor(vec3 d) {
   vec3 c = vec3(0.006, 0.003, 0.014);
   c += vec3(0.05, 0.016, 0.095) * smoothstep(0.5, 0.9, n) * (0.5 + m);
   c += vec3(0.02, 0.09, 0.10) * smoothstep(0.55, 0.9, m) * smoothstep(0.4, 0.7, n);
-  vec3 g = floor(d * 420.0); float h = bh31(g);
-  c += vec3(1.4, 1.2, 1.8) * step(0.9975, h) * (0.6 + 0.4 * sin(t * 2.0 + h * 90.0));
+  vec3 g = floor(d * 900.0); float h = bh31(g);
+  c += vec3(1.3, 1.15, 1.6) * step(0.9982, h) * (0.2 + 0.8 * fract(h * 731.0)) * (0.7 + 0.3 * sin(t * 2.0 + h * 90.0));
+  vec3 g2 = floor(d * 260.0); float h2 = bh31(g2 + 17.0);
+  c += vec3(1.6, 1.4, 2.0) * step(0.9994, h2) * 1.3;
   return c;
 }`;
 const MAIN = new THREE.Vector3(-10, -95, -588), GATE = new THREE.Vector3(0, -78.6, -722), EGG = new THREE.Vector3(-14, -30, -600);
