@@ -1,7 +1,6 @@
 // OVERWORLD — dawn over a terraced river valley: soft-stepped hills, cube-canopied groves, cherry blossom,
 // a glassy river and, on a scorched knoll at the valley's end, a ruined obsidian gate.
 import * as THREE from 'three';
-import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import type { World } from './world';
 import { BIRD } from './path';
 import { Sun } from './world';
@@ -48,7 +47,7 @@ function nearPath(x: number, y: number, z: number) {
   return m;
 }
 
-export function overworld(renderer: THREE.WebGLRenderer): World {
+export function overworld(renderer: THREE.WebGLRenderer): World & { plant(src: THREE.Object3D): void } {
   const scene = new THREE.Scene();
   const fog: FogSpec = { color: new THREE.Color(0.82, 0.64, 0.55), density: 0.00105, height: 4, falloff: 0.03 };
   const skyU = { uSun: { value: SUN } };
@@ -94,9 +93,9 @@ export function overworld(renderer: THREE.WebGLRenderer): World {
 
   // ---- groves: oak, birch and cherry with soft cubic canopies
   const r = rng(42);
-  const trunkM: THREE.Matrix4[] = [], trunkC: THREE.Color[] = [], leafM: THREE.Matrix4[] = [], leafC: THREE.Color[] = [];
+  const oakM: THREE.Matrix4[] = [], cherryM: THREE.Matrix4[] = [];
   const q = new THREE.Quaternion(), e = new THREE.Euler(), pos = new THREE.Vector3(), scl = new THREE.Vector3();
-  for (let i = 0; i < 26000 && trunkM.length < 5200; i++) {
+  for (let i = 0; i < 26000 && oakM.length + cherryM.length < 5200; i++) {
     const x = (r() - 0.5) * 760, z = 160 - r() * 900;
     const y = owHeight(x, z);
     const d = Math.abs(x - riverX(z));
@@ -107,23 +106,21 @@ export function overworld(renderer: THREE.WebGLRenderer): World {
     if (nearPath(x, y + 9, z) < 13) continue;
     const cherry = fbm2c(x * 0.005 + 3, z * 0.005, 2, 12) > 0.18, birch = !cherry && r() < 0.22;
     const hgt = (birch ? 5.5 : 3.6) + r() * 2.5, s = (cherry ? 3.4 : 2.7) + r() * 1.4;
-    trunkM.push(new THREE.Matrix4().compose(pos.set(x, y + hgt / 2 - 0.4, z), q.identity(), scl.set(0.7, hgt, 0.7)));
-    trunkC.push(birch ? new THREE.Color(0.75, 0.72, 0.66) : cherry ? new THREE.Color(0.18, 0.09, 0.08) : new THREE.Color(0.22, 0.14, 0.08));
-    const n = 3 + Math.floor(r() * 3);
-    for (let j = 0; j < n; j++) {
-      const k = j === 0 ? 1 : 0.55 + r() * 0.35;
-      e.set((r() - 0.5) * 0.5, r() * Math.PI, (r() - 0.5) * 0.5); q.setFromEuler(e);
-      const off = j === 0 ? [0, 0, 0] : [(r() - 0.5) * s * 0.9, (r() - 0.3) * s * 0.6, (r() - 0.5) * s * 0.9];
-      leafM.push(new THREE.Matrix4().compose(pos.set(x + off[0]!, y + hgt + s * 0.25 + off[1]!, z + off[2]!), q, scl.set(s * k, s * k * (cherry ? 0.8 : 0.9), s * k)));
-      const v = r();
-      leafC.push(cherry ? new THREE.Color().setRGB(0.95, 0.45 + v * 0.15, 0.62 + v * 0.1)
-        : birch ? new THREE.Color().setRGB(0.25 + v * 0.1, 0.42 + v * 0.08, 0.08) : new THREE.Color().setRGB(0.07 + v * 0.06, 0.2 + v * 0.1, 0.035));
-    }
+    e.set(0, r() * Math.PI * 2, 0); q.setFromEuler(e); const k = (hgt + s) * (cherry ? 1.05 : 1.0);
+    (cherry ? cherryM : oakM).push(new THREE.Matrix4().compose(pos.set(x, y - 0.3, z), q, scl.set(k, k * (birch ? 1.25 : 1), k)));
   }
-  const leafMat = withFogStd(fog, { roughness: 0.75, color: '#ffffff' });
-  const trunkMat = withFogStd(fog, { roughness: 0.9, color: '#ffffff' });
-  scene.add(instanced(new THREE.CylinderGeometry(0.28, 0.4, 1, 7), trunkMat, trunkM, trunkC));
-  scene.add(instanced(new RoundedBoxGeometry(1, 1, 1, 2, 0.2), leafMat, leafM, leafC));
+  /** Blender tree asset (assets/trees: meshes Oak, Cherry) -> one fogged InstancedMesh per material primitive. */
+  const plant = (src: THREE.Object3D) => {
+    for (const [name, ms] of [['Oak', oakM], ['Cherry', cherryM]] as const) {
+      const node = src.getObjectByName(name); if (!node) throw new Error(`[overworld] trees asset missing ${name}`);
+      node.traverse((o) => {
+        const m = o as THREE.Mesh; if (!m.isMesh) return;
+        const om = m.material as THREE.MeshStandardMaterial;
+        const im = instanced(m.geometry, withFogStd(fog, { color: om.color, roughness: om.roughness }), ms);
+        im.castShadow = im.receiveShadow = true; scene.add(im);
+      });
+    }
+  };
 
   // ---- clouds: towering dawn cumulus + river mist
   const cl: PuffItem[] = [];
@@ -143,7 +140,7 @@ export function overworld(renderer: THREE.WebGLRenderer): World {
 
   const lightPos = new THREE.Vector3();
   return {
-    name: 'overworld', scene, fog, lightPos,
+    name: 'overworld', scene, fog, lightPos, plant,
     update(t, cam, bird) {
       sun.follow(bird); setTime(scene, t);
       lightPos.copy(cam.position).addScaledVector(SUN, 4000);

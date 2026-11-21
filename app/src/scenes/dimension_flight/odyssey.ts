@@ -6,6 +6,8 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { W, H, PW, PH, makeRT } from '../../engine/gl';
 import { smoothstep } from '../../engine/util';
 import { Swallow } from './swallow';
+import { GLTFManager } from '../../engine/gltf';
+import { resolveAsset } from '../../engine/assets';
 import { Portal } from './portals';
 import type { World } from './world';
 import { BIRD, PORTALS, FLAP, FOLD, CAM_LAG, CAM_OFF, CAM_FOV, DIVE } from './path';
@@ -31,7 +33,11 @@ export default class Odyssey extends Scene {
     const r = this.ctx.renderer;
     r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
     await this.bird.load(this.ctx.project ?? 'dimension_flight');
-    this.worlds = [overworld(r), nether(r), theEnd(r), aether(r), sift(r)];
+    const ow = overworld(r);
+    this.worlds = [ow, nether(r), theEnd(r), aether(r), sift(r)];
+    const trees = resolveAsset('trees', this.ctx.project ?? 'dimension_flight');
+    const treeInst = await GLTFManager.instantiate(trees.url, {});
+    ow.plant(treeInst.root);
     const res = new THREE.Vector2(PW, PH);
     PORTALS.forEach((p, i) => {
       const portal = new Portal(p.kind, new THREE.Vector3(...p.c), new THREE.Vector3(...p.n), this.rt.texture, res);
