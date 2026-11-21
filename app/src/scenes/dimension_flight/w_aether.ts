@@ -41,7 +41,7 @@ export function aether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
       float a = fbm2(p), b = fbm2(p * 3.1 + a * 2.0 + vec2(0.0, t * 0.02));
       float h = a * 0.65 + b * 0.35;
       float lit = smoothstep(0.3, 0.8, h + 0.15 * (fbm2(p * 3.1 + a * 2.0 + vec2(0.06, t * 0.02)) - b) * 8.0);
-      vec3 c = mix(vec3(0.26, 0.29, 0.4), vec3(0.98, 0.76, 0.5), lit) * mix(0.6, 1.05, h);
+      vec3 c = mix(vec3(0.26, 0.29, 0.4), vec3(0.85, 0.62, 0.38), lit) * mix(0.6, 1.05, h);
       return vec4(c, 1.0);
     }`, { uSun: { value: SUN } }, fog);
   scene.add(sea);
@@ -122,7 +122,7 @@ export function aether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
   return {
     name: 'aether', scene, fog, lightPos, plant,
     update(t, cam, bird) { sun.follow(bird); setTime(scene, t); lightPos.copy(cam.position).addScaledVector(SUN, 4000); },
-    post: () => ({ toneMap: 'aces', grade: { saturation: 1.55, gamma: 0.9, gain: 1.0, tint: [1.14, 1.02, 0.8], lift: [-0.015, -0.012, -0.008] }, exposure: 0.74, bloom: 0.45, bloomThreshold: 1.3, volumetric: 0.12, volumetricDecay: 0.94, halation: 0.12, ca: 0.6 }),
+    post: () => ({ toneMap: 'aces', grade: { saturation: 1.55, gamma: 0.9, gain: 1.0, tint: [1.14, 1.02, 0.8], lift: [-0.015, -0.012, -0.008] }, exposure: 0.62, bloom: 0.45, bloomThreshold: 1.3, volumetric: 0.12, volumetricDecay: 0.94, halation: 0.12, ca: 0.6 }),
     dispose() { disposeTree(scene); disposeEnv(scene); },
   };
 }
