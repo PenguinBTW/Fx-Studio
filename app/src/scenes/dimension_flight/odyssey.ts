@@ -37,7 +37,7 @@ export default class Odyssey extends Scene {
     this.worlds = [ow, nether(r), theEnd(r), aether(r), sift(r)];
     const trees = resolveAsset('trees', this.ctx.project ?? 'dimension_flight');
     const treeInst = await GLTFManager.instantiate(trees.url, {});
-    ow.plant(treeInst.root);
+    ow.plant((id) => treeInst.part(id));
     const res = new THREE.Vector2(PW, PH);
     PORTALS.forEach((p, i) => {
       const portal = new Portal(p.kind, new THREE.Vector3(...p.c), new THREE.Vector3(...p.n), this.rt.texture, res);

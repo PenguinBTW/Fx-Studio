@@ -47,7 +47,7 @@ function nearPath(x: number, y: number, z: number) {
   return m;
 }
 
-export function overworld(renderer: THREE.WebGLRenderer): World & { plant(src: THREE.Object3D): void } {
+export function overworld(renderer: THREE.WebGLRenderer): World & { plant(part: (id: string) => THREE.Object3D): void } {
   const scene = new THREE.Scene();
   const fog: FogSpec = { color: new THREE.Color(0.82, 0.64, 0.55), density: 0.00105, height: 4, falloff: 0.03 };
   const skyU = { uSun: { value: SUN } };
@@ -110,9 +110,9 @@ export function overworld(renderer: THREE.WebGLRenderer): World & { plant(src: T
     (cherry ? cherryM : oakM).push(new THREE.Matrix4().compose(pos.set(x, y - 0.3, z), q, scl.set(k, k * (birch ? 1.25 : 1), k)));
   }
   /** Blender tree asset (assets/trees: meshes Oak, Cherry) -> one fogged InstancedMesh per material primitive. */
-  const plant = (src: THREE.Object3D) => {
-    for (const [name, ms] of [['Oak', oakM], ['Cherry', cherryM]] as const) {
-      const node = src.getObjectByName(name); if (!node) throw new Error(`[overworld] trees asset missing ${name}`);
+  const plant = (part: (id: string) => THREE.Object3D) => {
+    for (const [name, ms] of [['oak', oakM], ['cherry', cherryM]] as const) {
+      const node = part(name);
       node.traverse((o) => {
         const m = o as THREE.Mesh; if (!m.isMesh) return;
         const om = m.material as THREE.MeshStandardMaterial;
