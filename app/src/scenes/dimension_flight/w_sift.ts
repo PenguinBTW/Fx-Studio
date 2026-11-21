@@ -103,7 +103,7 @@ export function sift(renderer: THREE.WebGLRenderer): World & { plant(part: (id: 
   tree(TREE.x, TREE.z, 3.2);
   // finale landmark: a pale floating cliff isle the swallow climbs toward, with souls streaming up past it
   {
-    const LAND = new THREE.Vector3(150, 10, -1330), rock = new THREE.Color('#e4e6e0'), shade = new THREE.Color('#b0b8b4'), moss = new THREE.Color('#e9ece4');
+    const LAND = new THREE.Vector3(125, 10, -1330), rock = new THREE.Color('#e4e6e0'), shade = new THREE.Color('#d6d9d2'), moss = new THREE.Color('#e9ece4');
     const isle = new THREE.Mesh(islandGeometry({ radius: 60, depth: 85, seed: 27, rings: 44, segs: 110,
       top: (x, z, r01) => 4 * fbm2c(x * 0.04, z * 0.04, 3, 5) * (1 - r01),
       color: (_x, y, _z, _s, under, out) => { if (under) out.copy(shade).lerp(rock, 0.45 + 0.35 * Math.sin(y * 0.25)); else out.copy(moss); } }),
