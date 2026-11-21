@@ -115,8 +115,25 @@ export function calcBilateralWeight(
   }
 }
 
+const COPY_FRAG = /* glsl */ `
+uniform sampler2D colorTex;
+uniform sampler2D depthTex;
+void main() {
+  fragColor = texture(colorTex, vUv);
+  gl_FragDepth = texture(depthTex, vUv).r;
+}`;
+
+/** Write depth only into targets that have a depth buffer; AlwaysDepth so the copy overwrites. */
+function depthWriteFor(mat: THREE.Material, target: THREE.WebGLRenderTarget | null) {
+  const w = Boolean(target?.depthBuffer);
+  mat.depthTest = w;
+  mat.depthWrite = w;
+  mat.depthFunc = THREE.AlwaysDepth;
+}
+
 export class DepthDoFPass {
   private pass: FSPass;
+  private copy: FSPass | null = null;
   private rt: THREE.WebGLRenderTarget;
 
   constructor() {
@@ -138,7 +155,8 @@ export class DepthDoFPass {
 
   /**
    * Render depth-based defocus blur & bokeh.
-   * If disabled or aperture <= 0, returns colorTex directly.
+   * Writes colour plus the scene depth into `out`. If disabled or aperture <= 0, returns colorTex
+   * directly when no `out` is given, and otherwise copies colour and depth into `out` unchanged.
    */
   render(
     renderer: THREE.WebGLRenderer,
@@ -149,7 +167,13 @@ export class DepthDoFPass {
   ): THREE.Texture {
     const p = { ...DEFAULT_DEPTH_DOF, ...params };
     if (!p.enabled || p.aperture <= 0.001 || (p.maxRadius !== undefined && p.maxRadius <= 0.001)) {
-      return colorTex;
+      if (out === undefined) return colorTex;
+      this.copy ??= new FSPass(COPY_FRAG, { colorTex: { value: null }, depthTex: { value: null } });
+      depthWriteFor(this.copy.mat, out);
+      this.copy.u.colorTex!.value = colorTex;
+      this.copy.u.depthTex!.value = depthTex;
+      this.copy.render(renderer, out);
+      return out ? out.texture : colorTex;
     }
 
     const target = out !== undefined ? out : this.rt;
@@ -169,12 +193,14 @@ export class DepthDoFPass {
     u.far!.value = p.far ?? 1000.0;
     u.samples!.value = Math.max(8, Math.min(64, Math.round(p.samples ?? 32)));
 
+    depthWriteFor(this.pass.mat, target);
     this.pass.render(renderer, target);
     return target ? target.texture : colorTex;
   }
 
   dispose() {
     this.pass.dispose();
+    this.copy?.dispose();
     this.rt.dispose();
   }
 }
