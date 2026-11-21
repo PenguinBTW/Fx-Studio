@@ -127,15 +127,15 @@ export function sift(renderer: THREE.WebGLRenderer): World & { plant(part: (id: 
             float h1 = fract(sin(seed * 917.3) * 43758.5), h2 = fract(sin(seed * 373.1) * 24634.6), h3 = fract(sin(seed * 155.7) * 11743.2);
             float ph = fract(h1 + uT * (0.05 + 0.05 * h3));
             float ang = h2 * 6.2832 + uT * (0.4 + h3 * 0.5) + ph * 7.0;
-            float rad = 30.0 + 30.0 * pow(h3, 2.0) * (1.0 - ph * 0.5);
-            vec3 p = position + vec3(cos(ang) * rad, -100.0 + ph * 190.0, sin(ang) * rad);
+            float rad = (seed < 0.3 ? 2.0 + 6.0 * h3 : 30.0 + 30.0 * pow(h3, 2.0)) * (1.0 - ph * 0.5);
+            vec3 p = position + vec3(cos(ang) * rad, seed < 0.3 ? 15.0 + ph * 150.0 : -100.0 + ph * 190.0, sin(ang) * rad);
             vA = sin(ph * 3.1416) * smoothstep(73.0, 78.0, uT);
             vec4 mv = modelViewMatrix * vec4(p, 1.0);
             gl_PointSize = (5.0 + 11.0 * h2 * h2) * 300.0 / -mv.z;
             gl_Position = projectionMatrix * mv; }`,
         fragmentShader: `varying float vA;
           void main() { float d = length(gl_PointCoord - 0.5); float a = smoothstep(0.5, 0.0, d);
-            gl_FragColor = vec4(vec3(1.6, 2.6, 3.4) * a * vA, a * vA); }`,
+            float core = smoothstep(0.18, 0.0, d); gl_FragColor = vec4((vec3(0.5, 1.8, 3.2) * a + vec3(3.0, 3.6, 4.0) * core) * vA, a * vA); }`,
       });
       const pts = new THREE.Points(g, sm); pts.frustumCulled = false; scene.add(pts);
     }
@@ -173,7 +173,7 @@ export function sift(renderer: THREE.WebGLRenderer): World & { plant(part: (id: 
     turbulence: { amp: 1.6, freq: 0.06, drift: 0.2 },
     fall: { center: [0, -95, -1150], box: [260, 10, 300], velocity: [0.6, 4.2, -0.4], drag: 0 },
   });
-  scene.add(makeMotes({ count: 450, box: [70, 36, 70], color: new THREE.Color(0.35, 1.3, 3.0), color2: new THREE.Color(0.5, 2.2, 2.6), size: 0.03, vel: [0.6, 0.5, 0.2], swirl: 0.8, flicker: 0.5 }));
+  scene.add(makeMotes({ count: 160, box: [70, 36, 70], color: new THREE.Color(0.35, 1.3, 3.0), color2: new THREE.Color(0.5, 2.2, 2.6), size: 0.03, vel: [0.6, 0.5, 0.2], swirl: 0.8, flicker: 0.5 }));
 
   const lightPos = new THREE.Vector3();
   return {
