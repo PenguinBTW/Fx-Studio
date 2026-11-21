@@ -136,10 +136,10 @@ export default class S3Type extends Scene {
     const lead = LEAD / V - WB;
     const wi = clamp(Math.floor((lt - lead) / WB), 0, ORDER.length - 1);
     const nb = Math.max(0, Math.floor((lt - lead - wi * WB) / BEAT));
-    const widths = [62, 75, 100, 125];
+    const FACES = [F.archivo(125, 900), F.serif(600, true), F.mono(600), F.archivo(62, 300), F.archivoItalic(100, 800), F.serif(400), F.archivo(100, 900)];
     const bt = T0 + lead + wi * WB + nb * BEAT;
     if (lt >= 0 && lt < 8 * BAR) {
-      slam(g, ORDER[wi]!, 192, 900, T, { t0: bt, t1: bt + BEAT - 0.06, size: 96, family: F.archivo(widths[nb % 4]!, 900), align: 'left', from: 1.15, shake: 2, out: 0.05, halo: HALO, haloW: 8, color: nb % 4 === 3 ? C.signal : C.bone });
+      if (wi === 5) slam(g, ORDER[wi]!, 192, 900, T, { t0: bt, t1: bt + BEAT - 0.06, size: 190, family: FACES[nb % FACES.length]!, align: 'left', from: 1.15, shake: 2, out: 0.05, halo: HALO, haloW: 8, color: nb % 4 === 3 ? C.signal : C.bone });
       typeLine(g, `0${wi + 1} / 06`, 1728, 900, T, T0 + wi * WB, { size: 30, align: 'right', color: C.ash, cps: 80, cursor: false });
     }
 
@@ -156,5 +156,9 @@ export default class S3Type extends Scene {
       zoom: 1 + 0.03 * wordHit + 0.05 * exit,
       shake: [0.1 * k, -0.6 * (0.1 * k)],
     };
+  }
+
+  override dispose(): void {
+    this.dof.dispose();
   }
 }

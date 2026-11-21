@@ -78,6 +78,9 @@ export function studioEnv(renderer: THREE.WebGLRenderer): THREE.Texture {
 }
 
 /** Render a three.js scene into `out` and lay the 2D layer over it. */
+/** Lets a transition sample a scene's 3D world without its 2D overlay type (the multiverse wall). */
+export const overlay = { on: true };
+
 export function present(ctx: SceneCtx, out: THREE.WebGLRenderTarget, scene: THREE.Scene, cam: THREE.Camera, layer?: Layer2D, extra?: () => void, clear = 0x050506, layerOpacity = 1) {
   const r = ctx.renderer;
   r.setRenderTarget(out);
@@ -85,7 +88,7 @@ export function present(ctx: SceneCtx, out: THREE.WebGLRenderTarget, scene: THRE
   r.clear();
   r.render(scene, cam);
   if (extra) { extra(); r.setRenderTarget(out); }
-  if (layer && layerOpacity > 0.001) ctx.comp.draw(r, layer.upload(), out, { mode: 'normal', opacity: layerOpacity });
+  if (layer && layerOpacity > 0.001 && overlay.on) ctx.comp.draw(r, layer.upload(), out, { mode: 'normal', opacity: layerOpacity });
   r.resetState();
 }
 
@@ -220,7 +223,7 @@ export class DoFPresenter {
     if (extra) extra(this.rt);
     this.pass.render(r, this.rt.texture, this.rt.depthTexture!, { enabled: dof.aperture > 0.01, focusDistance: dof.focus, aperture: dof.aperture, maxRadius: dof.maxRadius ?? 16, near: cam.near, far: cam.far, samples: 24 }, out);
     r.setRenderTarget(out);
-    if (layer && layerOpacity > 0.001) ctx.comp.draw(r, layer.upload(), out, { mode: 'normal', opacity: layerOpacity });
+    if (layer && layerOpacity > 0.001 && overlay.on) ctx.comp.draw(r, layer.upload(), out, { mode: 'normal', opacity: layerOpacity });
     r.resetState();
   }
   dispose() { this.rt?.dispose(); this.pass.dispose(); }
