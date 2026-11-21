@@ -69,7 +69,9 @@ export default class S1Boot extends Scene {
 
     // Camera: ECU on the nib (alternating sides per bar) -> a hard cut per bar from bar 5 -> push into the collapsing line.
     const side = Math.floor((T - B0) / BAR) % 2 === 0 ? 1 : -1;
-    const track: CamKey = { pos: [hx + 0.7 * side, hy + 0.15, 2.3], tgt: [hx - 0.35 * side, hy + 0.12, 0], fov: 34 };
+    // Hold creep: every ECU slowly pushes in on the nib until the next bar's cut resets it.
+    const bf = T > B0 ? ((T - B0) / BAR) % 1 : T / B0;
+    const track: CamKey = { pos: [hx + (0.7 - 0.12 * bf) * side, hy + 0.15, 2.3 - 0.55 * ease.outCubic(bf)], tgt: [hx - 0.35 * side, hy + 0.12, 0], fov: 34 - 5 * bf };
     const lt = T - bar(5), d = lt - Math.floor(lt / BAR) * BAR;
     const cuts: CamKey[] = [
       { pos: [3.5 - 0.5 * d, 2.0, 9.0], tgt: [0, 0, 0], fov: 42 },

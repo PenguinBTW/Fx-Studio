@@ -7,6 +7,7 @@ import { F, font } from '../../engine/type';
 import { clamp, springStep, ease } from '../../engine/util';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import { resolveAsset } from '../../engine/assets';
+import { DepthDoFPass } from '../../engine/dof';
 import type { SceneCtx } from '../../engine/scene';
 
 export const C = { void: '#050506', bone: '#E8E4DA', signal: '#FF4D12', ice: '#8FD8FF', ash: '#6B6A66' } as const;
@@ -77,6 +78,9 @@ export function studioEnv(renderer: THREE.WebGLRenderer): THREE.Texture {
 }
 
 /** Render a three.js scene into `out` and lay the 2D layer over it. */
+/** Lets a transition sample a scene's 3D world without its 2D overlay type (the multiverse wall). */
+export const overlay = { on: true };
+
 export function present(ctx: SceneCtx, out: THREE.WebGLRenderTarget, scene: THREE.Scene, cam: THREE.Camera, layer?: Layer2D, extra?: () => void, clear = 0x050506, layerOpacity = 1) {
   const r = ctx.renderer;
   r.setRenderTarget(out);
@@ -84,7 +88,7 @@ export function present(ctx: SceneCtx, out: THREE.WebGLRenderTarget, scene: THRE
   r.clear();
   r.render(scene, cam);
   if (extra) { extra(); r.setRenderTarget(out); }
-  if (layer && layerOpacity > 0.001) ctx.comp.draw(r, layer.upload(), out, { mode: 'normal', opacity: layerOpacity });
+  if (layer && layerOpacity > 0.001 && overlay.on) ctx.comp.draw(r, layer.upload(), out, { mode: 'normal', opacity: layerOpacity });
   r.resetState();
 }
 
@@ -198,4 +202,29 @@ export function applyCam(cam: THREE.PerspectiveCamera, k: CamKey, kick = 0) {
 export function lin(hex: string, k = 1): [number, number, number] {
   const c = new THREE.Color(hex);
   return [c.r * k, c.g * k, c.b * k];
+}
+
+export interface DoFKey { focus: number; aperture: number; maxRadius?: number }
+
+/** present() with the engine's physical thin-lens DoF: scene (+ extra passes) into a depth RT, DepthDoFPass into out, 2D layer on top. */
+export class DoFPresenter {
+  private rt: THREE.WebGLRenderTarget | null = null;
+  private pass = new DepthDoFPass();
+  render(ctx: SceneCtx, out: THREE.WebGLRenderTarget, scene: THREE.Scene, cam: THREE.PerspectiveCamera, dof: DoFKey, layer?: Layer2D, extra?: (t: THREE.WebGLRenderTarget) => void, clear = 0x050506, layerOpacity = 1) {
+    const r = ctx.renderer;
+    if (!this.rt || this.rt.width !== out.width || this.rt.height !== out.height) {
+      this.rt?.dispose();
+      this.rt = new THREE.WebGLRenderTarget(out.width, out.height, { type: THREE.HalfFloatType, depthTexture: new THREE.DepthTexture(out.width, out.height) });
+    }
+    r.setRenderTarget(this.rt);
+    r.setClearColor(clear, 1);
+    r.clear();
+    r.render(scene, cam);
+    if (extra) extra(this.rt);
+    this.pass.render(r, this.rt.texture, this.rt.depthTexture!, { enabled: dof.aperture > 0.01, focusDistance: dof.focus, aperture: dof.aperture, maxRadius: dof.maxRadius ?? 16, near: cam.near, far: cam.far, samples: 24 }, out);
+    r.setRenderTarget(out);
+    if (layer && layerOpacity > 0.001 && overlay.on) ctx.comp.draw(r, layer.upload(), out, { mode: 'normal', opacity: layerOpacity });
+    r.resetState();
+  }
+  dispose() { this.rt?.dispose(); this.pass.dispose(); }
 }
