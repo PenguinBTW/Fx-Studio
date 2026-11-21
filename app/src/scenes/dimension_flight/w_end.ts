@@ -50,18 +50,21 @@ export function theEnd(renderer: THREE.WebGLRenderer): World & { plant(part: (id
   island(MAIN, 108, 80, 3, 7);
   island(GATE, 30, 34, 8, 1.2);
   const outer: THREE.Vector3[] = [];
+  const rt = rng(91);
   for (let i = 0; i < 14; i++) {
     const a = r() * Math.PI * 2, d = 170 + r() * 260;
     const p = new THREE.Vector3(MAIN.x + Math.cos(a) * d, MAIN.y + (r() - 0.4) * 60, MAIN.z + Math.sin(a) * d);
     if (nearPathXZ(p.x, p.z) < 40) continue;
-    island(p, 14 + r() * 26, 14 + r() * 22, 20 + i, 2); outer.push(p);
+    const om = island(p, 14 + r() * 26, 14 + r() * 22, 20 + i, 2); outer.push(p);
+    om.rotation.set((rt() - 0.5) * 0.35, rt() * 6.28, (rt() - 0.5) * 0.35); om.scale.set(1, 0.55 + rt() * 1.3, 1);
   }
   const rh = rng(77);
   for (let i = 0; i < 16; i++) {
     const a = (i / 16) * Math.PI * 2 + rh() * 0.3, d = 480 + rh() * 360;
     const p = new THREE.Vector3(MAIN.x + Math.cos(a) * d, MAIN.y + 10 + rh() * 170, MAIN.z + Math.sin(a) * d);
     if (nearPathXZ(p.x, p.z) < 80) continue;
-    island(p, 34 + rh() * 50, 40 + rh() * 50, 60 + i, 3);
+    const dm = island(p, 34 + rh() * 50, 40 + rh() * 50, 60 + i, 3);
+    dm.rotation.set((rt() - 0.5) * 0.4, rt() * 6.28, (rt() - 0.5) * 0.4); dm.scale.set(0.6 + rt() * 0.9, 0.4 + rt() * 1.6, 0.6 + rt() * 0.9);
   }
 
   // ---- obsidian spires with caged crystals, beams converging on the levitating egg
