@@ -7,7 +7,7 @@ import { W, H, PW, PH, makeRT } from '../../engine/gl';
 import { smoothstep } from '../../engine/util';
 import { Swallow } from './swallow';
 import { PLUMAGE_RIM } from './materials/plumage';
-const RIM_BY_WORLD = ['#3a4a70', '#ff7a30', '#8a78ff', '#4a4030', '#2a8070'];
+const RIM_BY_WORLD = ['#34446a', '#ff8a3c', '#9a88ff', '#4a4030', '#2a8070'];
 import { DepthDoFPass } from '../../engine/dof';
 import { GLTFManager } from '../../engine/gltf';
 import { resolveAsset } from '../../engine/assets';
