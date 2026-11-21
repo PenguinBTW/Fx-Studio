@@ -43,7 +43,7 @@ export function aether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
       float a = fbm2(p), b = fbm2(p * 3.1 + a * 2.0 + vec2(0.0, t * 0.02));
       float h = a * 0.65 + b * 0.35;
       float lit = smoothstep(0.3, 0.8, h + 0.15 * (fbm2(p * 3.1 + a * 2.0 + vec2(0.06, t * 0.02)) - b) * 8.0);
-      vec3 c = mix(vec3(0.56, 0.6, 0.72), vec3(1.0, 0.9, 0.76), lit) * mix(0.6, 1.05, h);
+      vec3 c = mix(vec3(0.56, 0.6, 0.72), vec3(1.0, 0.9, 0.76), lit) * mix(0.85, 1.2, h);
       return vec4(c, 1.0);
     }`, { uSun: { value: SUN } }, fog);
   scene.add(sea);
@@ -117,7 +117,7 @@ export function aether(renderer: THREE.WebGLRenderer): World & { plant(part: (id
     const n = 5 + Math.floor(r() * 7), gold = r() < 0.18;
     for (let j = 0; j < n; j++) cl.push({ p: [cx + (r() - 0.5) * 50, cy + r() * 16, cz + (r() - 0.5) * 40], s: 12 + r() * 16, seed: r() * 100, tint: gold ? 1 : 0 });
   }
-  scene.add(makePuffs(cl, { lit: new THREE.Color(1.25, 1.12, 0.95), shade: new THREE.Color(0.6, 0.6, 0.64), sunDir: SUN, fog, opacity: 0.6, drift: [1.0, 0, 0], nearFade: 45 }));
+  scene.add(makePuffs(cl, { lit: new THREE.Color(1.3, 1.25, 1.15), shade: new THREE.Color(0.6, 0.6, 0.64), sunDir: SUN, fog, opacity: 0.6, drift: [1.0, 0, 0], nearFade: 45 }));
   scene.add(makeMotes({ count: 1600, box: [70, 40, 70], color: new THREE.Color(2.6, 2.2, 1.2), color2: new THREE.Color(1.6, 2.2, 2.6), size: 0.04, vel: [0.6, 0.3, 0], swirl: 1.0, flicker: 0.6 }));
 
   const lightPos = new THREE.Vector3();
