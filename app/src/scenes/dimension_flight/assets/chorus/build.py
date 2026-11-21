@@ -26,7 +26,7 @@ def seg(a, b, r):
     j.data.materials.append(STEM); objs.append(j)
 def flower(p, r):
     bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=r, location=p); o = bpy.context.object
-    for v in o.data.vertices: v.co = p + (v.co - p) * Vector((1, 1, 0.8)) * (1 + 0.3 * noise.noise((v.co - p) * 5))
+    for v in o.data.vertices: v.co = v.co * Vector((1, 1, 0.8)) * (1 + 0.3 * noise.noise(v.co * 5))  # object-local: the sphere already sits at p
     o.data.materials.append(FLOWER); objs.append(o)
 def grow(p, d, depth, s, r):
     for _ in range(2 + random.randint(0, 1)):
