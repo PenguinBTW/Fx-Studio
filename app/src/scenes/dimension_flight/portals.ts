@@ -191,7 +191,7 @@ export class Portal {
             float a = s.z * 6.2832 + ph * 3.0; float rr = mix(1.9, 0.2, ph) * max(uHalf.x, uHalf.y);
             p = vec3(cos(a) * rr * uHalf.x / uHalf.y, sin(a) * rr, (s.y - 0.5) * 3.0 * (1.0 - ph)); vA = sin(ph * 3.1416);
           } else if (uStyle < 1.5) { // end: sparks drift up out of the void
-            p = vec3((s.y - 0.5) * 2.0 * uHalf.x, (s.z - 0.5) * 2.0 * uHalf.y, -ph * 14.0); vA = sin(ph * 3.1416) * 0.8;
+            p = vec3((s.y - 0.5) * 2.0 * uHalf.x, (s.z - 0.5) * 2.0 * uHalf.y, -ph * 14.0); vA = sin(ph * 3.1416) * 0.28;
           } else { // sift: sand pours down across the ring
             float a = s.z * 6.2832; float rr = sqrt(s.y) * uHalf.x * 1.3;
             p = vec3(cos(a) * rr, uHalf.y * 1.4 - ph * uHalf.y * 2.8, sin(a) * 1.5); vA = sin(ph * 3.1416) * 0.7;
