@@ -90,8 +90,8 @@ export default class S12CityLogo extends Scene {
   private m = new THREE.Matrix4(); private p = new THREE.Vector3(); private s = new THREE.Vector3(); private q = new THREE.Quaternion();
   private hemi = new THREE.HemisphereLight(0x5a6a99, 0x0a0806, 0.5);
   private moon = new THREE.DirectionalLight(0x8899cc, 0.6);
-  private posC = new THREE.CatmullRomCurve3([[0.0, 1.7, 15.5], [0.0, 2.1, 5.0], [-3.5, 9.0, 7.0], [-1.5, 31, 29], [0, 37, 33]].map((v) => new THREE.Vector3(...(v as [number, number, number]))));
-  private tgtC = new THREE.CatmullRomCurve3([[0.0, 1.8, 0], [0.0, 3.2, -9], [0.5, 1.5, -6], [0, 0, -0.6], [0, 0, 0.4]].map((v) => new THREE.Vector3(...(v as [number, number, number]))));
+  private posC = new THREE.CatmullRomCurve3([[0.0, 1.7, 15.5], [0.0, 2.1, 5.0], [-3.5, 9.0, 7.0], [-1.5, 31, 29], [0, 36, 32]].map((v) => new THREE.Vector3(...(v as [number, number, number]))));
+  private tgtC = new THREE.CatmullRomCurve3([[0.0, 1.8, 0], [0.0, 3.2, -9], [0.5, 1.5, -6], [0, 0, -0.6], [0, 0, 0.6]].map((v) => new THREE.Vector3(...(v as [number, number, number]))));
 
   override async init() {
     // Rasterise the lockup into a mask on the block grid: 10 px per block.
@@ -118,7 +118,12 @@ export default class S12CityLogo extends Scene {
       if (!L && street(x, z)) continue;
       const edge = L && (!isLogo(i - 1, j) || !isLogo(i + 1, j) || !isLogo(i, j - 1) || !isLogo(i, j + 1)) ? 1 : 0;
       const h0 = street(x, z) ? 0.02 : 0.35 + 5.8 * Math.exp(-(r * r) / (2 * 13 * 13)) * (0.35 + 0.95 * h(id, 1)) + 0.5 * h(id, 2);
-      const h1 = L ? (z < -1 ? 4.4 : 3.1) + 0.35 * h(id, 3) : 0.12 + 0.3 * h(id, 4);
+      // Letters read as a skyline: 2x2 tower groups, thin strokes and stroke ends rise highest; the rest of the city stays
+      // as low lit blocks, stepping down beside the letters so the outline stays crisp.
+      let dn = 0, nearL = 0;
+      for (let dj = -3; dj <= 3; dj++) for (let di = -3; di <= 3; di++) { const l = isLogo(i + di, j + dj); dn += l; if (l && Math.abs(di) <= 1 && Math.abs(dj) <= 1) nearL = 1; }
+      const hg = h(Math.floor(i / 2) + Math.floor(j / 2) * NX, 3);
+      const h1 = L ? (z < -1 ? 2.9 : 2.2) + 1.6 * (1 - dn / 49) ** 2 + 0.6 * hg : nearL ? 0.25 + 0.15 * h(id, 4) : 0.45 + 1.0 * h(id, 4) * h(id, 7);
       const ts = T0 + 0.5 * BAR + Math.floor(clamp((x - X0) / span) * 7) * BEAT + 0.06 * h(id, 5);
       this.cells.push({ x, z, h0, h1, ts, logo: L });
       aLogo.push(L); aEdge.push(edge); aSeed.push(h(id, 6));
@@ -145,8 +150,8 @@ export default class S12CityLogo extends Scene {
     const utex = new THREE.CanvasTexture(uc); utex.anisotropy = 8; utex.colorSpace = THREE.SRGBColorSpace;
     this.urlMat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, uniforms: { uTex: { value: utex }, uWipe: { value: 0 }, uBone: { value: new THREE.Color(...lin(C.bone)) }, uSig: { value: new THREE.Color(...lin(C.signal)) } },
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-      fragmentShader: 'uniform sampler2D uTex; uniform float uWipe; uniform vec3 uBone; uniform vec3 uSig; varying vec2 vUv; void main(){ float a = texture2D(uTex, vUv).a; float w = smoothstep(uWipe, uWipe - 0.02, vUv.x); float e = exp(-abs(vUv.x - uWipe) * 60.0) * step(0.001, uWipe) * step(uWipe, 0.999); gl_FragColor = vec4(uBone * 2.2 * a * w + uSig * 6.0 * e * (0.3 + a), max(a * w, e * 0.6)); }' });
-    const ugeo = new THREE.PlaneGeometry(40, 40 * (160 / 2048)); ugeo.rotateX(-Math.PI / 2);
+      fragmentShader: 'uniform sampler2D uTex; uniform float uWipe; uniform vec3 uBone; uniform vec3 uSig; varying vec2 vUv; void main(){ float a = texture2D(uTex, vUv).a; float w = smoothstep(uWipe, uWipe - 0.02, vUv.x); float e = exp(-abs(vUv.x - uWipe) * 60.0) * step(0.001, uWipe) * step(uWipe, 0.999); vec2 g = fract(vUv * vec2(640.0, 50.0)) - 0.5; float dots = 0.45 + 0.55 * smoothstep(0.5, 0.1, length(g)); gl_FragColor = vec4(vec3(1.0, 0.78, 0.5) * 5.0 * dots * a * w + uSig * 6.0 * e * (0.3 + a), max(a * w, e * 0.6)); }' });
+    const ugeo = new THREE.PlaneGeometry(38, 38 * (160 / 2048)); ugeo.rotateX(-Math.PI / 2);
     const urlM = new THREE.Mesh(ugeo, this.urlMat); urlM.position.set(0, 0.06, Z0 + NZ * CELL + 0.9);
     this.moon.position.set(-60, 80, -40);
     this.scene.add(this.world.group, this.towers, skyM, urlM, this.hemi, this.moon);
