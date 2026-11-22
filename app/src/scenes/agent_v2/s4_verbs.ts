@@ -105,7 +105,7 @@ export default class S4Verbs extends Scene {
       if (['Resin', 'KeyRed', 'Ceramic', 'Disk'].includes(nm)) { mat.clearcoat = 1; mat.clearcoatRoughness = 0.08; }
       if (nm === 'Glass') { mat.transparent = true; mat.opacity = 0.22; mat.depthWrite = false; mat.clearcoat = 1; m.castShadow = false; }
       if (nm === 'Lens') { mat.transmission = 1; mat.thickness = 0.4; mat.ior = 1.5; mat.roughness = 0; m.castShadow = false; }
-      if (nm === 'LedG' || nm === 'LedR') this.leds.push(mat);
+      if (nm === 'LedG' || nm === 'LedR') { mat.emissive.set(nm === 'LedG' ? 0x40ff60 : 0xff3020); this.leds.push(mat); }
       m.material = mat; });
     this.scene.add(inst.root);
     this.flame = new THREE.Mesh(new THREE.SphereGeometry(0.07, 24, 16), new THREE.MeshBasicMaterial({ color: new THREE.Color(6, 3.2, 1.0), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
