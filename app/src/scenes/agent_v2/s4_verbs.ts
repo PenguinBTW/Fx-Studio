@@ -55,7 +55,7 @@ export default class S4Verbs extends Scene {
   private A = new Sheet(); private B = new Sheet(2.1, 2.97, 0xefe2c8); private strip = new Sheet(2.1, 0.5);
   private mk = marker(); private sc = scissors(); private st = stamp(); private fl = floppy(); private dr = drive(); private dk = deck();
   private lk = padlock(); private mt = match(); private mg = magnifier(); private bl = bell(); private plug = new THREE.Group();
-  private props: THREE.Object3D[] = [];
+  private props: THREE.Object3D[] = []; private propX: number[] = [];
   private oak!: THREE.Texture;
   override async init() {
     this.ctx.renderer.shadowMap.enabled = true; this.ctx.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -76,7 +76,7 @@ export default class S4Verbs extends Scene {
     this.dr.g.position.set(-3.3, 0, 1.4); this.dk.g.position.set(3.6, 0, -2.2); this.dk.g.rotation.y = -0.15; this.lk.g.position.set(-0.9, 0.11, 2.4);
     this.mt.g.position.set(2.4, 0.02, 2.3); this.mt.g.rotation.y = 0.6; this.bl.g.position.set(4.6, 0, 0.9);
     this.props = [this.B.mesh, this.strip.mesh, this.mk, this.sc.g, this.st, pad, this.fl.g, this.dr.g, this.dk.g, this.lk.g, this.mt.g, this.mg, this.bl.g, this.plug];
-    this.scene.add(this.A.mesh, ...this.props);
+    this.scene.add(this.A.mesh, ...this.props); this.propX = this.props.map((p) => p.position.x);
   }
 
   private bAt(T: number) { const o = new THREE.Vector3(2.7, 0.004, 0.4); let lift = 0;
@@ -120,6 +120,10 @@ export default class S4Verbs extends Scene {
     this.props.forEach((p, i) => { if (T > fmt) p.position.x += sweep(i); });
   }
 
+  private resetProps() {
+    this.props.forEach((p, i) => { p.position.x = this.propX[i]!; });
+  }
+
   private ink(T: number) {
     const ws = hitsOf('W'), fmt = kOf('format'), wipe = 1 - ease((T - fmt) / 0.3); let tip: THREE.Vector3 | null = null;
     this.A.draw((g, w, h) => {
@@ -140,7 +144,7 @@ export default class S4Verbs extends Scene {
     if (T > fmt) this.mk.position.x += 14 * ease((T - fmt) / 0.35);
   }
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
-    const T = f.t; this.pose(T); this.ink(T);
+    const T = f.t; this.resetProps(); this.pose(T); this.ink(T);
     const rel = (T - T20) / (bar(21) - T20), b = Math.min(11, Math.max(0, Math.floor(rel))), q = (rel - b) * (bar(21) - T20);
     const at = (i: number, push: number) => { const s = SHOTS[Math.max(0, i)]!; const tgt = new THREE.Vector3(s[0], s[1], s[2]); const d = s[3] * (1 - 0.08 * push);
       return { tgt, pos: tgt.clone().add(new THREE.Vector3(Math.sin(s[4]), s[5], Math.cos(s[4])).normalize().multiplyScalar(d)) }; };
