@@ -22,9 +22,9 @@ void main() { vec3 ro = uCamL, rd = normalize(vL - ro);
   const int S = 64; float dt = (b - a) / float(S); float tr = 1.0; vec3 col = vec3(0.0);
   float j = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453); float t = a + dt * j;
   for (int i = 0; i < S; i++) { vec3 p = ro + rd * t; float x01; float de = dens(p, x01);
-    if (de > 0.003) { float heat = clamp(de * (1.1 - x01 * 1.15) * (0.25 + 1.1 * gRi * gRi), 0.0, 1.0); float soot = smoothstep(0.5, 1.0, x01) * (1.0 - heat) * smoothstep(0.35, 0.9, gD);
-      float core = smoothstep(0.4, 0.0, gD) * smoothstep(0.16, 0.0, x01) * smoothstep(uFront, uFront - 0.3, x01); float tongue = smoothstep(0.68, 0.8, gRi) * smoothstep(0.25, 0.75, gD) * smoothstep(0.85, 0.15, x01);
-      vec3 e = bb(heat) * (0.15 + heat) * 0.7 * uGain * smoothstep(0.28, 0.7, de) * (0.12 + 0.88 * smoothstep(0.4, 0.82, gRi)) + vec3(1.0, 0.92, 0.7) * core * de * 3.2 * uGain + vec3(1.0, 0.55, 0.12) * tongue * de * 3.6 * uGain; col += tr * e * dt * 1.5; tr *= exp(-de * dt * (0.25 + 1.4 * soot)); if (tr < 0.02) break; }
+    if (de > 0.003) { float heat = clamp(smoothstep(0.92, 0.0, x01) * (0.6 + 0.5 * gRi) * (0.7 + 0.5 * de), 0.0, 1.0); float soot = (1.0 - smoothstep(0.35, 0.75, gRi)) * smoothstep(0.15, 0.5, x01);
+      float core = smoothstep(0.4, 0.0, gD) * smoothstep(0.16, 0.0, x01) * smoothstep(uFront, uFront - 0.3, x01); float tongue = smoothstep(0.68, 0.8, gRi) * smoothstep(0.25, 0.75, gD) * smoothstep(0.1, 0.22, x01) * smoothstep(0.72, 0.5, x01);
+      vec3 e = bb(heat) * (0.15 + heat) * 0.7 * uGain * smoothstep(0.28, 0.7, de) * (0.12 + 0.88 * smoothstep(0.4, 0.82, gRi)) + vec3(1.0, 0.92, 0.7) * core * de * 3.2 * uGain + vec3(1.0, 0.55, 0.12) * tongue * de * 7.2 * uGain; col += tr * e * dt * 1.5; tr *= exp(-de * dt * (0.25 + 2.5 * soot)); if (tr < 0.02) break; }
     t += dt; }
   gl_FragColor = vec4(col, 1.0 - tr); }`;
 
