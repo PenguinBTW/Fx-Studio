@@ -345,6 +345,6 @@ export default class S4Verbs extends Scene {
       depthDof: { enabled: true, focusDistance: focus, aperture: panels ? 8 : 15, blades: 9, maxRadius: 30 } };
   }
   private pcams = [0, 1, 2, 3].map(() => new THREE.PerspectiveCamera(24, 16 / 9, 0.05, 200));
-  override dispose() { this.layer.texture.dispose(); this.oak?.dispose(); this.env?.dispose(); this.rtTmp?.dispose(); this.rtAcc?.dispose(); for (const s of [this.A, this.B, this.strip]) s.tex.dispose();
+  override dispose() { this.layer.texture.dispose(); this.oak?.dispose(); this.env?.dispose(); this.winDay?.dispose(); this.winNight?.dispose(); this.key.map?.dispose(); this.scan.map?.dispose(); this.key.shadow.map?.dispose(); this.lampL.shadow.map?.dispose(); this.rtTmp?.dispose(); this.rtAcc?.dispose(); for (const s of [this.A, this.B, this.strip]) s.tex.dispose();
     for (const sc of [this.scene, this.tscene]) sc.traverse((o) => { const m = o as THREE.Mesh; m.geometry?.dispose(); (m.material as THREE.Material | undefined)?.dispose(); }); }
 }
