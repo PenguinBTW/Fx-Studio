@@ -106,10 +106,10 @@ def fang(base, length, r, dirv, bend):
         p = [p[k] + d[k] * length / 5 for k in range(3)]; d = [d[k] + bend[k] / 5 for k in range(3)]
     return skin_chain(pts, 'f', 1)
 
-def strand(pts, r0):
+def strand(pts, r0, tp=1.0):
     cu = bpy.data.curves.new('m', 'CURVE'); cu.dimensions = '3D'; cu.bevel_depth = r0; cu.bevel_resolution = 1
     sp_ = cu.splines.new('POLY'); sp_.points.add(len(pts) - 1)
-    for i, p in enumerate(pts): sp_.points[i].co = (*p, 1); sp_.points[i].radius = 1 - i / len(pts)
+    for i, p in enumerate(pts): sp_.points[i].co = (*p, 1); sp_.points[i].radius = (1 - i / len(pts)) ** tp
     o = bpy.data.objects.new('m', cu); bpy.context.collection.objects.link(o); select(o); bpy.ops.object.convert(target='MESH'); return bpy.context.active_object
 
 def under(x): w, ht, hb, cz, n = table(BODY, x); return w, cz - hb, cz + ht
@@ -168,10 +168,14 @@ sp, V, F = [], [], []
 for k in range(42):
     x = 0.6 + k * 0.2; w, ht, hb, cz, n = table(BODY, x); h = 0.05 + 0.62 * ht; top = cz + ht * 1.02
     hn.append(fang((x, 0, top - 0.03), h, 0.22 * ht + 0.01, (-0.55, 0, 0.83), (-0.35, 0, -0.1)))
-    V += [(x, 0, top - 0.02), (x - h * 0.5, 0, top + h * 0.78), (x + 0.1, 0, top - 0.02), (x + 0.1 - h * 0.3, 0, top + h * 0.38)]
+    sp.append(((x - h * 0.5, top + h * 0.78), (x, top - 0.02), h))
 spikes = join(hn, 'spikes'); assign(spikes, HO)
 for k in range(41):
-    a = k * 4; b = (k + 1) * 4; F += [(a, a + 2, a + 3, a + 1), (a + 2, b, b + 1, a + 3)]
+    (t0, b0, h0), (t1, b1, h1) = sp[k], sp[k + 1]; sag = 0.5 * min(h0, h1); i0 = len(V)
+    for j in range(9):
+        u = j / 8; c = math.sin(math.pi * u) ** 0.8 * (1 - 0.12 * math.sin(math.pi * 3 * u))
+        V += [(b0[0] + (b1[0] - b0[0]) * u, 0, b0[1] + (b1[1] - b0[1]) * u), (t0[0] + (t1[0] - t0[0]) * u, 0, t0[1] + (t1[1] - t0[1]) * u - sag * c)]
+    F += [(i0 + 2 * j, i0 + 2 * j + 2, i0 + 2 * j + 3, i0 + 2 * j + 1) for j in range(8)]
 me = bpy.data.meshes.new('fin'); me.from_pydata(V, [], F); fin = bpy.data.objects.new('fin', me); bpy.context.collection.objects.link(fin)
 select(fin); so = fin.modifiers.new('so', 'SOLIDIFY'); so.thickness = 0.006; bpy.ops.object.modifier_apply(modifier='so'); assign(fin, FI)
 # mane, beard (hinged with jaw), whiskers
@@ -182,10 +186,10 @@ for k in range(170):
     ln = 0.5 + 0.5 * ((k * 0.7548) % 1)
     ms.append(strand([(x0 - ln * t * 1.15, y0 * (1 + 0.8 * t), z0 + ln * (0.4 * t - 0.3 * t * t) * (1 if z0 > cz else -0.4)) for t in [i / 7 for i in range(8)]], 0.011))
 for k in range(34):
-    x0 = 9.5 + 0.5 * ((k * 0.618) % 1); y0 = (((k * 0.381) % 1) - 0.5) * 0.25; ln = 0.35 + 0.25 * ((k * 0.7548) % 1)
-    bd.append(strand([(x0 - ln * t * 0.9, y0 * (1 + t), -0.15 - ln * t * 0.9) for t in [i / 6 for i in range(7)]], 0.008))
+    x0 = 9.5 + 0.5 * ((k * 0.618) % 1); y0 = (((k * 0.381) % 1) - 0.5) * 0.5; ln = 0.35 + 0.25 * ((k * 0.7548) % 1)
+    bd.append(strand([(x0 - ln * t * 0.9, y0 * (1 + 1.6 * t) + 0.06 * math.sin(t * 4 + k), -0.15 - ln * t * 0.8 + 0.12 * t * t) for t in [i / 6 for i in range(7)]], 0.008, 1.6))
 for s in (-1, 1):
-    ms.append(strand([(10.64 - 1.35 * t, (0.16 + 0.5 * math.sin(min(1, t * 1.4) * 1.5708)) * s, 0.02 - 0.27 * math.sin(t * 2.8) + 0.21 * t ** 3) for t in [i / 23 for i in range(24)]], 0.007))
+    ms.append(strand([(10.64 + 0.35 * t - 0.75 * t * t, (0.18 + 0.75 * math.sin(min(1, t * 1.3) * 1.5708)) * s, 0.1 + 0.55 * t - 0.15 * t * t) for t in [i / 23 for i in range(24)]], 0.008, 2.0))
 mane = join(ms, 'mane'); assign(mane, MA)
 beard = join(bd, 'jawbeard'); assign(beard, MA)
 jaw = join([jaw, lowt], 'jaw')
