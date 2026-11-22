@@ -11,7 +11,7 @@ import { solveDollyZoom } from '../../engine/rig';
 import { C, HALO, BAR, BEAT, bar, sceneTime, model, studioEnv, slam, typeLine, applyCam, lin, DoFPresenter } from './kit';
 
 const ORDER = ['KINETIC', 'TYPE', 'IN', '3D', 'ANY', 'FONT'];
-const BLENDER = 4;
+const BLENDER = 4, FONT_FACES = 6;
 const SP = 40;
 const LEAD = 26;
 const V = SP / (1.3 * BAR);
@@ -81,6 +81,19 @@ export default class S3Type extends Scene {
     ORDER.forEach((n, i) => {
       let o: THREE.Object3D | undefined;
       if (i < BLENDER) o = inst.root.getObjectByName('word_' + n);
+      else if (i === 5) {
+        // FONT is six Blender-extruded faces of the same word; render() shows one per beat.
+        o = new THREE.Group();
+        for (let v = 0; v < FONT_FACES; v++) {
+          const w = inst.root.getObjectByName('word_FONT_' + v);
+          if (!w) throw new Error('type_words missing word_FONT_' + v);
+          const b = new THREE.Box3().setFromObject(w);
+          w.position.set(0, 0, 0); w.rotation.set(0, 0, 0); w.scale.setScalar(1 / Math.max(b.max.y - b.min.y, 1e-3));
+          w.traverse((m) => { if ((m as THREE.Mesh).isMesh) (m as THREE.Mesh).material = hot; });
+          o.add(w);
+        }
+        this.scene.add(o);
+      }
       else {
         // Engine in-world extruded text (text_lighting): any string, lit and shadowed like the Blender words.
         const t = createInWorldText(n, { size: 1, depth: 0.32, bevelEnabled: true, bevelThickness: 0.04, bevelSize: 0.03, letterSpacing: 0.1, material: i === 5 ? hot : chrome });
@@ -132,6 +145,7 @@ export default class S3Type extends Scene {
       o.scale.setScalar(o.scale.x / (o.userData.s ?? 1) * s);
       o.userData.s = s;
       o.visible = (u > -2.8 && u < 1.5) || (inDZ && i === 4);
+      if (i === 5) { const fv = ((Math.floor((T - T0) / BEAT) % FONT_FACES) + FONT_FACES) % FONT_FACES; o.children.forEach((c, v) => (c.visible = v === fv)); }
       // Keep close passes from blowing out: emissive and lit energy fall off inside the last few metres.
       const near = clamp(1 - (p.z - o.position.z - 2) / 14, 0, 1);
       o.traverse((m) => { const mm = (m as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined; if (mm && 'emissiveIntensity' in mm) { mm.userData.e0 ??= mm.emissiveIntensity; mm.emissiveIntensity = mm.userData.e0 * (0.25 + 0.75 * (1 - near)); } });
@@ -226,6 +240,6 @@ export default class S3Type extends Scene {
     for (const m of [this.slabs, this.strips]) { m.geometry.dispose(); (m.material as THREE.Material).dispose(); m.dispose(); }
     this.floorM.geometry.dispose(); (this.floorM.material as THREE.Material).dispose();
     this.panelTex?.dispose();
-    this.words.slice(BLENDER).forEach((o) => o?.traverse((m) => { const mm = m as THREE.Mesh; if (mm.isMesh) { mm.geometry.dispose(); (mm.material as THREE.Material).dispose(); } }));
+    this.words.slice(BLENDER, 5).forEach((o) => o?.traverse((m) => { const mm = m as THREE.Mesh; if (mm.isMesh) { mm.geometry.dispose(); (mm.material as THREE.Material).dispose(); } }));
   }
 }

@@ -147,7 +147,7 @@ export default class S1Boot extends Scene {
         const col = near > 0.02 ? [bone[0] + (sig[0] - bone[0]) * near, bone[1] + (sig[1] - bone[1]) * near, bone[2] + (sig[2] - bone[2]) * near] : bone;
         const dim = pulse * (1 - 0.65 * collapse);
         L.seg(px, py, z, x, y, z, w, col[0]! * dim, col[1]! * dim, col[2]! * dim, fall);
-        L.seg(px, 2 * FLOOR - py, z, x, 2 * FLOOR - y, z, w * 1.8, col[0]! * dim * 0.18, col[1]! * dim * 0.18, col[2]! * dim * 0.18, fall);
+        L.seg(px, 2 * FLOOR - py, z, x, 2 * FLOOR - y, z, w * 1.8, col[0]! * dim * 0.4, col[1]! * dim * 0.4, col[2]! * dim * 0.4, fall);
         px = x; py = y;
       }
     }
@@ -162,12 +162,12 @@ export default class S1Boot extends Scene {
     typeLine(sg, 'is a function', 960, 760, T, bar(2.75), { size: 92, align: 'center', family: F.archivo(100, 800), t1: bar(4) - 0.1, cps: 30 });
     typeLine(sg, 'of time.', 960, 760, T, bar(4), { size: 92, align: 'center', family: F.archivo(100, 800), color: C.signal, t1: bar(5) - 0.1, cps: 30 });
     const FX = ['y = sin(x - t)', 'y = tanh(3 sin x)', 'y = saw(x - t)', 'y = sin x cos(t)'];
-    for (let b = 0; b < 4; b++) slam(sg, FX[b]!, 960, 190, T, { t0: bar(5 + b), t1: bar(6 + b) - 0.2, size: 72, family: F.mono(600), from: 1.3, shake: 3, out: 0.12, color: b % 2 ? C.signal : C.bone });
-    slam(sg, 'Frame = f(t)', 960, 300, T, { t0: bar(9), t1: bar(10.3), size: 150, family: F.mono(600), from: 1.45, shake: 5, out: 0.25 });
+    for (let b = 0; b < 4; b++) slam(sg, FX[b]!, 960, 840, T, { t0: bar(5 + b), t1: bar(6 + b) - 0.2, size: 72, family: F.mono(600), from: 1.3, shake: 3, out: 0.12, color: b % 2 ? C.signal : C.bone });
+    slam(sg, 'Frame = f(t)', 960, 800, T, { t0: bar(9), t1: bar(10.3), size: 150, family: F.mono(600), from: 1.45, shake: 5, out: 0.25 });
 
     this.sign.upload();
     this.signM.visible = T < bar(10.3);
-    { const P = new THREE.Vector3(...k.pos), D = new THREE.Vector3(...k.tgt).sub(P).normalize(); this.signM.position.copy(P).addScaledVector(D, 4.6); this.signM.position.y += 0.3; this.signM.lookAt(P); this.floorU.uSign.value.copy(this.signM.position); }
+    { const P = new THREE.Vector3(...k.pos), D = new THREE.Vector3(...k.tgt).sub(P).normalize(); if (T < bar(5)) { this.signM.position.copy(P).addScaledVector(D, 4.6); this.signM.position.y += 0.3; this.signM.scale.setScalar(1); this.signM.lookAt(P); } else { const dd = new THREE.Vector3(...k.tgt).distanceTo(P) + 3; D.y = 0; D.normalize(); this.signM.position.copy(P).addScaledVector(D, dd); this.signM.scale.setScalar(dd / 4.6); this.signM.position.y = FLOOR + 2.587 * this.signM.scale.x * 0.5 - 0.35 * this.signM.scale.x; this.signM.lookAt(P.x, this.signM.position.y, P.z); } this.floorU.uSign.value.copy(this.signM.position); }
     present(this.ctx, out, this.scene, this.cam, this.layer, () => L.render(this.ctx.renderer, out, this.cam));
 
     const pre = prog(T, bar(10), bar(11), ease.inQuad);

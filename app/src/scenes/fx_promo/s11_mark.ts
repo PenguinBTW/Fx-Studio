@@ -25,14 +25,14 @@ void main(){
   float sealed = smoothstep(e + 0.05, e - 0.05, vW.x);
   vec3 bone = uBone * (1.05 + 0.25 * vW.y);
   c = mix(c, bone * 0.9 + c * 0.35, uWord * 0.62);
-  c = mix(c, bone, sealed) + vec3(1.0, 0.96, 0.9) * (0.22 + 0.5 * sealed) * exp(-pow((vW.x * 0.3 + vW.y * 0.7 - uSweep) * 4.0, 2.0)) + uSig * 5.0 * exp(-abs(vW.x - e) * 14.0) * step(0.001, uSeal) * step(uSeal, 0.999);
+  c = mix(c, bone, sealed) + vec3(1.0, 0.96, 0.9) * (0.1 + 0.4 * sealed) * exp(-pow((vW.x * 0.3 + vW.y * 0.7 - uSweep) * 4.0, 2.0)) + uSig * 5.0 * exp(-abs(vW.x - e) * 14.0) * step(0.001, uSeal) * step(uSeal, 0.999);
   gl_FragColor = vec4(c, 1.0);
 }`;
 const SKY_FS = `uniform float uT; uniform float uBeam; uniform vec3 uSig; uniform vec3 uIce; varying vec3 vD;
 void main(){
   vec3 d = normalize(vD);
   float hz = exp(-abs(d.y + 0.08) * 9.0);
-  vec3 c = vec3(0.002, 0.002, 0.004) + uSig * 0.07 * hz + uIce * 0.012 * exp(-abs(d.y - 0.3) * 5.0);
+  vec3 c = vec3(0.002, 0.002, 0.004) + uSig * (0.07 * hz + 0.12 * exp(-abs(d.y + 0.08) * 1.6)) + uIce * 0.012 * exp(-abs(d.y - 0.3) * 5.0);
   float a = atan(d.x, d.y + 0.35);
   float beams = pow(0.5 + 0.5 * sin(a * 18.0 + sin(a * 5.0 + uT * 0.3) * 2.5), 90.0) * (0.4 + 0.6 * pow(0.5 + 0.5 * sin(a * 7.0 - uT * 0.5), 3.0)) * smoothstep(0.1, -0.7, d.z) * smoothstep(-0.25, 0.3, d.y);
   c += mix(uSig, vec3(1.0, 0.9, 0.8), 0.35) * beams * uBeam;
@@ -87,7 +87,7 @@ export default class S11Mark extends Scene {
       const k = ORDER.indexOf(pn);
       let g = this.glyphs.find((x) => x.k === k);
       if (!g) {
-        const u: Record<string, THREE.IUniform> = { uTex: { value: this.black }, uRes: { value: new THREE.Vector2(1920, 1080) }, uSeal: { value: 0 }, uFlash: { value: 0 }, uZoom: { value: 0.75 }, uBox: { value: new THREE.Vector3() }, uWord: { value: k >= 4 ? 1 : 0 }, uOff: { value: new THREE.Vector2() }, uSweep: { value: -9 }, uBone: { value: col(C.bone).multiplyScalar(1.15) }, uSig: { value: col(C.signal) } };
+        const u: Record<string, THREE.IUniform> = { uTex: { value: this.black }, uRes: { value: new THREE.Vector2(1920, 1080) }, uSeal: { value: 0 }, uFlash: { value: 0 }, uZoom: { value: 0.75 }, uBox: { value: new THREE.Vector3() }, uWord: { value: k >= 4 ? 1 : 0.55 }, uOff: { value: new THREE.Vector2() }, uSweep: { value: -9 }, uBone: { value: col(C.bone).multiplyScalar(1.15) }, uSig: { value: col(C.signal) } };
         const portal = new THREE.ShaderMaterial({ vertexShader: PORTAL_VS, fragmentShader: PORTAL_FS, uniforms: u, toneMapped: false });
         this.mats.push(portal);
         g = { o: m, u, k, portal, box: new THREE.Box3() };
@@ -164,7 +164,7 @@ export default class S11Mark extends Scene {
       (U.uRes!.value as THREE.Vector2).set(out.width, out.height);
       U.uSeal!.value = seal;
       U.uSweep!.value = -5 + 10 * ease.inOutCubic(clamp(ph * 1.6));
-      U.uFlash!.value = (hit === g.k ? 1.2 : 0) * Math.exp(-(beatF - beatN) * 4) * (1 - seal);
+      U.uFlash!.value = (hit === g.k ? 0.5 : 0) * Math.exp(-(beatF - beatN) * 4) * (1 - seal);
     });
     for (const m of this.ribbons) m.update(T);
     const su = (this.sky.material as THREE.ShaderMaterial).uniforms;
@@ -207,7 +207,7 @@ export default class S11Mark extends Scene {
 
     const flash = T >= SEAL ? Math.exp(-(T - SEAL) * 5) : 0;
     const end = prog(T, 213.3, 214.45, ease.inOutQuad);
-    return { exposure: 1 + 0.35 * flash, bloom: 0.75 + 0.3 * flash, bloomThreshold: 0.85, vignette: 0.55, ca: (0.35 + 0.6 * f.a.snare) * (1 - seal), grain: 0.045, fade: end };
+    return { exposure: 1 + 0.35 * flash, bloom: 0.55 + 0.3 * flash, bloomThreshold: 1.0, vignette: 0.55, ca: (0.35 + 0.6 * f.a.snare) * (1 - seal), grain: 0.045, fade: end };
   }
 
   override dispose(): void {

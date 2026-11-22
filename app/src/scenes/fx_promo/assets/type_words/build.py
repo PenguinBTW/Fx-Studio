@@ -12,4 +12,9 @@ for w, font, m in [('KINETIC', 'Archivo-w620-900.ttf', BONE), ('TYPE', 'Archivo-
     o = text_mesh(w, font, size=1.0, extrude=0.18, bevel=0.018, name=f'word_{w}')
     select(o); bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='BOUNDS'); o.location = (0, 0, 0)
     o['fx_part'] = w; assign(o, m); shade_smooth_auto(o)
+# FONT in six faces: s3_type swaps the 3D word's typeface on every beat.
+for v, font in enumerate(['Archivo-w1250-900.ttf', 'Cormorant-600.ttf', 'src/IBMPlexMono-Bold.ttf', 'ArchivoItalic-w1000-800.ttf', 'CormorantItalic-600.ttf', 'Archivo-w620-300.ttf']):
+    o = text_mesh('FONT', font, size=1.0, extrude=0.18, bevel=0.012, name=f'word_FONT_{v}')
+    select(o); bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='BOUNDS'); o.location = (0, 0, 0)
+    o['fx_part'] = f'FONT_{v}'; assign(o, SIGNAL); shade_smooth_auto(o)
 export(HERE)
