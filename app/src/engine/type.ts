@@ -61,11 +61,14 @@ export async function loadFonts(): Promise<void> {
     DEFS.map(async (d) => {
       const res = await fetch(`fonts/${d.file}`);
       if (!res.ok) throw new Error(`HTTP ${res.status} for fonts/${d.file}`);
+      // A missing file under the Vite dev server comes back as 200 + index.html (SPA fallback).
+      if (res.headers.get('content-type')?.includes('text/html')) throw new Error(`fonts/${d.file} is missing (server returned HTML)`);
       const buf = await res.arrayBuffer();
-      bufCache.set(d.family, buf);
       const ff = new FontFace(d.family, buf, d.features ? { featureSettings: d.features } : undefined);
       await ff.load();
       document.fonts.add(ff);
+      // Only cache bytes the browser accepted, so ot() never parses an HTML page or a corrupt file.
+      bufCache.set(d.family, buf);
     }),
   );
   for (let i = 0; i < results.length; i++) {
