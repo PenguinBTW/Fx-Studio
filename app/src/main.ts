@@ -319,7 +319,10 @@ function setupPlayer() {
       if (audio && audioAvailable && !audio.error && !audio.paused) {
         if (audio.currentTime !== lastAudioT) { lastAudioT = audio.currentTime; lastPerf = now; }
         t = lastAudioT + (now - lastPerf) / 1000;
-        if (audio.ended) playing = false;
+        if (audio.ended || t >= engine.duration) {
+          if (loop) seek(loop[0]);
+          else { audio.pause(); t = Math.min(t, engine.duration); playing = false; }
+        }
       } else {
         const dt = (now - lastPerf) / 1000;
         lastPerf = now;
