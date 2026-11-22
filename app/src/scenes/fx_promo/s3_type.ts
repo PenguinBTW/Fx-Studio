@@ -104,14 +104,14 @@ export default class S3Type extends Scene {
     const inDZ = T >= DZ0 && T < DZ1;
 
     this.words.forEach((o, i) => {
-      const [ox, oy] = PASS[i]!;
+      const [ox, oy] = PASS[i]!.map((v) => v * 0.72) as [number, number];
       const zW = -i * SP;
       // Word stands on the path at its own z, offset so the lens slips past it; a slow twist reads the extrusion.
       const tPass = T0 + (LEAD + i * SP) / V;
       const u = i === 3 && inDZ ? -1.1 : T - tPass;
       const pp = this.camPath(tPass);
       // Just before the pass the word is flung outward past the frame edge instead of filling the lens.
-      const fling = 1 + 2.6 * ease.inCubic(clamp((u + 1.1) / 1.1));
+      const fling = 1 + 2.6 * ease.inCubic(clamp((u + 0.55) / 0.55));
       o.position.set(pp.x + ox * fling, pp.y + oy * fling, zW);
       o.rotation.set(0.0, (i % 2 ? -1 : 1) * (0.18 + 0.12 * Math.tanh(u)), (i % 2 ? 1 : -1) * 0.04);
       const s = 1 + 0.05 * k;
