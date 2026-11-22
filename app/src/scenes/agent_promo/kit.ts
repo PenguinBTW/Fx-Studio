@@ -254,7 +254,7 @@ export function heroLights(scene: THREE.Scene, key = 0xffd7a0, rim = 0x9cc9e8, k
   scene.add(k, k.target, r, r.target, h);
   return { key: k, rim: r, hemi: h };
 }
-export function enableShadows(ctx: SceneCtx) { ctx.renderer.shadowMap.enabled = true; ctx.renderer.shadowMap.type = THREE.PCFSoftShadowMap; }
+export function enableShadows(ctx: SceneCtx) { ctx.renderer.shadowMap.enabled = true; ctx.renderer.shadowMap.type = THREE.PCFShadowMap; }
 /** Piecewise camera path keyed by bar number with inOutCubic easing between keys. */
 export function camPath(keys: [number, CamKey][], b: number): CamKey {
   if (b <= keys[0]![0]) return keys[0]![1];
