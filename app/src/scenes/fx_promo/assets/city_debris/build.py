@@ -28,9 +28,30 @@ for i, p in enumerate(pts):
     if len(bm.verts) < 4: bm.free(); continue
     # Vertex colour: weathered facade outside, pale fresh concrete on the fracture faces (multiplied by the instance tint).
     col = bm.loops.layers.color.new('Col')
+    # Rebar: a few rusted bars sticking out of the larger fracture faces.
+    rebar = []
+    for fc in [f for f in bm.faces if f[inner] and f.calc_area() > 0.03][:3]:
+        cen, nrm = fc.calc_center_median(), fc.normal.copy()
+        r = bmesh.ops.create_cube(bm, size=1.0)['verts']
+        ln = random.uniform(0.12, 0.28)
+        for v in r:
+            v.co = Vector((v.co.x * 0.014, v.co.y * 0.014, (v.co.z + 0.5) * ln))
+        rot = Vector((0, 0, 1)).rotation_difference((nrm + Vector((random.uniform(-0.3, 0.3), random.uniform(-0.3, 0.3), random.uniform(-0.3, 0.3)))).normalized())
+        for v in r:
+            v.co = rot @ v.co + cen - nrm * 0.03
+        rebar += r
+    rv = set(rebar)
     for fc in bm.faces:
-        c = (1.0, 1.0, 1.0, 1.0) if fc[inner] else (0.72, 0.71, 0.7, 1.0)
-        for lp in fc.loops: lp[col] = c
+        if any(v in rv for v in fc.verts):
+            c = (0.32, 0.17, 0.09)
+        elif fc[inner]:
+            # Fresh break: rougher, mid-grey concrete with mottling.
+            g = 0.5 + 0.12 * random.random(); c = (g, g * 0.98, g * 0.95)
+        else:
+            # Weathered facade: soot streaks darken toward the slab underside, plus per-face dirt.
+            z = fc.calc_center_median().z / H
+            g = (0.42 + 0.3 * z) * (0.75 + 0.25 * random.random()); c = (g, g * 0.97, g * 0.92)
+        for lp in fc.loops: lp[col] = (*c, 1.0)
     me = bpy.data.meshes.new(f'chunk_{i:02d}'); bm.to_mesh(me); bm.free()
     for ca in [c for c in me.color_attributes if c.name != 'Col']: me.color_attributes.remove(ca)
     me.color_attributes.active_color = me.color_attributes['Col']; me.color_attributes.render_color_index = 0

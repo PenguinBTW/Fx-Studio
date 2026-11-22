@@ -17,7 +17,7 @@ const WORLDS: [string, number, number, number, number][] = [
 ];
 // Portal shape cut into each host world (the thing the camera dives through) and its rim colour:
 // 0 tall tower window, 1 octagon (tunnel end), 2 lens/ring, 3 slit between monoliths, 4 paper diamond cut-out, 5 wide slot.
-const SHAPE = [1, 0, 4, 2, 3, 2, 5, 2];
+const SHAPE = [1, 0, 4, 2, 3, 2, 1, 2];
 const RIM: [number, number, number][] = [[1, 0.45, 0.12], [1, 0.7, 0.35], [0.2, 0.15, 0.12], [0.75, 0.6, 1], [0.35, 0.8, 1], [1, 0.45, 0.12], [0.5, 1, 0.8], [1, 0.55, 0.2]];
 const N = WORLDS.length;
 const H = 0.24;
@@ -38,12 +38,15 @@ float nrm(vec2 d, float s){
 vec3 look(vec2 s, out float glow, out vec3 rim){
   vec2 P = (c0 - 0.5 * H) / (1.0 - H);
   // Bank through each dive (zero at both ends so the hand-offs stay seamless).
-  vec2 q = s - 0.5; q.x *= 1.7778; q = mat2(cos(uRoll), -sin(uRoll), sin(uRoll), cos(uRoll)) * q; q.x /= 1.7778; s = q + 0.5;
+  // Scale with the roll so the rotated frame always covers the screen (no texture edge shows at the corners).
+  vec2 q = s - 0.5; q.x *= 1.7778; q = mat2(cos(uRoll), -sin(uRoll), sin(uRoll), cos(uRoll)) * q; q.x /= 1.7778;
+  s = q / (cos(abs(uRoll)) + 1.7778 * sin(abs(uRoll))) + 0.5;
   vec2 x = P + (s - P) * pow(H, uF);
   glow = 0.0;
   vec2 d = (x - c0) / (0.5 * H);
   // The portal opens out to the full window as the dive completes, so the hand-off to the next layer is seamless.
-  float e = 1.0 - mix(nrm(d, uS.x), max(abs(d.x), abs(d.y)), smoothstep(0.5, 1.0, uF));
+  // The opening keeps its world's shape and overgrows the frame (no rectangular screen ever forms).
+  float e = 1.0 - nrm(d, uS.x) * mix(1.0, 1.0 / nrm(vec2(1.0), uS.x), smoothstep(0.4, 1.0, uF));
   float sz = 0.5 * pow(H, 1.0 - uF);
   float es = e * sz;
   rim = uC0;
@@ -66,6 +69,32 @@ vec3 look(vec2 s, out float glow, out vec3 rim){
   glow += exp(-es1 * 900.0) * 1.2;
   return uG.z * texture2D(L2, 0.5 + (x1 - c1) / H).rgb;
 }
+// Foreground host geometry (towers, monoliths, tunnel ribs) flies past the camera in front of the opening,
+// faster than the opening grows, so the portal reads as a place inside the world rather than a picture on it.
+float occ(vec2 uv, out float edge){
+  edge = 0.0;
+  float a = smoothstep(0.02, 0.2, uF) * (1.0 - smoothstep(0.8, 0.97, uF));
+  if (a <= 0.0) return 0.0;
+  vec2 p = uv - c0; p.x *= 1.7778;
+  float grow = pow(1.0 / H, uF * 1.25), m = 0.0;
+  if (uS.x > 0.5 && uS.x < 2.5) {
+    // Tunnel ribs / lens rings: concentric bands expanding past the camera.
+    for (int j = 0; j < 3; j++) {
+      float r = (0.16 + 0.11 * float(j)) * grow, w = 0.025 * grow;
+      float dd = abs(length(p) - r) - w;
+      m = max(m, smoothstep(0.004, -0.004, dd)); edge = max(edge, exp(-abs(dd + w * 0.7) * 260.0));
+    }
+  } else {
+    // Towers / monoliths / paper strips: slabs either side of the opening sliding outward.
+    for (int j = 0; j < 4; j++) {
+      float side = mod(float(j), 2.0) * 2.0 - 1.0, x0 = side * (0.2 + 0.12 * float(j / 2)) * grow, w = (0.035 + 0.015 * float(j)) * grow;
+      float top = (0.22 + 0.25 * fract(float(j) * 0.618)) * grow;
+      float dd = max(abs(p.x - x0) - w, p.y - top);
+      m = max(m, smoothstep(0.004, -0.004, dd)); edge = max(edge, exp(-abs(abs(p.x - x0) - w) * 300.0) * step(p.y, top));
+    }
+  }
+  edge *= a; return m * a;
+}
 void main(){
   vec3 c = vec3(0.0), rim, ri; float g = 0.0, gi;
   for (int i = 0; i < 6; i++) {
@@ -77,8 +106,11 @@ void main(){
   }
   c /= 6.0; look(vUv, g, rim);
   // The rim dies away as the portal fills the frame, so the screen never ends up framed by it.
-  g *= 1.0 - 0.85 * smoothstep(0.45, 0.9, uF);
+  g *= 1.0 - smoothstep(0.4, 0.85, uF);
   c += rim * g * (1.4 + 1.6 * uKick) + vec3(1.0, 0.9, 0.8) * smoothstep(0.7, 2.0, g) * 0.4;
+  float oe, om = occ(vUv, oe);
+  vec3 fg = texture2D(L0, c0 + (vUv - c0) * 0.35).rgb * 0.12 * uG.x;
+  c = mix(c, fg, om) + rim * oe * (0.6 + 0.8 * uKick);
   gl_FragColor = vec4(c, 1.0);
 }`;
 
@@ -110,7 +142,7 @@ export default class FxpInfiniteZoom implements Transition {
     const speed = 1 - Math.abs(fr - 0.5) * 2;
     this.pass.draw(out, a, b, api.u, {
       L0: tex(k), L1: tex(k + 1), L2: k + 2 <= N ? tex(k + 2) : b, c0: ctr(k), c1: k + 1 < N ? ctr(k + 1) : new THREE.Vector2(0.5, 0.5),
-      uG: new THREE.Vector3(WORLDS[k]![4], WORLDS[k + 1]?.[4] ?? 1, WORLDS[k + 2]?.[4] ?? 1), uS: new THREE.Vector2(SHAPE[k]!, SHAPE[k + 1] ?? 2), uC0: new THREE.Vector3(...RIM[k]!), uC1: new THREE.Vector3(...(RIM[k + 1] ?? RIM[0]!)), uRoll: (k % 2 ? -1 : 1) * 0.22 * Math.sin(Math.PI * fe), uF: fe, uDepth: k + 1 < N ? 2 : 1, uBlur: 0.02 + 0.07 * speed, uKick: f.a.kick, uRgb: 0.004 + 0.01 * speed,
+      uG: new THREE.Vector3(WORLDS[k]![4], WORLDS[k + 1]?.[4] ?? 1, WORLDS[k + 2]?.[4] ?? 1), uS: new THREE.Vector2(SHAPE[k]!, SHAPE[k + 1] ?? 2), uC0: new THREE.Vector3(...RIM[k]!), uC1: new THREE.Vector3(...(RIM[k + 1] ?? RIM[0]!)), uRoll: (k % 2 ? -1 : 1) * 0.14 * Math.sin(Math.PI * fe), uF: fe, uDepth: k + 1 < N ? 2 : 1, uBlur: 0.02 + 0.07 * speed, uKick: f.a.kick, uRgb: 0.004 + 0.01 * speed,
     });
     const hit = Math.exp(-fr * 9) * (k > 0 ? 1 : 0);
     return { invert: 0, zoom: 1, flash: 0, ca: 0.4 + 1.4 * hit, bloom: 0.45 + 0.4 * hit, bloomThreshold: 0.9, exposure: 1 + 0.25 * hit, shake: [6 * hit, 6 * hit] };

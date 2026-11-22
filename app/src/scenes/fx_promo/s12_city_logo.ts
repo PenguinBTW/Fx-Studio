@@ -91,7 +91,7 @@ export default class S12CityLogo extends Scene {
   private m = new THREE.Matrix4(); private p = new THREE.Vector3(); private s = new THREE.Vector3(); private q = new THREE.Quaternion();
   private hemi = new THREE.HemisphereLight(0x5a6a99, 0x0a0806, 0.5);
   private moon = new THREE.DirectionalLight(0x8899cc, 0.6);
-  private posC = new THREE.CatmullRomCurve3([[0.0, 1.7, 15.5], [0.0, 2.1, 5.0], [-15, 2.4, 0.8], [-3, 14, 30], [0, 25, 37]].map((v) => new THREE.Vector3(...(v as [number, number, number]))));
+  private posC = new THREE.CatmullRomCurve3([[0.0, 1.7, 15.5], [0.0, 2.1, 5.0], [-13.5, 2.6, 2.4], [-3, 14, 30], [0, 25, 37]].map((v) => new THREE.Vector3(...(v as [number, number, number]))));
   private tgtC = new THREE.CatmullRomCurve3([[0.0, 1.8, 0], [0.0, 3.2, -9], [6, 2.6, -1.6], [0, 1, -1.5], [0, 1.5, -0.5]].map((v) => new THREE.Vector3(...(v as [number, number, number]))));
 
   override async init() {
@@ -124,7 +124,7 @@ export default class S12CityLogo extends Scene {
       let dn = 0, nearL = 0;
       for (let dj = -5; dj <= 5; dj++) for (let di = -5; di <= 5; di++) { const l = isLogo(i + di, j + dj); dn += l; if (l && Math.abs(di) <= 2 && Math.abs(dj) <= 2) nearL = 1; }
       const hg = h(Math.floor(i / 3) + Math.floor(j / 3) * NX, 3);
-      const h1 = L ? (z < -1 ? 2.9 : 2.2) + 1.6 * (1 - dn / 121) ** 2 + 0.6 * hg : nearL ? 0.25 + 0.15 * h(id, 4) : 0.45 + 1.0 * h(id, 4) * h(id, 7);
+      const h1 = L ? (z < -1 ? 1.5 : 1) * (2.6 + 1.6 * (1 - dn / 121) ** 2 + 0.6 * hg) : nearL ? 0.25 + 0.15 * h(id, 4) : 0.45 + 1.0 * h(id, 4) * h(id, 7);
       const ts = T0 + 0.5 * BAR + Math.floor(clamp((x - X0) / span) * 7) * BEAT + 0.06 * h(id, 5);
       this.cells.push({ x, z, h0, h1, ts, logo: L });
       aLogo.push(L); aEdge.push(edge); aSeed.push(h(id, 6));
