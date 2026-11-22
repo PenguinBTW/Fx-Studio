@@ -38,7 +38,7 @@ export default class S14Quiet extends Scene {
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
     const T = f.t, rr = this.ctx.renderer, lt = T - T93;
     const head = 4 + lt * 0.75; this.rig.dragon.pose(glidePath, head, LEN); this.rig.jaw.value = 0.06;
-    this.rig.reveal.value = 1 - sm(bar(96), bar(100.5), T);
+    this.rig.reveal.value = 1 - 0.8 * sm(bar(96), bar(101), T);
     const hp = new THREE.Vector3(); glidePath(head - 3.5, hp);
     const bp = new THREE.Vector3(); glidePath(head - LEN + (LEN + 0.8) * (1 - this.rig.reveal.value), bp); this.ember.position.copy(bp).add(new THREE.Vector3(0, 0.4, 0.3));
     this.ember.intensity = 18 * sm(bar(96), bar(96.5), T) * (1 - sm(bar(100), bar(100.8), T)) * (0.85 + 0.15 * Math.sin(T * 31));
@@ -48,7 +48,8 @@ export default class S14Quiet extends Scene {
       const s = 0.5 + 1.1 * h(i, 7); this.m4.compose(new THREE.Vector3((h(i, 0) - 0.5) * 30 + sw, y, (h(i, 1) - 0.5) * 22 - 2), this.q, new THREE.Vector3(s, s, s)); this.flakes.setMatrixAt(i, this.m4);
     }
     this.flakes.instanceMatrix.needsUpdate = true;
-    const az = 1.0 - 1.6 * sm(0, 9, lt), cd = 3.4 + 2.8 * sm(0.4, 9, lt) + 2.5 * sm(bar(99), bar(101), T), el = 0.2 + 0.45 * sm(0, 9, lt) + 2.4 * sm(bar(98.5), bar(101), T); this.cam.position.set(hp.x + cd * Math.sin(az), hp.y + el, hp.z + cd * Math.cos(az)); this.cam.lookAt(hp.x, hp.y - 0.1, hp.z); this.cam.updateProjectionMatrix();
+    const hq = new THREE.Vector3(); glidePath(head - 3.9, hq); const fw = hp.clone().sub(hq).setY(0).normalize(), sd = new THREE.Vector3(-fw.z, 0, fw.x);
+    const th = 1.0 - 0.4 * sm(0, 7, lt), cd = 3.4 + 2.4 * sm(0.4, 9, lt) + 1.0 * sm(bar(99), bar(101), T), el = 0.2 + 0.45 * sm(0, 9, lt) + 0.8 * sm(bar(98.5), bar(101), T); this.cam.position.copy(hp).addScaledVector(fw, cd * Math.cos(th)).addScaledVector(sd, cd * Math.sin(th)).add(new THREE.Vector3(0, el, 0)); this.cam.lookAt(hp.x, hp.y - 0.1, hp.z); this.cam.updateProjectionMatrix();
     rr.setRenderTarget(out); rr.setClearColor(0x060606, 1); rr.clear(true, true, true); rr.render(this.scene, this.cam);
     const g = this.layer.ctx; this.layer.clear();
     term(g, S14_LINES, T, { size: 50, align: 'center', x: 960, y: 900, halo: 'rgba(0,0,0,0.5)', color: '#ece8e0', cursor: '#ece8e0', alpha: overlayTextDuck(f.tin, f.tout) });

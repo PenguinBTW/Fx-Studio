@@ -52,9 +52,9 @@ export default class S15Logo extends Scene {
     const head = 2 + (T - T101) * 2.2, h2 = (T - bar(107)) * 4.0; if (T < bar(107)) { this.rig.dragon.pose(lapPath, head, LEN); this.dg.visible = head < 24; } else { this.rig.dragon.pose(outroPath, h2, LEN); this.dg.visible = h2 < 44; } this.rig.jaw.value = 0.2;
     const cu = sm(T_LOCK, T_LOCK + 0.22, T); this.cur.position.set(this.curBase.x, this.curBase.y + 2.2 * (1 - cu), this.curBase.z); this.cur.visible = T >= T_LOCK - 0.05; 
     const blink = T < T_LOCK + 0.4 || Math.floor((T - T_LOCK) / BEAT) % 2 === 0 ? 1 : 0.12; this.curMat.emissiveIntensity = 2.4 * blink;
-    const ph = lock ? (T - T_LOCK) % (4 * BAR) : 0, sw = sm(0.1, 2.6, ph); this.sweep.position.set(-9 + 18 * sw, 5, 7); this.sweep.target.position.set(-4 + 8 * sw, 0.4, 0); this.sweep.intensity = lock ? 160 * Math.sin(Math.PI * sw) : 0;
+    const ph = lock ? (T - T_LOCK) % (2 * BAR) : 0, sw = sm(0.05, 1.6, ph); this.sweep.position.set(-9 + 18 * sw, 5, 7); this.sweep.target.position.set(-4 + 8 * sw, 0.4, 0); this.sweep.intensity = lock ? 160 * Math.sin(Math.PI * sw) : 0;
     const settle = lock ? Math.exp(-(T - T_LOCK) * 6) : 0, push = sm(T_LOCK, END, T), pre = 1 - sm(T101, T_LOCK, T);
-    const az = lock ? 0.22 * Math.sin((T - T_LOCK) * 0.11) : 0, rad = 8.2 + 3 * pre - 1.6 * push + 0.6 * settle;
+    const az = lock ? 0.22 * Math.sin((T - T_LOCK) * 0.11) : 0, rad = 8.2 + 3 * pre - 3.2 * push + 0.6 * settle;
     this.cam.position.set(0.2 + 2.2 * pre * Math.sin((T - T101) * 0.9) + rad * Math.sin(az), 0.35 + 1.2 * pre + 0.5 * push, rad * Math.cos(az)); this.cam.lookAt(0.2, 0.15, 0); this.cam.updateProjectionMatrix();
     this.style.render(rr, this.scene, this.cam, out, mode, T); rr.resetState();
     const g = this.layer.ctx; this.layer.clear(); const duck = overlayTextDuck(f.tin, f.tout);

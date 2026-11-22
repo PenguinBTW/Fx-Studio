@@ -88,7 +88,7 @@ export default class S8Fire extends Scene {
     const pos = c1.lerp(c2, w2).lerp(c3, w3); const look = m.clone().addScaledVector(dir, 1.8 * w2 + (1 - w2) * 0.9).lerp(m.clone().addScaledVector(dir, 2.2), w3);
     pos.add(new THREE.Vector3(Math.sin(T * 31), Math.sin(T * 27), 0).multiplyScalar(0.03 * b));
     this.cam.position.copy(pos); this.cam.lookAt(look); this.cam.updateProjectionMatrix(); this.cam.updateMatrixWorld();
-    this.vol.u.uGain.value = 0.2 + 0.4 * (1 - b); this.vol.update(this.cam, this.u.uMouth.value, dir, T, sm(BREATHS[0]![0] - 0.05, BREATHS[0]![0] + 0.6, T), b);
+    this.vol.u.uGain.value = 0.34 + 0.3 * (1 - b); this.vol.update(this.cam, this.u.uMouth.value, dir, T, sm(BREATHS[0]![0] - 0.05, BREATHS[0]![0] + 0.6, T), b);
     rr.setRenderTarget(out); rr.setClearColor(0x020203, 1); rr.clear(true, true, true); rr.render(this.scene, this.cam);
     const g = this.layer.ctx; this.layer.clear(); term(g, S8_LINES, T, { size: 46, x: 200, align: 'left', y: 930, halo: 'rgba(0,0,0,0.6)', alpha: overlayTextDuck(f.tin, f.tout) });
     this.ctx.comp.draw(rr, this.layer.upload(), out, { mode: 'normal', opacity: 1 }); rr.resetState();
