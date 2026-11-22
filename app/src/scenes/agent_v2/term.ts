@@ -3,7 +3,7 @@
 import { F, font } from '../../engine/type';
 import { BEAT, B0 } from '../agent_promo/kit';
 
-export interface TLine { text: string; at: number; hold: number; cps?: number; x?: number; y?: number }
+export interface TLine { lead?: number; text: string; at: number; hold: number; cps?: number; x?: number; y?: number }
 export interface TermStyle { x?: number; y?: number; size?: number; color?: string; cursor?: string; align?: 'left' | 'center'; family?: string; halo?: string; prompt?: string; alpha?: number }
 
 const WIPE = 0.24;
@@ -14,7 +14,7 @@ export const typeDur = (l: TLine) => l.text.length / (l.cps ?? 18);
 export const lineEnd = (l: TLine) => l.at + typeDur(l) + l.hold + WIPE;
 
 export function term(g: CanvasRenderingContext2D, lines: TLine[], T: number, st: TermStyle = {}) {
-  const l = lines.find((q) => T >= q.at - 0.6 && T < lineEnd(q) + 0.05);
+  const l = lines.find((q) => T >= q.at - (q.lead ?? 0.6) && T < lineEnd(q) + 0.05);
   if (!l) return;
   const size = st.size ?? 44, cps = l.cps ?? 18, pr = st.prompt ?? '';
   if ((st.alpha ?? 1) <= 0) return;

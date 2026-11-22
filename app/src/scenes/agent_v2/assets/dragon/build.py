@@ -27,7 +27,7 @@ def table(keys, x):
 
 #        x     half-w  top   bottom  cz    exponent
 BODY = [(0.0,  0.015, 0.015, 0.015, 0.0,  2.0), (0.5, 0.09, 0.09, 0.08, 0.0, 2.0), (2.2, 0.25, 0.26, 0.21, 0.0, 2.2),
-        (4.6,  0.40,  0.40,  0.34,  0.0,  2.3), (6.6, 0.43, 0.43, 0.37, 0.0, 2.3), (8.2, 0.35, 0.36, 0.31, 0.0, 2.2),
+        (3.4,  0.31,  0.31,  0.27,  0.0,  2.3), (5.4, 0.38, 0.39, 0.33, 0.0, 2.3), (7.3, 0.47, 0.47, 0.41, 0.0, 2.3), (8.3, 0.33, 0.35, 0.29, 0.0, 2.2),
         (8.85, 0.35,  0.37,  0.30,  0.02, 2.2), (9.25, 0.40, 0.40, 0.17, 0.07, 2.4), (9.65, 0.33, 0.34, 0.11, 0.09, 2.6),
         (10.0, 0.245, 0.25,  0.09,  0.07, 2.9), (10.4, 0.19, 0.175, 0.08, 0.035, 3.1), (10.66, 0.155, 0.145, 0.07, 0.025, 3.0),
         (10.84, 0.085, 0.075, 0.05, 0.015, 2.5), (10.9, 0.01, 0.01, 0.01, 0.015, 2.0)]
@@ -106,10 +106,10 @@ def fang(base, length, r, dirv, bend):
         p = [p[k] + d[k] * length / 5 for k in range(3)]; d = [d[k] + bend[k] / 5 for k in range(3)]
     return skin_chain(pts, 'f', 1)
 
-def strand(pts, r0):
+def strand(pts, r0, tp=1.0):
     cu = bpy.data.curves.new('m', 'CURVE'); cu.dimensions = '3D'; cu.bevel_depth = r0; cu.bevel_resolution = 1
     sp_ = cu.splines.new('POLY'); sp_.points.add(len(pts) - 1)
-    for i, p in enumerate(pts): sp_.points[i].co = (*p, 1); sp_.points[i].radius = 1 - i / len(pts)
+    for i, p in enumerate(pts): sp_.points[i].co = (*p, 1); sp_.points[i].radius = (1 - i / len(pts)) ** tp
     o = bpy.data.objects.new('m', cu); bpy.context.collection.objects.link(o); select(o); bpy.ops.object.convert(target='MESH'); return bpy.context.active_object
 
 def under(x): w, ht, hb, cz, n = table(BODY, x); return w, cz - hb, cz + ht
@@ -122,13 +122,17 @@ TONG = [(x, table(JAW, x)[0] * 0.8, 0.004, 0.004, -0.03, 2.0) for x in span(9.3,
 jm = loft(TONG, 'jawmouth', span(9.3, 10.74, 0.01), 24); assign(jm, MO)
 # teeth: upper row follows the lip outline, big canines near the front
 up, lo = [], []
-for i in range(16):
-    x = 9.58 + i * 0.074; w, zb, _ = under(x); can = math.exp(-((x - 10.55) / 0.04) ** 2)
+xs, xq = [], 9.58
+for i in range(40):
+    if xq > 10.68: break
+    xs.append(xq); xq += 0.07 + 0.09 * ((i * 0.7548776) % 1) ** 2
+for i, x in enumerate(xs):
+    w, zb, _ = under(x); can = math.exp(-((x - 10.55) / 0.04) ** 2)
     for s in (-1, 1):
-        L_ = 0.055 + 0.07 * can + 0.015 * (i % 2); 
-        up.append(fang((x, (w - 0.03) * s, zb + 0.02), L_, 0.016 + 0.01 * can, (-0.15, 0.05 * s, -1), (0.25, 0, 0)))
+        hj = ((i * 7 + (s + 1) * 13) * 0.6180339) % 1; L_ = 0.03 + 0.08 * can + 0.07 * hj * hj + 0.025 * (i % 4 == 1)
+        up.append(fang((x + 0.02 * (hj - 0.5), (w - 0.03) * s, zb + 0.02), L_, 0.012 + 0.012 * can + 0.006 * hj, (-0.15 - 0.2 * (hj - 0.5), (0.05 + 0.08 * (hj - 0.5)) * s, -1), (0.35 + 0.35 * hj, 0, 0)))
         wj = table(JAW, x + 0.03)[0]; cl = math.exp(-((x - 10.42) / 0.04) ** 2)
-        lo.append(fang((x + 0.03, (wj - 0.035) * s, -0.04), 0.045 + 0.06 * cl, 0.013 + 0.008 * cl, (-0.1, 0.03 * s, 1), (0.2, 0, 0)))
+        hk = ((i * 11 + (s + 1) * 5) * 0.381966) % 1; lo.append(fang((x + 0.03, (wj - 0.035) * s, -0.04), 0.03 + 0.06 * cl + 0.035 * hk * hk, 0.01 + 0.008 * cl + 0.005 * hk, (-0.1 + 0.2 * (hk - 0.5), 0.03 * s, 1), (0.2 + 0.15 * hk, 0, 0)))
 teeth = join(up, 'teeth'); assign(teeth, TO)
 lowt = join(lo, 'lowteeth'); assign(lowt, TO)
 # eyes: small almond lenses recessed under the brow
@@ -164,10 +168,14 @@ sp, V, F = [], [], []
 for k in range(42):
     x = 0.6 + k * 0.2; w, ht, hb, cz, n = table(BODY, x); h = 0.05 + 0.62 * ht; top = cz + ht * 1.02
     hn.append(fang((x, 0, top - 0.03), h, 0.22 * ht + 0.01, (-0.55, 0, 0.83), (-0.35, 0, -0.1)))
-    V += [(x, 0, top - 0.02), (x - h * 0.5, 0, top + h * 0.78), (x + 0.1, 0, top - 0.02), (x + 0.1 - h * 0.3, 0, top + h * 0.38)]
+    sp.append(((x - h * 0.5, top + h * 0.78), (x, top - 0.02), h))
 spikes = join(hn, 'spikes'); assign(spikes, HO)
 for k in range(41):
-    a = k * 4; b = (k + 1) * 4; F += [(a, a + 2, a + 3, a + 1), (a + 2, b, b + 1, a + 3)]
+    (t0, b0, h0), (t1, b1, h1) = sp[k], sp[k + 1]; sag = 0.5 * min(h0, h1); i0 = len(V)
+    for j in range(9):
+        u = j / 8; c = math.sin(math.pi * u) ** 0.8 * (1 - 0.12 * math.sin(math.pi * 3 * u))
+        V += [(b0[0] + (b1[0] - b0[0]) * u, 0, b0[1] + (b1[1] - b0[1]) * u), (t0[0] + (t1[0] - t0[0]) * u, 0, t0[1] + (t1[1] - t0[1]) * u - sag * c)]
+    F += [(i0 + 2 * j, i0 + 2 * j + 2, i0 + 2 * j + 3, i0 + 2 * j + 1) for j in range(8)]
 me = bpy.data.meshes.new('fin'); me.from_pydata(V, [], F); fin = bpy.data.objects.new('fin', me); bpy.context.collection.objects.link(fin)
 select(fin); so = fin.modifiers.new('so', 'SOLIDIFY'); so.thickness = 0.006; bpy.ops.object.modifier_apply(modifier='so'); assign(fin, FI)
 # mane, beard (hinged with jaw), whiskers
@@ -178,10 +186,10 @@ for k in range(170):
     ln = 0.5 + 0.5 * ((k * 0.7548) % 1)
     ms.append(strand([(x0 - ln * t * 1.15, y0 * (1 + 0.8 * t), z0 + ln * (0.4 * t - 0.3 * t * t) * (1 if z0 > cz else -0.4)) for t in [i / 7 for i in range(8)]], 0.011))
 for k in range(34):
-    x0 = 9.5 + 0.5 * ((k * 0.618) % 1); y0 = (((k * 0.381) % 1) - 0.5) * 0.25; ln = 0.35 + 0.25 * ((k * 0.7548) % 1)
-    bd.append(strand([(x0 - ln * t * 0.9, y0 * (1 + t), -0.15 - ln * t * 0.9) for t in [i / 6 for i in range(7)]], 0.008))
+    x0 = 9.5 + 0.5 * ((k * 0.618) % 1); y0 = (((k * 0.381) % 1) - 0.5) * 0.5; ln = 0.35 + 0.25 * ((k * 0.7548) % 1)
+    bd.append(strand([(x0 - ln * t * 0.9, y0 * (1 + 1.6 * t) + 0.06 * math.sin(t * 4 + k), -0.15 - ln * t * 0.8 + 0.12 * t * t) for t in [i / 6 for i in range(7)]], 0.008, 1.6))
 for s in (-1, 1):
-    ms.append(strand([(10.64, 0.16 * s, 0.02), (10.45, 0.5 * s, -0.08), (10.0, 0.85 * s, -0.02), (9.3, 1.05 * s, 0.15), (8.5, 1.1 * s, 0.38), (7.8, 1.0 * s, 0.5)], 0.0065))
+    ms.append(strand([(10.64 + 0.35 * t - 0.75 * t * t, (0.18 + 0.75 * math.sin(min(1, t * 1.3) * 1.5708)) * s, 0.1 + 0.55 * t - 0.15 * t * t) for t in [i / 23 for i in range(24)]], 0.008, 2.0))
 mane = join(ms, 'mane'); assign(mane, MA)
 beard = join(bd, 'jawbeard'); assign(beard, MA)
 jaw = join([jaw, lowt], 'jaw')

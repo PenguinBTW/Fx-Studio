@@ -39,6 +39,10 @@ export interface ProjectManifest {
   /** Final soundtrack (relative to this project folder, or absolute). `render.ts audio` writes a full-length export here when --out is not given
    *  (a .mp3 target is encoded from the mixdown WAV); `render.ts video` muxes it when neither --audio nor --mix is given. */
   audio?: string;
+  /** Seconds of soundtrack fade-out ending at the export's `to` (for films that end before their soundtrack). */
+  audioFadeOut?: number;
+  /** Film length is the timeline end even when the soundtrack runs longer. */
+  trimToTimeline?: boolean;
 }
 
 /** Selection priority: explicit (?project= / --project) > pointer file > fallback. */

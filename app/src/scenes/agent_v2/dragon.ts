@@ -46,7 +46,8 @@ float shash(vec2 c) { return fract(sin(dot(c, vec2(12.9898, 78.233))) * 43758.54
 // overlapping shingle scales in the body's local (length, angle) space: x = height, y = cell id, z = crease
 vec3 scl(vec3 p) {
   float hd = smoothstep(9.1, 9.3, p.x); float ang = atan(p.z, p.y) / 6.28318;
-  vec2 g = vec2(p.x * mix(26.0, 42.0, hd), ang * mix(56.0, 88.0, hd));
+  float bel = smoothstep(-0.04, -0.2, p.y) * (1.0 - hd), nk = smoothstep(7.0, 8.8, p.x) * (1.0 - hd), dsl = smoothstep(0.15, 0.32, p.y) * (1.0 - hd); float rs = mix(1.0, 1.7, nk) * mix(1.0, 0.42, bel) * mix(1.0, 0.75, dsl);
+  vec2 g = vec2(p.x * mix(26.0, 42.0, hd) * rs, ang * mix(56.0, 88.0, hd) * rs);
   vec2 c0 = floor(g); float h1 = 0.0, h2 = 0.0, id = 0.0;
   for (int i = -1; i <= 1; i++) for (int j = -1; j <= 1; j++) {
     vec2 c = c0 + vec2(float(i), float(j)); vec2 q = (g - c - vec2(0.5, 0.5 + 0.5 * mod(c.x, 2.0))) * vec2(1.0, 1.2);
@@ -61,14 +62,15 @@ export function scaleFrag(s: THREE.WebGLProgramParametersWithUniforms) {
   s.fragmentShader = s.fragmentShader.replace('#include <common>', '#include <common>\n' + SCALE_GLSL).replace('#include <color_fragment>', `#include <color_fragment>
     vec3 sc_ = scl(vLoc);
     { float belly = smoothstep(-0.1, -0.24, vLoc.y) * (1.0 - smoothstep(9.0, 9.3, vLoc.x));
-      diffuseColor.rgb *= mix(0.45, 1.0, sc_.x) * (0.8 + 0.4 * sc_.y) * (1.0 - 0.75 * sc_.z);
+      float lf_ = 0.5 + 0.5 * sin(vLoc.x * 1.7 + 2.0 * sin(vLoc.x * 0.43) + vLoc.z * 2.0); float dor_ = smoothstep(0.0, 0.3, vLoc.y);
+      diffuseColor.rgb *= mix(0.45, 1.0, sc_.x) * (0.8 + 0.4 * sc_.y) * (1.0 - 0.75 * sc_.z) * (0.7 + 0.55 * lf_) * mix(1.0, 0.7, dor_);
       diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.32, 0.25, 0.16) * (0.7 + 0.3 * sc_.x), belly * 0.8); }`)
     .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
     totalEmissiveRadiance += sc_.z * uSeam * vec3(1.0, 0.28, 0.05) * (0.3 + 0.7 * smoothstep(-0.1, 0.3, vLoc.y));`)
     .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
     roughnessFactor = mix(0.7, roughnessFactor, sc_.x);`)
     .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
-    { float hgt = sc_.x * 0.012; vec3 dpx = dFdx(-vViewPosition), dpy = dFdy(-vViewPosition); float hx = dFdx(hgt), hy = dFdy(hgt);
+    { float hgt = sc_.x * 0.02; vec3 dpx = dFdx(-vViewPosition), dpy = dFdy(-vViewPosition); float hx = dFdx(hgt), hy = dFdy(hgt);
       vec3 r1 = cross(dpy, normal), r2 = cross(normal, dpx); float det = dot(dpx, r1);
       normal = normalize(abs(det) * normal - sign(det) * (hx * r1 + hy * r2)); }`);
 }

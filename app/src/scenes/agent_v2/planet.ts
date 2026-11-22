@@ -96,7 +96,8 @@ export default class Planet extends Scene {
     u.uMolten.value = 1 - sm(b(4), b(5) + 0.4, T); u.uGrow.value = sm(b(4) - 0.2, b(5), T);
     u.uSea.value = sm(b(5), b(6) + 0.5, T); u.uForest.value = sm(b(6), b(7) + 0.4, T); u.uCloud.value = sm(b(7), b(8) + 0.4, T);
     const k = sm(b(3) - 0.3, b(9), T), d = 9.2 - 2.4 * k;
-    this.cam.position.set(1.2 - 0.9 * k, 0.5 - 0.2 * k, d); this.cam.lookAt(-0.55 + 0.2 * k, 0.0, 0); this.cam.updateProjectionMatrix();
+    const sw = sm(b(5), b(6.2), T) * (1 - sm(b(7.4), b(8.6), T)), lk = new THREE.Vector3(-0.55 + 0.2 * k, 0.0, 0).lerp(new THREE.Vector3(-0.7, 1.15, -1.3), sw);
+    this.cam.position.set(1.2 - 0.9 * k, 0.5 - 0.2 * k, d).lerp(new THREE.Vector3(0.9 + 0.5 * sm(b(5), b(7.4), T), 1.25, 2.05), sw); this.cam.lookAt(lk); this.cam.updateProjectionMatrix();
     const r = this.ctx.renderer; r.setRenderTarget(out); r.setClearColor(0x000000, 1); r.clear(true, true, true); r.render(this.scene, this.cam);
     const g = this.layer.ctx; this.layer.clear(); term(g, S1_LINES, T, { size: 44, x: 200, align: 'left', y: 920, halo: 'rgba(0,0,0,0.6)', alpha: overlayTextDuck(f.tin, f.tout) });
     this.ctx.comp.draw(r, this.layer.upload(), out, { mode: 'normal', opacity: 1 }); r.resetState();

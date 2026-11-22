@@ -22,9 +22,9 @@ const BG_F = /* glsl */ `uniform float uInk, uT; varying vec2 vUv;
 float h(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float n(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h(i), h(i + vec2(1, 0)), f.x), mix(h(i + vec2(0, 1)), h(i + vec2(1, 1)), f.x), f.y); }
 float fb(vec2 p) { float s = 0.0, a = 0.5; for (int i = 0; i < 5; i++) { s += a * n(p); p *= 2.03; a *= 0.5; } return s; }
-void main() { vec2 uv = vUv; vec3 c = vec3(0.94, 0.90, 0.81);
+void main() { vec2 uv = vUv; vec3 c = vec3(0.80, 0.75, 0.66);
   c -= 0.05 * fb(uv * vec2(9.0, 30.0)) + 0.03 * h(floor(uv * 900.0));
-  c -= vec3(0.06, 0.07, 0.03) * smoothstep(0.35, 1.0, length((uv - 0.5) * vec2(1.6, 1.0)));
+  c -= vec3(0.2, 0.21, 0.18) * smoothstep(0.25, 1.0, length((uv - 0.5) * vec2(1.6, 1.0)));
   for (int k = 0; k < 3; k++) { float fk = float(k); float base = 0.18 + 0.12 * fk;
     float ridge = base + 0.16 * fb(vec2(uv.x * (2.0 + fk) + fk * 7.0, fk)) + 0.05 * n(vec2(uv.x * 14.0, fk));
     float m = smoothstep(ridge + 0.004, ridge - 0.004, uv.y) * smoothstep(ridge - 0.25, ridge, uv.y + 0.08 * fb(uv * 6.0 + fk));
@@ -48,15 +48,15 @@ export default class S5Paper extends Scene {
     bg.frustumCulled = false; bg.renderOrder = -1; this.scene.add(bg); this.bgMesh = bg;
     const pm = new THREE.PMREMGenerator(this.ctx.renderer); this.env = pm.fromScene(new RoomEnvironment(), 0.04).texture; pm.dispose(); this.ctx.renderer.resetState();
     this.scene.environment = this.env; this.scene.environmentIntensity = 0.35;
-    const key = new THREE.DirectionalLight(0xfff2e0, 3.0); key.position.set(-4, 6, 6);
+    const key = new THREE.DirectionalLight(0xfff2e0, 4.2); key.position.set(-4, 6, 6);
     const rim = new THREE.DirectionalLight(0xffe0c0, 1.6); rim.position.set(5, 2, -6);
-    this.scene.add(key, rim, new THREE.HemisphereLight(0xfaf2e4, 0x8a7a66, 0.8));
+    this.scene.add(key, rim, new THREE.HemisphereLight(0xfaf2e4, 0x3a2e26, 0.45));
     const fg = new THREE.PlaneGeometry(0.16, 0.16); this.flakes = new THREE.InstancedMesh(fg, new THREE.MeshStandardMaterial({ color: 0xefe6d4, roughness: 0.9, side: THREE.DoubleSide }), 260);
     this.flakes.frustumCulled = false; this.scene.add(this.flakes);
   }
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
     const T = f.t, [h1, h2, h3, h4] = HITS as [number, number, number, number], P = this.rig.paperU;
-    P.paper.value = sm(h1 - 0.05, h1 + 0.55, T); P.facet.value = sm(h2 - 0.05, h2 + 0.5, T); P.fold.value = sm(h3 - 0.05, h3 + 0.5, T); P.ink.value = sm(h4 - 0.05, h4 + 0.6, T);
+    P.paper.value = sm(h1 - 0.05, h1 + 0.55, T); P.facet.value = sm(h2 - 0.05, h2 + 0.5, T); P.fold.value = sm(h3 - 0.05, h3 + 0.5, T); P.ink.value = sm(h4 - 0.05, h4 + 0.6, T); P.tint.value.setRGB(0.86, 0.2, 0.11).lerp(new THREE.Color(0.92, 0.86, 0.74), sm(h4, h4 + 0.6, T));
     this.bgU.uInk.value = sm(h4, h4 + 1.4, T); this.bgU.uT.value = T;
     const head = 4 + (T - T32) * V; this.rig.dragon.pose(paperPath, head, LEN); this.rig.reveal.value = 1;
     this.rig.jaw.value = 0.12 + 0.1 * Math.sin(T * 1.3);
