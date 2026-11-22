@@ -153,6 +153,12 @@
       "scene": "fx_promo/s10_finale",
       "id": "s10_finale",
       "start": 195.18,
+      "end": 203.95
+    },
+    {
+      "scene": "fx_promo/s12_city_logo",
+      "id": "s12_city_logo",
+      "start": 196.0,
       "end": 214.5
     }
   ],
@@ -302,10 +308,10 @@
       "dur": 0.24
     },
     {
-      "id": "t-multiverse",
-      "transition": "fxp_multiverse",
+      "id": "t-infinite-zoom",
+      "transition": "fxp_infinite_zoom",
       "from": "recap7_s7_tunnel",
-      "to": "s10_finale",
+      "to": "s12_city_logo",
       "at": 196.15,
       "dur": 7.771
     }

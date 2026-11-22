@@ -102,7 +102,6 @@ export default class S2Surface extends Scene {
     train(g, this.cues, T, 960, 330, { size: 230, family: fam, from: 1.6, shake: 8, out: 0.08 }, bar(19) - 0.1);
     train(g, this.cues2, T, 960, 520, { size: 120, family: F.archivo(62, 900), from: 2.2, shake: 4, out: 0.08 }, bar(19) - 0.1);
     g.restore();
-    typeLine(g, 'y = sin(1.35x - 0.9t) + Σ ripple(beat)', 192, 930, T, T0 + 0.4, { size: 28, color: C.ash, cps: 60 });
 
     present(this.ctx, out, this.scene, this.cam, this.layer, () => L.render(this.ctx.renderer, out, this.cam));
     const beatK = Math.exp(-(((lt % BEAT) + BEAT) % BEAT) * 10);
