@@ -14,6 +14,7 @@ const testScripts = [
   'test_advanced_demo.ts',
   'test_v060_features.ts',
   'test_math_rig_audit.ts',
+  'test_v2_sync.ts',
 ];
 
 console.log('================================================================');

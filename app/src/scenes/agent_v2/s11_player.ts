@@ -96,7 +96,7 @@ export default class S11Player extends Scene {
     gr = g.createLinearGradient(0, 0, 0, 150); gr.addColorStop(0, 'rgba(0,0,0,0.7)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 1920, 150);
     g.textBaseline = 'middle'; g.fillStyle = W; g.font = font(F.archivo(100, 700), 34); g.fillText('everything you see is me', 40, 54);
     g.font = font(F.archivo(100, 500), 22); g.fillStyle = D; g.fillText('agent  ·  rendered just now', 40, 96);
-    const DUR = 224.4, pos = Math.min(1, Math.max(0, (it + 109) / DUR)), x0 = 40, x1 = 1880, px = x0 + (x1 - x0) * pos, scr = k === 3 || k === 4;
+    const DUR = 211.2, pos = Math.min(1, Math.max(0, (it + 109) / DUR)), x0 = 40, x1 = 1880, px = x0 + (x1 - x0) * pos, scr = k === 3 || k === 4;
     g.fillStyle = 'rgba(255,255,255,0.25)'; g.fillRect(x0, 986, x1 - x0, scr ? 10 : 6); g.fillStyle = 'rgba(255,255,255,0.4)'; g.fillRect(x0, 986, Math.min(x1 - x0, (px - x0) * 1.15), scr ? 10 : 6);
     g.fillStyle = R; g.fillRect(x0, 986, px - x0, scr ? 10 : 6); g.beginPath(); g.arc(px, 989 + (scr ? 2 : 0), scr ? 14 : 9, 0, 7); g.fill();
     if (scr) { g.fillStyle = 'rgba(10,10,12,0.9)'; g.fillRect(px - 130, 800, 260, 160); g.strokeStyle = W; g.lineWidth = 3; g.strokeRect(px - 130, 800, 260, 160);

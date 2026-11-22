@@ -52,7 +52,7 @@ export function activeProjectName(project?: string | null): string {
   });
 }
 
-function loadManifest(project?: string | null): ProjectManifest {
+export function loadManifest(project?: string | null): ProjectManifest {
   const available = Object.keys(manifests);
   const want = resolveProjectName({
     urlProject: project,

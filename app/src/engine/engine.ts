@@ -289,8 +289,12 @@ export class Engine {
     this.lastT = -1;
   }
 
+  /** when set, duration is the timeline end even if the audio driver runs longer */
+  trimToTimeline = false;
+
   get duration() {
     const tlEnd = this.timeline.reduce((m, e) => Math.max(m, e.end), 0);
+    if (this.trimToTimeline && tlEnd > 0) return tlEnd;
     const drDur = this.driver?.duration ?? 0;
     return Math.max(tlEnd, drDur) || 5.0;
   }

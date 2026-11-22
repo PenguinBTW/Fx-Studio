@@ -15,7 +15,7 @@ import type { PathFn } from './dragon';
 
 export const T37 = bar(37), S6_END = bar(45);
 export const COMIC: DragonLook = { scale: 0xe0186e, iri: 0, metal: 0, rough: 0.45, horn: 0xffd21a, mane: 0x00a6e6, maneSheen: 0x80e0ff, fin: 0xffc400, finGlow: 0x000000, seam: 0, eye: [1, 1, 0.2] };
-export const S6_LINES: TLine[] = [{ text: 'comic book? watch.', at: T37 - 1.1, hold: 0.55, cps: 22 }];
+export const S6_LINES: TLine[] = [{ text: 'comic book? watch.', at: T37 + 0.25, hold: 0.9, cps: 22 }];
 const sm = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 export const comicPath: PathFn = (p, o) => o.set(p * 1.15 - 3, 1.5 * Math.sin(p * 0.42) + 0.4 * Math.sin(p * 1.1), 1.6 * Math.sin(p * 0.31 + 1.0));
 const V = 3.2;

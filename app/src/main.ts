@@ -2,7 +2,7 @@
 import { Engine, type AdaptiveSampling } from './engine/engine';
 import { PW, PH, SCALE } from './engine/gl';
 import { BRIDGE_VERSION, textureCanvases, type EngineBridge, type TextProbeRecord } from './engine/bridge';
-import { makeTimeline, makeTransitions, activeProjectName } from './timeline';
+import { makeTimeline, makeTransitions, activeProjectName, loadManifest } from './timeline';
 import { installFxStats, exposeFxStats } from './engine/fxstats';
 
 const params = new URLSearchParams(location.search);
@@ -25,6 +25,7 @@ async function boot() {
   const onlySet = ONLY ? new Set(ONLY.split(',')) : null;
   engine.project = activeProjectName(PROJECT);
   engine.transitions = makeTransitions(PROJECT);
+  engine.trimToTimeline = Boolean(loadManifest(PROJECT).trimToTimeline);
   await engine.init(onlySet ? (e) => onlySet.has(e.id) || (Boolean(e.file) && onlySet.has(e.file!)) : undefined);
   TIMELINE = engine.timeline;
   if (EXPORT) { exposeFxStats(engine.renderer); setupExport(); }
@@ -318,7 +319,10 @@ function setupPlayer() {
       if (audio && audioAvailable && !audio.error && !audio.paused) {
         if (audio.currentTime !== lastAudioT) { lastAudioT = audio.currentTime; lastPerf = now; }
         t = lastAudioT + (now - lastPerf) / 1000;
-        if (audio.ended) playing = false;
+        if (audio.ended || t >= engine.duration) {
+          if (loop) seek(loop[0]);
+          else { audio.pause(); t = Math.min(t, engine.duration); playing = false; }
+        }
       } else {
         const dt = (now - lastPerf) / 1000;
         lastPerf = now;

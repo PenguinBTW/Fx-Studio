@@ -15,7 +15,7 @@ export const TX = bar(10), TF = bar(11.5), S2_END = bar(15);
 export const S2_LINES: TLine[] = [{ text: 'watch it fall.', at: TX + 0.25, hold: 1.0, cps: 16 }, { text: 'or stop it halfway.', at: TF + 0.05, hold: 2.4, cps: 16 }];
 const sm = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 /** Simulation time: real time after the blast until the freeze, then a 150 ms brake into a near-stop drift. */
-export function tau(T: number) { const te = T - TX, tf = TF - TX; if (te <= 0) return 0; if (te < tf) return te; const d = te - tf; return tf + 0.15 * (1 - Math.exp(-d / 0.15)) + 0.012 * d; }
+export function tau(T: number) { const te = T - TX, tf = TF - TX; if (te <= 0) return 0; if (te < tf) return te; const d = te - tf; return tf + 0.15 * (1 - Math.exp(-d / 0.15)) + 0.035 * d; }
 
 
 const SHARD_V = /* glsl */ `uniform float uTau, uSep, uRot; varying vec3 vN, vW; varying float vK, vDepth; ${SHARD_GLSL}
@@ -24,11 +24,11 @@ void main() { mat3 M; vec3 p = shardPos(position, uTau, uSep, ${R.toFixed(2)}, M
   vec4 w = modelMatrix * vec4(p, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
 export const SHARD_F = /* glsl */ `${SURF_FN} uniform float uAsh, uTau, uHeat; varying vec3 vN, vW; varying float vK, vDepth;
 void main() { vec3 col;
-  if (vK < 0.5) { col = shadePlanet(vN, vW); float l = dot(col, vec3(0.3, 0.55, 0.15)); col = mix(col, vec3(l) * vec3(0.95, 0.92, 0.9), uAsh * 0.88); }
+  if (vK < 0.5) { col = shadePlanet(vN, vW); float l = dot(col, vec3(0.3, 0.55, 0.15)); col = mix(col, vec3(l) * vec3(0.95, 0.92, 0.9), uAsh * 0.45); }
   else { vec3 Ng = normalize(cross(dFdx(vW), dFdy(vW))); float diff = max(dot(Ng, uSun), 0.0);
     float cr = pcrack(vW * 2.6 + vN * 3.0); float strata = 0.5 + 0.5 * gn(vW * 2.0 + vec3(vDepth * 8.0));
-    float vein = smoothstep(0.07, 0.0, cr) * smoothstep(0.2, 0.6, gn(vW * 1.7) + 0.5); float hot = clamp(vein * 0.9 + smoothstep(0.9, 0.84, vDepth) * 0.6, 0.0, 1.0) * uHeat;
-    col = mix(vec3(0.03, 0.028, 0.027), vec3(0.075, 0.068, 0.062), strata * 0.5 + 0.5 * gn(vW * 9.0)) * (0.3 + 1.4 * diff) * mix(vec3(1.0), vec3(0.75, 0.78, 0.85), uAsh) + blackbody(hot * (0.55 + 0.25 * gn(vW * 5.0))) * hot * 0.9; }
+    float vein = smoothstep(0.07, 0.0, cr) * smoothstep(0.2, 0.6, gn(vW * 1.7) + 0.5); float hot = clamp(vein * 1.1 + smoothstep(0.92, 0.7, vDepth) * 0.8 + 0.25 * smoothstep(0.3, 0.0, cr), 0.0, 1.0) * uHeat;
+    col = mix(vec3(0.03, 0.028, 0.027), vec3(0.075, 0.068, 0.062), strata * 0.5 + 0.5 * gn(vW * 9.0)) * (0.3 + 1.4 * diff) * mix(vec3(1.0), vec3(0.75, 0.78, 0.85), uAsh) + blackbody(hot * (0.6 + 0.3 * gn(vW * 5.0))) * hot * 1.3; }
   gl_FragColor = vec4(col, 1.0); }`;
 const EMBER_V = /* glsl */ `uniform float uTau, uAsh; attribute vec3 aDir; attribute vec3 aRnd; varying vec3 vC; varying float vA; ${PNOISE}
 void main() { float t = max(uTau - 0.6 * aRnd.x, 0.0); float sp = 0.4 + 2.2 * aRnd.y * aRnd.y;
@@ -65,12 +65,12 @@ export default class S2Crumble extends Scene {
     const T = f.t, u = this.u, t9 = bar(9);
     const ta = tau(T); u.uTau.value = ta; u.uT.value = T; u.uRot.value = 0.04 * Math.min(T, TX); this.uc.uT.value = T; this.uc.uRot.value = u.uRot.value;
     const rumble = sm(t9 + 0.4, TX, T) * (T < TX ? 1 : 0);
-    u.uSep.value = 0.006 * sm(t9 + 0.4, TX, T); u.uAsh.value = sm(TF - 0.05, TF + 0.6, T); u.uHeat.value = 1 - 0.55 * sm(TX, TF, ta + TX);
+    u.uSep.value = 0.006 * sm(t9 + 0.4, TX, T); u.uAsh.value = sm(TF - 0.05, TF + 0.6, T); u.uHeat.value = 1 - 0.3 * sm(TX, TF, ta + TX);
     this.uc.uCloud.value = 1 - sm(TX - 0.1, TX + 0.35, T); this.halo.visible = this.cloud.visible = T < TX + 0.4;
     (this.halo.material as THREE.ShaderMaterial).uniforms.uMolten!.value = 0;
     const kOut = sm(TX, TF, T), kIn = sm(TF + 0.2, S2_END + 0.8, T);
     const r = 6.85 + 2.1 * kOut - 4.6 * kIn, a = Math.atan2(0.3, 6.85) - 2.0 * kIn, h = 0.3 + 0.25 * kOut + 0.9 * Math.sin(kIn * 2.2) * kIn;
-    const j = 0.035 * rumble; this.cam.position.set(r * Math.sin(a) + j * Math.sin(T * 61), h + j * Math.sin(T * 47 + 1), r * Math.cos(a));
+    const j = 0.035 * rumble, dl = sm(TF, S2_END + 0.8, T), lat = 0.9 * Math.sin(dl * 3.1416) ; this.cam.position.set(r * Math.sin(a) + j * Math.sin(T * 61) + lat * Math.cos(a), h + j * Math.sin(T * 47 + 1) + 0.12 * Math.sin(T * 0.9) * dl, r * Math.cos(a) - lat * Math.sin(a));
     this.cam.lookAt(-0.35 * (1 - kOut) + 0.3 * kIn, 0.0 + 0.2 * kIn, 0); this.cam.fov = 30 + 12 * kIn; this.cam.updateProjectionMatrix();
     const rr = this.ctx.renderer; rr.setRenderTarget(out); rr.setClearColor(0x000000, 1); rr.clear(true, true, true); rr.render(this.scene, this.cam);
     const g = this.layer.ctx; this.layer.clear(); term(g, S2_LINES, T, { size: 44, x: 200, align: 'left', y: 920, halo: 'rgba(0,0,0,0.6)', alpha: overlayTextDuck(f.tin, f.tout) });

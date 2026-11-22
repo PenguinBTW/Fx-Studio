@@ -47,7 +47,7 @@ export function marker() {
   g.add(body, band, tip, collar); g.rotation.z = 0.35; return g;
 }
 export function scissors() {
-  const g = new THREE.Group(), steel = std(0xc9ccd2, 0.18, 1), grip = std(0xd8301c, 0.35, 0, { clearcoat: 0.5 });
+  const g = new THREE.Group(), steel = std(0xc9ccd2, 0.18, 1), grip = std(0xb8281a, 0.6, 0, { clearcoat: 0.15, clearcoatRoughness: 0.5 });
   const half = (s: number) => { const h = new THREE.Group(); const blade = box(1.5, 0.025, 0.12, steel); blade.position.set(0.75, 0, 0.03 * s); blade.rotation.y = -0.04 * s;
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.06, 12, 32), grip); ring.rotation.x = Math.PI / 2; ring.position.set(-0.45, 0, 0.18 * s); ring.castShadow = true;
     const arm = box(0.35, 0.05, 0.08, grip); arm.position.set(-0.15, 0, 0.08 * s); h.add(blade, ring, arm); return h; };
