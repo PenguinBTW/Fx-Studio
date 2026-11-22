@@ -189,7 +189,7 @@ export default class S4Verbs extends Scene {
     this.motes = new THREE.Points(g, m); this.motes.frustumCulled = false; this.scene.add(this.motes);
   }
   // terminal callouts live on a plane at the focus distance, so the depth of field keeps them sharp
-  private tscene = new THREE.Scene(); private tcam = new THREE.PerspectiveCamera(26, 16 / 9, 0.01, 500);
+  private tscene = new THREE.Scene(); private tcam = new THREE.PerspectiveCamera(26, 16 / 9, 0.05, 200);
   private mkText() {
     const m = new THREE.MeshBasicMaterial({ map: this.layer.texture, color: new THREE.Color(1.5, 1.5, 1.5), transparent: true, alphaTest: 0.01, depthTest: true, depthFunc: THREE.AlwaysDepth, depthWrite: true });
     this.txt = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), m); this.txt.renderOrder = 999; this.txt.frustumCulled = false; this.tcam.add(this.txt); this.tscene.add(this.tcam);
@@ -342,7 +342,7 @@ export default class S4Verbs extends Scene {
     return { toneMap: 'agx', exposure: [0.86, 1.0, 0.95][L]! + flare, bloom: 0.16, bloomThreshold: 1.5, halation: 0.12, blackPoint: 0.012, vignette: 0.55, grain: 0.04, ca: 0.25 + 3 * whip,
       shake: [6 * shake * Math.sin(T * 91), 6 * shake * Math.cos(T * 77)], zoom: 1 + 0.012 * shake,
       volumetric: (L === 0 ? 0.3 : 0.14) * inWin, volumetricLightPos: [wv.x * 0.5 + 0.5, wv.y * 0.5 + 0.5], volumetricDecay: 0.95, volumetricSteps: 24,
-      depthDof: { enabled: true, focusDistance: focus, aperture: panels ? 8 : 15, blades: 9, maxRadius: 30 } };
+      depthDof: { enabled: true, focusDistance: focus, aperture: panels ? 8 : 15, blades: 9, maxRadius: 30, near: 0.05, far: 200 } };
   }
   private pcams = [0, 1, 2, 3].map(() => new THREE.PerspectiveCamera(24, 16 / 9, 0.05, 200));
   override dispose() { this.layer.texture.dispose(); this.oak?.dispose(); this.env?.dispose(); this.winDay?.dispose(); this.winNight?.dispose(); this.key.map?.dispose(); this.scan.map?.dispose(); this.key.shadow.map?.dispose(); this.lampL.shadow.map?.dispose(); this.rtTmp?.dispose(); this.rtAcc?.dispose(); for (const s of [this.A, this.B, this.strip]) s.tex.dispose();
