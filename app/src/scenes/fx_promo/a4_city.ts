@@ -192,6 +192,7 @@ export default class A4City extends Scene {
       const m = o as THREE.Mesh;
       if (!m.isMesh) return;
       const k = this.chunks.length, im = new THREE.InstancedMesh(m.geometry, this.debrisMat, Math.max(1, this.nFloors));
+      im.name = `city_debris.${m.name}`; im.userData.fx_entity = `city_debris.${m.name}`;
       im.castShadow = true; im.receiveShadow = true; im.frustumCulled = false; im.setColorAt(0, this.c.set(0xffffff)); im.count = 0;
       this.chunks.push({ im, off: m.getWorldPosition(new THREE.Vector3()), ax: new THREE.Vector3(h(k, 81) - 0.5, h(k, 82) - 0.5, h(k, 83) - 0.5).normalize(), w: 4 + 8 * h(k, 84) });
       this.scene.add(im);
