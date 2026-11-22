@@ -124,6 +124,8 @@ export default class A4City extends Scene {
   private brk: { t: number; p: THREE.Vector3; q: THREE.Quaternion; v: THREE.Vector3 }[][] = [];
   private shocks: THREE.Vector3[] = [];
   private hero = -1; private heroDir = 0; private heroL = new THREE.PointLight(0xff7a30, 0, 16, 1.6);
+  // Hero close-up lighting: a warm key from the camera side and a cool rim behind the tower separate chunks from the dust.
+  private keyL = new THREE.PointLight(0xffe2c0, 0, 30, 1.2); private rimL = new THREE.PointLight(0x7fb0ff, 0, 30, 1.2);
   private debrisMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85, vertexColors: true, emissive: 0x1c1814 });
   private dm = new THREE.Matrix4(); private dp = new THREE.Vector3(); private dq = new THREE.Quaternion();
 
@@ -200,7 +202,7 @@ export default class A4City extends Scene {
         if (score > bestC) { bestC = score; this.heroDir = ang; }
       }
     }
-    this.scene.add(this.heroL);
+    this.scene.add(this.heroL, this.keyL, this.rimL);
     this.shocks = this.B.map((b, bi) => ({ b, bi })).sort((a, c) => c.b.n - a.b.n).slice(0, 4).map(({ b, bi }) => {
       const L = b.n * FH * 0.8;
       return new THREE.Vector3(b.x + Math.cos(b.psi) * L, b.z + Math.sin(b.psi) * L, b.tc + (bi === this.tallest ? 0.91 : 1.98));
@@ -436,6 +438,10 @@ export default class A4City extends Scene {
       for (let i = 0; i < Math.min(5, hb.n); i++) { const d = T - this.brk[this.hero]![i]!.t; if (d > 0) heat += Math.exp(-d * 3); }
       this.heroL.position.set(hb.x + Math.cos(hb.psi) * 0.8, 0.8, hb.z + Math.sin(hb.psi) * 0.8);
       this.heroL.intensity = 30 * Math.min(1.5, heat);
+      const on = bn >= 45.9 && bn < 46.6 ? 1 : 0, cx = Math.cos(this.heroDir), cz = Math.sin(this.heroDir);
+      this.keyL.position.set(hb.x + cx * 6 - cz * 2.5, 4.5, hb.z + cz * 6 + cx * 2.5);
+      this.rimL.position.set(hb.x - cx * 5 + cz * 3, 5, hb.z - cz * 5 - cx * 3);
+      this.keyL.intensity = 30 * on; this.rimL.intensity = 70 * on;
     }
     applyCam(this.cam, key, a.kick * 0.5 * (1 - night * 0.5) + dustK * a.kick * 2);
     this.dustMat.uniforms.uScale!.value = 1080 / (2 * Math.tan((this.cam.fov * Math.PI) / 360));

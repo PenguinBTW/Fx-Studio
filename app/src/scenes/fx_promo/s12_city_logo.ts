@@ -58,6 +58,7 @@ void main(){
   }
   c *= 1.0 + uFlash * logo * 1.5;
   float d = length(vW - cameraPosition), fo = 1.0 - exp(-pow(uFogD * d, 2.0));
+  c *= mix(0.2, 1.0, smoothstep(1.0, 7.0, d));
   gl_FragColor = vec4(mix(c, uFog, fo), 1.0);
 }`;
 const SKY_VS = `varying vec3 vD; void main(){ vD = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
@@ -90,8 +91,8 @@ export default class S12CityLogo extends Scene {
   private m = new THREE.Matrix4(); private p = new THREE.Vector3(); private s = new THREE.Vector3(); private q = new THREE.Quaternion();
   private hemi = new THREE.HemisphereLight(0x5a6a99, 0x0a0806, 0.5);
   private moon = new THREE.DirectionalLight(0x8899cc, 0.6);
-  private posC = new THREE.CatmullRomCurve3([[0.0, 1.7, 15.5], [0.0, 2.1, 5.0], [-15, 2.4, 0.8], [-3, 15, 24], [0, 36, 32]].map((v) => new THREE.Vector3(...(v as [number, number, number]))));
-  private tgtC = new THREE.CatmullRomCurve3([[0.0, 1.8, 0], [0.0, 3.2, -9], [6, 2.6, -1.6], [0, 1, -1.5], [0, 0, 0.6]].map((v) => new THREE.Vector3(...(v as [number, number, number]))));
+  private posC = new THREE.CatmullRomCurve3([[0.0, 1.7, 15.5], [0.0, 2.1, 5.0], [-15, 2.4, 0.8], [-3, 14, 30], [0, 25, 37]].map((v) => new THREE.Vector3(...(v as [number, number, number]))));
+  private tgtC = new THREE.CatmullRomCurve3([[0.0, 1.8, 0], [0.0, 3.2, -9], [6, 2.6, -1.6], [0, 1, -1.5], [0, 1.5, -0.5]].map((v) => new THREE.Vector3(...(v as [number, number, number]))));
 
   override async init() {
     // Rasterise the lockup into a mask on the block grid: 10 px per block.
