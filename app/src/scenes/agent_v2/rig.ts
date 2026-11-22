@@ -28,22 +28,22 @@ function revealFrag(rv: { value: number }, glow: { value: number }) {
 }
 
 
-export interface PaperU { paper: { value: number }; facet: { value: number }; fold: { value: number }; ink: { value: number } }
+export interface PaperU { paper: { value: number }; facet: { value: number }; fold: { value: number }; ink: { value: number }; tint: { value: THREE.Color } }
 /** paper: washi material sweeping head->tail; facet: flat-shaded folds; fold: vertices snap to a coarse lattice (origami); ink: sumi creases */
 function paperHook(P: PaperU) {
   return (s: THREE.WebGLProgramParametersWithUniforms) => {
-    s.uniforms.uPaper = P.paper; s.uniforms.uFacet = P.facet; s.uniforms.uFold = P.fold; s.uniforms.uInk = P.ink;
+    s.uniforms.uPaper = P.paper; s.uniforms.uFacet = P.facet; s.uniforms.uFold = P.fold; s.uniforms.uInk = P.ink; s.uniforms.uPTint = P.tint;
     const front = (u: string) => `clamp(${u} * 14.0 - (${LEN.toFixed(2)} + 1.0 - vLoc.x) * 1.1, 0.0, 1.0)`;
     s.vertexShader = s.vertexShader.replace('#include <common>', '#include <common>\nuniform float uFold;')
       .replace('vec3 P0 = position, N0 = normal;', `vec3 P0 = position, N0 = normal; { float fk_ = clamp(uFold * 14.0 - (${LEN.toFixed(2)} + 1.0 - position.x) * 1.1, 0.0, 1.0);
-        float r_ = length(P0.yz), a_ = atan(P0.z, P0.y), n_ = 5.0, ac_ = (floor(a_ / 6.2832 * n_) + 0.5) * 6.2832 / n_;
-        float tw_ = abs(fract(P0.x / 0.38) - 0.5) * 2.0; float rp_ = r_ * cos(3.1416 / n_) / max(cos(a_ - ac_), 0.5) * (0.82 + 0.36 * tw_);
+        float r_ = length(P0.yz), a_ = atan(P0.z, P0.y), n_ = 4.0, ac_ = (floor(a_ / 6.2832 * n_) + 0.5) * 6.2832 / n_;
+        float tw_ = abs(fract(P0.x / 0.38) - 0.5) * 2.0; float rp_ = r_ * cos(3.1416 / n_) / max(cos(a_ - ac_), 0.5) * (0.7 + 0.6 * tw_);
         vec2 yz_ = vec2(cos(a_), sin(a_)) * rp_; P0.yz = mix(P0.yz, yz_, fk_ * (1.0 - smoothstep(0.32, 0.5, r_))); }`);
-    s.fragmentShader = s.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uPaper, uFacet, uInk;\nfloat ph_(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }')
+    s.fragmentShader = s.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uPaper, uFacet, uInk; uniform vec3 uPTint;\nfloat ph_(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }')
       .replace('#include <color_fragment>', `#include <color_fragment>
       { float pp_ = ${front('uPaper')}, ik_ = ${front('uInk')};
         float fib_ = ph_(floor(vLoc * vec3(400.0, 900.0, 900.0))) * 0.025 + 0.03 * sin(vLoc.x * 37.0 + vLoc.y * 90.0) * sin(vLoc.z * 70.0);
-        vec3 pc_ = vec3(0.93, 0.89, 0.80) - fib_;
+        vec3 pc_ = uPTint * (1.0 - fib_ * 1.5);
         float back_ = smoothstep(0.02, 0.3, vLoc.y + 0.08 * sin(vLoc.x * 5.0));
         float brush_ = smoothstep(0.35, 0.75, ph_(floor(vLoc * vec3(3.0, 1.0, 1.0)) + 3.0) * 0.5 + 0.5 * sin(vLoc.x * 2.3 + vLoc.z * 9.0));
         pc_ = mix(pc_, vec3(0.08, 0.07, 0.07), ik_ * back_ * (0.55 + 0.45 * brush_));
@@ -74,7 +74,7 @@ export class DragonRig {
   readonly jaw = { value: 0 };
   readonly reveal = { value: 1 };
   readonly revGlow = { value: 1 };
-  readonly paperU: PaperU = { paper: { value: 0 }, facet: { value: 0 }, fold: { value: 0 }, ink: { value: 0 } };
+  readonly paperU: PaperU = { paper: { value: 0 }, facet: { value: 0 }, fold: { value: 0 }, ink: { value: 0 }, tint: { value: new THREE.Color(0.93, 0.89, 0.80) } };
   async load(ctx: SceneCtx, L: DragonLook = OBSIDIAN) {
     const fr = this.dragon.frames, sc = this.dragon.scale, rv = revealFrag(this.reveal, this.revGlow), ph = paperHook(this.paperU);
     const both = (a?: (s: THREE.WebGLProgramParametersWithUniforms) => void) => (s: THREE.WebGLProgramParametersWithUniforms) => { a?.(s); rv(s); ph(s); };
