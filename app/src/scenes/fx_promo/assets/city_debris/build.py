@@ -32,6 +32,8 @@ for i, p in enumerate(pts):
         c = (1.0, 1.0, 1.0, 1.0) if fc[inner] else (0.72, 0.71, 0.7, 1.0)
         for lp in fc.loops: lp[col] = c
     me = bpy.data.meshes.new(f'chunk_{i:02d}'); bm.to_mesh(me); bm.free()
+    for ca in [c for c in me.color_attributes if c.name != 'Col']: me.color_attributes.remove(ca)
+    me.color_attributes.active_color = me.color_attributes['Col']; me.color_attributes.render_color_index = 0
     ob = bpy.data.objects.new(f'chunk_{i:02d}', me); bpy.context.collection.objects.link(ob)
     assign(ob, BODY); ob['fx_part'] = ob.name
     select(ob); bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='BOUNDS')
