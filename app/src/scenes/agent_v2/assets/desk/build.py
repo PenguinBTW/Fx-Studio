@@ -109,15 +109,16 @@ dled = fin([rb('dl', 0.07, 0.02, 0.03, LEDG, bev=0.006)], 'drive_led', loc=(-0.4
 
 # ---- portable cassette recorder, front edge at -Y
 deck = fin([rb('cbody', 3.0, 1.8, 0.55, ALU, bev=0.07), rb('top', 2.9, 1.7, 0.03, PLA, z=0.54, bev=0.012),
-            rb('cass', 1.42, 0.74, 0.012, CASS, x=-0.55, y=0.25, z=0.565, bev=0.006), rb('win', 0.62, 0.26, 0.004, DARK, x=-0.55, y=0.25, z=0.576, bev=0.002),
-            rb('glass', 1.52, 0.84, 0.012, GLASS, x=-0.55, y=0.25, z=0.64, bev=0.006),
+            rb('cass', 1.42, 0.74, 0.05, CASS, x=-0.55, y=0.25, z=0.565, bev=0.012), rb('clab', 1.1, 0.2, 0.004, LAB, x=-0.55, y=-0.02, z=0.614, bev=0.002), rb('tstrip', 0.6, 0.03, 0.006, TAPE, x=-0.55, y=0.12, z=0.614, bev=0.002),
+            *[cyl('scr%d' % j, 0.02, 0.01, loc=(-0.55 + 0.62 * (1 if j & 1 else -1), 0.25 + 0.3 * (1 if j & 2 else -1), 0.616), m=STEEL, verts=12) for j in range(4)],
+            rb('glass', 1.52, 0.84, 0.012, GLASS, x=-0.55, y=0.25, z=0.68, bev=0.006),
             *[torus('gr%d' % k, 0.1 + 0.07 * k, 0.012, PLA, loc=(0.95, 0.05, 0.575)) for k in range(4)],
             rb('jack', 0.04, 0.12, 0.12, DARK, x=1.5, y=0.2, z=0.25, bev=0.01)], 'deck')
 for i in range(4):
     k = fin([rb('k%d' % i, 0.36, 0.42, 0.12, KRED if i == 1 else KSIL, y=-0.21, bev=0.03)], 'deck_key%d' % i, loc=(-1.15 + 0.42 * i, -0.39, 0.55)); parent(k, deck)
 for i, x in enumerate((-0.85, -0.25)):
     teeth = [rb('t%d_%d' % (i, j), 0.03, 0.1, 0.03, LAB, x=0.045 * math.cos(j * TAU / 6), y=0.045 * math.sin(j * TAU / 6), bev=0.005, rot=(0, 0, j * TAU / 6)) for j in range(6)]
-    sp = fin([lathe('wound%d' % i, [(0, 0), (0.2 - 0.06 * i, 0), (0.2 - 0.06 * i, 0.02), (0, 0.02)], TAPE), lathe('hub%d' % i, [(0, 0.02), (0.07, 0.02), (0.07, 0.035), (0, 0.035)], LAB), *teeth], 'deck_spool%d' % i, loc=(x, 0.25, 0.577))
+    sp = fin([lathe('wound%d' % i, [(0, 0), (0.2 - 0.06 * i, 0), (0.2 - 0.06 * i, 0.02), (0, 0.02)], TAPE), lathe('hub%d' % i, [(0, 0.02), (0.07, 0.02), (0.07, 0.035), (0, 0.035)], LAB), *teeth], 'deck_spool%d' % i, loc=(x, 0.25, 0.616))
     parent(sp, deck)
 knob = fin([lathe('kn', [(0, 0), (0.16, 0), (0.165, 0.02), (0.16, 0.16), (0.14, 0.18), (0, 0.18)], ALU, seg=48), rb('ind', 0.02, 0.12, 0.01, KRED, y=0.06, z=0.18, bev=0.004)], 'deck_knob', loc=(1.15, 0.6, 0.57))
 parent(knob, deck)

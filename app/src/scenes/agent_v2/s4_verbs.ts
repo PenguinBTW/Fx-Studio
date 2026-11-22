@@ -57,8 +57,8 @@ const SHOTS: Shot[] = [
   { t: [0.8, 0, 0.2], d: 4.6, a0: -0.35, a1: 0.0, el: 0.82, fov: 28 }, { t: [1.0, 0, 0.2], d: 5.2, a0: 0.2, a1: -0.2, el: 0.45, fov: 28 },
 ];
 const PANELS2: Shot[] = [{ t: 'bell', d: 2.3, a0: -0.6, a1: -0.4, el: 0.25, fov: 24 }, { t: [1.6, 0, 0.3], d: 5.6, a0: 0.15, a1: 0.0, el: 1.15, fov: 30 }];
-const PANELS4: Shot[] = [{ t: 'deck_knob', d: 1.9, a0: -0.5, a1: -0.3, el: 0.5, fov: 22 }, { t: [2.6, 0, 0.4], d: 5.2, a0: 0.0, a1: 0.15, el: 1.1, fov: 30 },
-  { t: 'deck_key1', d: 2.1, a0: -0.1, a1: -0.3, el: 0.45, fov: 24 }, { t: [0.6, 0.2, 0.2], d: 9.5, a0: 0.35, a1: 0.2, el: 0.5, fov: 32 }];
+const PANELS4: Shot[] = [{ t: 'deck_knob', d: 1.9, a0: -0.8, a1: -0.2, el: 0.5, fov: 22 }, { t: [2.6, 0, 0.4], d: 5.2, a0: -0.3, a1: 0.35, el: 1.1, fov: 30 },
+  { t: 'deck_key1', d: 2.1, a0: 0.2, a1: -0.45, el: 0.45, fov: 24 }, { t: [0.6, 0.2, 0.2], d: 9.5, a0: 0.6, a1: 0.05, el: 0.5, fov: 32 }];
 /** which prop the agent tags for each verb */
 const TAG: Record<Prop, string> = { W: 'pen', S: 'scissors', P: 'B', T: 'stamp', F: 'floppy', D: 'deck', L: 'lock', M: 'match', B: 'bell', G: 'mag', X: 'A' };
 const MOTES = 1400;
@@ -77,6 +77,47 @@ export default class S4Verbs extends Scene {
   private env?: THREE.Texture; private oak!: THREE.Texture;
   private rtTmp!: THREE.WebGLRenderTarget; private rtAcc!: THREE.WebGLRenderTarget;
 
+  private key = new THREE.SpotLight(0xffa548, 9, 0, 0.55, 0.2, 0); private scan = new THREE.SpotLight(0x9ff6ff, 0, 0, 0.75, 0.05, 0);
+  private lampL = new THREE.SpotLight(0xffb070, 0, 0, 0.95, 0.6, 0); private hemi = new THREE.HemisphereLight(0x8fa6d8, 0x3a2414, 0.35);
+  private rimA = new THREE.PointLight(0xff2fa8, 0, 0, 2); private rimB = new THREE.PointLight(0x26e0ff, 0, 0, 2);
+  private win!: THREE.Mesh; private bulb!: THREE.Mesh; private winDay!: THREE.Texture; private winNight!: THREE.Texture;
+  private flameU = { uT: { value: 0 } }; private scratch = new THREE.PerspectiveCamera(26, 16 / 9, 0.05, 200);
+  /** blinds cookie for the key light (slats + window mullion), or a single scan line */
+  private cookie(line = false) {
+    const c = document.createElement('canvas'); c.width = c.height = 512; const g = c.getContext('2d')!;
+    if (line) { g.fillStyle = '#000'; g.fillRect(0, 0, 512, 512); g.filter = 'blur(3px)'; g.fillStyle = '#fff'; g.fillRect(0, 244, 512, 24); }
+    else { g.fillStyle = '#fff'; g.fillRect(0, 0, 512, 512); g.filter = 'blur(2px)'; g.fillStyle = '#000'; for (let i = 0; i < 11; i++) g.fillRect(0, 10 + i * 46, 512, 17); g.fillRect(244, 0, 24, 512); g.fillRect(0, 0, 512, 10); }
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+  }
+  /** the window behind the desk: warm afternoon, or night city */
+  private windowTex(night: boolean) {
+    const c = document.createElement('canvas'); c.width = 768; c.height = 504; const g = c.getContext('2d')!; let s = night ? 31 : 17; const rnd = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+    const gr = g.createLinearGradient(0, 0, 0, 504); if (night) { gr.addColorStop(0, '#060c22'); gr.addColorStop(1, '#1c2a55'); } else { gr.addColorStop(0, '#fff6e0'); gr.addColorStop(1, '#ffcf8a'); }
+    g.fillStyle = gr; g.fillRect(0, 0, 768, 504);
+    if (night) { for (let i = 0; i < 260; i++) { const y = 250 + 250 * rnd(); g.fillStyle = rnd() < 0.7 ? `rgba(255,${200 + 50 * rnd() | 0},140,${0.6 + 0.4 * rnd()})` : 'rgba(140,200,255,0.9)'; g.beginPath(); g.arc(768 * rnd(), y, 1 + 2.5 * rnd(), 0, 6.3); g.fill(); }
+      g.fillStyle = '#fffbe8'; g.beginPath(); g.arc(600, 90, 26, 0, 6.3); g.fill(); }
+    else { g.fillStyle = 'rgba(120,90,40,0.35)'; for (let i = 0; i < 18; i++) { g.beginPath(); g.arc(768 * rnd(), 380 + 120 * rnd(), 40 + 70 * rnd(), 0, 6.3); g.fill(); } }
+    g.fillStyle = night ? 'rgba(10,8,6,0.9)' : 'rgba(60,40,20,0.55)'; for (let i = 0; i < 12; i++) g.fillRect(0, 8 + i * 42, 768, 9);
+    g.fillStyle = '#1a120c'; g.fillRect(372, 0, 24, 504); g.fillRect(0, 240, 768, 20);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+  }
+  /** lighting look per lyric section: golden afternoon (bars 20-23), night with the desk lamp (24-27), neon scanner (28-31) */
+  private look(b: number, T: number) {
+    const L = b < 4 ? 0 : b < 8 ? 1 : 2, day = L === 0, night = L === 1, neon = L === 2;
+    this.key.color.set(day ? 0xffa548 : night ? 0x7d9bff : 0x9fdcff); this.key.intensity = day ? 9 : night ? 2.4 : 0.6;
+    this.hemi.intensity = day ? 0.3 : 0.05; this.lampL.intensity = night ? 9 : 0;
+    (this.bulb.material as THREE.MeshBasicMaterial).color.setRGB(night ? 6 : 0.3, night ? 4.2 : 0.25, night ? 2.2 : 0.2);
+    const wm = this.win.material as THREE.MeshBasicMaterial; wm.map = day ? this.winDay : this.winNight; wm.color.setRGB(day ? 2.2 : neon ? 1.3 : 1.5, day ? 2.2 : neon ? 0.45 : 1.5, day ? 2.2 : neon ? 1.5 : 1.5);
+    this.rimA.intensity = neon ? 160 : 0; this.rimB.intensity = neon ? 160 : 0; this.scan.intensity = neon ? 14 : 0;
+    const ph = ((T - T20) / BEAT) % 1; this.scan.target.position.set(-4 + 10 * ease(ph), 0, 0.5);
+    this.scene.environmentIntensity = day ? 0.22 : 0.08; return L;
+  }
+  /** where the main camera will be this frame (the magnifier needs it before the sheets are drawn) */
+  private eye(b: number, q: number) {
+    if (b <= 9) { this.place(this.scratch, SHOTS[b]!, q, 16 / 9); return this.scratch.position.clone(); }
+    if (b === 11 && q >= 0.75) return new THREE.Vector3(0, 3, 0);
+    const set = b === 10 ? PANELS2 : PANELS4; this.place(this.scratch, set[Math.min(3, Math.floor(q * 4)) % set.length]!, q, 16 / 9); return this.scratch.position.clone();
+  }
   override async init() {
     const r = this.ctx.renderer; r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
     const pm = new THREE.PMREMGenerator(r); this.env = pm.fromScene(new RoomEnvironment(), 0.04).texture; pm.dispose(); r.resetState();
@@ -84,19 +125,28 @@ export default class S4Verbs extends Scene {
     this.oak = oakTexture(); this.oak.repeat.set(7, 4.2);
     const desk = new THREE.Mesh(new THREE.PlaneGeometry(40, 24).rotateX(-Math.PI / 2), new THREE.MeshPhysicalMaterial({ map: this.oak, bumpMap: this.oak, bumpScale: 0.6, color: 0x8c6a50, roughness: 0.42, clearcoat: 0.3, clearcoatRoughness: 0.35 }));
     desk.receiveShadow = true; desk.position.z = -2;
-    const wall = new THREE.Mesh(new THREE.PlaneGeometry(80, 40), new THREE.MeshStandardMaterial({ color: 0x2a2622, roughness: 0.95 })); wall.position.set(0, 8, -16); wall.receiveShadow = true;
-    // the window far behind: overexposed panes + specks that the lens turns into bokeh
-    const win = new THREE.Group(); const pane = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.6, 1.9, 1.2) });
-    for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) { const p = new THREE.Mesh(new THREE.PlaneGeometry(3.1, 3.6), pane); p.position.set(-11 + i * 3.4, 3.2 + j * 3.9, -15.9); win.add(p); }
-    let s = 7; const rnd = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
-    for (let i = 0; i < 70; i++) { const c = rnd() < 0.6 ? new THREE.Color(6, 3.8, 1.8) : new THREE.Color(1.6, 3.2, 5.0); const b = new THREE.Mesh(new THREE.SphereGeometry(0.05 + 0.08 * rnd(), 8, 6), new THREE.MeshBasicMaterial({ color: c }));
-      b.position.set(-16 + 32 * rnd(), 0.6 + 7 * rnd(), -10 - 5 * rnd()); win.add(b); }
-    const sun = new THREE.DirectionalLight(0xffc488, 5.2); sun.position.set(-7, 8, -6); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
-    const sc = sun.shadow.camera; sc.left = -10; sc.right = 10; sc.top = 10; sc.bottom = -10; sc.near = 1; sc.far = 30; sun.shadow.bias = -0.0004; sun.shadow.radius = 3;
-    const blinds = new THREE.Group(); for (let i = 0; i < 18; i++) { const b = new THREE.Mesh(new THREE.BoxGeometry(14, 0.03, 0.26), new THREE.MeshBasicMaterial({ color: 0 })); b.castShadow = true; b.position.set(0, i * 0.42 - 3.6, 0); blinds.add(b); }
-    blinds.position.set(-3.5, 4.5, -3); blinds.lookAt(0, 0, 0); blinds.rotateX(Math.PI / 2);
-    const rim = new THREE.DirectionalLight(0x8fb4ff, 0.8); rim.position.set(6, 3, -8);
-    this.scene.add(desk, wall, win, sun, sun.target, blinds, rim, new THREE.HemisphereLight(0x7f9cd8, 0x3a2414, 0.45), this.cam);
+    const wall = new THREE.Mesh(new THREE.PlaneGeometry(60, 24), new THREE.MeshStandardMaterial({ color: 0x6a5a4c, roughness: 0.92 })); wall.position.set(0, 9, -9); wall.receiveShadow = true;
+    this.winDay = this.windowTex(false); this.winNight = this.windowTex(true);
+    this.win = new THREE.Mesh(new THREE.PlaneGeometry(7, 4.6), new THREE.MeshBasicMaterial({ map: this.winDay, color: new THREE.Color(2.2, 2.2, 2.2) })); this.win.position.set(-5.5, 4.4, -8.95);
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(7.4, 5.0, 0.2), new THREE.MeshStandardMaterial({ color: 0x2a2018, roughness: 0.6 })); frame.position.set(-5.5, 4.4, -9.05);
+    // key light: a spot through a blinds cookie (slats + mullion) stripes the desk
+    this.key.map = this.cookie(); this.key.position.set(-7, 8, -6); this.key.target.position.set(0.5, 0, 0.5); this.key.castShadow = true; this.key.shadow.mapSize.set(2048, 2048); this.key.shadow.bias = -0.0004; this.key.shadow.radius = 2;
+    this.scan.map = this.cookie(true); this.scan.position.set(0.5, 9, 3); this.scan.castShadow = false;
+    // desk lamp (back left) for the night look
+    const lampM = new THREE.MeshStandardMaterial({ color: 0x1b1d20, roughness: 0.35, metalness: 0.8 }), lamp = new THREE.Group();
+    const lb = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.55, 0.12, 40), lampM), la = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 3.2, 12), lampM); la.position.set(0, 1.6, 0);
+    const shade = new THREE.Mesh(new THREE.ConeGeometry(0.6, 0.8, 40, 1, true), new THREE.MeshStandardMaterial({ color: 0x1b1d20, roughness: 0.4, metalness: 0.6, side: THREE.DoubleSide })); shade.position.set(0.6, 3.1, 0.5); shade.rotation.set(0.5, 0, -0.6);
+    this.bulb = new THREE.Mesh(new THREE.SphereGeometry(0.16, 20, 12), new THREE.MeshBasicMaterial({ color: new THREE.Color(6, 4.2, 2.2) })); this.bulb.position.set(0.66, 2.85, 0.6);
+    lamp.add(lb, la, shade, this.bulb); lamp.position.set(-5.2, 0, -3.4); lamp.traverse((o) => { o.castShadow = true; }); this.bulb.castShadow = false;
+    this.lampL.position.set(-4.5, 2.8, -2.8); this.lampL.target.position.set(-1.5, 0, 0.5); this.lampL.castShadow = true; this.lampL.shadow.mapSize.set(1024, 1024);
+    // a shelf of books at the back of the desk: something for the lens to fall off into
+    const shelf = new THREE.Group(); let s2 = 7; const rnd2 = () => { s2 = (s2 * 16807) % 2147483647; return s2 / 2147483647; };
+    const cols = [0x7a2a1c, 0x1c3a5a, 0xc8b48a, 0x2a4a2a, 0x3a2a4a, 0xa8641c];
+    for (const y of [0.0, 2.2]) { let x = 0; while (x < 7) { const w = 0.22 + 0.25 * rnd2(), h = 1.3 + 0.6 * rnd2(); const bk = new THREE.Mesh(new THREE.BoxGeometry(w, h, 1.2), new THREE.MeshStandardMaterial({ color: cols[Math.floor(rnd2() * cols.length)], roughness: 0.7 })); bk.position.set(x + w / 2, y + h / 2, 0); shelf.add(bk); x += w + 0.02; }
+      const board = new THREE.Mesh(new THREE.BoxGeometry(7.2, 0.12, 1.4), new THREE.MeshStandardMaterial({ color: 0x3a2618, roughness: 0.6 })); board.position.set(3.5, y - 0.06, 0); shelf.add(board); }
+    shelf.position.set(4.5, 0, -8.2);
+    this.rimA.position.set(-6, 2.5, 2.5); this.rimB.position.set(6.5, 2.5, -1.5);
+    this.scene.add(desk, wall, this.win, frame, this.key, this.key.target, this.scan, this.scan.target, lamp, this.lampL, this.lampL.target, shelf, this.hemi, this.rimA, this.rimB, this.cam);
     // Blender prop kit; every mesh gets its own physical material
     const inst = await GLTFManager.instantiate(resolveAsset('desk', this.ctx.project ?? 'agent_v2').url, {});
     inst.root.traverse((o) => { if (o.name) this.n[o.name] = o; const m = o as THREE.Mesh; if (!m.isMesh) return; m.castShadow = m.receiveShadow = true;
@@ -108,7 +158,11 @@ export default class S4Verbs extends Scene {
       if (nm === 'LedG' || nm === 'LedR') { mat.emissive.set(nm === 'LedG' ? 0x40ff60 : 0xff3020); this.leds.push(mat); }
       m.material = mat; });
     this.scene.add(inst.root);
-    this.flame = new THREE.Mesh(new THREE.SphereGeometry(0.07, 24, 16), new THREE.MeshBasicMaterial({ color: new THREE.Color(6, 3.2, 1.0), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+    this.flame = new THREE.Mesh(new THREE.SphereGeometry(0.07, 32, 24), new THREE.ShaderMaterial({ uniforms: this.flameU, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
+      vertexShader: `uniform float uT; varying vec3 vN, vV, vP; void main(){ vP = position / 0.07; vec3 p = position; p.x += 0.012 * sin(uT * 31.0 + vP.y * 3.0) * (vP.y * 0.5 + 0.5); p.y += 0.04 * max(vP.y, 0.0); vec4 mv = modelViewMatrix * vec4(p, 1.0); vN = normalMatrix * normal; vV = -mv.xyz; gl_Position = projectionMatrix * mv; }`,
+      fragmentShader: `varying vec3 vN, vV, vP; void main(){ float f = clamp(dot(normalize(vN), normalize(vV)), 0.0, 1.0); float y = vP.y * 0.5 + 0.5;
+        vec3 c = mix(vec3(0.25, 0.45, 1.6), vec3(4.0, 1.5, 0.35), smoothstep(0.08, 0.38, y)); c = mix(c, vec3(6.0, 5.0, 3.0), f * f * smoothstep(0.25, 0.6, y) * smoothstep(1.0, 0.7, y));
+        float a = pow(f, 1.6) * smoothstep(1.0, 0.72, y) * (0.5 + 0.5 * smoothstep(0.0, 0.25, y)); gl_FragColor = vec4(c * a, a); }` }));
     this.n.match!.add(this.flame, this.flameLight); this.flame.position.set(0.02, 0.09, 0); this.flameLight.position.set(0, 0.15, 0);
     this.n.A = this.A.mesh; this.n.B = this.B.mesh; this.A.mesh.rotation.y = 0.04; this.B.mesh.rotation.y = -0.12;
     this.scene.add(this.A.mesh, this.B.mesh, this.strip.mesh);
@@ -145,7 +199,7 @@ export default class S4Verbs extends Scene {
     for (const [v, d] of Object.entries(BMOVE)) { const e = ease((T - kOf(v)) / 0.3); o.x += d[0] * e; o.z += d[2] * e; lift = Math.max(lift, Math.sin(Math.PI * Math.min(1, Math.max(0, (T - kOf(v)) / 0.3))) * (v === 'drop' ? 0.25 : 0.05)); }
     o.y += lift; return o; }
   private pose(T: number) {
-    const n = this.n, fmt = kOf('format');
+    const n = this.n, fmt = kOf('format'); this.flameU.uT.value = T;
     for (const k in this.rest) n[k]!.position.copy(this.rest[k]!);
     const bp = this.bAt(T); this.B.mesh.position.copy(bp);
     const cut = kOf('cut'), paste = kOf('paste'), rip = kOf('rip');
@@ -189,8 +243,11 @@ export default class S4Verbs extends Scene {
     if (T > fmt) { let i = 0; for (const o of [...Object.keys(this.rest).map((k) => n[k]!), this.B.mesh, this.strip.mesh]) o.position.x += 14 * ease((T - fmt - 0.008 * i++) / 0.2); }
   }
 
-  private ink(T: number) {
+  private ink(T: number, eye: THREE.Vector3) {
     const ws = hitsOf('W'), fmt = kOf('format'), wipe = 1 - ease((T - fmt) / 0.14); let tip: THREE.Vector3 | null = null, last: THREE.Vector3 | null = null;
+    let wEnv = 0; for (const t of [...ws, kOf('rewrite'), kOf('cross')]) wEnv = Math.max(wEnv, sm(t - 0.28, t - 0.05, T) * (1 - sm(t + 0.45, t + 0.75, T)));
+    this.n.mag!.position.x += 1.3 * wEnv; // the lens moves aside while the pen writes
+    const lc = this.n.mag!.position, lt = (eye.y - 0.012) / Math.max(1e-3, eye.y - lc.y), lp = eye.clone().lerp(lc, lt); // lens footprint seen from the camera
     this.A.draw((g, w, h) => {
       g.globalAlpha = wipe; g.font = font(F.serif(600, true), 104); g.fillStyle = '#121426'; g.textBaseline = 'middle';
       ws.forEach((t, i) => { const r = Math.min(1, Math.max(0, (T - t) / 0.36)); if (r <= 0) return; const txt = LINES_A[i] ?? '', y = 220 + (i === 1 ? 0 : i) * 150 + (i === 1 ? 90 : 0);
@@ -198,6 +255,10 @@ export default class S4Verbs extends Scene {
         const p = new THREE.Vector3(-1.05 + (90 + tw * r) / w * 2.1, 0.02, -1.485 + (y + 18) / h * 2.97); last = p; if (r < 1) tip = p; });
       const rw = kOf('rewrite'), cr = kOf('cross'); for (const [t0, y] of [[rw, 220], [cr, 670]] as const) { const r = Math.min(1, Math.max(0, (T - t0) / 0.2)); if (r > 0) { g.strokeStyle = '#c0281c'; g.lineWidth = 9; g.beginPath(); g.moveTo(80, y); g.lineTo(80 + 760 * r, y - 6); g.stroke(); } }
       const ck = T - kOf('check'); if (ck > 0) { g.strokeStyle = 'rgba(192,40,28,0.9)'; g.lineWidth = 16; g.beginPath(); g.moveTo(760, 200); g.lineTo(810, 260); g.lineTo(930, 120); g.stroke(); }
+      const mu = (lp.x + 1.05) / 2.1 * w, mv = (lp.z + 1.485) / 2.97 * h, R = 0.47 * lt / 2.1 * w, Z = 1.8;
+      if (lc.y > 0.15 && mu > -R && mu < w + R && mv > -R && mv < h + R) { g.save(); g.globalAlpha = 1; g.beginPath(); g.arc(mu, mv, R, 0, 6.2832); g.clip();
+        g.drawImage(this.A.canvas, mu - R / Z, mv - R / Z, 2 * R / Z, 2 * R / Z, mu - R, mv - R, 2 * R, 2 * R);
+        const gr = g.createRadialGradient(mu, mv, R * 0.55, mu, mv, R); gr.addColorStop(0, 'rgba(255,250,235,0)'); gr.addColorStop(1, 'rgba(40,28,16,0.35)'); g.fillStyle = gr; g.fillRect(mu - R, mv - R, 2 * R, 2 * R); g.restore(); }
     });
     this.B.draw((g) => { g.globalAlpha = 0.85;
       for (const [v, txt] of STAMPS) { if (v === 'check' || T < kOf(v)) continue; const x = v === 'rate' ? 680 : v === 'update' ? 330 : 512, y = v === 'rate' ? 1150 : v === 'update' ? 380 : 724;
@@ -205,7 +266,6 @@ export default class S4Verbs extends Scene {
         const tw = g.measureText(txt).width; g.strokeRect(-tw / 2 - 30, -75, tw + 60, 150); g.fillText(txt, 0, 4); g.restore(); } });
     this.strip.draw((g) => { g.font = font(F.serif(600, true), 70); g.fillStyle = '#121426'; g.fillText('everything you see', 90, 130); });
     // pen: lies on the desk, stands up onto the writing front while it writes
-    let wEnv = 0; for (const t of [...ws, kOf('rewrite'), kOf('cross')]) wEnv = Math.max(wEnv, sm(t - 0.28, t - 0.05, T) * (1 - sm(t + 0.45, t + 0.75, T)));
     const pen = this.n.pen!, rest = this.rest.pen!.clone(); rest.y = 0.07;
     const at = (tip as THREE.Vector3 | null) ?? (last as THREE.Vector3 | null) ?? new THREE.Vector3(0.4, 0.02, 0.2);
     pen.position.copy(rest).lerp(at, wEnv); if (tip) pen.position.y += 0.015 * Math.abs(Math.sin(T * 40));
@@ -232,7 +292,9 @@ export default class S4Verbs extends Scene {
     let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; const v = new THREE.Vector3();
     for (let i = 0; i < 8; i++) { v.set(i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z).project(cam); if (v.z > 1) return;
       const px = (rect[0] + (v.x * 0.5 + 0.5) * rect[2]) * sx, py = (rect[1] + (0.5 - v.y * 0.5) * rect[3]) * sx; x0 = Math.min(x0, px); x1 = Math.max(x1, px); y0 = Math.min(y0, py); y1 = Math.max(y1, py); }
-    const m = 40 * sx; x0 = Math.max(x0, rect[0] * sx + m); y0 = Math.max(y0, rect[1] * sx + m + 40 * sx); x1 = Math.min(x1, (rect[0] + rect[2]) * sx - m); y1 = Math.min(y1, (rect[1] + rect[3]) * sx - m); if (x1 - x0 < 30 || y1 - y0 < 30) return;
+    const m = 40 * sx, RX0 = rect[0] * sx, RY0 = rect[1] * sx, RW = rect[2] * sx, RH = rect[3] * sx;
+    if (x1 - x0 > 0.8 * RW || y1 - y0 > 0.8 * RH) { const ccx = Math.min(RX0 + 0.7 * RW, Math.max(RX0 + 0.3 * RW, (x0 + x1) / 2)), ccy = Math.min(RY0 + 0.7 * RH, Math.max(RY0 + 0.3 * RH, (y0 + y1) / 2)); x0 = ccx - 0.2 * RW; x1 = ccx + 0.2 * RW; y0 = ccy - 0.2 * RH; y1 = ccy + 0.2 * RH; }
+    x0 = Math.max(x0, RX0 + m); y0 = Math.max(y0, RY0 + m + 100 * sx); x1 = Math.min(x1, RX0 + RW - m); y1 = Math.min(y1, RY0 + RH - m); if (x1 - x0 < 30 || y1 - y0 < 30) return;
     const sn = 1 + 0.35 * Math.exp(-Math.max(0, dt) * 16), cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, hw = (x1 - x0) / 2 * sn + 10 * sx, hh = (y1 - y0) / 2 * sn + 10 * sx;
     const a = alpha * sm(-0.02, 0.04, dt) * (1 - sm(BEAT - 0.14, BEAT, dt)), L = Math.min(34 * sx, hw * 0.4, hh * 0.4);
     g.save(); g.globalAlpha = a; g.strokeStyle = '#eaf6ff'; g.lineWidth = 3 * sx; g.shadowColor = 'rgba(0,0,0,0.6)'; g.shadowBlur = 8 * sx; g.beginPath();
@@ -243,21 +305,22 @@ export default class S4Verbs extends Scene {
   }
 
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
-    const T = f.t, rr = this.ctx.renderer, Wd = out.width, Ht = out.height; this.pose(T); this.ink(T);
+    const T = f.t, rr = this.ctx.renderer, Wd = out.width, Ht = out.height;
     const BARL = bar(21) - T20, rel = (T - T20) / BARL, b = Math.min(11, Math.max(0, Math.floor(rel))), q = Math.min(1, Math.max(0, rel - b)), beat = Math.min(3, Math.floor(q * 4));
+    const L = this.look(b, T); this.pose(T); this.ink(T, this.eye(b, q));
     const k = Math.min(47, Math.max(0, Math.floor((T - T20 + 0.02) / BEAT))), alpha = overlayTextDuck(f.tin, f.tout);
     const g = this.layer.ctx; this.layer.clear(); this.moteU.uT.value = T; this.moteU.uPx.value = Ht / 1080;
     const auto = rr.autoClear; rr.autoClear = false; let focus = 4, whip = 0, panels = 0;
     const draw = (target: THREE.WebGLRenderTarget, cam: THREE.Camera, clear: boolean) => { rr.setRenderTarget(target); if (clear) { rr.setClearColor(0x000000, 1); rr.clear(true, true, true); } rr.render(this.scene, cam); };
     if (b <= 9) {
-      const WH = 0.075, shut = 0.5 / 60 / BARL, s = SHOTS[b]!, prev = b > 0 ? SHOTS[b - 1] : undefined, N = prev && q < WH + shut ? 6 : 1;
+      const WH = 0.075, shut = 1 / 60 / BARL, s = SHOTS[b]!, prev = b > 0 ? SHOTS[b - 1] : undefined, N = prev && q < WH + shut ? 24 : 1;
       const camAt = (qq: number) => this.place(this.cam, s, Math.max(0, qq), 16 / 9, prev && qq < WH ? { s: prev, e: ease(Math.max(0, qq) / WH) } : undefined);
       for (let i = 0; i < N - 1; i++) { camAt(q - shut * (1 - i / (N - 1))); this.moteU.uFocus.value = focus; draw(this.rtTmp, this.cam, true); this.ctx.comp.draw(rr, this.rtTmp.texture, this.rtAcc, { mode: 'normal', opacity: 1 / (i + 1) }); }
       focus = camAt(q); this.moteU.uFocus.value = focus; draw(out, this.cam, true);
       if (N > 1) { this.ctx.comp.draw(rr, this.rtAcc.texture, out, { mode: 'normal', opacity: (N - 1) / N }); whip = 1 - q / (WH + shut); }
       this.callout(g, k, T, this.cam, [0, 0, 1920, 1080], alpha);
     } else if (b === 11 && beat === 3) {
-      focus = this.topDown(this.cam, (q - 0.75) / 0.1); this.moteU.uFocus.value = focus; draw(out, this.cam, true);
+      focus = this.topDown(this.cam, (q - 0.75) / 0.02); this.moteU.uFocus.value = focus; draw(out, this.cam, true);
     } else {
       const set = b === 10 ? PANELS2 : PANELS4; panels = set.length; const cols = 2, rows = panels === 2 ? 1 : 2, gap = 6;
       rr.setRenderTarget(out); rr.setClearColor(0x000000, 1); rr.clear(true, true, true); rr.setScissorTest(true);
@@ -272,13 +335,13 @@ export default class S4Verbs extends Scene {
     const hh = 2 * focus * Math.tan(THREE.MathUtils.degToRad(this.tcam.fov) / 2); this.txt.position.set(0, 0, -focus); this.txt.scale.set(hh * 16 / 9, hh, 1); this.tcam.updateMatrixWorld(true);
     rr.setRenderTarget(out); rr.render(this.tscene, this.tcam); rr.autoClear = auto; rr.resetState();
     // god rays from the window when it is in frame
-    const wv = new THREE.Vector3(-8, 5, -15.9).project(this.cam), inWin = panels ? 0 : sm(1.4, 0.9, Math.max(Math.abs(wv.x), Math.abs(wv.y))) * (wv.z < 1 ? 1 : 0);
+    const wv = new THREE.Vector3(-5.5, 4.4, -9).project(this.cam), inWin = panels ? 0 : sm(1.4, 0.9, Math.max(Math.abs(wv.x), Math.abs(wv.y))) * (wv.z < 1 ? 1 : 0);
     let shake = 0; for (const [v] of STAMPS) if (v !== 'check') shake = Math.max(shake, slam((T - kOf(v)) * 1.5) * (T >= kOf(v) ? 1 : 0));
     shake = Math.max(shake, 0.6 * slam((T - kOf('drop')) * 1.5) * (T >= kOf('drop') ? 1 : 0));
     const burn = T - kOf('burn'), flare = burn > 0 ? 0.35 * slam(burn * 1.2) : 0;
-    return { toneMap: 'agx', exposure: 0.86 + flare, bloom: 0.16, bloomThreshold: 1.5, halation: 0.25, vignette: 0.55, grain: 0.04, ca: 0.25 + 3 * whip,
+    return { toneMap: 'agx', exposure: [0.86, 1.0, 0.95][L]! + flare, bloom: 0.16, bloomThreshold: 1.5, halation: 0.12, blackPoint: 0.012, vignette: 0.55, grain: 0.04, ca: 0.25 + 3 * whip,
       shake: [6 * shake * Math.sin(T * 91), 6 * shake * Math.cos(T * 77)], zoom: 1 + 0.012 * shake,
-      volumetric: 0.1 * inWin, volumetricLightPos: [wv.x * 0.5 + 0.5, wv.y * 0.5 + 0.5], volumetricDecay: 0.95, volumetricSteps: 24,
+      volumetric: (L === 0 ? 0.3 : 0.14) * inWin, volumetricLightPos: [wv.x * 0.5 + 0.5, wv.y * 0.5 + 0.5], volumetricDecay: 0.95, volumetricSteps: 24,
       depthDof: { enabled: true, focusDistance: focus, aperture: panels ? 8 : 15, blades: 9, maxRadius: 30 } };
   }
   private pcams = [0, 1, 2, 3].map(() => new THREE.PerspectiveCamera(24, 16 / 9, 0.05, 200));
