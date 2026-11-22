@@ -9,7 +9,7 @@ import { F, font } from '../../engine/type';
 import { bar, BAR } from '../agent_promo/kit';
 import { term, type TLine } from './term';
 import { DragonRig, LEN } from './rig';
-import { skyWorld, skyEnv, DUSK } from './sky';
+import { skyWorld, skyEnv, DUSK, disposeTree } from './sky';
 import { StylePass, STYLE } from './style';
 import type { PathFn } from './dragon';
 
@@ -43,7 +43,7 @@ export default class S11Player extends Scene {
   private screen!: THREE.Group; private wall!: THREE.Group; private refl!: THREE.Group; private disp: { dispose(): void }[] = [];
   override async init() {
     const g = await this.rig.load(this.ctx); this.inner.add(g); this.rig.revGlow.value = 0;
-    const world = skyWorld(DUSK, this.time); this.inner.add(world); this.env = skyEnv(this.ctx.renderer, world); this.inner.environment = this.env; this.inner.environmentIntensity = 0.5;
+    const world = skyWorld(DUSK, this.time); this.inner.add(world); this.disp.push({ dispose: () => disposeTree(world) }); this.env = skyEnv(this.ctx.renderer, world); this.inner.environment = this.env; this.inner.environmentIntensity = 0.5;
     const key = new THREE.DirectionalLight(0xff8a50, 3.5); key.position.copy(DUSK.sun).multiplyScalar(10); const rim = new THREE.DirectionalLight(0x8a7aff, 1.2); rim.position.set(3, 4, 6);
     this.inner.add(key, rim);
     const film = new THREE.MeshBasicMaterial({ map: this.rt.texture, toneMapped: false });

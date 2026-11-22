@@ -1,6 +1,7 @@
 // S6 comic (bars 37-45, the drop): the same dragon redrawn as a printed comic — CMYK halftone, ink lines, animated on twos,
 // cut into panel layouts that change on every bar, with hand-lettered sound effects punching in on the downbeats.
 import * as THREE from 'three';
+import { disposeTree } from './sky';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { FSPass, Layer2D } from '../../engine/gl';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
@@ -60,7 +61,7 @@ export default class S6Comic extends Scene {
     const g = await this.rig.load(this.ctx, COMIC); this.scene.add(g); this.rig.revGlow.value = 0;
     const bg = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShaderMaterial({ uniforms: this.bgU, depthWrite: false,
       vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy * 2.0, 0.9999, 1.0); }', fragmentShader: BG_F }));
-    bg.frustumCulled = false; bg.renderOrder = -1; this.scene.add(bg);
+    bg.frustumCulled = false; bg.renderOrder = -1; this.scene.add(bg); this.bgMesh = bg;
     const pm = new THREE.PMREMGenerator(this.ctx.renderer); this.env = pm.fromScene(new RoomEnvironment(), 0.04).texture; pm.dispose(); this.ctx.renderer.resetState();
     this.scene.environment = this.env; this.scene.environmentIntensity = 0.5;
     const key = new THREE.DirectionalLight(0xffffff, 3.5); key.position.set(-3, 6, 5); const rim = new THREE.DirectionalLight(0xffffff, 2.0); rim.position.set(4, 1, -6);
@@ -102,5 +103,6 @@ export default class S6Comic extends Scene {
     const kick = T >= T37 ? Math.exp(-(((T - T37) % BEAT)) * 10) : 0;
     return { exposure: 1.0, bloom: 0.05, bloomThreshold: 1.0, grain: 0.03, vignette: 0.15, ca: 0.2, zoom: 1 + 0.02 * kick };
   }
-  override dispose() { this.layer.texture.dispose(); this.env?.dispose(); this.rig.dispose(); this.style.dispose(); this.comp.dispose(); for (const r of this.rts) r.dispose(); }
+  private bgMesh?: THREE.Mesh;
+  override dispose() { if (this.bgMesh) disposeTree(this.bgMesh); this.layer.texture.dispose(); this.env?.dispose(); this.rig.dispose(); this.style.dispose(); this.comp.dispose(); for (const r of this.rts) r.dispose(); }
 }

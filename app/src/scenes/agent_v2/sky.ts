@@ -51,3 +51,8 @@ export function skyEnv(r: THREE.WebGLRenderer, world: THREE.Object3D) {
   const pm = new THREE.PMREMGenerator(r); const tex = pm.fromScene(s, 0.02, 0.1, 1000).texture; pm.dispose(); r.resetState();
   return tex;
 }
+
+/** Frees the geometry and materials of every mesh under root. */
+export function disposeTree(root: THREE.Object3D) {
+  root.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; m.geometry.dispose(); for (const x of ([] as THREE.Material[]).concat(m.material)) x.dispose(); });
+}

@@ -1,6 +1,7 @@
 // S7 style roulette (bars 45-53): one coiling dragon, one continuous orbit, and a new art direction on every beat —
 // then every half beat — each with its own backdrop palette. The silhouette never changes; everything else does.
 import * as THREE from 'three';
+import { disposeTree } from './sky';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { Layer2D } from '../../engine/gl';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
@@ -51,7 +52,7 @@ export default class S7Roulette extends Scene {
     const g = await this.rig.load(this.ctx); this.scene.add(g); this.rig.revGlow.value = 0;
     const bg = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShaderMaterial({ uniforms: this.bgU, depthWrite: false,
       vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy * 2.0, 0.9999, 1.0); }', fragmentShader: BG_F }));
-    bg.frustumCulled = false; bg.renderOrder = -1; this.scene.add(bg);
+    bg.frustumCulled = false; bg.renderOrder = -1; this.scene.add(bg); this.bgMesh = bg;
     const pm = new THREE.PMREMGenerator(this.ctx.renderer); this.env = pm.fromScene(new RoomEnvironment(), 0.04).texture; pm.dispose(); this.ctx.renderer.resetState();
     this.scene.environment = this.env; this.scene.environmentIntensity = 0.25;
     const key = new THREE.DirectionalLight(0xfff0e0, 3.2); key.position.set(-4, 7, 5); const rim = new THREE.DirectionalLight(0x80d8ff, 3.0); rim.position.set(5, 2, -6);
@@ -73,5 +74,6 @@ export default class S7Roulette extends Scene {
     const kick = Math.exp(-(T - s.at) * 12);
     return { exposure: 1.0, bloom: 0.2, bloomThreshold: 0.95, grain: 0.03, vignette: 0.25, ca: 0.2 + 1.5 * kick, zoom: 1 + 0.03 * kick };
   }
-  override dispose() { this.layer.texture.dispose(); this.env?.dispose(); this.rig.dispose(); this.style.dispose(); }
+  private bgMesh?: THREE.Mesh;
+  override dispose() { if (this.bgMesh) disposeTree(this.bgMesh); this.layer.texture.dispose(); this.env?.dispose(); this.rig.dispose(); this.style.dispose(); }
 }

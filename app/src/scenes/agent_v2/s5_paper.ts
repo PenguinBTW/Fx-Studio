@@ -1,6 +1,7 @@
 // S5 paper (bars 32-37): on each of the four sung "Technologic"s the dragon is refolded one step further into origami —
 // washi skin, flat folds, snapped lattice geometry, then sumi ink — while the backdrop becomes an ink-wash landscape.
 import * as THREE from 'three';
+import { disposeTree } from './sky';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { Layer2D } from '../../engine/gl';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
@@ -44,7 +45,7 @@ export default class S5Paper extends Scene {
     const g = await this.rig.load(this.ctx); this.scene.add(g); this.rig.revGlow.value = 0;
     const bg = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShaderMaterial({ uniforms: this.bgU, depthWrite: false,
       vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy * 2.0, 0.9999, 1.0); }', fragmentShader: BG_F }));
-    bg.frustumCulled = false; bg.renderOrder = -1; this.scene.add(bg);
+    bg.frustumCulled = false; bg.renderOrder = -1; this.scene.add(bg); this.bgMesh = bg;
     const pm = new THREE.PMREMGenerator(this.ctx.renderer); this.env = pm.fromScene(new RoomEnvironment(), 0.04).texture; pm.dispose(); this.ctx.renderer.resetState();
     this.scene.environment = this.env; this.scene.environmentIntensity = 0.35;
     const key = new THREE.DirectionalLight(0xfff2e0, 3.0); key.position.set(-4, 6, 6);
@@ -82,5 +83,6 @@ export default class S5Paper extends Scene {
     const hit = HITS.reduce((acc, h) => acc + (T >= h ? Math.exp(-(T - h) * 7) : 0), 0);
     return { toneMap: 'agx', exposure: 1.05, bloom: 0.15, bloomThreshold: 1.0, vignette: 0.25, grain: 0.05, ca: 0.15 + 1.2 * hit, zoom: 1 + 0.025 * hit };
   }
-  override dispose() { this.layer.texture.dispose(); this.env?.dispose(); this.rig.dispose(); this.flakes.geometry.dispose(); (this.flakes.material as THREE.Material).dispose(); }
+  private bgMesh?: THREE.Mesh;
+  override dispose() { if (this.bgMesh) disposeTree(this.bgMesh); this.layer.texture.dispose(); this.env?.dispose(); this.rig.dispose(); this.flakes.geometry.dispose(); (this.flakes.material as THREE.Material).dispose(); }
 }

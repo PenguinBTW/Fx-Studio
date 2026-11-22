@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { Dragon, deform, scaleFrag, type PathFn } from './dragon';
 import { StylePass } from './style';
-import { skyWorld, skyEnv, STORM as DUSK } from './sky';
+import { skyWorld, skyEnv, STORM as DUSK, disposeTree } from './sky';
 
 const path: PathFn = (p, o) => o.set(3.8 * Math.cos(p * 0.42) + 0.5 * Math.sin(p * 1.3), 1.1 * Math.sin(p * 0.7) + 0.35 * Math.cos(p * 1.9), 3.2 * Math.sin(p * 0.42) - 1.2);
 
@@ -39,7 +39,7 @@ export default class Proof extends Scene {
       return deform(new THREE.MeshPhysicalMaterial({ color: 0x3a3028, roughness: 0.32, clearcoat: 0.8, clearcoatRoughness: 0.2 }), fr, sc, undefined, j);
     });
     this.scene.add(this.dragon.group);
-    const world = skyWorld(DUSK, this.time); this.scene.add(world);
+    const world = skyWorld(DUSK, this.time); this.scene.add(world); this.world = world;
     this.scene.environment = this.env = skyEnv(this.ctx.renderer, world); this.scene.environmentIntensity = 0.5;
     const key = new THREE.DirectionalLight(0xff8a50, 3.5); key.position.copy(DUSK.sun).multiplyScalar(10);
     const rim = new THREE.DirectionalLight(0x5ad8ff, 3.0); rim.position.set(6, 5, 6);
@@ -66,5 +66,6 @@ export default class Proof extends Scene {
     return { exposure: 1, bloom: 0.25, bloomThreshold: 0.95, grain: 0.02, vignette: 0.3, ca: 0.4, halation: 0.1 };
   }
 
-  override dispose() { this.env?.dispose(); this.dragon.dispose(); this.style.dispose(); }
+  private world?: THREE.Group;
+  override dispose() { if (this.world) disposeTree(this.world); this.env?.dispose(); this.dragon.dispose(); this.style.dispose(); }
 }
