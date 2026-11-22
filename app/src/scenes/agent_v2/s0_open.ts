@@ -6,7 +6,7 @@ import { bar } from '../agent_promo/kit';
 import { overlayTextDuck } from '../../engine/transition';
 import { term, type TLine } from './term';
 
-export const S0_LINES: TLine[] = [{ text: "everything you're about to see is me.", at: bar(1) + 0.15, hold: 0.9, cps: 17 }];
+export const S0_LINES: TLine[] = [{ text: "everything you're about to see is me.", at: bar(1) + 0.15, hold: 0.9, cps: 17, lead: 3 }];
 
 export default class S0Open extends Scene {
   private layer = new Layer2D();
