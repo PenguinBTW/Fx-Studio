@@ -26,7 +26,8 @@ const TF_VS = `varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(positio
 const TF_FS = `uniform vec3 uAcc; uniform float uKick; varying vec3 vW;
 void main(){ vec2 p = vW.xz * 0.25; vec2 q = abs(fract(p) - 0.5) / fwidth(p); float g = 1.0 - min(min(q.x, q.y), 1.0);
   float d = length(vW - cameraPosition), fade = exp(-d * 0.03);
-  vec3 c = vec3(0.006, 0.008, 0.014) + uAcc * g * fade * (0.08 + 0.25 * uKick) + uAcc * 0.05 * exp(-abs(vW.x) * 0.25) * fade;
+  vec3 c = vec3(0.006, 0.008, 0.014) + uAcc * g * fade * (0.08 + 0.25 * uKick) + uAcc * 0.05 * exp(-abs(vW.x) * 0.25) * fade
+    + uAcc * (0.12 + 0.5 * uKick) * exp(-abs(abs(vW.x) - 15.5) * 0.7) * (0.6 + 0.4 * sin(vW.z * 0.9 + vW.x)) * fade;
   gl_FragColor = vec4(c, 1.0); }`;
 // Vertigo on "3D": a dolly-zoom (engine solveDollyZoom) holds the word's size while the lens opens 26 -> 88 deg.
 const T3 = T0 + (LEAD + 3 * SP) / V;
@@ -38,6 +39,8 @@ export default class S3Type extends Scene {
   private layer = new Layer2D();
   private streaks = new LineBatch(STREAKS + 8, { screen2D: false, worldWidth: true, blend: 'add', depthTest: true });
   private words: THREE.Object3D[] = [];
+  private panelTex?: THREE.Texture;
+  private slabMat?: THREE.MeshStandardMaterial;
   private sig = new THREE.PointLight(new THREE.Color(C.signal), 0, 60, 1.6);
   private dof = new DoFPresenter();
   private w3 = 6;
@@ -55,7 +58,18 @@ export default class S3Type extends Scene {
     this.scene.environmentIntensity = 0.22;
     this.scene.fog = new THREE.FogExp2(0x070a14, 0.016);
     this.scene.background = new THREE.Color(0x070a14);
-    const slabMat = new THREE.MeshStandardMaterial({ color: 0x1a1c22, metalness: 0.85, roughness: 0.32 });
+    // Monolith faces: panel seams plus sparse lit cells, so the walls read as built surfaces at speed.
+    const pc = document.createElement('canvas'); pc.width = 256; pc.height = 512;
+    const px = pc.getContext('2d')!; px.fillStyle = '#000'; px.fillRect(0, 0, 256, 512);
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 4; x++) {
+      const r = hash(x * 31 + y, 5);
+      px.fillStyle = r > 0.82 ? '#fff' : r > 0.6 ? '#3a3a3a' : '#101010';
+      px.fillRect(x * 64 + 3, y * 32 + 3, 58, r > 0.82 ? 6 : 26);
+    }
+    const pt = new THREE.CanvasTexture(pc); pt.colorSpace = THREE.SRGBColorSpace;
+    this.panelTex = pt;
+    const slabMat = new THREE.MeshStandardMaterial({ color: 0x1a1c22, metalness: 0.85, roughness: 0.32, emissive: new THREE.Color(C.ice), emissiveMap: pt, emissiveIntensity: 0.6 });
+    this.slabMat = slabMat;
     this.slabs = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), slabMat, SLOTS * 2);
     this.strips = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0xffffff }), SLOTS * 2 * 3);
     this.slabs.frustumCulled = this.strips.frustumCulled = false;
@@ -146,6 +160,7 @@ export default class S3Type extends Scene {
       const wi = clamp(Math.floor((T - T0 + LEAD / V) / (1.3 * BAR)), 0, 5);
       const acc = new THREE.Color(ACCENT[wi]!);
       this.floorU.uAcc.value.set(acc.r, acc.g, acc.b); this.floorU.uKick.value = f.a.kick;
+      if (this.slabMat) { this.slabMat.emissive.copy(acc).lerp(new THREE.Color(C.ice), 0.5); this.slabMat.emissiveIntensity = 0.35 + 0.9 * f.a.kick; }
       this.floorM.position.set(p.x, FLOOR_Y, p.z);
       const span = SLOTS * SLOT, bt = ((T - bar(1)) / BEAT) % 1;
       for (let i = 0; i < SLOTS; i++) for (let sd = 0; sd < 2; sd++) {
@@ -187,10 +202,8 @@ export default class S3Type extends Scene {
     const lead = LEAD / V - WB;
     const wi = clamp(Math.floor((lt - lead) / WB), 0, ORDER.length - 1);
     const nb = Math.max(0, Math.floor((lt - lead - wi * WB) / BEAT));
-    const FACES = [F.archivo(125, 900), F.serif(600, true), F.mono(600), F.archivo(62, 300), F.archivoItalic(100, 800), F.serif(400), F.archivo(100, 900)];
     const bt = T0 + lead + wi * WB + nb * BEAT;
     if (lt >= 0 && lt < 8 * BAR) {
-      if (wi >= 4) slam(g, ORDER[wi]!, 192, 900, T, { t0: bt, t1: bt + BEAT - 0.06, size: 190, family: wi === 5 ? FACES[nb % FACES.length]! : F.archivo(125, 900), align: 'left', from: 1.15, shake: 2, out: 0.05, halo: HALO, haloW: 8, color: nb % 4 === 3 ? C.signal : C.bone });
     }
 
     this.dof.render(this.ctx, out, this.scene, this.cam, { focus, aperture: inDZ ? 6 : 10, maxRadius: 14 }, this.layer, (rt) => L.render(this.ctx.renderer, rt, this.cam));
@@ -210,6 +223,9 @@ export default class S3Type extends Scene {
 
   override dispose(): void {
     this.dof.dispose();
+    for (const m of [this.slabs, this.strips]) { m.geometry.dispose(); (m.material as THREE.Material).dispose(); m.dispose(); }
+    this.floorM.geometry.dispose(); (this.floorM.material as THREE.Material).dispose();
+    this.panelTex?.dispose();
     this.words.slice(BLENDER).forEach((o) => o?.traverse((m) => { const mm = m as THREE.Mesh; if (mm.isMesh) { mm.geometry.dispose(); (mm.material as THREE.Material).dispose(); } }));
   }
 }
