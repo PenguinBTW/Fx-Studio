@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import type { Frame, PostOverrides } from '../engine/scene';
 import type { Transition, TransitionAPI, TransitionCtx } from '../engine/transition';
 import { ShaderPass } from '../scenes/fx_promo/tkit';
-import { B0, overlay } from '../scenes/fx_promo/kit';
+import { overlay } from '../scenes/fx_promo/kit';
 
 // [scene id, sample time, window centre in that world (screen x, y from top)]. Layer 0 is the outgoing scene, the
 // last window opens on the incoming one.
@@ -17,6 +17,7 @@ const WORLDS: [string, number, number, number, number][] = [
 ];
 const N = WORLDS.length;
 const H = 0.24;
+const DUR = 7.771;
 
 const FRAG = `uniform sampler2D L0; uniform sampler2D L1; uniform sampler2D L2; uniform vec2 c0; uniform vec2 c1;
 uniform vec3 uG; uniform float uF; uniform float uDepth; uniform float uBlur; uniform float uKick; uniform float uRgb;
@@ -70,13 +71,13 @@ export default class FxpInfiniteZoom implements Transition {
     const fr = z - k;
     // Each dive eases in then punches through on the half-bar, so the crossing lands on the beat.
     const fe = fr + 0.45 * (fr * fr * (3 - 2 * fr) - fr);
-    const lt = f.t - B0;
+    const lt = api.u * DUR;
     const tex = (i: number): THREE.Texture => {
       if (i === 0) return a;
       if (i >= N) return b;
       const [id, base] = WORLDS[i]!;
       overlay.on = false;
-      try { return api.sampleScene(id, base + (lt % 4)); } finally { overlay.on = true; }
+      try { return api.sampleScene(id, base + lt); } finally { overlay.on = true; }
     };
     const ctr = (i: number) => new THREE.Vector2(WORLDS[i]![2], 1 - WORLDS[i]![3]);
     const speed = 1 - Math.abs(fr - 0.5) * 2;
