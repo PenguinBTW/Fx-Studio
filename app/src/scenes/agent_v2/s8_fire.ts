@@ -21,6 +21,11 @@ export const firePath: PathFn = (p, o) => o.set(p * 0.9 - 7.5, 0.6 * Math.sin(p 
 export const N = 70000, LIFE = 1.25;
 export function breath(t: number) { let b = 0; for (const [a, e] of BREATHS) b = Math.max(b, sm(a - 0.08, a + 0.12, t) * (1 - sm(e - 0.3, e, t))); return Math.max(b, 0.45 * sm(BREATHS[0]![0] + 0.2, BREATHS[0]![0] + 0.5, t) * (1 - sm(BREATHS[2]![1] - 0.5, BREATHS[2]![1], t))); }
 
+/** The fire's origin: the centre of the open mouth, which drops below the head's centre line as the jaw opens. */
+export function mouthAt(m: THREE.Vector3, dir: THREE.Vector3, jaw: number, scale: number, out: THREE.Vector3) {
+  const n = new THREE.Vector3(0, 1, 0).addScaledVector(dir, -dir.y).normalize();
+  return out.copy(m).addScaledVector(dir, 0.35).addScaledVector(n, (-0.05 - 0.45 * Math.sin(jaw)) * scale);
+}
 export const FIRE_V = /* glsl */ `attribute vec4 aR; uniform float uT, uB0, uB1, uB2, uB3, uB4, uB5; uniform vec3 uMouth, uDir; uniform float uSpread, uSize, uCurl; varying float vAge, vHot, vE;
 float sm_(float a, float b, float x) { float t = clamp((x - a) / (b - a), 0.0, 1.0); return t * t * (3.0 - 2.0 * t); }
 float br(float t) { return max(max(sm_(uB0 - 0.08, uB0 + 0.12, t) * (1.0 - sm_(uB1 - 0.3, uB1, t)), sm_(uB2 - 0.08, uB2 + 0.12, t) * (1.0 - sm_(uB3 - 0.3, uB3, t))), sm_(uB4 - 0.08, uB4 + 0.12, t) * (1.0 - sm_(uB5 - 0.3, uB5, t))); }
@@ -76,7 +81,7 @@ export default class S8Fire extends Scene {
     const inh = sm(T53 + 0.6, BREATHS[0]![0], T) * (1 - sm(BREATHS[0]![0], BREATHS[0]![0] + 0.25, T));
     this.rig.jaw.value = 0.08 + 0.3 * inh + 0.62 * b + 0.05 * Math.sin(T * 30) * b;
     const m = new THREE.Vector3(), m2 = new THREE.Vector3(); firePath(head - 0.45, m); firePath(head + 0.4, m2);
-    const dir = m2.clone().sub(m).normalize(); dir.y -= 0.12; dir.normalize(); this.u.uMouth.value.copy(m).addScaledVector(dir, 0.35); this.u.uDir.value.copy(dir);
+    const dir = m2.clone().sub(m).normalize(); dir.y -= 0.12; dir.normalize(); mouthAt(m, dir, this.rig.jaw.value, this.rig.dragon.scale.value, this.u.uMouth.value); this.u.uDir.value.copy(dir);
     this.fireL.position.copy(m).addScaledVector(dir, 1.6); const flick = 0.85 + 0.15 * Math.sin(T * 37) * Math.sin(T * 23); this.fireL.intensity = 70 * b * flick;
     this.fireL2.position.copy(m).addScaledVector(dir, 5.5); this.fireL2.intensity = 110 * b * flick * sm(0.2, 0.7, b);
     this.mouthL.position.copy(m).addScaledVector(dir, 0.15); this.mouthL.intensity = 14 * inh * (0.8 + 0.2 * Math.sin(T * 41)) + 12 * b;

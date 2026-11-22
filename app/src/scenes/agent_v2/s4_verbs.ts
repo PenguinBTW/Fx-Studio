@@ -224,6 +224,8 @@ export default class S4Verbs extends Scene {
     // scissors snap shut on the hit and spring back open
     const sh = since(hitsOf('S'), T), ang = sh.n ? 0.62 * (1 - slam(sh.d * 0.7)) : 0.62;
     n.sc_a!.rotation.y = ang / 2; n.sc_b!.rotation.y = -ang / 2; n.scissors!.position.x = 1.35 + 0.5 * Math.min(sh.n, 1);
+    // the dragged sheet shoves the scissors ahead of it instead of sliding through them
+    n.scissors!.position.z += 0.75 * ease((T - kOf('drag') + 0.06) / 0.26);
     // stamp: arc from the ink pad to its target, slam, lift
     const rest = this.rest.stamp!; let spos = rest.clone(), tilt = 0;
     for (const [v] of STAMPS) { const t = kOf(v), tgt = v === 'check' ? new THREE.Vector3(0.7, 0.01, -1.0) : this.bAt(t).add(new THREE.Vector3(v === 'rate' ? 0.3 : v === 'update' ? -0.3 : 0, 0.01, v === 'rate' ? 0.7 : v === 'update' ? -0.7 : 0));
