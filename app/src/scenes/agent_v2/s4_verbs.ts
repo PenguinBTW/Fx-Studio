@@ -321,6 +321,8 @@ export default class S4Verbs extends Scene {
     const k = Math.min(47, Math.max(0, Math.floor((T - T20 + 0.02) / BEAT))), alpha = overlayTextDuck(f.tin, f.tout);
     const g = this.layer.ctx; this.layer.clear(); this.moteU.uT.value = T; this.moteU.uPx.value = Ht / 1080;
     const auto = rr.autoClear; rr.autoClear = false; let focus = 4, whip = 0, panels = 0;
+    // lights and props are fixed within a frame: build the shadow maps once, not once per whip sub-frame or panel
+    const shAuto = rr.shadowMap.autoUpdate; rr.shadowMap.autoUpdate = false; rr.shadowMap.needsUpdate = true;
     const draw = (target: THREE.WebGLRenderTarget, cam: THREE.Camera, clear: boolean) => { rr.setRenderTarget(target); if (clear) { rr.setClearColor(0x000000, 1); rr.clear(true, true, true); } rr.render(this.scene, cam); };
     if (b <= 9) {
       const WH = 0.075, shut = 1 / 60 / BARL, s = SHOTS[b]!, prev = b > 0 ? SHOTS[b - 1] : undefined, N = prev && q < WH + shut ? 48 : 1;
@@ -343,7 +345,7 @@ export default class S4Verbs extends Scene {
     // callout pass: the 2D layer on a plane at the focus distance
     this.layer.upload(); this.tcam.fov = this.cam.fov; this.tcam.aspect = 16 / 9; this.tcam.updateProjectionMatrix();
     const hh = 2 * focus * Math.tan(THREE.MathUtils.degToRad(this.tcam.fov) / 2); this.txt.position.set(0, 0, -focus); this.txt.scale.set(hh * 16 / 9, hh, 1); this.tcam.updateMatrixWorld(true);
-    rr.setRenderTarget(out); rr.render(this.tscene, this.tcam); rr.autoClear = auto; rr.resetState();
+    rr.setRenderTarget(out); rr.render(this.tscene, this.tcam); rr.autoClear = auto; rr.shadowMap.autoUpdate = shAuto; rr.resetState();
     // god rays from the window when it is in frame
     const wv = new THREE.Vector3(-5.5, 4.4, -9).project(this.cam), inWin = panels ? 0 : sm(1.4, 0.9, Math.max(Math.abs(wv.x), Math.abs(wv.y))) * (wv.z < 1 ? 1 : 0);
     let shake = 0; for (const [v] of STAMPS) if (v !== 'check') shake = Math.max(shake, slam((T - kOf(v)) * 1.5) * (T >= kOf(v) ? 1 : 0));

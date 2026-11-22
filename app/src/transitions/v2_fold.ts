@@ -12,7 +12,7 @@ const vec2 gH0 = vec2(0.312, 0.392); // the sheet's half-size in the top-down de
 float mapA; float gBack;
 vec3 S(sampler2D T, vec2 q) { return texture2D(T, mix(q, gC + (q - 0.5) * 2.0 * gH0, mapA)).rgb; }
 // back faces: plain paper with a faint mirrored show-through of the ink; lit by the desk light in main()
-vec3 back(vec3 src, float c, float g) { gBack = 1.0; float lum = dot(src, vec3(0.3, 0.55, 0.15)); return PAPER * (0.9 - 0.14 * (1.0 - smoothstep(0.15, 0.6, lum))) * (0.72 + 0.28 * (-c)) * (1.0 - 0.25 * smoothstep(0.95, 1.0, g)); }
+vec3 back(vec3 src, float c, float g) { gBack = 1.0; float lum = dot(src, vec3(0.3, 0.55, 0.15)); return PAPER * (0.92 - 0.3 * (1.0 - smoothstep(0.15, 0.6, lum))) * (0.72 + 0.28 * (-c)) * (1.0 - 0.25 * smoothstep(0.95, 1.0, g)); }
 vec4 f1(vec2 p, float th, sampler2D T) {
   float c = cos(th), sn = sin(th), Y = p.y - 0.5, den = c + K * Y * sn;
   if (abs(den) > 1e-4) { float s = Y / den;
@@ -43,7 +43,7 @@ void main() {
   // the paper takes the desk's light where it lies now: blinds stripes and the warm key
   vec3 d = texture2D(texD, vUv).rgb; vec3 dl = d; for (int i = 0; i < 8; i++) { float a = float(i) * 0.785; dl += texture2D(texD, vUv + 0.022 * vec2(cos(a) / uAsp, sin(a))).rgb; } dl /= 9.0; // blur out the wood grain, keep the slats
   float st = smoothstep(0.03, 0.2, dot(dl, vec3(0.3, 0.55, 0.15)));
-  vec3 light = mix(vec3(0.62, 0.6, 0.66), vec3(2.0, 1.45, 0.9), st); float lit = open ? 1.0 - smoothstep(0.7, 0.95, u) : 1.0;
+  vec3 light = mix(vec3(0.78, 0.66, 0.56), vec3(2.0, 1.45, 0.9), st); float lit = open ? 1.0 - smoothstep(0.7, 0.95, u) : 1.0;
   vec3 face = k.rgb * mix(vec3(1.0), light, gBack * lit);
   vec3 bg = d * (1.0 - 0.55 * sh.a * (1.0 - k.a));
   gl_FragColor = vec4(mix(bg, face, k.a), 1.0);
