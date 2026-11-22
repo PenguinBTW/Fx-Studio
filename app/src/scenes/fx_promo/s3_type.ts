@@ -11,8 +11,8 @@ import { solveDollyZoom } from '../../engine/rig';
 import { C, HALO, BAR, BEAT, bar, sceneTime, model, studioEnv, slam, typeLine, applyCam, lin, DoFPresenter } from './kit';
 
 const ORDER = ['KINETIC', 'TYPE', 'IN', '3D', 'ANY', 'FONT'];
-// Neighbouring beats get the most different faces: Black, Cormorant Italic, Plex Mono, Light, Cormorant, Italic.
-const BLENDER = 4, FONT_FACES = 6, FONT_ORDER = [0, 4, 2, 5, 1, 3];
+// Neighbouring beats always change class (serif italic, light, serif, mono, black) so every swap reads in a still.
+const BLENDER = 4, FONT_FACES = 6, FONT_ORDER = [4, 5, 1, 2, 4, 0];
 const SP = 40;
 const LEAD = 26;
 const V = SP / (1.3 * BAR);

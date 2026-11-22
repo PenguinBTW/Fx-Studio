@@ -33,6 +33,7 @@ void main(){
   vec3 d = normalize(vD);
   float hz = exp(-abs(d.y + 0.08) * 9.0);
   vec3 c = vec3(0.002, 0.002, 0.004) + uSig * (0.07 * hz + 0.05 * exp(-abs(d.y + 0.08) * 4.0)) + uIce * 0.012 * exp(-abs(d.y - 0.3) * 5.0);
+  c *= mix(1.0, 0.2, smoothstep(0.02, 0.45, d.y));
   float a = atan(d.x, d.y + 0.35);
   float beams = pow(0.5 + 0.5 * sin(a * 18.0 + sin(a * 5.0 + uT * 0.3) * 2.5), 90.0) * (0.4 + 0.6 * pow(0.5 + 0.5 * sin(a * 7.0 - uT * 0.5), 3.0)) * smoothstep(0.1, -0.7, d.z) * smoothstep(-0.25, 0.3, d.y);
   c += mix(uSig, vec3(1.0, 0.9, 0.8), 0.35) * beams * uBeam;
@@ -207,7 +208,7 @@ export default class S11Mark extends Scene {
 
     const flash = T >= SEAL ? Math.exp(-(T - SEAL) * 5) : 0;
     const end = prog(T, 213.3, 214.45, ease.inOutQuad);
-    return { exposure: 1 + 0.35 * flash, bloom: 0.55 + 0.3 * flash, bloomThreshold: 1.0, vignette: 0.55, ca: (0.35 + 0.6 * f.a.snare) * (1 - seal), grain: 0.045, fade: end };
+    return { exposure: 0.7 + 0.3 * THREE.MathUtils.smoothstep(T, SEAL - 1.5, SEAL) + 0.35 * flash, bloom: 0.55 + 0.3 * flash, bloomThreshold: 1.0, vignette: 0.55, ca: (0.35 + 0.6 * f.a.snare) * (1 - seal), grain: 0.045, fade: end };
   }
 
   override dispose(): void {
