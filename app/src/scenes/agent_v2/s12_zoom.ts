@@ -55,6 +55,15 @@ vec3 galaxy(vec2 q) { vec2 gc = vec2(-0.32, 0.12); vec2 d = q - gc; d = mat2(1.0
   vec3 c = vec3(0.55, 0.65, 1.0) * arms * disk * n * 1.6 + vec3(1.0, 0.8, 0.55) * exp(-r * 14.0) * 2.0 + vec3(0.6, 0.3, 0.5) * arms * disk * 0.4 * n;
   c *= 1.0 - dust * 0.7; float st = step(0.9965, h21(floor(q * 900.0))) * disk * 3.0 * smoothstep(15.2, 16.0, uZ); c += vec3(st);
   c += vec3(1.0, 0.9, 0.7) * exp(-length(q) * pow(10.0, 16.0 - uZ) * 60.0) * 1.2 * (1.0 - smoothstep(14.5, 15.5, uZ)); return c; }
+// the deep field behind the galaxy: two satellite dwarfs, faint background galaxies, dust lanes and layered stars
+vec3 deepField(vec2 q, vec2 uv) { vec3 c = vec3(0.0);
+  for (int i = 0; i < 2; i++) { vec2 sp = i == 0 ? vec2(0.62, -0.38) : vec2(-1.05, 0.55); float r = length((q - sp) * vec2(1.0, 1.5)); c += vec3(0.7, 0.75, 1.0) * (exp(-r * 22.0) * 0.5 + exp(-r * 70.0) * 0.6) * (0.6 + 0.4 * pfbm(vec3(q * 30.0, float(i)), 3)); }
+  vec2 g = uv * 7.0; vec2 cell = floor(g), f = fract(g) - 0.5; float h = h21(cell + 17.0);
+  if (h > 0.55) { vec2 o = (vec2(h21(cell + 3.0), h21(cell + 8.0)) - 0.5) * 0.6; float a = h * 31.0; mat2 R = mat2(cos(a), -sin(a), sin(a), cos(a)); vec2 d = R * (f - o) * vec2(1.0, 2.2 + 2.0 * h21(cell + 5.0));
+    float sz = 0.03 + 0.05 * h21(cell + 11.0); c += mix(vec3(1.0, 0.8, 0.6), vec3(0.6, 0.7, 1.0), h21(cell + 2.0)) * exp(-length(d) / sz) * 0.35; }
+  float neb = smoothstep(0.5, 0.95, pfbm(vec3(uv * 0.9, 21.0 + uT * 0.01), 5) * 0.5 + 0.5); c += mix(vec3(0.25, 0.12, 0.35), vec3(0.08, 0.2, 0.4), pfbm(vec3(uv * 1.7, 3.0), 3) * 0.5 + 0.5) * neb * 0.22;
+  for (int k = 0; k < 3; k++) { float sc = 260.0 * (1.0 + float(k) * 1.9); vec2 s = floor(uv * sc + float(k) * 13.1); float st = step(0.996 - 0.001 * float(k), h21(s)); c += mix(vec3(1.0, 0.85, 0.7), vec3(0.75, 0.85, 1.0), h21(s + 1.0)) * st * h21(s + 4.0) * (0.9 - 0.25 * float(k)); }
+  return c; }
 vec3 stars(vec2 uv) { float s = step(0.997, h21(floor(uv * 520.0))) * h21(floor(uv * 520.0) + 3.0); return vec3(s * 0.7); }
 void main() { vec2 uv = (vUv - 0.5) * vec2(uRes.x / uRes.y, 1.0) * 2.0; float ca = cos(uA), sa = sin(uA); uv = mat2(ca, -sa, sa, ca) * uv; float z = uZ;
   vec3 c = vec3(0.0);
@@ -67,6 +76,7 @@ void main() { vec2 uv = (vUv - 0.5) * vec2(uRes.x / uRes.y, 1.0) * 2.0; float ca
   float cz = z - 7.5; float cov = smoothstep(0.52, 0.8, pfbm(vec3(uv * pow(10.0, cz) * 1.3, uT * 0.03 + 4.0), 5) * 0.5 + 0.5); c = mix(c, vec3(0.05, 0.05, 0.07) + vec3(0.5, 0.28, 0.12) * (1.0 - cov) * 0.4, cov * w(z, 6.4, 8.5) * 0.85);
   for (int k = 0; k < 3; k++) { float ph = fract((z - 8.0) / 3.0 + float(k) / 3.0); float sc = 520.0 * pow(10.0, 3.0 * (1.0 - ph)); float fade = sin(3.14159 * ph); c += stars(uv * sc / 520.0 + float(k) * 3.7) * fade * smoothstep(7.6, 9.0, z) * 0.7; }
   c += vec3(0.35, 0.3, 0.5) * smoothstep(0.55, 0.9, pfbm(vec3(uv * 1.2 + z * 0.05, 9.0), 4) * 0.5 + 0.5) * smoothstep(9.0, 10.5, z) * (1.0 - smoothstep(13.5, 15.0, z)) * 0.35;
+  c += deepField(uv * pow(10.0, z - 16.0), uv) * smoothstep(14.6, 16.0, z);
   fragColor = vec4(c, 1.0); }`;
 
 export default class S12Zoom extends Scene {

@@ -17,18 +17,22 @@ const V = 6.0, PI_ = (TI - T59) * V + 2; // path param at which the head hits th
 /** dives from the sky along -x...+x, hits y=0 at p = PI_, then flattens out under water */
 export const oceanPath: PathFn = (p, o) => { const q = p - PI_; return o.set(q * 0.8, q < 0 ? -q * 0.55 - 0.004 * q * q * q : -q * 0.55 * Math.exp(-q * 0.12) - 0.3 * Math.sin(q * 0.4), 1.2 * Math.sin(p * 0.15)); };
 
-const WATER_V = /* glsl */ `uniform float uT, uTI; varying vec3 vW; varying vec3 vN;
+const WATER_V = /* glsl */ `uniform float uT, uTI; varying vec3 vW; varying vec3 vN; varying float vH;
 vec3 wave(vec2 p, float t) { float h = 0.0; vec2 g = vec2(0.0); for (int i = 0; i < 6; i++) { float fi = float(i); vec2 d = normalize(vec2(cos(fi * 1.7 + 0.3), sin(fi * 2.3 + 1.1)));
   float k = 0.35 * pow(1.55, fi), a = 0.22 / pow(1.7, fi), ph = dot(d, p) * k + t * sqrt(9.8 * k) * 0.6; h += a * sin(ph); g += a * k * cos(ph) * d; }
   float r = length(p - vec2(0.0, 1.2 * sin(${PI_.toFixed(3)} * 0.15))), ti = t - uTI; if (ti > 0.0) { float ring = sin(r * 3.0 - ti * 9.0) * exp(-abs(r - ti * 3.0) * 1.2) * 0.35 * exp(-ti * 0.6); h += ring; }
   return vec3(h, g); }
-void main() { vec3 p = position; vec3 w = wave(p.xz, uT); p.y += w.x; vN = normalize(vec3(-w.y, 1.0, -w.z)); vec4 wp = modelMatrix * vec4(p, 1.0); vW = wp.xyz; gl_Position = projectionMatrix * viewMatrix * wp; }`;
-const WATER_F = /* glsl */ `uniform float uT, uTI; uniform vec3 uHead; varying vec3 vW; varying vec3 vN;
-void main() { vec3 V = normalize(cameraPosition - vW); vec3 N = normalize(vN); bool under = cameraPosition.y < 0.0; if (under) N = -N;
+void main() { vec3 p = position; vec3 w = wave(p.xz, uT); p.y += w.x; vH = w.x; vN = normalize(vec3(-w.y, 1.0, -w.z)); vec4 wp = modelMatrix * vec4(p, 1.0); vW = wp.xyz; gl_Position = projectionMatrix * viewMatrix * wp; }`;
+const WATER_F = /* glsl */ `uniform float uT, uTI; uniform vec3 uHead; varying vec3 vW; varying vec3 vN; varying float vH;
+// capillary ripples in the fragment shader: the mesh carries the swell, these give the moon a glitter path
+vec2 ripple(vec2 p, float t) { vec2 g = vec2(0.0); for (int i = 0; i < 7; i++) { float fi = float(i); vec2 d = normalize(vec2(cos(fi * 2.9 + 0.7), sin(fi * 1.3 + 2.1)));
+  float k = 2.2 * pow(1.62, fi), a = 0.03 / pow(1.45, fi), ph = dot(d, p) * k + t * sqrt(9.8 * k) * 0.5; g += a * k * cos(ph) * d; } return g; }
+void main() { vec3 V = normalize(cameraPosition - vW); float dist = length(cameraPosition - vW); vec2 rg = ripple(vW.xz, uT) * exp(-dist * 0.06); vec3 N = normalize(vN + vec3(-rg.x, 0.0, -rg.y)); bool under = cameraPosition.y < 0.0; if (under) N = -N;
   float fr = 0.02 + 0.98 * pow(1.0 - max(dot(N, V), 0.0), 5.0); vec3 R = reflect(-V, N);
-  vec3 sky = mix(vec3(0.01, 0.02, 0.05), vec3(0.06, 0.1, 0.2), smoothstep(-0.1, 0.6, R.y)); vec3 moonD = normalize(vec3(-0.4, 0.35, -1.0));
-  sky += vec3(0.9, 0.95, 1.0) * pow(max(dot(R, moonD), 0.0), 900.0) * 30.0 + vec3(0.3, 0.4, 0.6) * pow(max(dot(R, moonD), 0.0), 40.0);
-  vec3 deep = vec3(0.0, 0.012, 0.02); vec3 c = under ? mix(vec3(0.02, 0.1, 0.16), vec3(0.3, 0.5, 0.6), pow(max(dot(-N, V), 0.0), 3.0) * 0.4) : mix(deep, sky, fr);
+  vec3 sky = mix(vec3(0.07, 0.11, 0.2), vec3(0.006, 0.012, 0.035), smoothstep(0.0, 0.5, R.y)); vec3 moonD = normalize(vec3(-0.4, 0.35, -1.0)); float md = max(dot(R, moonD), 0.0);
+  sky += vec3(0.9, 0.95, 1.0) * pow(md, 900.0) * 30.0 + vec3(0.55, 0.7, 1.0) * pow(md, 160.0) * 2.5 + vec3(0.12, 0.18, 0.32) * pow(md, 12.0) * 0.12;
+  vec3 deep = vec3(0.0, 0.012, 0.02) + vec3(0.0, 0.06, 0.07) * smoothstep(0.05, 0.35, vH) * max(dot(V, vec3(0.0, 0.3, 0.0)) + 0.6, 0.0); vec3 c = under ? mix(vec3(0.02, 0.1, 0.16), vec3(0.3, 0.5, 0.6), pow(max(dot(-N, V), 0.0), 3.0) * 0.4) : mix(deep, sky, fr);
+  if (!under) { c += vec3(0.5, 0.62, 0.7) * smoothstep(0.3, 0.42, vH + 0.05 * rg.x) * 0.25; c = mix(c, vec3(0.035, 0.055, 0.11), 1.0 - exp(-dist * 0.012)); }
   float ti = uT - uTI; float r = length(vW.xz - vec2(0.0, 1.2 * sin(${PI_.toFixed(3)} * 0.15)));
   float bio = ti > 0.0 ? exp(-abs(r - ti * 3.0) * 1.5) * exp(-ti * 0.35) * (0.6 + 0.4 * sin(r * 9.0)) + exp(-r * 0.6) * exp(-ti * 0.8) * 2.0 : 0.0;
   float trail = exp(-length(vW.xz - uHead.xz) * 0.8) * step(uHead.y, 0.5);
@@ -62,7 +66,10 @@ export default class S9Ocean extends Scene {
     const moon = new THREE.DirectionalLight(0xbcd0ff, 1.6); moon.position.set(-4, 3.5, -10); const glow = new THREE.PointLight(0x30e0ff, 0, 10, 1.5);
     const bg = new THREE.Mesh(new THREE.SphereGeometry(300, 32, 16), new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, fog: false,
       vertexShader: 'varying vec3 vD; void main() { vD = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-      fragmentShader: 'varying vec3 vD; void main() { gl_FragColor = vec4(mix(vec3(0.0, 0.006, 0.01), vec3(0.02, 0.11, 0.14), smoothstep(-0.7, 0.0, vD.y)), 1.0); }' }));
+      fragmentShader: `varying vec3 vD; void main() { vec3 vD = normalize(vD); vec3 c = cameraPosition.y > 0.0 ? vec3(0.035, 0.055, 0.11) : mix(vec3(0.0, 0.006, 0.01), vec3(0.02, 0.11, 0.14), smoothstep(-0.7, 0.0, vD.y));
+        if (vD.y > 0.0 && cameraPosition.y > 0.0) { vec3 mD = normalize(vec3(-0.4, 0.35, -1.0)); float m = max(dot(vD, mD), 0.0); vec3 q = floor(vD * 420.0); float h = fract(sin(dot(q, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
+          c = mix(vec3(0.035, 0.055, 0.11), vec3(0.003, 0.006, 0.02), smoothstep(0.0, 0.4, vD.y)) + vec3(0.9, 0.95, 1.0) * smoothstep(0.99955, 0.9997, m) * 6.0 + vec3(0.35, 0.45, 0.7) * pow(m, 60.0) * 0.5 + vec3(0.8, 0.85, 1.0) * step(0.9975, h) * smoothstep(0.02, 0.3, vD.y) * 1.5; }
+        gl_FragColor = vec4(c, 1.0); }` }));
     bg.renderOrder = -1; this.bgU = bg;
     this.objs = [water, plk, moon, glow, bg]; this.scene.add(...this.objs, new THREE.HemisphereLight(0x203048, 0x000000, 0.25));
     const pm = new THREE.PMREMGenerator(this.ctx.renderer); this.env = pm.fromScene(new RoomEnvironment(), 0.04).texture; pm.dispose(); this.ctx.renderer.resetState();
@@ -79,7 +86,7 @@ export default class S9Ocean extends Scene {
     const w = sm(TI - 0.3, TI + 0.6, T); const un = hp.clone().add(new THREE.Vector3(-7.5, 0.4, 5.5)); un.y = Math.min(un.y, -0.6 - 1.0 * w);
     const pos = hp.clone().add(new THREE.Vector3(-4.0, 0.9, 4.6)).lerp(ab, sm(T59, T59 + 0.8, T) * (1 - w)).lerp(un, w); pos.y = w < 0.01 ? Math.max(pos.y, 0.8) : pos.y;
     this.cam.position.copy(pos); this.cam.lookAt(look0.clone().add(new THREE.Vector3(w * 2.0, 0, 0))); this.cam.updateProjectionMatrix();
-    const under = this.cam.position.y < 0; this.scene.fog = under ? this.fog : null; this.bgU.visible = under; this.bgU.position.copy(this.cam.position);
+    const under = this.cam.position.y < 0; this.scene.fog = under ? this.fog : null; this.bgU.visible = true; this.bgU.position.copy(this.cam.position);
     rr.setRenderTarget(out); rr.setClearColor(under ? 0x01080c : 0x01030a, 1); rr.clear(true, true, true); rr.render(this.scene, this.cam);
     const g = this.layer.ctx; this.layer.clear(); term(g, S9_LINES, T, { size: 46, x: 200, align: 'left', y: 930, halo: 'rgba(0,0,0,0.6)', color: '#dff8ff', cursor: '#40e8ff', alpha: overlayTextDuck(f.tin, f.tout) });
     this.ctx.comp.draw(rr, this.layer.upload(), out, { mode: 'normal', opacity: 1 }); rr.resetState();

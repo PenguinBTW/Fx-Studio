@@ -84,7 +84,7 @@ export class DragonRig {
       if (name === 'Tooth') return deform(new THREE.MeshPhysicalMaterial({ color: 0xe8dcc4, roughness: 0.25, clearcoat: 0.6 }), fr, sc, both(), j);
       if (name === 'Eye') return deform(new THREE.MeshBasicMaterial({ color: 0xffffff }), fr, sc, both(eyeFrag(L.eye)));
       if (name === 'Mouth') return deform(new THREE.MeshStandardMaterial({ color: 0x3a0606, roughness: 0.45, emissive: 0x200000 }), fr, sc, both(), j);
-      if (name === 'Mane') return deform(new THREE.MeshPhysicalMaterial({ color: L.mane, roughness: 0.5, sheen: 1, sheenColor: new THREE.Color(L.maneSheen), sheenRoughness: 0.4 }), fr, sc, both());
+      if (name === 'Mane') return deform(new THREE.MeshPhysicalMaterial({ color: L.mane, roughness: 0.5, sheen: 1, sheenColor: new THREE.Color(L.maneSheen), sheenRoughness: 0.4 }), fr, sc, both(), j);
       if (name === 'Fin') return deform(new THREE.MeshPhysicalMaterial({ color: L.fin, roughness: 0.5, side: THREE.DoubleSide, emissive: L.finGlow, transparent: true, opacity: 0.8, sheen: 0.6, sheenColor: new THREE.Color(0xff5020) }), fr, sc, both());
       return deform(new THREE.MeshPhysicalMaterial({ color: L.horn, roughness: 0.32, clearcoat: 0.8, clearcoatRoughness: 0.2 }), fr, sc, both(), j);
     });
