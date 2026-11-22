@@ -1,0 +1,224 @@
+{
+  "project": "agent_v2",
+  "audio": "../../../public/audio/agent_cut.mp3",
+  "entries": [
+    {
+      "scene": "agent_v2/s0_open",
+      "id": "s0_open",
+      "start": 0,
+      "end": 5.9
+    },
+    {
+      "scene": "agent_v2/planet",
+      "id": "s1_world",
+      "start": 5.287,
+      "end": 17.2
+    },
+    {
+      "scene": "agent_v2/s2_crumble",
+      "id": "s2_crumble",
+      "start": 16.455,
+      "end": 28.4
+    },
+    {
+      "scene": "agent_v2/s3_forge",
+      "id": "s3_forge",
+      "start": 27.672,
+      "end": 37.82
+    },
+    {
+      "scene": "agent_v2/s4_verbs",
+      "id": "s4_verbs",
+      "start": 36.92,
+      "end": 60.205
+    },
+    {
+      "scene": "agent_v2/s5_paper",
+      "id": "s5_paper",
+      "start": 59.4,
+      "end": 69.6
+    },
+    {
+      "scene": "agent_v2/s6_comic",
+      "id": "s6_comic",
+      "start": 67.6,
+      "end": 84.5
+    },
+    {
+      "scene": "agent_v2/s7_roulette",
+      "id": "s7_roulette",
+      "start": 83.6,
+      "end": 99.5
+    },
+    {
+      "scene": "agent_v2/s8_fire",
+      "id": "s8_fire",
+      "start": 98.6,
+      "end": 110.8
+    },
+    {
+      "scene": "agent_v2/s9_ocean",
+      "id": "s9_ocean",
+      "start": 109.8,
+      "end": 118.3
+    },
+    {
+      "scene": "agent_v2/s10_editor",
+      "id": "s10_editor",
+      "start": 117.3,
+      "end": 129.5
+    },
+    {
+      "scene": "agent_v2/s11_player",
+      "id": "s11_player",
+      "start": 128.5,
+      "end": 144.4
+    },
+    {
+      "scene": "agent_v2/s12_zoom",
+      "id": "s12_zoom",
+      "start": 143.4,
+      "end": 151.9
+    },
+    {
+      "scene": "agent_v2/s13_rush",
+      "id": "s13_rush",
+      "start": 151.139,
+      "end": 174.398
+    },
+    {
+      "scene": "agent_v2/s14_quiet",
+      "id": "s14_quiet",
+      "start": 173.298,
+      "end": 189.255
+    },
+    {
+      "scene": "agent_v2/s15_logo",
+      "id": "s15_logo",
+      "start": 188.3,
+      "end": 224.436
+    }
+  ],
+  "transitions": [
+    {
+      "id": "t-cursor_bloom",
+      "transition": "v2_cursor_bloom",
+      "from": "s0_open",
+      "to": "s1_world",
+      "at": 5.337,
+      "dur": 0.5
+    },
+    {
+      "id": "t-shatter",
+      "transition": "v2_shatter",
+      "from": "s1_world",
+      "to": "s2_crumble",
+      "at": 16.505,
+      "dur": 0.6
+    },
+    {
+      "id": "t-vortex",
+      "transition": "v2_vortex",
+      "from": "s2_crumble",
+      "to": "s3_forge",
+      "at": 27.722,
+      "dur": 0.6
+    },
+    {
+      "id": "t-print",
+      "transition": "v2_print",
+      "from": "s3_forge",
+      "to": "s4_verbs",
+      "at": 36.97,
+      "dur": 0.8
+    },
+    {
+      "id": "t-fold",
+      "transition": "v2_fold",
+      "from": "s4_verbs",
+      "to": "s5_paper",
+      "at": 59.455,
+      "dur": 0.7
+    },
+    {
+      "id": "t-halftone",
+      "transition": "v2_halftone",
+      "from": "s5_paper",
+      "to": "s6_comic",
+      "at": 68.853,
+      "dur": 0.6
+    },
+    {
+      "id": "t-glitch",
+      "transition": "v2_glitch",
+      "from": "s6_comic",
+      "to": "s7_roulette",
+      "at": 83.884,
+      "dur": 0.45
+    },
+    {
+      "id": "t-burn",
+      "transition": "v2_burn",
+      "from": "s7_roulette",
+      "to": "s8_fire",
+      "at": 98.766,
+      "dur": 0.6
+    },
+    {
+      "id": "t-splash",
+      "transition": "v2_splash",
+      "from": "s8_fire",
+      "to": "s9_ocean",
+      "at": 109.983,
+      "dur": 0.6
+    },
+    {
+      "id": "t-vhs",
+      "transition": "v2_vhs",
+      "from": "s9_ocean",
+      "to": "s10_editor",
+      "at": 117.411,
+      "dur": 0.7
+    },
+    {
+      "id": "t-viewport",
+      "transition": "v2_viewport",
+      "from": "s10_editor",
+      "to": "s11_player",
+      "at": 128.579,
+      "dur": 0.8
+    },
+    {
+      "id": "t-mosaic",
+      "transition": "v2_mosaic",
+      "from": "s11_player",
+      "to": "s12_zoom",
+      "at": 143.585,
+      "dur": 0.7
+    },
+    {
+      "id": "t-flash",
+      "transition": "v2_flash",
+      "from": "s12_zoom",
+      "to": "s13_rush",
+      "at": 151.189,
+      "dur": 0.45
+    },
+    {
+      "id": "t-ash",
+      "transition": "v2_ash",
+      "from": "s13_rush",
+      "to": "s14_quiet",
+      "at": 173.348,
+      "dur": 1.0
+    },
+    {
+      "id": "t-ink",
+      "transition": "v2_ink",
+      "from": "s14_quiet",
+      "to": "s15_logo",
+      "at": 188.405,
+      "dur": 0.8
+    }
+  ]
+}

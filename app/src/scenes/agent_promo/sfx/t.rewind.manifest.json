@@ -1,0 +1,18 @@
+{
+  "id": "t.rewind",
+  "eventId": null,
+  "recipe": "reverseReverb",
+  "seed": 1339,
+  "file": "t.rewind.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 1.3199791666666667,
+  "hitOffsetSec": 0.5999791666666666,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.04074299276410943,
+  "rmsDb": -27.798941463908477,
+  "eventTime": null,
+  "startTime": null
+}

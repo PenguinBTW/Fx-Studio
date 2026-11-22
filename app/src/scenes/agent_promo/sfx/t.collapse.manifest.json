@@ -1,0 +1,18 @@
+{
+  "id": "t.collapse",
+  "eventId": null,
+  "recipe": "collapse",
+  "seed": 1820,
+  "file": "t.collapse.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 2.5,
+  "hitOffsetSec": 0,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.13414732440551638,
+  "rmsDb": -17.448359699871865,
+  "eventTime": null,
+  "startTime": null
+}

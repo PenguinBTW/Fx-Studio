@@ -1,0 +1,18 @@
+{
+  "id": "a6.mark5",
+  "eventId": null,
+  "recipe": "pressure",
+  "seed": 1154,
+  "file": "a6.mark5.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 0.9,
+  "hitOffsetSec": 0,
+  "peak": 0.3981071705534972,
+  "peakDb": -8.000000000000002,
+  "rms": 0.08262974310214505,
+  "rmsDb": -21.657271949468537,
+  "eventTime": null,
+  "startTime": null
+}

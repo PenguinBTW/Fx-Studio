@@ -1,0 +1,18 @@
+{
+  "id": "a7.back",
+  "eventId": null,
+  "recipe": "whoosh",
+  "seed": 1376,
+  "file": "a7.back.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 1.6,
+  "hitOffsetSec": 0.8,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.07529868216791245,
+  "rmsDb": -22.4642524898537,
+  "eventTime": null,
+  "startTime": null
+}

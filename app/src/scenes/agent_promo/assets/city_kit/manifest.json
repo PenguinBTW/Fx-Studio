@@ -1,0 +1,1 @@
+{ "id": "city_kit", "version": 1, "source": "build.py", "budgets": { "tris": 200000, "textureMB": 1 } }
