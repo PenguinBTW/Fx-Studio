@@ -49,7 +49,7 @@ export default class S14Quiet extends Scene {
     }
     this.flakes.instanceMatrix.needsUpdate = true;
     const hq = new THREE.Vector3(); glidePath(head - 3.9, hq); const fw = hp.clone().sub(hq).setY(0).normalize(), sd = new THREE.Vector3(-fw.z, 0, fw.x);
-    const th = 1.0 - 0.4 * sm(0, 7, lt), cd = 3.4 + 2.4 * sm(0.4, 9, lt) + 1.0 * sm(bar(99), bar(101), T), el = 0.2 + 0.45 * sm(0, 9, lt) + 0.8 * sm(bar(98.5), bar(101), T); this.cam.position.copy(hp).addScaledVector(fw, cd * Math.cos(th)).addScaledVector(sd, cd * Math.sin(th)).add(new THREE.Vector3(0, el, 0)); this.cam.lookAt(hp.x, hp.y - 0.1, hp.z); this.cam.updateProjectionMatrix();
+    const th = 1.0 - 0.4 * sm(0, 7, lt), cd = 3.4 + 2.4 * sm(0.4, 9, lt) + 1.0 * sm(bar(99), bar(101), T), el = 0.2 + 0.45 * sm(0, 9, lt) + 0.8 * sm(bar(98.5), bar(101), T); this.cam.position.copy(hp).addScaledVector(fw, cd * Math.cos(th)).addScaledVector(sd, cd * Math.sin(th)).add(new THREE.Vector3(0, el, 0)); const la = hp.clone().addScaledVector(fw, 1.6 * (1 - sm(0, 6, lt))); this.cam.lookAt(la.x, la.y - 0.1, la.z); this.cam.updateProjectionMatrix();
     rr.setRenderTarget(out); rr.setClearColor(0x060606, 1); rr.clear(true, true, true); rr.render(this.scene, this.cam);
     const g = this.layer.ctx; this.layer.clear();
     term(g, S14_LINES, T, { size: 50, align: 'center', x: 960, y: 900, halo: 'rgba(0,0,0,0.5)', color: '#ece8e0', cursor: '#ece8e0', alpha: overlayTextDuck(f.tin, f.tout) });
