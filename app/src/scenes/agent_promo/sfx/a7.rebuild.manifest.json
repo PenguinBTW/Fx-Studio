@@ -1,0 +1,18 @@
+{
+  "id": "a7.rebuild",
+  "eventId": null,
+  "recipe": "subHit",
+  "seed": 1450,
+  "file": "a7.rebuild.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 1.6,
+  "hitOffsetSec": 0,
+  "peak": 0.8912509381337457,
+  "peakDb": -0.9999999999999987,
+  "rms": 0.20713993075785392,
+  "rmsDb": -13.674723465280172,
+  "eventTime": null,
+  "startTime": null
+}

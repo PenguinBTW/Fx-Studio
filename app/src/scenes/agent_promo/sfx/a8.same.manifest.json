@@ -1,0 +1,18 @@
+{
+  "id": "a8.same",
+  "eventId": null,
+  "recipe": "glassPing",
+  "seed": 1598,
+  "file": "a8.same.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 8.399979166666666,
+  "hitOffsetSec": 0.8999791666666667,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.035354262979741445,
+  "rmsDb": -29.031164238781834,
+  "eventTime": null,
+  "startTime": null
+}

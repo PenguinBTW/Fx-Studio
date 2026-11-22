@@ -1,0 +1,18 @@
+{
+  "id": "a4.verbs",
+  "eventId": null,
+  "recipe": "pops",
+  "seed": 340,
+  "file": "a4.verbs.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 3.37175,
+  "hitOffsetSec": 0,
+  "peak": 0.251188643150958,
+  "peakDb": -12,
+  "rms": 0.011473643200343707,
+  "rmsDb": -38.8059731928387,
+  "eventTime": null,
+  "startTime": null
+}

@@ -1,0 +1,18 @@
+{
+  "id": "a11.lock",
+  "eventId": null,
+  "recipe": "subHit",
+  "seed": 1894,
+  "file": "a11.lock.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 2.2,
+  "hitOffsetSec": 0,
+  "peak": 0.8912509381337456,
+  "peakDb": -0.9999999999999997,
+  "rms": 0.16163773450753524,
+  "rmsDb": -15.829144903980424,
+  "eventTime": null,
+  "startTime": null
+}

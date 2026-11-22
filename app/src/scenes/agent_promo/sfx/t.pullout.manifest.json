@@ -1,0 +1,18 @@
+{
+  "id": "t.pullout",
+  "eventId": null,
+  "recipe": "whoosh",
+  "seed": 1524,
+  "file": "t.pullout.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 0.6,
+  "hitOffsetSec": 0.24,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.07711091325859314,
+  "rmsDb": -22.257683066067013,
+  "eventTime": null,
+  "startTime": null
+}

@@ -1,0 +1,18 @@
+{
+  "id": "a3.rotors",
+  "eventId": null,
+  "recipe": "granularCloud",
+  "seed": 229,
+  "file": "a3.rotors.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 9,
+  "hitOffsetSec": 0,
+  "peak": 0.3981071705534972,
+  "peakDb": -8.000000000000002,
+  "rms": 0.030491383854033736,
+  "rmsDb": -30.31645729391103,
+  "eventTime": null,
+  "startTime": null
+}

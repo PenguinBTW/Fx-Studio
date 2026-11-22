@@ -1,7 +1,7 @@
 // Entry: preview player (default) or export mode (?export=1, driven by scripts/render.ts).
 import { Engine, type AdaptiveSampling } from './engine/engine';
 import { PW, PH, SCALE } from './engine/gl';
-import { BRIDGE_VERSION, type EngineBridge, type TextProbeRecord } from './engine/bridge';
+import { BRIDGE_VERSION, textureCanvases, type EngineBridge, type TextProbeRecord } from './engine/bridge';
 import { makeTimeline, makeTransitions, activeProjectName } from './timeline';
 import { installFxStats, exposeFxStats } from './engine/fxstats';
 
@@ -39,7 +39,7 @@ function installTextProbeHook() {
 
   function recordCall(ctx: CanvasRenderingContext2D, text: any, x: number, y: number, isStroke: boolean) {
     const P = window.__motion ?? window.__pdoom;
-    if (!P?.probe || P.recordText === false) return;
+    if (!P?.probe || P.recordText === false || textureCanvases.has(ctx.canvas)) return;
     const str = String(text ?? '');
     if (!str || !str.trim()) return;
 

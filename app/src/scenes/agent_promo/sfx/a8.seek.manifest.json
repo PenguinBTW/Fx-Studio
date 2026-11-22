@@ -1,0 +1,18 @@
+{
+  "id": "a8.seek",
+  "eventId": null,
+  "recipe": "whoosh",
+  "seed": 1561,
+  "file": "a8.seek.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 0.35,
+  "hitOffsetSec": 0.105,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.06627842959845312,
+  "rmsDb": -23.57255580614212,
+  "eventTime": null,
+  "startTime": null
+}
