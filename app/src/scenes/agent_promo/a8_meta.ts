@@ -11,7 +11,7 @@ import { clamp, ease, prog } from '../../engine/util';
 import { C, bar, model, part, present, sceneTime, heroLights, enableShadows, shadows, camPath, applyCam, typeLine, barOf, ACT_BARS, FACTS, textureText, type CamKey } from './kit';
 
 const FPS = 60, DUR = 224.436, LEN = 18, tx = (t: number) => -LEN / 2 + (t / DUR) * LEN;
-const T_SEEK = bar(73), BACK = bar(73) - bar(69), T_SAME = bar(75);
+const T_SEEK = bar(73), BACK = bar(73) - bar(69), T_SAME = bar(75), HOLD_END = bar(78.5);
 const ACT_COL = [0x2a2a2e, 0xd8cdb4, 0xb89a6a, 0x34405a, 0x2f5a46, 0x6a6e78, 0x8a3a30, 0x4a6a8a, 0x8a7a5a, 0x5a4a6a, 0x3a3a3a, 0xd8d2c4];
 const CAM: [number, CamKey][] = [
   [68.8, { pos: [0.6, 2.3, 2.6], tgt: [0, 2.1, -1], fov: 34 }],
@@ -62,7 +62,7 @@ export default class A8Meta extends Scene {
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
     const T = sceneTime(this.ctx, f.t), b = barOf(T);
     const seek = prog(T, T_SEEK, T_SEEK + 0.35, ease.inOutCubic);
-    const film = T - BACK * seek;
+    const film = T < T_SEEK ? T : THREE.MathUtils.lerp(T, T_SEEK - BACK + Math.max(0, T - HOLD_END), seek);
     const frame = Math.round(film * FPS);
     this.head.position.set(tx(film), 0.3, 0.1); this.glow.position.set(tx(film), 1.2, 0.5);
     const s = String(frame).padStart(6, '0');
