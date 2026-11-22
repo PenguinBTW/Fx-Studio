@@ -9,7 +9,7 @@
       "params": {
         "count": 42,
         "spacing": 0.058823529411764705,
-        "freq": 4200,
+        "freq": 5200,
         "spread": 5,
         "jitter": 0.15,
         "decayMs": 4
@@ -36,7 +36,7 @@
       "params": {
         "count": 42,
         "spacing": 0.116848125,
-        "freq": 3400,
+        "freq": 5200,
         "spread": 3,
         "jitter": 0.05,
         "decayMs": 9,
@@ -65,7 +65,7 @@
         "source": "ping",
         "lead": 1.0,
         "tail": 1.0,
-        "freq": 3600
+        "freq": 5200
       }
     },
     {
@@ -131,7 +131,7 @@
       "seed": 377,
       "at": 57.95,
       "params": {
-        "freq": 3800
+        "freq": 5200
       }
     },
     {
@@ -140,7 +140,7 @@
       "seed": 414,
       "at": 57.3,
       "params": {
-        "freq": 3520,
+        "freq": 5200,
         "decay": 1.0,
         "leadIn": 0.9
       }
@@ -427,7 +427,7 @@
       "at": 77.417,
       "params": {
         "dur": 1.4,
-        "freq": 3200,
+        "freq": 5200,
         "voices": 4,
         "decay": 0.9
       }
@@ -484,7 +484,7 @@
       "seed": 1487,
       "at": 119.631,
       "params": {
-        "freq": 3600
+        "freq": 5200
       }
     },
     {
@@ -532,7 +532,7 @@
       "params": {
         "count": 8,
         "spacing": 0.934785,
-        "freq": 3000,
+        "freq": 5200,
         "spread": 4,
         "decayMs": 7
       }
@@ -545,7 +545,7 @@
       "params": {
         "count": 16,
         "spacing": 0.4673925,
-        "freq": 3400,
+        "freq": 5200,
         "spread": 4,
         "decayMs": 7
       }
@@ -558,7 +558,7 @@
       "params": {
         "count": 16,
         "spacing": 0.23369625,
-        "freq": 3800,
+        "freq": 5200,
         "spread": 4,
         "decayMs": 7
       }
@@ -571,7 +571,7 @@
       "params": {
         "count": 24,
         "spacing": 0.116848125,
-        "freq": 4200,
+        "freq": 5200,
         "spread": 4,
         "decayMs": 7
       }

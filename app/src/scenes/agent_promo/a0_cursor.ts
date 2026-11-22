@@ -7,7 +7,7 @@ import { F, font } from '../../engine/type';
 import { clamp, ease, prog } from '../../engine/util';
 import { C, BEAT, bar, model, part, present, sceneTime, PROMPT, heroLights, HALO } from './kit';
 
-const T0 = 0.45, CPS = 17, SIZE = 34, Y = 540;
+const T0 = 0.45, CPS = 17, SIZE = 44, Y = 540;
 const typedAt = (T: number) => clamp(Math.floor((T - T0) * CPS), 0, PROMPT.length);
 
 export default class A0Cursor extends Scene {
@@ -34,7 +34,7 @@ export default class A0Cursor extends Scene {
     const g = this.layer.ctx; this.layer.clear();
     const fam = F.mono(400);
     g.font = font(fam, SIZE);
-    const line = '> ' + PROMPT, full = g.measureText(line).width;
+    const line = '> …' + PROMPT, full = g.measureText(line).width;
     const x0 = 960 - full / 2, n = typedAt(T), shown = line.slice(0, 2 + n);
     const fadeType = 1 - prog(T, bar(2.6), bar(3) - 0.1, ease.inCubic);
     g.textBaseline = 'middle'; g.textAlign = 'left';
@@ -66,7 +66,7 @@ export default class A0Cursor extends Scene {
     this.block.traverse((o) => { const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial; if (m?.emissiveIntensity !== undefined) m.emissiveIntensity = 6 * blink; });
     this.glow.position.copy(wp).add(new THREE.Vector3(0, 0.1, 0.4)); this.glow.intensity = 3 * blink * (1 + 4 * free);
     present(this.ctx, out, this.scene, this.cam, this.layer, undefined, 0x07070a);
-    return { exposure: 1, bloom: 0.9, bloomThreshold: 0.75, vignette: 0.55, grain: 0.05 };
+    return { exposure: 1, bloom: 0.75, bloomThreshold: 0.85, vignette: 0.55, grain: 0.05 };
   }
 }
 const B_OFF = bar(1);

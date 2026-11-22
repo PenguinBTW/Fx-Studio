@@ -8,7 +8,7 @@ import { Layer2D } from '../../engine/gl';
 import { overlayTextDuck } from '../../engine/transition';
 import { F, font } from '../../engine/type';
 import { clamp, ease, prog } from '../../engine/util';
-import { C, bar, model, part, present, sceneTime, heroLights, enableShadows, shadows, camPath, applyCam, typeLine, barOf, ACT_BARS, FACTS, type CamKey } from './kit';
+import { C, bar, model, part, present, sceneTime, heroLights, enableShadows, shadows, camPath, applyCam, typeLine, barOf, ACT_BARS, FACTS, textureText, type CamKey } from './kit';
 
 const FPS = 60, DUR = 224.436, LEN = 18, tx = (t: number) => -LEN / 2 + (t / DUR) * LEN;
 const T_SEEK = bar(73), BACK = bar(73) - bar(69), T_SAME = bar(75);
@@ -70,7 +70,7 @@ export default class A8Meta extends Scene {
       const { cv, tex } = this.digits[i]!, g = cv.getContext('2d')!;
       g.fillStyle = '#0c0c0e'; g.fillRect(0, 0, 128, 192);
       g.font = font(F.mono(600), 150); g.textAlign = 'center'; g.textBaseline = 'middle';
-      g.fillStyle = i >= 6 - String(frame).length ? '#EDE6D6' : '#3a3936'; g.fillText(s[i]!, 64, 102);
+      g.fillStyle = i >= 6 - String(frame).length ? '#EDE6D6' : '#3a3936'; textureText(() => g.fillText(s[i]!, 64, 102));
       g.fillStyle = '#000'; g.fillRect(0, 94, 128, 4);
       tex.needsUpdate = true;
     }
@@ -79,7 +79,7 @@ export default class A8Meta extends Scene {
     const f0 = Math.round((T_SEEK - BACK) * FPS);
     typeLine(g, `frame ${f0}. again.`, 150, 900, T, T_SEEK - 0.9, { size: 42, cps: 22, color: C.bone, t1: T_SAME - 0.3 });
     typeLine(g, 'same frame.', 150, 900, T, T_SAME, { size: 42, cps: 22, color: C.signal, t1: bar(78.5) });
-    if (FACTS.frameHash) typeLine(g, `sha256 ${FACTS.frameHash}  =  ${FACTS.frameHash}`, 150, 956, T, T_SAME + 0.7, { size: 26, cps: 40, color: C.ash, cursor: false, t1: bar(78.5) });
+    if (FACTS.frameHash) typeLine(g, `sha256 ${String(FACTS.frameHash).slice(0, 12)}…  x2, identical`, 150, 966, T, T_SAME + 0.7, { size: 34, cps: 40, color: C.bone, cursor: false, t1: bar(78.5) });
     present(this.ctx, out, this.scene, this.cam, this.layer, undefined, 0x07070a, overlayTextDuck(f.tin, f.tout));
     return { exposure: 1.0, bloom: 0.7, bloomThreshold: 0.8, vignette: 0.5, grain: 0.04 };
   }

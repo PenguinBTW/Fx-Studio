@@ -8,7 +8,7 @@ import { Layer2D } from '../../engine/gl';
 import { overlayTextDuck } from '../../engine/transition';
 import { F, font } from '../../engine/type';
 import { clamp, ease, prog } from '../../engine/util';
-import { C, BEAT, bar, model, part, present, sceneTime, heroLights, enableShadows, shadows, camPath, applyCam, typeLine, barOf, spin, type CamKey } from './kit';
+import { C, BEAT, bar, model, part, present, sceneTime, heroLights, enableShadows, shadows, camPath, applyCam, typeLine, barOf, spin, rmsAt, FACTS, textureText, type CamKey } from './kit';
 import { makePrint, loadPrints, wallSlot, WALL_Z, PW, PH } from './a5_print';
 
 /** The notes are the real v1 review notes (REVIEW.md, round 0). u,v = lasso centre on the still, r = radius. */
@@ -88,7 +88,7 @@ export default class A6Critique extends Scene {
         for (let s = 0; s <= 64; s++) { const p = this.notePoint(k, Math.min(lt, STROKE) * (s / 64)); s ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]); }
         g.stroke();
         const ch = Math.floor(clamp((lt - STROKE) / 0.6) * n.text.length);
-        if (ch > 0) { const [tx, ty] = this.textAt(k); g.font = font(F.archivo(100, 800), 30); g.lineWidth = 6; g.strokeStyle = 'rgba(239,232,218,0.85)'; g.strokeText(n.text.slice(0, ch), tx, ty); g.fillStyle = '#D9262B'; g.fillText(n.text.slice(0, ch), tx, ty); }
+        if (ch > 0) { const [tx, ty] = this.textAt(k); g.font = font(F.archivo(100, 800), 30); g.lineWidth = 6; g.strokeStyle = 'rgba(239,232,218,0.85)'; textureText(() => { g.strokeText(n.text.slice(0, ch), tx, ty); g.fillStyle = '#D9262B'; g.fillText(n.text.slice(0, ch), tx, ty); }); }
       });
       if (i === APPROVED && T > T_CHECK) {
         const s = prog(T, T_CHECK, T_CHECK + 0.25, ease.outCubic); g.strokeStyle = '#2FBF71'; g.lineWidth = 14; g.beginPath();
@@ -118,7 +118,7 @@ export default class A6Critique extends Scene {
     sg.fillStyle = '#EFE8DA'; sg.fillRect(0, 0, 256, 512); sg.strokeStyle = 'rgba(60,110,140,0.35)'; sg.lineWidth = 1;
     for (let x = 16; x < 256; x += 28) { sg.beginPath(); sg.moveTo(x, 0); sg.lineTo(x, 512); sg.stroke(); }
     for (let q = Math.floor(T / 0.5); q > Math.floor(T / 0.5) - 20; q--) { const row = (T - q * 0.5) / dt; sg.beginPath(); sg.moveTo(0, row); sg.lineTo(256, row); sg.stroke(); }
-    const px = (tt: number) => 20 + clamp(this.ctx.audio.env('rms', tt)) * 216;
+    const px = (tt: number) => 20 + clamp(rmsAt(tt)) * 216;
     sg.strokeStyle = '#D9262B'; sg.lineWidth = 2.5; sg.beginPath();
     for (let j = 0; j < 512; j += 2) { const x = px(T - j * dt); j ? sg.lineTo(x, j) : sg.moveTo(x, j); }
     sg.stroke(); this.strip.tex.needsUpdate = true;
@@ -126,7 +126,7 @@ export default class A6Critique extends Scene {
     applyCam(this.cam, camPath(CAM, b));
     const g = this.layer.ctx; this.layer.clear();
     typeLine(g, "i don't like it.", 150, 900, T, bar(37.5), { size: 42, cps: 20, color: C.bone, t1: bar(41.5) });
-    typeLine(g, `${NOTES.length} notes. 1 pass.`, 150, 900, T, bar(49), { size: 42, cps: 20, color: C.signal, t1: bar(52.3) });
+    typeLine(g, `${FACTS.v1Notes} notes. ${FACTS.v1Passed} pass.`, 150, 900, T, bar(49), { size: 42, cps: 20, color: C.signal, t1: bar(52.3) });
     present(this.ctx, out, this.scene, this.cam, this.layer, undefined, 0x08090c, overlayTextDuck(f.tin, f.tout));
     return { exposure: 1.0, bloom: 0.45, bloomThreshold: 0.9, vignette: 0.5, grain: 0.04 };
   }

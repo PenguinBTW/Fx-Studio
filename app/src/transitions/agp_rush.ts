@@ -8,9 +8,9 @@ import { ShaderPass } from '../scenes/agent_promo/tkit';
 import { BEAT, bar } from '../scenes/agent_promo/kit';
 
 const CLIPS: [string, number][] = [
-  ['a1_tape', 10.5], ['a2_plan', 24], ['a3_swarm', 33], ['a4_build', 41], ['a5_print', 64.5], ['a6_critique', 79.5],
+  ['a1_tape', 10.5], ['a2_plan', 24], ['a3_swarm', 35.8], ['a4_build', 43], ['a5_print', 64.5], ['a6_critique', 79.5],
   ['a7_rewrite', 109.5], ['a8_meta', 131], ['a0_cursor', 2.6], ['a2_plan', 21], ['a4_build', 47], ['a6_critique', 86],
-  ['a3_swarm', 30], ['a7_rewrite', 116], ['a5_print', 61], ['a1_tape', 14], ['a4_build', 53], ['a8_meta', 146],
+  ['a3_swarm', 36.6], ['a7_rewrite', 116], ['a5_print', 61], ['a1_tape', 14], ['a4_build', 53], ['a8_meta', 146],
 ];
 const SEG: [number, number][] = [[81, 2], [85, 1], [89, 0.5], [91, 0.25], [93, 0]];
 /** Cut grid: returns [slot index, slot start time, slot length]. */

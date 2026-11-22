@@ -13,7 +13,7 @@ import type { SceneCtx } from '../../engine/scene';
 export const C = { void: '#07070A', bone: '#EDE6D6', signal: '#FF5A1F', ice: '#9CC9E8', ash: '#6B6A66', red: '#D9262B', ok: '#2FBF71', cream: '#EFE8DA', ink: '#1B1A18' } as const;
 export const HALO = 'rgba(5,5,6,0.88)';
 
-/** Song grid (HBFS, 123.45 BPM). Bars are 1-based to match storyboard.md. */
+/** Song grid (Technologic cut, 128.37 BPM). Bars are 1-based to match storyboard.md. */
 export const BAR = 1.86957;
 export const BEAT = BAR / 4;
 export const B0 = 1.848;
@@ -23,8 +23,30 @@ export const beatAt = (k: number, b = 0) => bar(k) + b * BEAT;
 /** Scene time: song time, optionally shifted so recap entries replay a scene's choreography. */
 export const sceneTime = (ctx: SceneCtx, t: number) => t + (Number(ctx.params?.shift) || 0);
 
+/** Instances share the cached GLTF's materials; clone them so one scene's grade never leaks into another (seek determinism). */
+/** Text painted into a 3D texture canvas: canvas coords are not screen coords, so it stays out of the 2D text probe. */
+export function textureText(fn: () => void) {
+  const w = window as unknown as { __motion?: { recordText?: boolean }; __pdoom?: { recordText?: boolean } };
+  const P = w.__motion ?? w.__pdoom, was = P?.recordText;
+  if (P) P.recordText = false;
+  try { fn(); } finally { if (P) P.recordText = was; }
+}
+
 export async function model(ctx: SceneCtx, id: string): Promise<GLTFInstance> {
-  return GLTFManager.instantiate(resolveAsset(id, ctx.project ?? 'agent_promo').url, {});
+  const inst = await GLTFManager.instantiate(resolveAsset(id, ctx.project ?? 'agent_promo').url, {});
+  const own = new Map<THREE.Material, THREE.Material>();
+  const mine = (x: THREE.Material) => { let c = own.get(x); if (!c) own.set(x, (c = x.clone())); return c; };
+  inst.root.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (m.isMesh) m.material = Array.isArray(m.material) ? m.material.map(mine) : mine(m.material);
+  });
+  return inst;
+}
+
+/** Song loudness at t (0..1), from the baked rms.json. */
+export function rmsAt(t: number) {
+  const x = Math.max(0, t) * RMS.fps, i = Math.floor(x), a = RMS.rms[i] ?? 0, b = RMS.rms[i + 1] ?? a;
+  return a + (b - a) * (x - i);
 }
 
 /** Bake each mesh of a Blender asset into an InstancedMesh sharing one set of matrices. */
@@ -157,7 +179,7 @@ export function train(c: CanvasRenderingContext2D, cues: Cue[], t: number, x: nu
 }
 
 /** Mono typewriter line with a block cursor; returns the drawn width. */
-export function typeLine(c: CanvasRenderingContext2D, text: string, x: number, y: number, t: number, t0: number, o: { size?: number; cps?: number; color?: string; align?: CanvasTextAlign; t1?: number; cursor?: boolean; family?: string } = {}) {
+export function typeLine(c: CanvasRenderingContext2D, text: string, x: number, y: number, t: number, t0: number, o: { size?: number; cps?: number; color?: string; align?: CanvasTextAlign; t1?: number; cursor?: boolean; family?: string; plate?: boolean } = {}) {
   if (t < t0) return 0;
   const size = o.size ?? 30;
   const n = Math.min(text.length, Math.floor((t - t0) * (o.cps ?? 28)));
@@ -171,6 +193,7 @@ export function typeLine(c: CanvasRenderingContext2D, text: string, x: number, y
   const shown = text.slice(0, n);
   c.textAlign = 'left';
   c.globalAlpha = fade;
+  if (o.plate) { c.fillStyle = 'rgba(7,7,10,0.78)'; c.fillRect(x0 - size * 0.5, y - size * 0.8, c.measureText(shown).width + size * 1.4, size * 1.6); }
   c.lineWidth = size * 0.3;
   c.strokeStyle = HALO;
   c.strokeText(shown, x0, y);
@@ -232,9 +255,10 @@ export class DoFPresenter {
 
 // ---- agent_promo additions ----
 import FACTS_JSON from './facts.json';
+import RMS from './rms.json';
 export const FACTS = FACTS_JSON as Record<string, number | string>;
-/** The user's prompt, verbatim; A1 punches its real ASCII bytes. */
-export const PROMPT = 'make a film that shows how you make films.';
+/** The closing words of the user's request, verbatim (REVIEW.md, 'Sources'); A1 punches their real ASCII bytes. */
+export const PROMPT = 'should use fx studio + blender its your project.';
 /** Fractional bar number at time T (bar 1 = first downbeat). */
 export const barOf = (T: number) => (T - B0) / BAR + 1;
 /** Find a named node of a Blender asset. */

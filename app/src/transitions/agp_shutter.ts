@@ -14,11 +14,14 @@ void main(){
   float k = mod(a + rot, sector) - sector * 0.5;
   float hex = length(p) * cos(k) / cos(sector * 0.5);
   float close = u < 0.5 ? 1.0 - smoothstep(0.0, 0.5, u) : smoothstep(0.5, 1.0, u);
-  float R = close * 1.15;
+  float R = max(close * 1.15, 0.035);
   vec3 src = u < 0.5 ? texture2D(texA, vUv).rgb : texture2D(texB, 0.5 + (vUv - 0.5) * (1.0 + 0.1 * (1.0 - u))).rgb;
   float open = step(hex, R);
-  float blade = 0.03 + 0.04 * (1.0 - smoothstep(0.0, 0.03, abs(fract((a + rot) / sector) - 0.5) * hex));
-  vec3 col = mix(vec3(blade * 0.25), src, open);
+  float f = fract((a + rot) / sector);
+  float seam = 1.0 - smoothstep(0.0, 0.012, abs(f - 0.5) * hex);
+  vec3 metal = vec3(0.07, 0.072, 0.08) * (0.45 + 0.9 * f) * (0.7 + 0.5 * smoothstep(1.2, 0.0, hex));
+  metal = mix(metal, SIGNAL * 0.9, seam * 0.6);
+  vec3 col = mix(metal, src, open);
   col = mix(col, SIGNAL * 1.6, (1.0 - smoothstep(0.0, 0.006, abs(hex - R))) * step(0.01, R));
   gl_FragColor = vec4(col, 1.0);
 }`;

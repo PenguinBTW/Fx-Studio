@@ -28,6 +28,7 @@ export default class A7Rewrite extends Scene {
   private lots: { x: number; z: number; type: number; h: number; k: number }[] = [];
   private towers: Instanced[] = []; private caps!: Instanced; private tiles!: Instanced;
   private mats: Record<string, THREE.MeshStandardMaterial> = {};
+  private fog = new THREE.Fog(0x07090a, 14, 46);
   private key!: THREE.DirectionalLight; private head!: THREE.Object3D; private img = new Image();
   private p = new THREE.Vector3(); private q = new THREE.Quaternion(); private s = new THREE.Vector3();
 
@@ -45,7 +46,7 @@ export default class A7Rewrite extends Scene {
       for (const im of I.meshes) { im.geometry.translate(-ox, 0, 0); im.castShadow = im.receiveShadow = true; }
       this.towers.push(I); this.scene.add(I.group);
     }
-    this.caps = new Instanced(kit, this.lots.length, undefined, (n) => n === 'lit_a');
+    this.caps = new Instanced(kit, this.lots.length, (_n, m) => (m as THREE.MeshStandardMaterial).clone(), (n) => n === 'lit_a');
     for (const im of this.caps.meshes) im.geometry.translate(-6, -0.5, 0);
     this.tiles = new Instanced(kit, 80, undefined, (n) => n === 'pcb' || n.startsWith('trace'));
     for (const im of this.tiles.meshes) { im.geometry.translate(0, 0, 6); im.receiveShadow = true; }
@@ -67,11 +68,12 @@ export default class A7Rewrite extends Scene {
 
   private version(v2: boolean) {
     const m = this.mats;
-    if (v2) m.Concrete!.color.setRGB(0.0331, 0.0368, 0.0423); else m.Concrete!.color.setRGB(0.3, 0.31, 0.33); m.Concrete!.roughness = v2 ? 0.75 : 0.7;
-    m.Window!.emissiveIntensity = v2 ? 0.45 : 1.8;
+    if (v2) m.Concrete!.color.setRGB(0.0331, 0.0368, 0.0423); else m.Concrete!.color.setRGB(0.2, 0.205, 0.22); m.Concrete!.roughness = v2 ? 0.75 : 0.7;
+    m.Window!.emissiveIntensity = v2 ? 0.45 : 1.1;
+    for (const im of this.caps.meshes) (im.material as THREE.MeshStandardMaterial).emissiveIntensity = v2 ? 0.3 : 1.0;
     if (v2) m.Glass!.color.setRGB(0.003, 0.0044, 0.006); else m.Glass!.color.setRGB(0.05, 0.07, 0.09);
-    this.key.intensity = v2 ? 1.4 : 1.9; this.scene.environmentIntensity = v2 ? 0.35 : 0.75;
-    this.scene.fog = v2 ? new THREE.Fog(0x07090a, 14, 46) : null;
+    this.key.intensity = v2 ? 1.4 : 1.6; this.scene.environmentIntensity = v2 ? 0.35 : 0.55;
+    this.scene.fog = v2 ? this.fog : null;
   }
 
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
@@ -96,7 +98,7 @@ export default class A7Rewrite extends Scene {
     applyCam(this.cam, camPath(CAM, b));
     const g = this.layer.ctx; this.layer.clear();
     const duck = overlayTextDuck(f.tin, f.tout);
-    typeLine(g, 'so i rewrite it.', 150, 900, T, bar(53.6), { size: 42, cps: 20, color: C.bone, t1: bar(56.3) });
+    typeLine(g, 'so i rewrite it.', 150, 900, T, bar(53.6), { size: 42, cps: 20, color: C.bone, t1: bar(56.3), plate: true });
     const tag = (s: string, x: number, col: string) => { g.font = font(F.mono(500), 34); g.textBaseline = 'middle'; g.lineWidth = 10; g.strokeStyle = HALO; g.strokeText(s, x, 90); g.fillStyle = col; g.fillText(s, x, 90); };
     if (T < T_BACK) tag('v1', 80, C.bone);
     if (T >= T_RW + SWEEP && T < T_SPLIT) tag('v2', 80, C.bone);
@@ -106,7 +108,7 @@ export default class A7Rewrite extends Scene {
       g.save(); g.beginPath(); g.rect(0, 0, 960 * split, 1080); g.clip(); g.drawImage(this.img, 0, 0, 1920, 1080); g.restore();
       g.fillStyle = C.signal; g.fillRect(960 * split - 4, 0, 8, 1080);
       tag('v1', 60, C.bone); if (split >= 1) tag('v2', 1860 - 50, C.bone);
-      typeLine(g, 'same camera. same bars.', 960, 1000, T, T_SPLIT + 1.2, { size: 30, cps: 24, align: 'center', color: C.bone, cursor: false });
+      typeLine(g, 'same camera. same bars.', 960, 1000, T, T_SPLIT + 1.2, { size: 36, cps: 24, align: 'center', color: C.bone, cursor: false, plate: true });
     }
     present(this.ctx, out, this.scene, this.cam, this.layer, extra, 0x07090a, split > 0 ? Math.max(duck, 1) : duck);
     return { exposure: 1.0, bloom: 0.7, bloomThreshold: 0.85, vignette: 0.5, grain: 0.04 };

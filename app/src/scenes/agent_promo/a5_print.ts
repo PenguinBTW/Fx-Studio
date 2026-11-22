@@ -14,7 +14,7 @@ export const wallSlot = (i: number) => new THREE.Vector3(-2.7 + (i % 4) * 1.8, 2
 export const PRINT_T = [bar(31) + 0.15, 61.05, 63.05, 64.98, 66.82, 67.82, 67.82 + BEAT, 67.82 + 2 * BEAT];
 const SCALE = 1.3, SLOT = new THREE.Vector3(0, 0.42 * SCALE + 0.01, 0.3 * SCALE);
 const CAM: [number, CamKey][] = [
-  [30.8, { pos: [0.15, 0.78, 1.25], tgt: [0, 0.5, 0.75], fov: 34 }],
+  [30.8, { pos: [0.5, 1.05, 2.1], tgt: [0, 0.45, 0.6], fov: 34 }],
   [32.6, { pos: [1.3, 1.4, 3.2], tgt: [0, 0.9, 0], fov: 36 }],
   [34.8, { pos: [-0.6, 2.2, 5.6], tgt: [0, 1.9, -3.5], fov: 38 }],
   [36.9, { pos: [0, 2.15, 3.4], tgt: [0, 2.15, -3.5], fov: 36 }],

@@ -91,7 +91,7 @@ export default class A1Tape extends Scene {
     applyCam(this.cam, { ...k, pos: [k.pos[0] + 0.02 * Math.sin(T * 0.7), k.pos[1], k.pos[2]] }, strike * 0.3);
     const g = this.layer.ctx; this.layer.clear();
     const nb = PROMPT.length;
-    typeLine(g, 'one sentence.', 150, 860, T, bar(6.75), { size: 40, cps: 22, cursor: false });
+    typeLine(g, 'its last line.', 150, 860, T, bar(6.75), { size: 40, cps: 22, cursor: false });
     typeLine(g, `${nb} bytes.`, 150, 916, T, bar(7.25), { size: 40, cps: 22, color: C.signal, t1: bar(8.6) });
     present(this.ctx, out, this.scene, this.cam, this.layer, undefined, 0x07070a, overlayTextDuck(f.tin, f.tout));
     return { exposure: 1.05, bloom: 0.55, bloomThreshold: 0.95, vignette: 0.5, grain: 0.04 };

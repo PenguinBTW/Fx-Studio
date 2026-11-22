@@ -64,7 +64,7 @@ export default class A4Build extends Scene {
     }
     this.top = new Instanced(kit, 1, undefined, (n) => n.startsWith('tower_a'));
     for (const im of this.top.meshes) im.castShadow = true;
-    this.caps = new Instanced(kit, this.lots.length, undefined, (n) => n === 'lit_a');
+    this.caps = new Instanced(kit, this.lots.length, (_n, m) => { const c = (m as THREE.MeshStandardMaterial).clone(); c.emissiveIntensity = 0.3; return c; }, (n) => n === 'lit_a');
     for (const im of this.caps.meshes) im.geometry.translate(-6, -0.5, 0);
     this.tiles = new Instanced(kit, 120, undefined, (n) => n === 'pcb' || n.startsWith('trace'));
     for (const im of this.tiles.meshes) { im.geometry.translate(0, 0, 6); im.receiveShadow = true; }

@@ -14,6 +14,7 @@ const vec3 SIGNAL = vec3(1.0, 0.102, 0.0123);
 export class ShaderPass {
   readonly mat: THREE.ShaderMaterial;
   private scene = new THREE.Scene();
+  private quad!: THREE.Mesh;
   private cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   constructor(private ctx: TransitionCtx, frag: string, uniforms: Record<string, THREE.IUniform> = {}) {
     this.mat = new THREE.ShaderMaterial({
@@ -22,7 +23,8 @@ export class ShaderPass {
       fragmentShader: `uniform sampler2D texA; uniform sampler2D texB; uniform float u; uniform float uAsp; varying vec2 vUv;${TGLSL}\n${frag}`,
       depthTest: false, depthWrite: false,
     });
-    this.scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.mat));
+    this.quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.mat);
+    this.scene.add(this.quad);
   }
   draw(out: THREE.WebGLRenderTarget, a: THREE.Texture | null, b: THREE.Texture | null, u: number, set: Record<string, unknown> = {}) {
     const U = this.mat.uniforms;
@@ -35,5 +37,5 @@ export class ShaderPass {
     r.render(this.scene, this.cam);
     r.resetState();
   }
-  dispose() { this.mat.dispose(); }
+  dispose() { this.mat.dispose(); this.quad.geometry.dispose(); }
 }

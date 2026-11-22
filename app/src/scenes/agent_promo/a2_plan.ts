@@ -7,7 +7,7 @@ import { Layer2D } from '../../engine/gl';
 import { overlayTextDuck } from '../../engine/transition';
 import { F, font } from '../../engine/type';
 import { clamp, ease, prog } from '../../engine/util';
-import { C, bar, model, part, present, sceneTime, heroLights, enableShadows, shadows, camPath, applyCam, typeLine, barOf, actOfBar, h1, FACTS, type CamKey } from './kit';
+import { C, bar, model, part, present, sceneTime, heroLights, enableShadows, shadows, camPath, applyCam, typeLine, barOf, actOfBar, h1, FACTS, rmsAt, type CamKey } from './kit';
 
 const N = 119, COLS = 17, ROWS = 7, SX = 0.42, SZ = 0.3, CW = 0.36, CD = 0.24;
 const T_DEAL0 = bar(9), T_DEAL1 = bar(12.4), T_RISE = bar(12.5);
@@ -61,7 +61,7 @@ export default class A2Plan extends Scene {
       for (let k = 0; k < uv.count; k++) uv.setXY(k, u0 + uv.getX(k) / COLS, v0 + uv.getY(k) / ROWS);
       const mesh = new THREE.Mesh(geo, mat); mesh.castShadow = mesh.receiveShadow = true;
       this.cards.push(mesh); this.scene.add(mesh);
-      let s = 0; for (let k = 0; k < 8; k++) s += this.ctx.audio.env('rms', bar(i + 1) + (k / 8) * (bar(2) - bar(1)));
+      let s = 0; for (let k = 0; k < 8; k++) s += rmsAt(bar(i + 1) + (k / 8) * (bar(2) - bar(1)));
       this.loud.push(s / 8);
     }
     const mx = Math.max(...this.loud, 1e-6); this.loud = this.loud.map((v) => v / mx);
@@ -69,7 +69,7 @@ export default class A2Plan extends Scene {
     this.cols.castShadow = this.cols.receiveShadow = true; this.cols.frustumCulled = false; this.scene.add(this.cols);
     const lampM = await model(this.ctx, 'desk_lamp'); shadows(lampM.root);
     lampM.root.position.set(4.6, 0, -1.6); lampM.root.rotation.y = -0.5; lampM.root.scale.setScalar(1.6); this.scene.add(lampM.root);
-    const spot = new THREE.SpotLight(0xffd2a0, 12, 16, 0.75, 0.55, 1.6);
+    const spot = new THREE.SpotLight(0xffd2a0, 4, 16, 0.75, 0.9, 1.6);
     spot.position.set(3.2, 3.4, -1.0); spot.target.position.set(0, 0, 0.2); spot.castShadow = true; spot.shadow.mapSize.set(2048, 2048); spot.shadow.bias = -0.0002;
     this.scene.add(spot, spot.target);
     const L = heroLights(this.scene, 0xffd7a0, 0x9cc9e8, 0.35, 1.2, 0.15); L.rim.position.set(-6, 3, -6);

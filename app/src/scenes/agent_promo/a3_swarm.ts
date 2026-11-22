@@ -73,7 +73,7 @@ export default class A3Swarm extends Scene {
     this.lead.position.copy(this.pos[0]!).y -= 0.15; this.lead.intensity = 4 - 2 * prog(T, T_SPLIT, splitAt(GENS));
     applyCam(this.cam, camPath(CAM, b));
     const g = this.layer.ctx; this.layer.clear();
-    typeLine(g, "i don't work alone.", 960, 930, T, bar(16.25), { size: 42, cps: 22, align: 'center', color: C.bone, t1: bar(18.6) });
+    typeLine(g, 'i split the work.', 960, 930, T, bar(16.25), { size: 42, cps: 22, align: 'center', color: C.bone, t1: bar(18.6) });
     present(this.ctx, out, this.scene, this.cam, this.layer, undefined, 0x06070c, overlayTextDuck(f.tin, f.tout));
     return { exposure: 1.1, bloom: 1.0, bloomThreshold: 0.7, vignette: 0.55, grain: 0.05 };
   }
