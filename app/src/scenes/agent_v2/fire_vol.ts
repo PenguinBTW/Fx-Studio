@@ -11,7 +11,7 @@ float gRi, gD;
 float dens(vec3 p, out float x01) { x01 = p.x / uLen; float r = 0.15 + 1.3 * uRad * pow(x01, 0.55);
   vec2 c = vec2(0.35 * uRad * x01 * x01, 0.0); float d = length(p.yz - c) / r; gD = d;
   vec3 q = p * vec3(0.8, 1.5, 1.5) - vec3(uT * 9.0, uT * 2.0, 0.0); q += 1.1 * vec3(pfbm(q * 0.7 + 3.1, 3), pfbm(q * 0.7 + 8.3, 3), pfbm(q * 0.7 + 1.7, 3));
-  float hf = pfbm(q * 3.3 + 5.7, 3); float ri = pow(1.0 - abs(pfbm(q * 1.6 + 2.0, 4)), 3.0); gRi = ri; float n = mix(0.6, smoothstep(0.34, 0.68, pfbm(q, 5) * 0.5 + 0.5 + 0.22 * hf) * (0.35 + 0.95 * ri), smoothstep(0.0, 0.3, x01)); float sh = smoothstep(1.0, 0.15, d + 0.55 * (n - 0.5) + 0.35 * hf * x01);
+  float hf = pfbm(q * 3.3 + 5.7, 3); float ri = pow(1.0 - abs(pfbm(q * 1.6 + 2.0, 4)), 3.0); gRi = ri; float n = mix(0.6, smoothstep(0.34, 0.68, pfbm(q, 5) * 0.5 + 0.5 + 0.22 * hf) * (0.35 + 0.95 * ri), smoothstep(0.0, 0.3, x01)); float sh = smoothstep(0.9, 0.5, d + 0.7 * (n - 0.5) + 0.4 * hf * x01);
   float front = smoothstep(uFront, uFront - 0.18, x01) * smoothstep(0.0, 0.02, x01);
   return clamp(sh * front * n * 2.4 * uOn, 0.0, 1.0); }
 void main() { vec3 ro = uCamL, rd = normalize(vL - ro);
@@ -21,9 +21,9 @@ void main() { vec3 ro = uCamL, rd = normalize(vL - ro);
   const int S = 64; float dt = (b - a) / float(S); float tr = 1.0; vec3 col = vec3(0.0);
   float j = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453); float t = a + dt * j;
   for (int i = 0; i < S; i++) { vec3 p = ro + rd * t; float x01; float de = dens(p, x01);
-    if (de > 0.003) { float heat = clamp(de * (1.15 - x01 * 1.0) * (0.55 + 0.7 * gRi), 0.0, 1.0); float soot = smoothstep(0.45, 1.0, x01) * (1.0 - heat);
+    if (de > 0.003) { float heat = clamp(de * (1.1 - x01 * 1.15) * (0.25 + 1.1 * gRi * gRi), 0.0, 1.0); float soot = smoothstep(0.45, 1.0, x01) * (1.0 - heat);
       float core = smoothstep(0.55, 0.0, gD) * smoothstep(0.45, 0.0, x01) * smoothstep(uFront, uFront - 0.3, x01);
-      vec3 e = bb(heat) * (0.15 + heat) * 0.7 * uGain + vec3(1.0, 0.92, 0.7) * core * de * 2.0 * uGain; col += tr * e * dt * 1.5; tr *= exp(-de * dt * (0.12 + 0.6 * soot)); if (tr < 0.02) break; }
+      vec3 e = bb(heat) * (0.15 + heat) * 0.7 * uGain + vec3(1.0, 0.92, 0.7) * core * de * 2.0 * uGain; col += tr * e * dt * 1.5; tr *= exp(-de * dt * (0.25 + 1.4 * soot)); if (tr < 0.02) break; }
     t += dt; }
   gl_FragColor = vec4(col, 1.0 - tr); }`;
 

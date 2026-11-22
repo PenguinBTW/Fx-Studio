@@ -48,12 +48,12 @@ export default class S14Quiet extends Scene {
       const s = 0.5 + 1.1 * h(i, 7); this.m4.compose(new THREE.Vector3((h(i, 0) - 0.5) * 30 + sw, y, (h(i, 1) - 0.5) * 22 - 2), this.q, new THREE.Vector3(s, s, s)); this.flakes.setMatrixAt(i, this.m4);
     }
     this.flakes.instanceMatrix.needsUpdate = true;
-    const az = -0.6 + 0.11 * lt, cd = 6.6 - 1.4 * sm(0, 7, lt) + 2.5 * sm(bar(99), bar(101), T), el = 0.6 + 2.4 * sm(bar(98.5), bar(101), T); this.cam.position.set(hp.x + cd * Math.sin(az), hp.y + el, hp.z + cd * Math.cos(az)); this.cam.lookAt(hp.x, hp.y - 0.1, hp.z); this.cam.updateProjectionMatrix();
+    const az = 1.0 - 1.6 * sm(0, 9, lt), cd = 3.4 + 2.8 * sm(0.4, 9, lt) + 2.5 * sm(bar(99), bar(101), T), el = 0.2 + 0.45 * sm(0, 9, lt) + 2.4 * sm(bar(98.5), bar(101), T); this.cam.position.set(hp.x + cd * Math.sin(az), hp.y + el, hp.z + cd * Math.cos(az)); this.cam.lookAt(hp.x, hp.y - 0.1, hp.z); this.cam.updateProjectionMatrix();
     rr.setRenderTarget(out); rr.setClearColor(0x060606, 1); rr.clear(true, true, true); rr.render(this.scene, this.cam);
     const g = this.layer.ctx; this.layer.clear();
     term(g, S14_LINES, T, { size: 50, align: 'center', x: 960, y: 900, halo: 'rgba(0,0,0,0.5)', color: '#ece8e0', cursor: '#ece8e0', alpha: overlayTextDuck(f.tin, f.tout) });
     this.ctx.comp.draw(rr, this.layer.upload(), out, { mode: 'normal', opacity: 1 }); rr.resetState();
-    return { toneMap: 'aces', exposure: 0.95, bloom: 0.35, bloomThreshold: 0.8, halation: 0.15, vignette: 0.55, grain: 0.07, ca: 0.1, dof: 1, focusDist: 5.6, focalRange: 2.5 };
+    return { toneMap: 'aces', exposure: 0.95, bloom: 0.35, bloomThreshold: 0.8, halation: 0.15, vignette: 0.55, grain: 0.07, ca: 0.1, dof: 1, focusDist: cd, focalRange: 2.5 };
   }
   override dispose() { this.layer.texture.dispose(); this.env?.dispose(); this.rig.dispose(); this.flakes.geometry.dispose(); (this.flakes.material as THREE.Material).dispose(); this.flakes.dispose(); }
 }

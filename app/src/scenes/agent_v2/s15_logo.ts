@@ -19,9 +19,9 @@ export const T101 = bar(101), T_LOCK = bar(103), END = 224.436;
 const SEQ = [STYLE.blueprint, STYLE.ascii, STYLE.pixel, STYLE.comic, STYLE.thermal, STYLE.glass, STYLE.woodblock, STYLE.xray];
 export const S15_LINES: TLine[] = [{ text: 'enjoy.', at: bar(105) + 0.1, hold: 4.2, cps: 10 }];
 const sm = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
-export const lapPath: PathFn = (p, o) => { const a = p * 0.36; const ex = Math.max(0, p - 9); return o.set(5.6 * Math.cos(a) + 0.1, 0.6 + 0.5 * Math.sin(p * 0.8) + ex * 0.45, 2.2 * Math.sin(a) - 5.2 - ex * 2.2); };
+export const lapPath: PathFn = (p, o) => { const a = p * 0.36; const ex = Math.max(0, p - 9); return o.set(5.6 * Math.cos(a) + 0.1, 2.4 + 0.4 * Math.sin(p * 0.8) + ex * 0.45, 2.2 * Math.sin(a) - 5.2 - ex * 2.2); };
 
-export const outroPath: PathFn = (p, o) => o.set(-16 + p * 0.8, 2.6 + 0.5 * Math.sin(p * 0.35), -6.5 - 1.0 * Math.sin(p * 0.12));
+export const outroPath: PathFn = (p, o) => o.set(-16 + p * 0.8, 3.3 + 0.4 * Math.sin(p * 0.35), -6.5 - 1.0 * Math.sin(p * 0.12));
 
 export default class S15Logo extends Scene {
   private layer = new Layer2D();

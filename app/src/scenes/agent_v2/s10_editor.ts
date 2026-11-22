@@ -87,7 +87,7 @@ export default class S10Editor extends Scene {
     const c1 = m.clone().add(new THREE.Vector3(2.8, 0.9, 5.2)), c2 = m.clone().addScaledVector(dir, 3.6).add(new THREE.Vector3(-1.0, 1.8, 10.0));
     const pos = c1.lerp(c2, take ? sm(T67, T67 + BAR * 1.5, T) : 0); pos.add(new THREE.Vector3(Math.sin(T * 31), Math.sin(T * 27), 0).multiplyScalar(0.035 * b * take));
     this.cam.position.copy(pos); this.cam.lookAt(m.clone().addScaledVector(dir, 1.6 + 1.6 * take * sm(T67, T67 + BAR * 1.5, T))); this.cam.aspect = vw / vh; this.cam.updateProjectionMatrix(); this.cam.updateMatrixWorld();
-    this.vol.u.uGain.value = 0.6; this.vol.update(this.cam, this.u.uMouth.value, dir, ft, take ? sm(FR - 0.05, FR + 0.7, ft) : 0, take * b);
+    this.vol.u.uGain.value = 0.6 - 0.25 * take * b; this.vol.update(this.cam, this.u.uMouth.value, dir, ft, take ? sm(FR - 0.05, FR + 0.7, ft) : 0, take * b);
     // 3D viewport into its rect of the output target
     const sx = out.width / 1920, sy = out.height / 1080;
     rr.setRenderTarget(out); rr.setClearColor(0x0b0b0c, 1); rr.clear(true, true, true);
@@ -100,7 +100,7 @@ export default class S10Editor extends Scene {
     term(g, S10_LINES, T, { size: 44, x: vx + 60 * k, align: 'left', y: vy + vh - 70 * k, halo: 'rgba(0,0,0,0.75)', color: '#f4efe6', cursor: '#ff4d12', alpha: overlayTextDuck(f.tin, f.tout) });
     this.ctx.comp.draw(rr, this.layer.upload(), out, { mode: 'normal', opacity: 1 }); rr.resetState();
     const rew = T >= REW0 && T < REW1 ? Math.sin(Math.PI * (T - REW0) / (REW1 - REW0)) : 0;
-    return { toneMap: 'aces', exposure: 1.0, bloom: 0.35 + 0.25 * b * take, bloomThreshold: 0.85, halation: 0.25 + 0.4 * take * b, vignette: 0.25 + 0.2 * grow, grain: 0.04, ca: 0.2 + 0.8 * rew + 0.8 * take * b, zoom: 1 + 0.02 * take * b };
+    return { toneMap: 'aces', exposure: 1.0 - 0.2 * take * b, bloom: 0.35 + 0.15 * b * take, bloomThreshold: 0.85, halation: 0.25 + 0.4 * take * b, vignette: 0.25 + 0.2 * grow, grain: 0.04, ca: 0.2 + 0.8 * rew + 0.8 * take * b, zoom: 1 + 0.02 * take * b };
   }
 
   /** the editor chrome, drawn in 1920x1080 UI space with a hole where the viewport is */

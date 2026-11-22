@@ -83,9 +83,9 @@ export default class S8Fire extends Scene {
     this.core.position.copy(m).addScaledVector(dir, 0.3); const cs = 0.35 + 1.2 * inh + 0.6 * b; this.core.scale.set(cs, cs, 1); (this.core.material as THREE.SpriteMaterial).opacity = Math.min(1, inh * 1.2 + b);
     // camera: a 3/4 front on the head, pulled back for breath 1, beside the stream for 2, then straight into the fire on 3
     const c1 = m.clone().add(new THREE.Vector3(2.8, 0.9, 5.2)), c2 = m.clone().add(dir.clone().multiplyScalar(1.5)).add(new THREE.Vector3(-0.5, 1.0, 4.8));
-    const c3 = m.clone().add(dir.clone().multiplyScalar(6.5 - 3.5 * sm(BREATHS[2]![0], S8_END, T))).add(new THREE.Vector3(2.2, 1.0, 2.6));
+    const side = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize(); const c3 = m.clone().addScaledVector(dir, 2.4).addScaledVector(side, 5.2 - 1.4 * sm(BREATHS[2]![0], S8_END, T)).add(new THREE.Vector3(0, 1.3, 0));
     const w2 = sm(BREATHS[1]![0] - 0.2, BREATHS[1]![0], T), w3 = sm(BREATHS[2]![0] - 0.25, BREATHS[2]![0], T);
-    const pos = c1.lerp(c2, w2).lerp(c3, w3); const look = m.clone().addScaledVector(dir, 1.8 * w2 + (1 - w2) * 0.9).lerp(m.clone().addScaledVector(dir, -0.6), w3);
+    const pos = c1.lerp(c2, w2).lerp(c3, w3); const look = m.clone().addScaledVector(dir, 1.8 * w2 + (1 - w2) * 0.9).lerp(m.clone().addScaledVector(dir, 2.2), w3);
     pos.add(new THREE.Vector3(Math.sin(T * 31), Math.sin(T * 27), 0).multiplyScalar(0.03 * b));
     this.cam.position.copy(pos); this.cam.lookAt(look); this.cam.updateProjectionMatrix(); this.cam.updateMatrixWorld();
     this.vol.u.uGain.value = 0.2 + 0.4 * (1 - b); this.vol.update(this.cam, this.u.uMouth.value, dir, T, sm(BREATHS[0]![0] - 0.05, BREATHS[0]![0] + 0.6, T), b);
