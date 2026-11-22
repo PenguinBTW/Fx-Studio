@@ -69,6 +69,6 @@ export default class A0Cursor extends Scene {
     return { exposure: 1, bloom: 0.75, bloomThreshold: 0.85, vignette: 0.55, grain: 0.05 };
   }
 
-  override dispose() { release(this.scene); }
+  override dispose() { release(this.scene); this.layer.texture.dispose(); }
 }
 const B_OFF = bar(1);

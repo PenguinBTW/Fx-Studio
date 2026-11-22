@@ -50,5 +50,5 @@ export default class A9Rush extends Scene {
     present(this.ctx, out, this.scene, this.cam, this.layer, undefined, 0x060608, overlayTextDuck(f.tin, f.tout));
     return { exposure: 1.0, bloom: 0.8, bloomThreshold: 0.8, vignette: 0.6, grain: 0.05 };
   }
-  override dispose() { release(this.scene); for (const t of this.texs) t.dispose(); }
+  override dispose() { release(this.scene); this.layer.texture.dispose(); for (const t of this.texs) t.dispose(); }
 }

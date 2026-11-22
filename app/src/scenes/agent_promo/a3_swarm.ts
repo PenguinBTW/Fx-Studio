@@ -78,5 +78,5 @@ export default class A3Swarm extends Scene {
     return { exposure: 1.1, bloom: 1.0, bloomThreshold: 0.7, vignette: 0.55, grain: 0.05 };
   }
 
-  override dispose() { release(this.scene); }
+  override dispose() { release(this.scene); this.layer.texture.dispose(); }
 }

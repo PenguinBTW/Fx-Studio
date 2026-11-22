@@ -50,5 +50,5 @@ export default class A10Quiet extends Scene {
     present(this.ctx, out, this.scene, this.cam, this.layer, undefined, 0x060506, overlayTextDuck(f.tin, f.tout));
     return { exposure: 0.95, bloom: 0.6 + 0.4 * prog(T, bar(99.5), bar(100.9), ease.inCubic), bloomThreshold: 0.8, vignette: 0.6, grain: 0.05 };
   }
-  override dispose() { release(this.scene); for (const t of this.texs) t.dispose(); }
+  override dispose() { release(this.scene); this.layer.texture.dispose(); for (const t of this.texs) t.dispose(); }
 }

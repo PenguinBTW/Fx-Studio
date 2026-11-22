@@ -85,5 +85,5 @@ export default class A8Meta extends Scene {
     return { exposure: 1.0, bloom: 0.7, bloomThreshold: 0.8, vignette: 0.5, grain: 0.04 };
   }
 
-  override dispose() { release(this.scene); }
+  override dispose() { release(this.scene); this.layer.texture.dispose(); }
 }

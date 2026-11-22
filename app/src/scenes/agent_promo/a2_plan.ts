@@ -114,5 +114,5 @@ export default class A2Plan extends Scene {
     present(this.ctx, out, this.scene, this.cam, this.layer, undefined, 0x07070a, overlayTextDuck(f.tin, f.tout));
     return { exposure: 1.05, bloom: 0.6 + 0.6 * dive, bloomThreshold: 0.8, vignette: 0.5, grain: 0.04 };
   }
-  override dispose() { release(this.scene); this.tex.dispose(); }
+  override dispose() { release(this.scene); this.layer.texture.dispose(); this.tex.dispose(); }
 }

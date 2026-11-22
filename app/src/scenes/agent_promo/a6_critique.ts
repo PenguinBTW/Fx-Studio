@@ -131,5 +131,5 @@ export default class A6Critique extends Scene {
     present(this.ctx, out, this.scene, this.cam, this.layer, undefined, 0x08090c, overlayTextDuck(f.tin, f.tout));
     return { exposure: 1.0, bloom: 0.45, bloomThreshold: 0.9, vignette: 0.5, grain: 0.04 };
   }
-  override dispose() { release(this.scene); for (const t of this.texs) t.dispose(); for (const i of this.ink) i.tex.dispose(); this.strip.tex.dispose(); }
+  override dispose() { release(this.scene); this.layer.texture.dispose(); for (const t of this.texs) t.dispose(); for (const i of this.ink) i.tex.dispose(); this.strip.tex.dispose(); }
 }
