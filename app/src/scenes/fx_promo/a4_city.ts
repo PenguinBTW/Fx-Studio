@@ -4,6 +4,7 @@
 // e0..e1 (e0 > e1 plays it backwards: the rewind in A9a).
 import * as THREE from 'three';
 import { LargeParticles } from '../../engine/particles_large';
+import { CityWorld } from './city_world';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { Layer2D } from '../../engine/gl';
 import { overlayTextDuck } from '../../engine/transition';
@@ -82,9 +83,15 @@ function camAt(T: number): CamKey {
 }
 
 const SKY_VS = `varying vec3 vDir; void main(){ vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
-const SKY_FS = `uniform vec3 uTop, uBot, uSunCol; uniform vec3 uSun; varying vec3 vDir;
+const SKY_FS = `uniform vec3 uTop, uBot, uSunCol; uniform vec3 uSun; uniform float uT; varying vec3 vDir;
+float cn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); float a = fract(sin(dot(i, vec2(127.1, 311.7))) * 43758.5), b = fract(sin(dot(i + vec2(1, 0), vec2(127.1, 311.7))) * 43758.5), c = fract(sin(dot(i + vec2(0, 1), vec2(127.1, 311.7))) * 43758.5), d = fract(sin(dot(i + vec2(1, 1), vec2(127.1, 311.7))) * 43758.5); return mix(mix(a, b, f.x), mix(c, d, f.x), f.y); }
+float fbm(vec2 p){ float s = 0.0, a = 0.5; for (int i = 0; i < 5; i++) { s += a * cn(p); p = p * 2.03 + 7.1; a *= 0.5; } return s; }
 void main(){ vec3 d = normalize(vDir); float y = d.y; vec3 c = mix(uBot, uTop, smoothstep(-0.02, 0.55, y));
   float s = max(dot(d, normalize(uSun)), 0.0); c += uSunCol * (pow(s, 900.0) * 6.0 + pow(s, 12.0) * 0.35);
+  vec2 cp = d.xz / (max(y, 0.0) + 0.12) * 0.9 + vec2(uT * 0.03, uT * 0.01);
+  float cov = smoothstep(0.5, 0.78, fbm(cp)) * smoothstep(0.0, 0.12, y);
+  vec3 cl = mix(uTop * 0.55 + uBot * 0.35, uBot * 0.9 + uSunCol * 1.4, pow(s, 3.0) * 0.8 + 0.2 * smoothstep(0.6, 0.9, fbm(cp + 0.15)));
+  c = mix(c, cl, cov * 0.85);
   gl_FragColor = vec4(c, 1.0); }`;
 const DUST_VS = `attribute float aA; attribute float aS; uniform float uScale; varying float vA;
 void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv; gl_PointSize = aS * uScale / max(0.1, -mv.z); vA = aA; }`;
@@ -110,6 +117,7 @@ export default class A4City extends Scene {
   private ash = new LargeParticles(9000, 4512);
   private embers = new LargeParticles(1500, 9127);
   private nFloors = 0;
+  private world = new CityWorld();
   private v = new THREE.Vector3(); private q = new THREE.Quaternion(); private q2 = new THREE.Quaternion(); private s = new THREE.Vector3();
   private c = new THREE.Color(); private ax = new THREE.Vector3(); private up = new THREE.Vector3(0, 1, 0); private e = new THREE.Euler();
   override async init() {
@@ -158,7 +166,7 @@ export default class A4City extends Scene {
     for (const I of [this.roofs, this.cranes]) { for (const im of I.meshes) im.castShadow = true; for (let i = 0; i < I.count; i++) I.color(i, this.c.set(0xffffff)); this.scene.add(I.group); }
 
     this.sky = new THREE.ShaderMaterial({ vertexShader: SKY_VS, fragmentShader: SKY_FS, side: THREE.BackSide, depthWrite: false, fog: false,
-      uniforms: { uTop: { value: new THREE.Color() }, uBot: { value: new THREE.Color() }, uSunCol: { value: new THREE.Color() }, uSun: { value: new THREE.Vector3(0, 1, 0) } } });
+      uniforms: { uTop: { value: new THREE.Color() }, uBot: { value: new THREE.Color() }, uSunCol: { value: new THREE.Color() }, uSun: { value: new THREE.Vector3(0, 1, 0) }, uT: { value: 0 } } });
     const skyM = new THREE.Mesh(new THREE.SphereGeometry(500, 48, 24), this.sky); skyM.renderOrder = -1; skyM.frustumCulled = false;
     this.ground = new THREE.MeshStandardMaterial({ color: 0x2a2826, roughness: 0.95 });
     const gnd = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), this.ground); gnd.rotation.x = -Math.PI / 2; gnd.receiveShadow = true;
@@ -180,7 +188,8 @@ export default class A4City extends Scene {
     // Dark ash flecks against the bright backlit sky, plus a sparse ember layer that flares on every tower impact.
     this.ash.configure({ count: 3000, mode: 'fall', style: 'disc', opaque: true, size: [0.05, 0.16], life: [6, 12], temperature: [0, 1], color: { mode: 'flat', rgb: [0.035, 0.032, 0.03] }, intensity: 1, fade: [0.15, 0.25], turbulence: { amp: 2.2, freq: 0.07, drift: 0.4 }, fall: { center: [0, 14, 0], box: [120, 30, 120], velocity: [1.3, -1.7, 0.5], drag: 0 } });
     this.embers.configure({ count: 500, mode: 'fall', style: 'disc', size: [0.07, 0.2], life: [3, 6], temperature: [0, 1], color: { mode: 'blackbody', range: [1700, 3300] }, intensity: 0, brightnessVariance: 0.7, fade: [0.2, 0.4], turbulence: { amp: 1.6, freq: 0.1, drift: 0.5 }, fall: { center: [0, 6, 0], box: [90, 14, 90], velocity: [0.5, 2.4, 0.2], drag: 0 } });
-    this.scene.add(skyM, gnd, tube, this.sun, this.sun.target, this.hemi, this.dust);
+    void gnd;
+    this.scene.add(this.world.group, skyM, tube, this.sun, this.sun.target, this.hemi, this.dust);
     this.scene.fog = new THREE.FogExp2(0xffffff, 0.01);
   }
 
@@ -204,6 +213,8 @@ export default class A4City extends Scene {
     this.v.set(Math.cos(el) * Math.cos(az), Math.sin(el), Math.cos(el) * Math.sin(az));
     this.sky.uniforms.uTop!.value.copy(L.top); this.sky.uniforms.uBot!.value.copy(L.bot);
     this.sky.uniforms.uSun!.value.copy(this.v); this.sky.uniforms.uSunCol!.value.copy(L.sun).multiplyScalar(1 - night);
+    this.sky.uniforms.uT!.value = T;
+    this.world.update(T, { built: prog(T, bar(29), bar(32)), night, decay, collapse: prog(T, bar(45.5), bar(47)), top: L.top, bot: L.bot, sun: this.v, sunCol: this.sky.uniforms.uSunCol!.value, fog: L.fog, fogD: L.fogD, tint: this.c.set(0xffffff).lerp(L.fog, 0.3) });
     this.sun.position.copy(this.v).multiplyScalar(120); this.sun.target.position.set(0, 0, 0);
     this.sun.color.copy(L.sun); this.sun.intensity = L.sunI;
     this.hemi.color.copy(L.hemi); this.hemi.groundColor.copy(L.gnd); this.hemi.intensity = L.hemiI;
@@ -344,6 +355,7 @@ export default class A4City extends Scene {
   }
 
   override dispose(): void {
+    this.world.dispose();
     this.ash.dispose();
     this.embers.dispose();
   }
