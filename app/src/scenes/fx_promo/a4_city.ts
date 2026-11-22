@@ -4,6 +4,7 @@
 // e0..e1 (e0 > e1 plays it backwards: the rewind in A9a).
 import * as THREE from 'three';
 import { LargeParticles } from '../../engine/particles_large';
+import { CityWorld } from './city_world';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { Layer2D } from '../../engine/gl';
 import { overlayTextDuck } from '../../engine/transition';
@@ -15,6 +16,8 @@ const h = (i: number, s = 0) => { const x = Math.sin(i * 127.1 + s * 311.7) * 43
 const FH = 0.3, G = 15, CELL = 3.2, ND = 4200;
 const qBeat = (t: number, div = 1) => B0 + Math.ceil((t - B0) / (BEAT / div)) * (BEAT / div);
 const VAR = ['floor_a', 'floor_b', 'floor_c'] as const;
+const WHITE = new THREE.Color(0xffffff);
+const DC = new THREE.Color(), SOOT = new THREE.Color(0.36, 0.33, 0.29);
 
 interface Bld { x: number; z: number; v: number; n: number; rot: number; sc: number; r: number; tb: number; tc: number; band: number; psi: number; fo: number; falls: boolean; crane: boolean }
 
@@ -64,6 +67,9 @@ const CUTS: [number, number, CamKey, CamKey][] = [
   [46, 47, { pos: [0, 1.8, -2], tgt: [9, 9, 5], fov: 64 }, { pos: [0, 2.2, 3], tgt: [9, 10, 2], fov: 66 }],
   [47, 47.5, { pos: [34, 1.6, -6], tgt: [0, 8, 0], fov: 44 }, { pos: [32, 1.8, -3], tgt: [0, 8, 0], fov: 46 }],
 ];
+// Facade tints per tower (stone, blue glass, terracotta, sand, graphite, pale green glass) so the day build isn't white boxes.
+const FACADE = ['#F4EEE4', '#9FB6D0', '#C98A6A', '#E2C9A0', '#6E7076', '#A9C4B4'].map((c) => new THREE.Color(c));
+const CONCRETE = new THREE.Color(0.62, 0.6, 0.57);
 export const TALL = { x: 0, z: 0, h: 30 };
 function camAt(T: number): CamKey {
   const b = (T - B0) / BAR + 1;
@@ -82,9 +88,15 @@ function camAt(T: number): CamKey {
 }
 
 const SKY_VS = `varying vec3 vDir; void main(){ vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
-const SKY_FS = `uniform vec3 uTop, uBot, uSunCol; uniform vec3 uSun; varying vec3 vDir;
+const SKY_FS = `uniform vec3 uTop, uBot, uSunCol; uniform vec3 uSun; uniform float uT; varying vec3 vDir;
+float cn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); float a = fract(sin(dot(i, vec2(127.1, 311.7))) * 43758.5), b = fract(sin(dot(i + vec2(1, 0), vec2(127.1, 311.7))) * 43758.5), c = fract(sin(dot(i + vec2(0, 1), vec2(127.1, 311.7))) * 43758.5), d = fract(sin(dot(i + vec2(1, 1), vec2(127.1, 311.7))) * 43758.5); return mix(mix(a, b, f.x), mix(c, d, f.x), f.y); }
+float fbm(vec2 p){ float s = 0.0, a = 0.5; for (int i = 0; i < 5; i++) { s += a * cn(p); p = p * 2.03 + 7.1; a *= 0.5; } return s; }
 void main(){ vec3 d = normalize(vDir); float y = d.y; vec3 c = mix(uBot, uTop, smoothstep(-0.02, 0.55, y));
   float s = max(dot(d, normalize(uSun)), 0.0); c += uSunCol * (pow(s, 900.0) * 6.0 + pow(s, 12.0) * 0.35);
+  vec2 cp = d.xz / (max(y, 0.0) + 0.12) * 0.9 + vec2(uT * 0.03, uT * 0.01);
+  float cov = smoothstep(0.5, 0.78, fbm(cp)) * smoothstep(0.0, 0.12, y);
+  vec3 cl = mix(uTop * 0.55 + uBot * 0.35, uBot * 0.9 + uSunCol * 1.4, pow(s, 3.0) * 0.8 + 0.2 * smoothstep(0.6, 0.9, fbm(cp + 0.15)));
+  c = mix(c, cl, cov * 0.85);
   gl_FragColor = vec4(c, 1.0); }`;
 const DUST_VS = `attribute float aA; attribute float aS; uniform float uScale; varying float vA;
 void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv; gl_PointSize = aS * uScale / max(0.1, -mv.z); vA = aA; }`;
@@ -109,7 +121,32 @@ export default class A4City extends Scene {
   // Engine GPU particles: blackbody embers and ash drifting through the backlit collapse.
   private ash = new LargeParticles(9000, 4512);
   private embers = new LargeParticles(1500, 9127);
+  // Pre-fractured floors (Blender city_debris): each floor is swapped for its Voronoi chunks on the frame it lands.
+  private chunks: { im: THREE.InstancedMesh; off: THREE.Vector3; ax: THREE.Vector3; w: number }[] = [];
+  private brk: { t: number; p: THREE.Vector3; q: THREE.Quaternion; v: THREE.Vector3 }[][] = [];
+  private shocks: THREE.Vector3[] = [];
+  private hero = -1; private heroDir = 0; private heroL = new THREE.PointLight(0xff7a30, 0, 16, 1.6);
+  // Hero close-up lighting: a warm key from the camera side and a cool rim behind the tower separate chunks from the dust.
+  private keyL = new THREE.PointLight(0xffe2c0, 0, 30, 1.2); private rimL = new THREE.PointLight(0x7fb0ff, 0, 30, 1.2);
+  private debrisMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85, vertexColors: true, emissive: 0x1c1814 });
+  private dm = new THREE.Matrix4(); private dp = new THREE.Vector3(); private dq = new THREE.Quaternion();
+
+  /** Closed-form pose of floor i of a falling tower at tau s after it starts to go; returns its height above the rubble. */
+  private pose(b: Bld, bi: number, i: number, tau: number, v: THREE.Vector3, q: THREE.Quaternion) {
+    const idx = b.fo + i;
+    const theta = Math.min(1.25, (bi === this.tallest ? 1.5 : 0.32) * tau * tau);
+    const drop = tau > 0.15 ? 0.5 * 6.5 * (tau - 0.15) ** 2 : 0, tauK = clamp(tau);
+    const q2 = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(-Math.sin(b.psi), 0, Math.cos(b.psi)), theta);
+    v.set(0, i * FH, 0).applyQuaternion(q2);
+    const sep = tau * tau * 0.18 * (i / b.n);
+    v.x += Math.cos(b.psi + h(idx, 20) * 2) * sep; v.z += Math.sin(b.psi + h(idx, 21) * 2) * sep;
+    const floorY = 0.05 + 1.1 * (i / b.n) * h(idx, 22), free = v.y - drop - floorY;
+    v.y = Math.max(floorY, v.y - drop); v.x += b.x; v.z += b.z;
+    q.setFromEuler(new THREE.Euler((h(idx, 23) - 0.5) * tauK * 0.8, 0, (h(idx, 24) - 0.5) * tauK * 0.8)).premultiply(q2).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), b.rot));
+    return free;
+  }
   private nFloors = 0;
+  private world = new CityWorld();
   private v = new THREE.Vector3(); private q = new THREE.Quaternion(); private q2 = new THREE.Quaternion(); private s = new THREE.Vector3();
   private c = new THREE.Color(); private ax = new THREE.Vector3(); private up = new THREE.Vector3(0, 1, 0); private e = new THREE.Euler();
   override async init() {
@@ -142,8 +179,51 @@ export default class A4City extends Scene {
     this.B[this.tallest]!.tc = qBeat(bar(48.5));
     { const t = this.B[this.tallest]!; TALL.x = t.x; TALL.z = t.z; TALL.h = t.n * FH; }
     [...this.B].sort((a, b) => b.n - a.n).slice(0, 9).forEach((b) => (b.crane = true));
+    // Hero close-up (bar 46-46.5): the camera stands at the foot of one tower as its lower floors burst into chunks.
+    let hd = 1e9;
+    this.B.forEach((b, bi) => { const d = Math.abs(b.tc - bar(45.85)); if (b.n >= 10 && bi !== this.tallest && d < hd) { hd = d; this.hero = bi; } });
+    this.brk = this.B.map((b, bi) => Array.from({ length: b.n }, (_, i) => {
+      const p = new THREE.Vector3(), q = new THREE.Quaternion(), p0 = new THREE.Vector3(), q0 = new THREE.Quaternion();
+      let tau = 0.2;
+      // Hero-tower slabs crack apart mid-fall as they slam into the floor below, rather than only on landing.
+      const crack = bi === this.hero ? 0.35 + 0.5 * h(b.fo + i, 29) : 0.02;
+      for (; tau < 4; tau += 1 / 60) if (this.pose(b, bi, i, tau, p, q) < crack) break;
+      this.pose(b, bi, i, tau, p, q); this.pose(b, bi, i, tau - 1 / 60, p0, q0);
+      return { t: b.tc + tau, p, q, v: p.clone().sub(p0).multiplyScalar(60) };
+    }));
+    // Pick the clearest line of sight to it: sample around the tower and keep the angle whose sight line misses every other tower.
+    const hb0 = this.B[this.hero];
+    if (hb0) {
+      let bestC = -1e9;
+      for (let a = 0; a < 48; a++) {
+        const ang = (a / 48) * Math.PI * 2;
+        let clr = 1e9;
+        for (let k = 1; k <= 6; k++) {
+          const px = hb0.x + Math.cos(ang) * 1.6 * k, pz = hb0.z + Math.sin(ang) * 1.6 * k;
+          this.B.forEach((b, bi) => { if (bi !== this.hero) clr = Math.min(clr, Math.hypot(px - b.x, pz - b.z) - b.sc * 0.8); });
+        }
+        const score = clr + 0.4 * Math.abs(Math.sin(ang - hb0.psi));
+        if (score > bestC) { bestC = score; this.heroDir = ang; }
+      }
+    }
+    this.scene.add(this.heroL, this.keyL, this.rimL);
+    this.shocks = this.B.map((b, bi) => ({ b, bi })).sort((a, c) => c.b.n - a.b.n).slice(0, 4).map(({ b, bi }) => {
+      const L = b.n * FH * 0.8;
+      return new THREE.Vector3(b.x + Math.cos(b.psi) * L, b.z + Math.sin(b.psi) * L, b.tc + (bi === this.tallest ? 0.91 : 1.98));
+    });
 
     const inst = await model(this.ctx, 'city_kit');
+    const deb = await model(this.ctx, 'city_debris');
+    deb.root.updateMatrixWorld(true);
+    deb.root.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh) return;
+      const k = this.chunks.length, im = new THREE.InstancedMesh(m.geometry, this.debrisMat, Math.max(1, this.nFloors * 3));
+      im.name = `city_debris.${m.name}`; im.userData.fx_entity = `city_debris.${m.name}`;
+      im.castShadow = true; im.receiveShadow = true; im.frustumCulled = false; im.setColorAt(0, this.c.set(0xffffff)); im.count = 0;
+      this.chunks.push({ im, off: m.getWorldPosition(new THREE.Vector3()), ax: new THREE.Vector3(h(k, 81) - 0.5, h(k, 82) - 0.5, h(k, 83) - 0.5).normalize(), w: 4 + 8 * h(k, 84) });
+      this.scene.add(im);
+    });
     const bodyMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.78, metalness: 0.05 });
     const winMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
     const pick = (name: string, m: THREE.Material) => (name.toLowerCase().includes('win') ? winMat : name.toLowerCase().includes('steel') ? m : bodyMat);
@@ -158,7 +238,7 @@ export default class A4City extends Scene {
     for (const I of [this.roofs, this.cranes]) { for (const im of I.meshes) im.castShadow = true; for (let i = 0; i < I.count; i++) I.color(i, this.c.set(0xffffff)); this.scene.add(I.group); }
 
     this.sky = new THREE.ShaderMaterial({ vertexShader: SKY_VS, fragmentShader: SKY_FS, side: THREE.BackSide, depthWrite: false, fog: false,
-      uniforms: { uTop: { value: new THREE.Color() }, uBot: { value: new THREE.Color() }, uSunCol: { value: new THREE.Color() }, uSun: { value: new THREE.Vector3(0, 1, 0) } } });
+      uniforms: { uTop: { value: new THREE.Color() }, uBot: { value: new THREE.Color() }, uSunCol: { value: new THREE.Color() }, uSun: { value: new THREE.Vector3(0, 1, 0) }, uT: { value: 0 } } });
     const skyM = new THREE.Mesh(new THREE.SphereGeometry(500, 48, 24), this.sky); skyM.renderOrder = -1; skyM.frustumCulled = false;
     this.ground = new THREE.MeshStandardMaterial({ color: 0x2a2826, roughness: 0.95 });
     const gnd = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), this.ground); gnd.rotation.x = -Math.PI / 2; gnd.receiveShadow = true;
@@ -180,7 +260,8 @@ export default class A4City extends Scene {
     // Dark ash flecks against the bright backlit sky, plus a sparse ember layer that flares on every tower impact.
     this.ash.configure({ count: 3000, mode: 'fall', style: 'disc', opaque: true, size: [0.05, 0.16], life: [6, 12], temperature: [0, 1], color: { mode: 'flat', rgb: [0.035, 0.032, 0.03] }, intensity: 1, fade: [0.15, 0.25], turbulence: { amp: 2.2, freq: 0.07, drift: 0.4 }, fall: { center: [0, 14, 0], box: [120, 30, 120], velocity: [1.3, -1.7, 0.5], drag: 0 } });
     this.embers.configure({ count: 500, mode: 'fall', style: 'disc', size: [0.07, 0.2], life: [3, 6], temperature: [0, 1], color: { mode: 'blackbody', range: [1700, 3300] }, intensity: 0, brightnessVariance: 0.7, fade: [0.2, 0.4], turbulence: { amp: 1.6, freq: 0.1, drift: 0.5 }, fall: { center: [0, 6, 0], box: [90, 14, 90], velocity: [0.5, 2.4, 0.2], drag: 0 } });
-    this.scene.add(skyM, gnd, tube, this.sun, this.sun.target, this.hemi, this.dust);
+    void gnd;
+    this.scene.add(this.world.group, skyM, tube, this.sun, this.sun.target, this.hemi, this.dust);
     this.scene.fog = new THREE.FogExp2(0xffffff, 0.01);
   }
 
@@ -204,6 +285,8 @@ export default class A4City extends Scene {
     this.v.set(Math.cos(el) * Math.cos(az), Math.sin(el), Math.cos(el) * Math.sin(az));
     this.sky.uniforms.uTop!.value.copy(L.top); this.sky.uniforms.uBot!.value.copy(L.bot);
     this.sky.uniforms.uSun!.value.copy(this.v); this.sky.uniforms.uSunCol!.value.copy(L.sun).multiplyScalar(1 - night);
+    this.sky.uniforms.uT!.value = T;
+    this.world.update(T, { built: prog(T, bar(29), bar(32)), night, decay, collapse: prog(T, bar(45.5), bar(47)), top: L.top, bot: L.bot, sun: this.v, sunCol: this.sky.uniforms.uSunCol!.value, fog: L.fog, fogD: L.fogD, tint: this.c.set(0xffffff).lerp(L.fog, 0.3), shocks: this.shocks });
     this.sun.position.copy(this.v).multiplyScalar(120); this.sun.target.position.set(0, 0, 0);
     this.sun.color.copy(L.sun); this.sun.intensity = L.sunI;
     this.hemi.color.copy(L.hemi); this.hemi.groundColor.copy(L.gnd); this.hemi.intensity = L.hemiI;
@@ -244,13 +327,19 @@ export default class A4City extends Scene {
         this.s.set(b.sc, crush, b.sc);
         this.e.set((h(idx, 23) - 0.5) * tauK * 0.8, 0, (h(idx, 24) - 0.5) * tauK * 0.8);
         qf.setFromEuler(this.e).premultiply(this.q2).multiply(this.q);
+        if (T >= this.brk[bi]![i]!.t) this.s.setScalar(1e-4);
         I.set(idx, this.v, qf, this.s);
         // Body: clean -> grime + moss creeping up from the street -> dust coat.
-        this.c.copy(L.body);
+        this.c.copy(L.body).multiply(FACADE[Math.floor(h(bi, 77) * FACADE.length)]!);
         const m = decay * 1.3 - i / b.n - h(idx, 25) * 0.25;
         if (m > 0) this.c.lerp(h(idx, 26) < 0.55 ? moss : grime, Math.min(0.85, m * 2));
         if (tau > 0) this.c.lerp(ochre, Math.min(0.8, tau * 0.4));
+        // Falling slabs pick up soot and dirt, unevenly per floor, so they read as concrete rather than card.
+        if (tau > 0) this.c.lerp(grime, Math.min(0.7, tau * 0.6) * (0.4 + 0.6 * h(idx, 28)));
         I.color(idx, this.c, 'body');
+        // The cream floor plates (detail meshes) share the falling grime so the slabs don't stay pristine.
+        if (tau > 0) DC.copy(WHITE).multiplyScalar(0.8 + 0.15 * h(idx, 31)).lerp(SOOT, 0.3 + 0.4 * h(idx, 28));
+        I.color(idx, tau > 0 ? DC : WHITE, 'detail');
         // Windows: glass by day; at night each facade is one band of the mix; they die one by one on off-beats.
         const td = qBeat(bar(41) + h(idx, 27) * 3.6 * BAR, 2) + BEAT / 4;
         const alive = T < td ? 1 : 0;
@@ -286,15 +375,55 @@ export default class A4City extends Scene {
       this.cranes.set(bi, this.v.set(b.x + b.sc * 0.3, top, b.z), qr, this.s.set(cs, cs, cs));
     });
     for (const I of this.fl) I.commit();
+    // Debris: each landed floor is thrown out as its chunks (ballistic, one damped bounce, then they lie as rubble).
+    let nd = 0;
+    const GR = 6.5;
+    this.B.forEach((b, bi) => {
+      const bc = this.c.copy(L.body).multiply(FACADE[Math.floor(h(bi, 77) * FACADE.length)]!).lerp(CONCRETE, 0.6);
+      for (let i = 0; i < b.n; i++) {
+        const br = this.brk[bi]![i]!, t = T - br.t;
+        if (t < 0) continue;
+        const idx = b.fo + i;
+        // The hero tower also sheds gravel: two extra sets of small, fast fragments per floor.
+        for (let rep = 0; rep < (bi === this.hero ? 3 : 1); rep++) {
+        const gs = rep ? 0.22 + 0.12 * h(idx * 3 + rep, 88) : 1;
+        this.chunks.forEach((ch, k) => {
+          const o = this.v.set(ch.off.x * b.sc, ch.off.y, ch.off.z * b.sc).applyQuaternion(br.q), j = idx * 16 + k + rep * 7919;
+          const hr = Math.hypot(o.x, o.z) + 1e-3, kick = (1.2 + 2.8 * h(j, 85)) * (rep ? 1.8 : 1);
+          const vx = br.v.x * 0.35 + (o.x / hr) * kick, vz = br.v.z * 0.35 + (o.z / hr) * kick, vy = Math.max(0, br.v.y * 0.2) + 1 + 3 * h(j, 86);
+          const y0 = Math.max(0.06, br.p.y + o.y), t1 = (vy + Math.sqrt(vy * vy + 2 * GR * (y0 - 0.05))) / GR;
+          let y: number, run: number, spin: number;
+          if (t < t1) { y = y0 + vy * t - 0.5 * GR * t * t; run = t; spin = t; }
+          else { const tb = t - t1, vb = 0.25 * (GR * t1 - vy), sl = Math.min(tb, 0.5), tt = Math.min(tb, (2 * vb) / GR); y = 0.05 + Math.max(0, vb * tt - 0.5 * GR * tt * tt); run = t1 + 0.35 * sl; spin = t1 + 0.3 * sl; }
+          this.dp.set(br.p.x + o.x + vx * run, y, br.p.z + o.z + vz * run);
+          this.dq.setFromAxisAngle(ch.ax, ch.w * spin).multiply(br.q);
+          const ks = (0.7 + 0.6 * h(j, 87)) * gs;
+          ch.im.setMatrixAt(nd, this.dm.compose(this.dp, this.dq, this.s.set(b.sc * ks, ks, b.sc * ks)));
+          ch.im.setColorAt(nd, bc);
+        });
+        nd++;
+        }
+      }
+    });
+    for (const ch of this.chunks) { ch.im.count = nd; ch.im.instanceMatrix.needsUpdate = true; if (ch.im.instanceColor) ch.im.instanceColor.needsUpdate = true; }
     this.roofs.commit(); this.cranes.commit();
 
     // Dust: each collapsing tower exhales a billow from its base that rises and drifts downwind.
     const geo = this.dust.geometry;
     const pos = geo.getAttribute('position') as THREE.BufferAttribute, aA = geo.getAttribute('aA') as THREE.BufferAttribute, aS = geo.getAttribute('aS') as THREE.BufferAttribute;
-    const fallers = this.B.filter((b) => b.falls);
+    const fallers = this.B.filter((b) => b.falls), hb = this.B[this.hero];
     for (let i = 0; i < ND; i++) {
-      const b = fallers[i % fallers.length]!;
-      const age = T - (b.tc + 0.25 + h(i, 30) * 1.2);
+      // A quarter of the dust is the hero tower's impact plume, rolling out toward the close-up camera.
+      const heroDust = hb && i % 4 === 0;
+      const b = heroDust ? hb : fallers[i % fallers.length]!;
+      const age = heroDust ? T - (this.brk[this.hero]![0]!.t + h(i, 30) * 0.5) : T - (b.tc + 0.25 + h(i, 30) * 1.2);
+      if (heroDust && age > 0) {
+        const ang = this.heroDir + (h(i, 31) - 0.5) * 2.4, sp = (0.6 + 6 * h(i, 32)) * (1 - Math.exp(-age * 1.6));
+        pos.setXYZ(i, b.x + Math.cos(ang) * sp, 0.2 + 2.2 * h(i, 33) * (1 - Math.exp(-age * 1.2)) + age * 0.3, b.z + Math.sin(ang) * sp);
+        aA.setX(i, 0.22 * clamp(age / 0.15) * Math.exp(-age * 0.35) * (0.5 + 0.5 * h(i, 34)));
+        aS.setX(i, 1.5 + 4 * h(i, 35) + age * 1.5);
+        continue;
+      }
       if (age <= 0) { aA.setX(i, 0); continue; }
       const ang = h(i, 31) * Math.PI * 2, spread = (1.5 + 5 * h(i, 32)) * (1 - Math.exp(-age * 0.9));
       pos.setXYZ(i, b.x + Math.cos(ang) * spread + age * 0.9, 0.3 + b.n * FH * 0.6 * h(i, 33) * (1 - Math.exp(-age * 0.7)) + age * 0.25, b.z + Math.sin(ang) * spread);
@@ -306,7 +435,24 @@ export default class A4City extends Scene {
 
     // The Thread brightens with the vocal at night and keeps glowing after everything else dies.
     this.thread.color.set(C.signal).multiplyScalar(1.2 + night * (1 + 1.5 * a.vocal) * (1 - decay * 0.5) + dustK * 2);
-    applyCam(this.cam, camAt(T), a.kick * 0.5 * (1 - night * 0.5) + dustK * a.kick * 2);
+    const bn = (T - B0) / BAR + 1;
+    let key = camAt(T);
+    if (hb && bn >= 46 && bn < 46.5) {
+      const k = (bn - 46) / 0.5, fx = Math.cos(hb.psi), fz = Math.sin(hb.psi), d = 9.5 - 1.5 * k;
+      const cx = Math.cos(this.heroDir), cz = Math.sin(this.heroDir);
+      key = { pos: [hb.x + cx * d, 1.5 + 0.4 * k, hb.z + cz * d], tgt: [hb.x + fx * 1.2, 2.4, hb.z + fz * 1.2], fov: 50 };
+    }
+    if (hb) {
+      let heat = 0;
+      for (let i = 0; i < Math.min(5, hb.n); i++) { const d = T - this.brk[this.hero]![i]!.t; if (d > 0) heat += Math.exp(-d * 3); }
+      this.heroL.position.set(hb.x + Math.cos(hb.psi) * 0.8, 0.8, hb.z + Math.sin(hb.psi) * 0.8);
+      this.heroL.intensity = 30 * Math.min(1.5, heat);
+      const on = bn >= 45.9 && bn < 46.6 ? 1 : 0, cx = Math.cos(this.heroDir), cz = Math.sin(this.heroDir);
+      this.keyL.position.set(hb.x + cx * 6 - cz * 2.5, 4.5, hb.z + cz * 6 + cx * 2.5);
+      this.rimL.position.set(hb.x - cx * 5 + cz * 3, 5, hb.z - cz * 5 - cx * 3);
+      this.keyL.intensity = 30 * on; this.rimL.intensity = 70 * on;
+    }
+    applyCam(this.cam, key, a.kick * 0.5 * (1 - night * 0.5) + dustK * a.kick * 2);
     this.dustMat.uniforms.uScale!.value = 1080 / (2 * Math.tan((this.cam.fov * Math.PI) / 360));
 
     // Ash clears out of the sky before the tallest tower's fall so its silhouette reads; embers burst on each landing.
@@ -329,12 +475,10 @@ export default class A4City extends Scene {
       slam(g, w, x, 900, T, { t0: beatAt(29, i), t1: bar(31.5), size: 150, family: fam, align: 'left', from: 1.8, shake: 6, color: i === 3 ? C.signal : C.bone });
       g.font = font(fam, 150); x += g.measureText(w + ' ').width;
     });
-    typeLine(g, `assets/city_kit/build.py  →  model.glb  ·  ${this.nFloors.toLocaleString('en')} floors, one per 8th note`, 150, 980, T, bar(29.5), { size: 26, t1: bar(31.5), color: C.bone });
     slam(g, 'LIT BY THE MIX', 960, 540, T, { t0: bar(36), t1: bar(38) - 0.05, size: 170, family: fam, from: 2.2, shake: 10, color: '#FFB547' });
-    typeLine(g, 'facade[i] = audio.sample(t)[band]', 960, 640, T, bar(36.5), { size: 30, align: 'center', t1: bar(38) - 0.05, color: '#46E0FF' });
     if (T > bar(41.3) && T < bar(45.6)) {
       const yr = 2026 + Math.round(100 * prog(T, bar(41.5), bar(45.2), ease.inOutCubic));
-      typeLine(g, `year ${yr}`, 960, 960, T, bar(41.3), { size: 44, align: 'center', cps: 30, color: '#D8DCD6', cursor: false });
+      slam(g, `${yr}`, 960, 965, T, { t0: bar(41.3), t1: bar(45.6), size: 64, family: F.archivo(125, 700), from: 1.2, shake: 0, color: '#D8DCD6' });
     }
     slam(g, 'EVERYTHING IS f(t)', 960, 250, T, { t0: bar(46.5), t1: bar(48.2), size: 122, family: fam, from: 1.45, shake: 8, color: C.bone });
 
@@ -344,6 +488,8 @@ export default class A4City extends Scene {
   }
 
   override dispose(): void {
+    this.world.dispose();
+    this.debrisMat.dispose(); this.chunks.forEach((c) => c.im.dispose());
     this.ash.dispose();
     this.embers.dispose();
   }

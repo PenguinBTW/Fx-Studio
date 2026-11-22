@@ -228,3 +228,6 @@ export class DoFPresenter {
   }
   dispose() { this.rt?.dispose(); this.pass.dispose(); }
 }
+
+/** Live world textures for the s11_mark portal wordmark, filled each frame by the fxp_portal_mark transition. */
+export const portals = { tex: [] as THREE.Texture[] };

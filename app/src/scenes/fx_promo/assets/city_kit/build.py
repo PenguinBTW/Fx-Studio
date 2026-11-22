@@ -36,6 +36,32 @@ bpy.ops.object.select_all(action='DESELECT')
 for o in c[1:]: o.select_set(True)
 bpy.context.view_layer.objects.active = c[1]; bpy.ops.object.join(); tag(bpy.context.active_object, 'floor_c_win')
 c = [c[0], bpy.context.active_object]
+
+def join(objs, name):
+    bpy.ops.object.select_all(action='DESELECT')
+    for o in objs: o.select_set(True)
+    bpy.context.view_layer.objects.active = objs[0]; bpy.ops.object.join(); tag(bpy.context.active_object, name)
+    return bpy.context.active_object
+# Facade detail (shared body material): slab lips, corner piers and vertical mullions so towers read as architecture up close.
+fa = [box('fa_lip', 1.06, 1.06, H * 0.08)]
+for sx in (-1, 1):
+    for sy in (-1, 1): fa.append(box('fa_pier', 0.07, 0.07, H, x=sx * 0.5, y=sy * 0.5))
+for i in range(1, 6):
+    u = -0.5 + i / 6
+    for sgn in (-1, 1):
+        fa.append(box('fa_m', 0.025, 0.04, H * 0.5, z0=H * 0.27, x=u, y=sgn * 0.515))
+        fa.append(box('fa_m', 0.04, 0.025, H * 0.5, z0=H * 0.27, x=sgn * 0.515, y=u))
+a.append(join(fa, 'floor_a_detail'))
+fb = [cyl('fb_lip', 0.6, H * 0.08, n=8)]
+for i in range(16):
+    ang = i / 16 * math.tau
+    o = box('fb_fin', 0.03, 0.08, H * 0.9, x=math.cos(ang) * 0.575, y=math.sin(ang) * 0.575); o.rotation_euler.z = ang
+    fb.append(o)
+b.append(join(fb, 'floor_b_detail'))
+fc = [box('fc_lip', 1.7, 0.92, H * 0.07, z0=H * 0.0)]
+for i in range(6): fc.append(box('fc_pier', 0.06, 0.86, H * 0.96, x=-0.8 + i * 0.32))
+fc.append(box('fc_rail', 1.66, 0.03, H * 0.18, z0=H * 0.07, y=0.45))
+c.append(join(fc, 'floor_c_detail'))
 # roof crown: stepped cap + antenna
 r = [box('roof_body', 0.8, 0.8, 0.18), box('roof_mast', 0.05, 0.05, 0.9, z0=0.18, m=STEEL), box('roof_win', 0.12, 0.12, 0.06, z0=1.06, m=WIN)]
 bpy.ops.object.select_all(action='DESELECT')
