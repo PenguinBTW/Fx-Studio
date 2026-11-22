@@ -23,12 +23,21 @@ export function heightAt(x: number, z: number): number {
 }
 
 const WATER_VS = `varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
-const WATER_FS = `uniform vec3 uTop, uBot, uSunCol, uSun, uFog, uCity; uniform float uT, uFogD, uNight; varying vec3 vW;
+const WATER_FS = `uniform vec3 uTop, uBot, uSunCol, uSun, uFog, uCity; uniform float uT, uFogD, uNight; uniform vec3 uShock[4]; varying vec3 vW;
 void main(){
   vec3 v = normalize(vW - cameraPosition);
   vec2 p = vW.xz;
   vec2 g = vec2(cos(p.x * 0.9 + uT * 1.3) * 0.5 + cos(p.x * 2.3 - p.y * 1.1 + uT * 2.1) * 0.3 + cos(p.x * 5.1 + p.y * 3.7 + uT * 3.3) * 0.12,
                 cos(p.y * 0.8 - uT * 1.1) * 0.5 + cos(p.y * 2.7 + p.x * 0.9 + uT * 1.7) * 0.3 + cos(p.y * 4.9 - p.x * 4.1 - uT * 2.9) * 0.12);
+  // Impact shockwaves: a ring per tower landing races out across the bay, kicking the normals and catching the light.
+  float ring = 0.0;
+  for (int i = 0; i < 4; i++) {
+    float age = uT - uShock[i].z;
+    if (age <= 0.0) continue;
+    vec2 dp = p - uShock[i].xy; float dd = length(dp) + 1e-3;
+    float rg = exp(-pow((dd - age * 16.0) * 0.45, 2.0)) * exp(-age * 0.45);
+    g += dp / dd * rg * 7.0; ring += rg;
+  }
   vec3 n = normalize(vec3(-g.x * 0.07, 1.0, -g.y * 0.07));
   vec3 r = reflect(v, n);
   vec3 sky = mix(uBot, uTop, smoothstep(-0.02, 0.55, r.y));
@@ -37,6 +46,7 @@ void main(){
   vec3 c = mix(deep, sky, fr) + uSunCol * pow(max(dot(r, normalize(uSun)), 0.0), 380.0) * 14.0;
   float cd = length(p);
   c += uCity * uNight * exp(-max(cd - 30.0, 0.0) * 0.02) * (0.15 + 0.85 * fr) * pow(0.5 + 0.5 * sin(p.x * 2.0 + g.y * 6.0), 3.0);
+  c += mix(uSunCol + uTop, uCity * 0.5, uNight) * ring * 0.8;
   float d = length(vW - cameraPosition), fo = 1.0 - exp(-pow(uFogD * d, 2.0));
   gl_FragColor = vec4(mix(c, uFog, fo), 1.0);
 }`;
@@ -70,7 +80,7 @@ export class CityWorld {
     tg.setAttribute('color', new THREE.BufferAttribute(col, 3)); tg.computeVertexNormals();
     const terrain = new THREE.Mesh(tg, this.terrainMat); terrain.receiveShadow = true;
     this.water = new THREE.ShaderMaterial({ vertexShader: WATER_VS, fragmentShader: WATER_FS, fog: false, toneMapped: false,
-      uniforms: { uTop: { value: new THREE.Color() }, uBot: { value: new THREE.Color() }, uSunCol: { value: new THREE.Color() }, uFog: { value: new THREE.Color() }, uCity: { value: new THREE.Color() }, uSun: { value: new THREE.Vector3(0, 1, 0) }, uT: { value: 0 }, uFogD: { value: 0.002 }, uNight: { value: 0 } } });
+      uniforms: { uTop: { value: new THREE.Color() }, uBot: { value: new THREE.Color() }, uSunCol: { value: new THREE.Color() }, uFog: { value: new THREE.Color() }, uCity: { value: new THREE.Color() }, uShock: { value: [0, 1, 2, 3].map(() => new THREE.Vector3(0, 0, 1e9)) }, uSun: { value: new THREE.Vector3(0, 1, 0) }, uT: { value: 0 }, uFogD: { value: 0.002 }, uNight: { value: 0 } } });
     const wg = new THREE.PlaneGeometry(900, 900); wg.rotateX(-Math.PI / 2);
     const water = new THREE.Mesh(wg, this.water); water.position.y = -0.4;
     const roadMat = new THREE.MeshStandardMaterial({ color: 0x0c0c0e, roughness: 0.7 });
@@ -123,10 +133,11 @@ export class CityWorld {
   }
 
   /** built: 0..1 city finished; night: 0..1; decay: 0..1 abandonment; collapse: 0..1. */
-  update(T: number, o: { built: number; night: number; decay: number; collapse: number; top: THREE.Color; bot: THREE.Color; sun: THREE.Vector3; sunCol: THREE.Color; fog: THREE.Color; fogD: number; tint: THREE.Color }) {
+  update(T: number, o: { built: number; night: number; decay: number; collapse: number; top: THREE.Color; bot: THREE.Color; sun: THREE.Vector3; sunCol: THREE.Color; fog: THREE.Color; fogD: number; tint: THREE.Color; shocks?: THREE.Vector3[] }) {
     const U = this.water.uniforms;
     (U.uTop!.value as THREE.Color).copy(o.top); (U.uBot!.value as THREE.Color).copy(o.bot); (U.uSunCol!.value as THREE.Color).copy(o.sunCol);
     (U.uFog!.value as THREE.Color).copy(o.fog); (U.uSun!.value as THREE.Vector3).copy(o.sun); (U.uCity!.value as THREE.Color).setRGB(1.8, 0.9, 0.38);
+    (U.uShock!.value as THREE.Vector3[]).forEach((v, i) => (o.shocks?.[i] ? v.copy(o.shocks[i]!) : v.set(0, 0, 1e9)));
     U.uT!.value = T; U.uFogD!.value = o.fogD; U.uNight!.value = o.night * (1 - o.decay);
     this.terrainMat.color.copy(o.tint);
     const live = o.built * (1 - o.decay) * (1 - o.collapse);

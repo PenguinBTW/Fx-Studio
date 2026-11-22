@@ -118,6 +118,27 @@ export default class A4City extends Scene {
   // Engine GPU particles: blackbody embers and ash drifting through the backlit collapse.
   private ash = new LargeParticles(9000, 4512);
   private embers = new LargeParticles(1500, 9127);
+  // Pre-fractured floors (Blender city_debris): each floor is swapped for its Voronoi chunks on the frame it lands.
+  private chunks: { im: THREE.InstancedMesh; off: THREE.Vector3; ax: THREE.Vector3; w: number }[] = [];
+  private brk: { t: number; p: THREE.Vector3; q: THREE.Quaternion; v: THREE.Vector3 }[][] = [];
+  private shocks: THREE.Vector3[] = [];
+  private debrisMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85 });
+  private dm = new THREE.Matrix4(); private dp = new THREE.Vector3(); private dq = new THREE.Quaternion();
+
+  /** Closed-form pose of floor i of a falling tower at tau s after it starts to go; returns its height above the rubble. */
+  private pose(b: Bld, bi: number, i: number, tau: number, v: THREE.Vector3, q: THREE.Quaternion) {
+    const idx = b.fo + i;
+    const theta = Math.min(1.25, (bi === this.tallest ? 1.5 : 0.32) * tau * tau);
+    const drop = tau > 0.15 ? 0.5 * 6.5 * (tau - 0.15) ** 2 : 0, tauK = clamp(tau);
+    const q2 = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(-Math.sin(b.psi), 0, Math.cos(b.psi)), theta);
+    v.set(0, i * FH, 0).applyQuaternion(q2);
+    const sep = tau * tau * 0.18 * (i / b.n);
+    v.x += Math.cos(b.psi + h(idx, 20) * 2) * sep; v.z += Math.sin(b.psi + h(idx, 21) * 2) * sep;
+    const floorY = 0.05 + 1.1 * (i / b.n) * h(idx, 22), free = v.y - drop - floorY;
+    v.y = Math.max(floorY, v.y - drop); v.x += b.x; v.z += b.z;
+    q.setFromEuler(new THREE.Euler((h(idx, 23) - 0.5) * tauK * 0.8, 0, (h(idx, 24) - 0.5) * tauK * 0.8)).premultiply(q2).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), b.rot));
+    return free;
+  }
   private nFloors = 0;
   private world = new CityWorld();
   private v = new THREE.Vector3(); private q = new THREE.Quaternion(); private q2 = new THREE.Quaternion(); private s = new THREE.Vector3();
@@ -152,8 +173,29 @@ export default class A4City extends Scene {
     this.B[this.tallest]!.tc = qBeat(bar(48.5));
     { const t = this.B[this.tallest]!; TALL.x = t.x; TALL.z = t.z; TALL.h = t.n * FH; }
     [...this.B].sort((a, b) => b.n - a.n).slice(0, 9).forEach((b) => (b.crane = true));
+    this.brk = this.B.map((b, bi) => Array.from({ length: b.n }, (_, i) => {
+      const p = new THREE.Vector3(), q = new THREE.Quaternion(), p0 = new THREE.Vector3(), q0 = new THREE.Quaternion();
+      let tau = 0.2;
+      for (; tau < 4; tau += 1 / 60) if (this.pose(b, bi, i, tau, p, q) < 0.02) break;
+      this.pose(b, bi, i, tau, p, q); this.pose(b, bi, i, tau - 1 / 60, p0, q0);
+      return { t: b.tc + tau, p, q, v: p.clone().sub(p0).multiplyScalar(60) };
+    }));
+    this.shocks = this.B.map((b, bi) => ({ b, bi })).sort((a, c) => c.b.n - a.b.n).slice(0, 4).map(({ b, bi }) => {
+      const L = b.n * FH * 0.8;
+      return new THREE.Vector3(b.x + Math.cos(b.psi) * L, b.z + Math.sin(b.psi) * L, b.tc + (bi === this.tallest ? 0.91 : 1.98));
+    });
 
     const inst = await model(this.ctx, 'city_kit');
+    const deb = await model(this.ctx, 'city_debris');
+    deb.root.updateMatrixWorld(true);
+    deb.root.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh) return;
+      const k = this.chunks.length, im = new THREE.InstancedMesh(m.geometry, this.debrisMat, Math.max(1, this.nFloors));
+      im.castShadow = true; im.receiveShadow = true; im.frustumCulled = false; im.setColorAt(0, this.c.set(0xffffff)); im.count = 0;
+      this.chunks.push({ im, off: m.getWorldPosition(new THREE.Vector3()), ax: new THREE.Vector3(h(k, 81) - 0.5, h(k, 82) - 0.5, h(k, 83) - 0.5).normalize(), w: 4 + 8 * h(k, 84) });
+      this.scene.add(im);
+    });
     const bodyMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.78, metalness: 0.05 });
     const winMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
     const pick = (name: string, m: THREE.Material) => (name.toLowerCase().includes('win') ? winMat : name.toLowerCase().includes('steel') ? m : bodyMat);
@@ -216,7 +258,7 @@ export default class A4City extends Scene {
     this.sky.uniforms.uTop!.value.copy(L.top); this.sky.uniforms.uBot!.value.copy(L.bot);
     this.sky.uniforms.uSun!.value.copy(this.v); this.sky.uniforms.uSunCol!.value.copy(L.sun).multiplyScalar(1 - night);
     this.sky.uniforms.uT!.value = T;
-    this.world.update(T, { built: prog(T, bar(29), bar(32)), night, decay, collapse: prog(T, bar(45.5), bar(47)), top: L.top, bot: L.bot, sun: this.v, sunCol: this.sky.uniforms.uSunCol!.value, fog: L.fog, fogD: L.fogD, tint: this.c.set(0xffffff).lerp(L.fog, 0.3) });
+    this.world.update(T, { built: prog(T, bar(29), bar(32)), night, decay, collapse: prog(T, bar(45.5), bar(47)), top: L.top, bot: L.bot, sun: this.v, sunCol: this.sky.uniforms.uSunCol!.value, fog: L.fog, fogD: L.fogD, tint: this.c.set(0xffffff).lerp(L.fog, 0.3), shocks: this.shocks });
     this.sun.position.copy(this.v).multiplyScalar(120); this.sun.target.position.set(0, 0, 0);
     this.sun.color.copy(L.sun); this.sun.intensity = L.sunI;
     this.hemi.color.copy(L.hemi); this.hemi.groundColor.copy(L.gnd); this.hemi.intensity = L.hemiI;
@@ -257,6 +299,7 @@ export default class A4City extends Scene {
         this.s.set(b.sc, crush, b.sc);
         this.e.set((h(idx, 23) - 0.5) * tauK * 0.8, 0, (h(idx, 24) - 0.5) * tauK * 0.8);
         qf.setFromEuler(this.e).premultiply(this.q2).multiply(this.q);
+        if (T >= this.brk[bi]![i]!.t) this.s.setScalar(1e-4);
         I.set(idx, this.v, qf, this.s);
         // Body: clean -> grime + moss creeping up from the street -> dust coat.
         this.c.copy(L.body).multiply(FACADE[Math.floor(h(bi, 77) * FACADE.length)]!);
@@ -299,6 +342,32 @@ export default class A4City extends Scene {
       this.cranes.set(bi, this.v.set(b.x + b.sc * 0.3, top, b.z), qr, this.s.set(cs, cs, cs));
     });
     for (const I of this.fl) I.commit();
+    // Debris: each landed floor is thrown out as its chunks (ballistic, one damped bounce, then they lie as rubble).
+    let nd = 0;
+    const GR = 6.5;
+    this.B.forEach((b, bi) => {
+      const bc = this.c.copy(L.body).multiply(FACADE[Math.floor(h(bi, 77) * FACADE.length)]!).lerp(ochre, 0.55);
+      for (let i = 0; i < b.n; i++) {
+        const br = this.brk[bi]![i]!, t = T - br.t;
+        if (t < 0) continue;
+        const idx = b.fo + i;
+        this.chunks.forEach((ch, k) => {
+          const o = this.v.set(ch.off.x * b.sc, ch.off.y, ch.off.z * b.sc).applyQuaternion(br.q), j = idx * 16 + k;
+          const hr = Math.hypot(o.x, o.z) + 1e-3, kick = 1.2 + 2.8 * h(j, 85);
+          const vx = br.v.x * 0.35 + (o.x / hr) * kick, vz = br.v.z * 0.35 + (o.z / hr) * kick, vy = Math.max(0, br.v.y * 0.2) + 1 + 3 * h(j, 86);
+          const y0 = Math.max(0.06, br.p.y + o.y), t1 = (vy + Math.sqrt(vy * vy + 2 * GR * (y0 - 0.05))) / GR;
+          let y: number, run: number, spin: number;
+          if (t < t1) { y = y0 + vy * t - 0.5 * GR * t * t; run = t; spin = t; }
+          else { const tb = t - t1, vb = 0.25 * (GR * t1 - vy), sl = Math.min(tb, 0.5), tt = Math.min(tb, (2 * vb) / GR); y = 0.05 + Math.max(0, vb * tt - 0.5 * GR * tt * tt); run = t1 + 0.35 * sl; spin = t1 + 0.3 * sl; }
+          this.dp.set(br.p.x + o.x + vx * run, y, br.p.z + o.z + vz * run);
+          this.dq.setFromAxisAngle(ch.ax, ch.w * spin).multiply(br.q);
+          ch.im.setMatrixAt(nd, this.dm.compose(this.dp, this.dq, this.s.set(b.sc, 1, b.sc)));
+          ch.im.setColorAt(nd, bc);
+        });
+        nd++;
+      }
+    });
+    for (const ch of this.chunks) { ch.im.count = nd; ch.im.instanceMatrix.needsUpdate = true; if (ch.im.instanceColor) ch.im.instanceColor.needsUpdate = true; }
     this.roofs.commit(); this.cranes.commit();
 
     // Dust: each collapsing tower exhales a billow from its base that rises and drifts downwind.
@@ -356,6 +425,7 @@ export default class A4City extends Scene {
 
   override dispose(): void {
     this.world.dispose();
+    this.debrisMat.dispose(); this.chunks.forEach((c) => c.im.dispose());
     this.ash.dispose();
     this.embers.dispose();
   }
