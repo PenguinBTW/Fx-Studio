@@ -13,14 +13,15 @@ const N = 28;
 const X0 = -6, X1 = 6;
 const FLOOR = -1.5;
 const FLOOR_VS = `varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
-const FLOOR_FS = `uniform vec3 uSig, uIce, uHead; uniform float uKick, uRing, uT; varying vec3 vW;
+const FLOOR_FS = `uniform vec3 uSig, uIce, uHead, uSign; uniform float uKick, uRing, uT; varying vec3 vW;
 void main(){
   vec2 p = vW.xz; vec2 q = abs(fract(p * 2.0) - 0.5) / fwidth(p * 2.0); float g = 1.0 - min(min(q.x, q.y), 1.0);
   vec2 Q = abs(fract(p * 0.5) - 0.5) / fwidth(p * 0.5); float G = 1.0 - min(min(Q.x, Q.y), 1.0);
   float d = length(vW - cameraPosition), fade = exp(-d * 0.09);
-  vec3 c = vec3(0.004, 0.005, 0.008) + uIce * (0.06 * g + 0.17 * G) * fade * (0.6 + 0.8 * uKick);
+  vec3 c = vec3(0.004, 0.005, 0.008) + uIce * (0.12 * g + 0.32 * G) * fade * (0.6 + 0.8 * uKick);
   float r = length(p), ring = exp(-pow((r - uRing) * 6.0, 2.0)) * exp(-uRing * 0.15);
   c += uSig * (ring * 0.5 + 0.7 * exp(-length(p - uHead.xz) * 0.7));
+  c += vec3(1.0, 0.95, 0.9) * 0.22 * exp(-pow(length(p - uSign.xz) * 0.55, 2.0));
   c = mix(c, vec3(0.012, 0.016, 0.035), 1.0 - exp(-d * 0.035));
   gl_FragColor = vec4(c, 1.0);
 }`;
@@ -41,8 +42,8 @@ export default class S1Boot extends Scene {
   private own: THREE.Mesh[] = [];
   // The opening captions are a light sign standing behind the pen (in depth, occluded by the pen, crossed by the lines), not a screen overlay.
   private sign = new Layer2D();
-  private signM = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 2.5875), new THREE.MeshBasicMaterial({ transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, color: new THREE.Color(1.6, 1.6, 1.6) }));
-  private floorU = { uSig: { value: new THREE.Vector3(...lin(C.signal, 1)) }, uIce: { value: new THREE.Vector3(...lin(C.ice, 1)) }, uHead: { value: new THREE.Vector3() }, uKick: { value: 0 }, uRing: { value: 99 }, uT: { value: 0 } };
+  private signM = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 2.5875), new THREE.MeshBasicMaterial({ transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, color: new THREE.Color(3.2, 3.2, 3.2) }));
+  private floorU = { uSig: { value: new THREE.Vector3(...lin(C.signal, 1)) }, uIce: { value: new THREE.Vector3(...lin(C.ice, 1)) }, uHead: { value: new THREE.Vector3() }, uSign: { value: new THREE.Vector3(0, 0, 999) }, uKick: { value: 0 }, uRing: { value: 99 }, uT: { value: 0 } };
 
   override async init() {
     this.pen = await model(this.ctx, 'pen');
@@ -161,12 +162,12 @@ export default class S1Boot extends Scene {
     typeLine(sg, 'is a function', 960, 760, T, bar(2.75), { size: 92, align: 'center', family: F.archivo(100, 800), t1: bar(4) - 0.1, cps: 30 });
     typeLine(sg, 'of time.', 960, 760, T, bar(4), { size: 92, align: 'center', family: F.archivo(100, 800), color: C.signal, t1: bar(5) - 0.1, cps: 30 });
     const FX = ['y = sin(x - t)', 'y = tanh(3 sin x)', 'y = saw(x - t)', 'y = sin x cos(t)'];
-    for (let b = 0; b < 4; b++) slam(g, FX[b]!, 960, 190, T, { t0: bar(5 + b), t1: bar(6 + b) - 0.2, size: 72, family: F.mono(600), from: 1.3, shake: 3, out: 0.12, color: b % 2 ? C.signal : C.bone });
-    slam(g, 'Frame = f(t)', 960, 300, T, { t0: bar(9), t1: bar(10.3), size: 150, family: F.mono(600), from: 1.45, shake: 5, out: 0.25 });
+    for (let b = 0; b < 4; b++) slam(sg, FX[b]!, 960, 190, T, { t0: bar(5 + b), t1: bar(6 + b) - 0.2, size: 72, family: F.mono(600), from: 1.3, shake: 3, out: 0.12, color: b % 2 ? C.signal : C.bone });
+    slam(sg, 'Frame = f(t)', 960, 300, T, { t0: bar(9), t1: bar(10.3), size: 150, family: F.mono(600), from: 1.45, shake: 5, out: 0.25 });
 
     this.sign.upload();
-    this.signM.visible = T < bar(5);
-    { const P = new THREE.Vector3(...k.pos), D = new THREE.Vector3(...k.tgt).sub(P).normalize(); this.signM.position.copy(P).addScaledVector(D, 4.6); this.signM.position.y += 0.3; this.signM.lookAt(P); }
+    this.signM.visible = T < bar(10.3);
+    { const P = new THREE.Vector3(...k.pos), D = new THREE.Vector3(...k.tgt).sub(P).normalize(); this.signM.position.copy(P).addScaledVector(D, 4.6); this.signM.position.y += 0.3; this.signM.lookAt(P); this.floorU.uSign.value.copy(this.signM.position); }
     present(this.ctx, out, this.scene, this.cam, this.layer, () => L.render(this.ctx.renderer, out, this.cam));
 
     const pre = prog(T, bar(10), bar(11), ease.inQuad);

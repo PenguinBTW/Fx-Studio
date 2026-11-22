@@ -16,7 +16,7 @@ const ORDER = ['f', 'lp', 'x', 'rp', 's0', 's1', 's2', 's3', 's4', 's5'];
 
 const PORTAL_VS = `varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
 const PORTAL_FS = `uniform sampler2D uTex; uniform vec2 uRes; uniform float uSeal; uniform float uFlash; uniform float uZoom; uniform vec2 uOff;
-uniform float uSweep; uniform vec3 uBone; uniform vec3 uSig; uniform vec3 uBox; varying vec3 vW;
+uniform float uSweep; uniform vec3 uBone; uniform vec3 uSig; uniform vec3 uBox; uniform float uWord; varying vec3 vW;
 void main(){
   vec2 s = gl_FragCoord.xy / uRes;
   vec2 d = (gl_FragCoord.xy - uBox.xy) / uBox.z;
@@ -24,6 +24,7 @@ void main(){
   float e = mix(-3.4, 3.4, uSeal);
   float sealed = smoothstep(e + 0.05, e - 0.05, vW.x);
   vec3 bone = uBone * (1.05 + 0.25 * vW.y);
+  c = mix(c, bone * 0.9 + c * 0.35, uWord * 0.62);
   c = mix(c, bone, sealed) + vec3(1.0, 0.96, 0.9) * (0.22 + 0.5 * sealed) * exp(-pow((vW.x * 0.3 + vW.y * 0.7 - uSweep) * 4.0, 2.0)) + uSig * 5.0 * exp(-abs(vW.x - e) * 14.0) * step(0.001, uSeal) * step(uSeal, 0.999);
   gl_FragColor = vec4(c, 1.0);
 }`;
@@ -46,7 +47,7 @@ const FLOOR = {
       vec3 r = vec3(0.0); float k = 0.0;
       for (int i = -2; i <= 2; i++) { vec4 q = vUv; q.x += float(i) * 0.006 * q.w; q.y += float(i * i) * 0.002 * q.w; r += texture2DProj(tDiffuse, q).rgb; k += 1.0; }
       float fall = exp(-length(vW.xz) * 0.09);
-      gl_FragColor = vec4(mix(vec3(0.006) + r / k * 0.85 * fall, color, 1.0 - exp(-length(vW.xz) * 0.05)), 1.0);
+      gl_FragColor = vec4(mix(vec3(0.006) + r / k * 0.85 * fall, color, 1.0 - exp(-length(vW.xz) * 0.14)), 1.0);
     }`,
 };
 
@@ -86,7 +87,7 @@ export default class S11Mark extends Scene {
       const k = ORDER.indexOf(pn);
       let g = this.glyphs.find((x) => x.k === k);
       if (!g) {
-        const u: Record<string, THREE.IUniform> = { uTex: { value: this.black }, uRes: { value: new THREE.Vector2(1920, 1080) }, uSeal: { value: 0 }, uFlash: { value: 0 }, uZoom: { value: 0.75 }, uBox: { value: new THREE.Vector3() }, uOff: { value: new THREE.Vector2() }, uSweep: { value: -9 }, uBone: { value: col(C.bone).multiplyScalar(1.15) }, uSig: { value: col(C.signal) } };
+        const u: Record<string, THREE.IUniform> = { uTex: { value: this.black }, uRes: { value: new THREE.Vector2(1920, 1080) }, uSeal: { value: 0 }, uFlash: { value: 0 }, uZoom: { value: 0.75 }, uBox: { value: new THREE.Vector3() }, uWord: { value: k >= 4 ? 1 : 0 }, uOff: { value: new THREE.Vector2() }, uSweep: { value: -9 }, uBone: { value: col(C.bone).multiplyScalar(1.15) }, uSig: { value: col(C.signal) } };
         const portal = new THREE.ShaderMaterial({ vertexShader: PORTAL_VS, fragmentShader: PORTAL_FS, uniforms: u, toneMapped: false });
         this.mats.push(portal);
         g = { o: m, u, k, portal, box: new THREE.Box3() };
@@ -110,7 +111,7 @@ export default class S11Mark extends Scene {
       fragmentShader: SKY_FS,
     }));
     this.scene.add(this.sky);
-    this.floor = new Reflector(new THREE.PlaneGeometry(400, 400), { textureWidth: 960, textureHeight: 540, clipBias: 0.003, color: new THREE.Color(...lin(C.signal, 0.012)), shader: FLOOR });
+    this.floor = new Reflector(new THREE.PlaneGeometry(400, 400), { textureWidth: 960, textureHeight: 540, clipBias: 0.003, color: new THREE.Color(...lin(C.signal, 0.07)).addScalar(0.002), shader: FLOOR });
     this.floor.rotation.x = -Math.PI / 2;
     this.floor.position.y = -1.32;
     // The URL stays out of the mirror: its blurred reflection read as a garbled strip under it.
@@ -159,7 +160,7 @@ export default class S11Mark extends Scene {
     const hit = Math.floor(hash(beatN, 7) * 10);
     this.glyphs.forEach((g) => {
       const U = g.u;
-      U.uTex!.value = tex.length ? tex[(g.k + Math.max(0, nb) * 3) % tex.length] : this.black;
+      U.uTex!.value = tex.length ? tex[(g.k < 4 ? g.k + Math.max(0, nb) * 3 : 2 + Math.max(0, nb)) % tex.length] : this.black;
       (U.uRes!.value as THREE.Vector2).set(out.width, out.height);
       U.uSeal!.value = seal;
       U.uSweep!.value = -5 + 10 * ease.inOutCubic(clamp(ph * 1.6));
