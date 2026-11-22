@@ -64,6 +64,21 @@ real v1 still (`prints/v1_07`) with the live v2 render from the same camera.
 | ENG-5 | stale BPM comment | fixed |
 | AUD-1 | tick partials at 3.4–4.2 kHz | moved to 5.2 kHz; stems and master regenerated |
 
+Round 1 verification (after the fixes):
+
+- Seek determinism: A4 at 44 s rendered alone and rendered after A7 at 110 s in the same process: identical sha256
+  (`f002f7da…`). Before the fix these differed on 79% of pixels.
+- A8 frame at 128.98333 s: two separate processes plus one that renders 104 s first: three identical digests
+  (`2361ac4f…`, full value in `facts.frameHash`).
+- Clipped pixels (luma ≥ 250): A4 44 s 0.67%, A7 v2 110 s 0.49%. A7 v1 (104 s, left half at 125.5 s) stays at 12–15%:
+  v1 is the round-0 render the critique rejected, shown on purpose; the line on screen says it is rewritten.
+- Motion telemetry 80 / 140 / 160 s: 0 blocking (were 3 / 214 / 233). All were F04 hits from canvas text drawn into
+  3D textures (A6 notes on the prints, A8 split-flap digits), where canvas coordinates are not screen coordinates;
+  that text is now drawn through `kit.textureText()`, which keeps it out of the 2D probe. Remaining advisories: F13 frame
+  time (CPU-only VM, software GL), F12/F15/F11 benchmarks.
+- Final cursor now sits one gap after the ")" of "f(x)", computed from the mark's bounding boxes instead of a fixed offset.
+- `bun run test` 12/12 suites, `bun run typecheck`, `bun run assets:check` pass.
+
 ## Later rounds (independent reviewer)
 
 Appended below per round: score (art direction / engine use), notes received, notes fixed, waived notes with reasons.
