@@ -74,7 +74,7 @@ export default class S4Verbs extends Scene {
     this.plug.add(pb, prong, cable); this.plug.traverse((o) => { o.castShadow = true; });
     this.A.mesh.position.set(0, 0.003, 0); this.A.mesh.rotation.y = 0.04; this.B.mesh.rotation.y = -0.12;
     this.dr.g.position.set(-3.3, 0, 1.4); this.dk.g.position.set(3.6, 0, -2.2); this.dk.g.rotation.y = -0.15; this.lk.g.position.set(-0.9, 0.11, 2.4);
-    this.mt.g.position.set(2.4, 0.02, 2.3); this.mt.g.rotation.y = 0.6; this.bl.g.position.set(4.6, 0, 0.9);
+    this.mt.g.position.set(2.9, 0.02, 2.8); this.mt.g.rotation.y = 0.6; this.bl.g.position.set(4.6, 0, 0.9);
     this.props = [this.B.mesh, this.strip.mesh, this.mk, this.sc.g, this.st, pad, this.fl.g, this.dr.g, this.dk.g, this.lk.g, this.mt.g, this.mg, this.bl.g, this.plug];
     this.scene.add(this.A.mesh, ...this.props); this.propX = this.props.map((p) => p.position.x);
   }
@@ -112,7 +112,7 @@ export default class S4Verbs extends Scene {
     this.plug.position.set(3.6 + 1.9 - 0.45 * ease((T - kOf('plug') + 0.15) / 0.15), 0.3, -2.2 + 0.25); (this.dk.led.material as THREE.MeshStandardMaterial).emissiveIntensity = T > kOf('plug') ? 5 : 0;
     // padlock, match, bell, magnifier
     const lockE = ease((T - kOf('lock')) / 0.12) - ease((T - kOf('unlock')) / 0.15); this.lk.shackle.position.y = 0.8 - 0.18 * lockE; this.lk.shackle.rotation.y = 0.9 * (1 - lockE);
-    const burn = T - kOf('burn'), lit = burn > 0 ? 1 : 0; this.mt.g.position.set(2.4 - 0.3 * Math.sin(Math.PI * ease((burn + 0.2) / 0.25)), 0.02, 2.3);
+    const burn = T - kOf('burn'), lit = burn > 0 ? 1 : 0; this.mt.g.position.set(2.9 - 0.3 * Math.sin(Math.PI * ease((burn + 0.2) / 0.25)), 0.02, 2.8);
     const fl = lit * (0.9 + 0.1 * Math.sin(T * 41) + 0.06 * Math.sin(T * 97)) * (1 - ease((T - fmt) / 0.2)); this.mt.flame.scale.set(0.7 * fl + 1e-3, (1.6 + 1.2 * slam(burn)) * fl + 1e-3, 0.7 * fl + 1e-3); this.mt.light.intensity = 5 * fl;
     const bh = since(hitsOf('B'), T); this.bl.btn.position.y = 0.5 - 0.06 * (bh.d >= 0 && bh.d < 0.15 ? 1 : 0); const ring = slam(bh.d / 2) * 0.03; this.bl.dome.scale.set(1 + ring * Math.sin(T * 120), 1, 1 + ring * Math.cos(T * 120));
     let mp = new THREE.Vector3(-1.6, 0.05, 1.0); for (const [v, p] of Object.entries(MAG)) { const e = ease((T - kOf(v) + 0.2) / 0.25); mp = mp.lerp(new THREE.Vector3(p[0] + (v === 'scan' ? -1.2 * (1 - ease((T - kOf(v)) / BEAT)) : 0), 0.35, p[1]), e); }
@@ -156,7 +156,7 @@ export default class S4Verbs extends Scene {
     const g = this.layer.ctx; this.layer.clear(); term(g, S4_LINES, T, { size: 34, x: 96, y: 96, align: 'left', prompt: '> ', halo: 'rgba(0,0,0,0.55)', alpha: overlayTextDuck(f.tin, f.tout) });
     this.ctx.comp.draw(rr, this.layer.upload(), out, { mode: 'normal', opacity: 1 }); rr.resetState();
     const whip = b > 0 ? Math.exp(-q * 14) : 0;
-    return { toneMap: 'agx', exposure: 1.05, bloom: 0.35, bloomThreshold: 0.9, halation: 0.45, vignette: 0.45, grain: 0.09, ca: 0.3 + 2.5 * whip,
+    return { toneMap: 'agx', exposure: 0.95, bloom: 0.18, bloomThreshold: 1.2, halation: 0.15, vignette: 0.45, grain: 0.09, ca: 0.3 + 2.5 * whip,
       depthDof: { enabled: true, focusDistance: pos.distanceTo(tgt), aperture: 10, blades: 9 } };
   }
   override dispose() { this.layer.texture.dispose(); this.oak?.dispose(); for (const s of [this.A, this.B, this.strip]) s.tex.dispose();

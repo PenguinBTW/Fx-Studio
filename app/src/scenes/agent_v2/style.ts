@@ -56,7 +56,7 @@ void main() {
     vec2 g2 = abs(fract(frag / 12.0) - 0.5); float fine = smoothstep(0.47, 0.5, max(g2.x, g2.y));
     o = vec3(0.04, 0.17, 0.42) + vec3(0.25, 0.45, 0.75) * (0.35 * grid + 0.12 * fine) + vec3(0.85, 0.93, 1.0) * e + vec3(0.1, 0.2, 0.35) * L(c);
   } else if (uMode == 5) {
-    float d = lin(uv); float t = L(c) * 1.3 + 0.35 * smoothstep(30.0, 3.0, d) - 0.1; o = heatPal(t + 0.03 * h21(frag + uTime));
+    float d = lin(uv); float t = smoothstep(0.04, 0.9, pow(L(c), 0.7) * 1.2 + 0.35 * smoothstep(30.0, 3.0, d) - 0.05); o = heatPal(t + 0.03 * h21(frag + uTime));
   } else if (uMode == 6) {
     vec3 m[4]; vec3 v[4]; for (int k = 0; k < 4; k++) { m[k] = vec3(0); v[k] = vec3(0); }
     for (int j = -5; j <= 5; j++) for (int i = -5; i <= 5; i++) { vec3 s = src(uv + vec2(i, j) * 2.0 / uRes);
