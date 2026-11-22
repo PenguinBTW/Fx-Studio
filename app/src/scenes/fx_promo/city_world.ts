@@ -33,10 +33,10 @@ void main(){
   vec3 r = reflect(v, n);
   vec3 sky = mix(uBot, uTop, smoothstep(-0.02, 0.55, r.y));
   float fr = 0.02 + 0.98 * pow(1.0 - max(dot(-v, n), 0.0), 5.0);
-  vec3 deep = uBot * 0.06 + vec3(0.004, 0.012, 0.016);
+  vec3 deep = uBot * 0.06 + vec3(0.003, 0.008, 0.012) * (1.0 - uNight);
   vec3 c = mix(deep, sky, fr) + uSunCol * pow(max(dot(r, normalize(uSun)), 0.0), 380.0) * 14.0;
   float cd = length(p);
-  c += uCity * uNight * exp(-max(cd - 30.0, 0.0) * 0.04) * (0.5 + 0.5 * fr) * (0.6 + 0.4 * sin(p.x * 3.0 + g.y * 4.0));
+  c += uCity * uNight * exp(-max(cd - 30.0, 0.0) * 0.02) * (0.15 + 0.85 * fr) * pow(0.5 + 0.5 * sin(p.x * 2.0 + g.y * 6.0), 3.0);
   float d = length(vW - cameraPosition), fo = 1.0 - exp(-pow(uFogD * d, 2.0));
   gl_FragColor = vec4(mix(c, uFog, fo), 1.0);
 }`;
@@ -126,7 +126,7 @@ export class CityWorld {
   update(T: number, o: { built: number; night: number; decay: number; collapse: number; top: THREE.Color; bot: THREE.Color; sun: THREE.Vector3; sunCol: THREE.Color; fog: THREE.Color; fogD: number; tint: THREE.Color }) {
     const U = this.water.uniforms;
     (U.uTop!.value as THREE.Color).copy(o.top); (U.uBot!.value as THREE.Color).copy(o.bot); (U.uSunCol!.value as THREE.Color).copy(o.sunCol);
-    (U.uFog!.value as THREE.Color).copy(o.fog); (U.uSun!.value as THREE.Vector3).copy(o.sun); (U.uCity!.value as THREE.Color).setRGB(1.2, 0.6, 0.25);
+    (U.uFog!.value as THREE.Color).copy(o.fog); (U.uSun!.value as THREE.Vector3).copy(o.sun); (U.uCity!.value as THREE.Color).setRGB(1.8, 0.9, 0.38);
     U.uT!.value = T; U.uFogD!.value = o.fogD; U.uNight!.value = o.night * (1 - o.decay);
     this.terrainMat.color.copy(o.tint);
     const live = o.built * (1 - o.decay) * (1 - o.collapse);

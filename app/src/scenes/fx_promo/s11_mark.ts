@@ -45,8 +45,8 @@ const FLOOR = {
     void main(){
       vec3 r = vec3(0.0); float k = 0.0;
       for (int i = -2; i <= 2; i++) { vec4 q = vUv; q.x += float(i) * 0.006 * q.w; q.y += float(i * i) * 0.002 * q.w; r += texture2DProj(tDiffuse, q).rgb; k += 1.0; }
-      float fall = exp(-length(vW.xz) * 0.16);
-      gl_FragColor = vec4(mix(vec3(0.006) + r / k * 0.42 * fall, color, 1.0 - exp(-length(vW.xz) * 0.035)), 1.0);
+      float fall = exp(-length(vW.xz) * 0.09);
+      gl_FragColor = vec4(mix(vec3(0.006) + r / k * 0.85 * fall, color, 1.0 - exp(-length(vW.xz) * 0.05)), 1.0);
     }`,
 };
 
@@ -62,6 +62,7 @@ export default class S11Mark extends Scene {
   private urlPlane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), -10);
   private sky!: THREE.Mesh;
   private floor!: Reflector;
+  private urlMeshes: THREE.Mesh[] = [];
   private ribbons: RibbonMesh[] = [];
   private stem = new THREE.Vector3();
   private front = 0.2;
@@ -71,8 +72,8 @@ export default class S11Mark extends Scene {
     this.black.needsUpdate = true;
     const inst = await model(this.ctx, 'fx_wordmark');
     this.scene.add(inst.root);
-    const side = new THREE.MeshPhysicalMaterial({ color: 0x15161a, metalness: 1, roughness: 0.17, envMap: this.cubeRT.texture, envMapIntensity: 1.25, clearcoat: 1, clearcoatRoughness: 0.06 });
-    const url = new THREE.MeshStandardMaterial({ color: new THREE.Color(C.bone), emissive: new THREE.Color(C.bone).multiplyScalar(0.35), roughness: 0.35, metalness: 0.3, envMap: this.cubeRT.texture, clippingPlanes: [this.urlPlane] });
+    const side = new THREE.MeshPhysicalMaterial({ color: 0x9a9ca4, metalness: 1, roughness: 0.1, envMap: this.cubeRT.texture, envMapIntensity: 1.25, clearcoat: 1, clearcoatRoughness: 0.06 });
+    const url = new THREE.MeshStandardMaterial({ color: new THREE.Color(0xffffff), emissive: new THREE.Color(0xffffff).multiplyScalar(0.85), roughness: 0.35, metalness: 0.3, envMap: this.cubeRT.texture, clippingPlanes: [this.urlPlane] });
     this.mats.push(side, url);
     const col = (h: string) => new THREE.Vector3(...lin(h));
     inst.root.traverse((o) => {
@@ -81,7 +82,7 @@ export default class S11Mark extends Scene {
       if (!m.isMesh) return;
       let p: THREE.Object3D | null = m, pn = part ?? '';
       while (p && !pn) { pn = (p.userData?.fx_part as string) ?? ''; p = p.parent; }
-      if (pn === 'url') { m.material = url; return; }
+      if (pn === 'url') { m.material = url; m.scale.multiplyScalar(1.4); this.urlMeshes.push(m); return; }
       const k = ORDER.indexOf(pn);
       let g = this.glyphs.find((x) => x.k === k);
       if (!g) {
@@ -109,9 +110,12 @@ export default class S11Mark extends Scene {
       fragmentShader: SKY_FS,
     }));
     this.scene.add(this.sky);
-    this.floor = new Reflector(new THREE.PlaneGeometry(400, 400), { textureWidth: 960, textureHeight: 540, clipBias: 0.003, color: new THREE.Color(...lin(C.signal, 0.07)), shader: FLOOR });
+    this.floor = new Reflector(new THREE.PlaneGeometry(400, 400), { textureWidth: 960, textureHeight: 540, clipBias: 0.003, color: new THREE.Color(...lin(C.signal, 0.012)), shader: FLOOR });
     this.floor.rotation.x = -Math.PI / 2;
     this.floor.position.y = -1.32;
+    // The URL stays out of the mirror: its blurred reflection read as a garbled strip under it.
+    const fob = this.floor.onBeforeRender.bind(this.floor);
+    this.floor.onBeforeRender = (...a: Parameters<THREE.Object3D['onBeforeRender']>) => { for (const m of this.urlMeshes) m.visible = false; fob(...a); for (const m of this.urlMeshes) m.visible = true; };
     this.scene.add(this.floor);
 
     const glow = new THREE.MeshBasicMaterial({ color: new THREE.Color(...lin(C.signal, 2.2)), side: THREE.DoubleSide, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
@@ -121,7 +125,7 @@ export default class S11Mark extends Scene {
       const sl = prog(t, SEAL + BEAT, SEAL + 1.4 * BAR, ease.inOutCubic);
       const x = (u - 0.5) * (10 * (1 - sl) + 4.6 * sl);
       const y = 0.12 + 0.34 * Math.sin(u * 7 - t * 1.3) * Math.cos(u * 3.1 + t * 0.4);
-      const z = 0.6 * Math.sin(u * 11 + t * 0.9);
+      const z = -0.55 + 0.3 * Math.sin(u * 11 + t * 0.9);
       return [x * (1 - 0.3 * sl), y * (1 - sl) - 0.98 * sl, z * (1 - sl) + 0.2 * sl];
     };
     for (const [w, m] of [[0.032, glow], [0.009, core]] as const) {
@@ -178,7 +182,7 @@ export default class S11Mark extends Scene {
       k.roll = 0.25 * (1 - o1);
     } else if (nb < 2) k = mixKey(wide, { pos: [0.75, 0.2, 2.9], tgt: [0.05, -0.1, 0], fov: 37 }, ease.inOutQuad(ph));
     else if (nb < 3) k = mixKey({ pos: [-1.5, -1.18, 3.2], tgt: [0, -0.1, 0], fov: 36, roll: -0.04 }, { pos: [-0.9, -1.15, 2.9], tgt: [0, -0.15, 0], fov: 35, roll: -0.03 }, ease.inOutQuad(ph));
-    else k = mixKey({ pos: [0, -0.3, 4.7], tgt: [0, -0.36, 0], fov: 36 }, { pos: [0, -0.32, 4.15], tgt: [0, -0.37, 0], fov: 36 }, ease.outCubic(clamp((T - SEAL) / (214.5 - SEAL))));
+    else k = mixKey({ pos: [0, -0.45, 4.8], tgt: [0, -0.36, 0], fov: 36 }, { pos: [0, -0.12, 3.95], tgt: [0, -0.4, 0], fov: 36 }, ease.outCubic(clamp((T - SEAL) / (214.5 - SEAL))));
     applyCam(this.cam, k, f.a.kick * 0.35 * (1 - seal));
 
     const v = new THREE.Vector3();

@@ -18,9 +18,9 @@ void main(){
   vec2 p = vW.xz; vec2 q = abs(fract(p * 2.0) - 0.5) / fwidth(p * 2.0); float g = 1.0 - min(min(q.x, q.y), 1.0);
   vec2 Q = abs(fract(p * 0.5) - 0.5) / fwidth(p * 0.5); float G = 1.0 - min(min(Q.x, Q.y), 1.0);
   float d = length(vW - cameraPosition), fade = exp(-d * 0.09);
-  vec3 c = vec3(0.004, 0.005, 0.008) + uIce * (0.025 * g + 0.07 * G) * fade * (0.6 + 0.8 * uKick);
+  vec3 c = vec3(0.004, 0.005, 0.008) + uIce * (0.06 * g + 0.17 * G) * fade * (0.6 + 0.8 * uKick);
   float r = length(p), ring = exp(-pow((r - uRing) * 6.0, 2.0)) * exp(-uRing * 0.15);
-  c += uSig * (ring * 0.5 + 0.3 * exp(-length(p - uHead.xz) * 0.9));
+  c += uSig * (ring * 0.5 + 0.7 * exp(-length(p - uHead.xz) * 0.7));
   c = mix(c, vec3(0.012, 0.016, 0.035), 1.0 - exp(-d * 0.035));
   gl_FragColor = vec4(c, 1.0);
 }`;

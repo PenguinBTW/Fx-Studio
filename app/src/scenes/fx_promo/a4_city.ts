@@ -65,6 +65,8 @@ const CUTS: [number, number, CamKey, CamKey][] = [
   [46, 47, { pos: [0, 1.8, -2], tgt: [9, 9, 5], fov: 64 }, { pos: [0, 2.2, 3], tgt: [9, 10, 2], fov: 66 }],
   [47, 47.5, { pos: [34, 1.6, -6], tgt: [0, 8, 0], fov: 44 }, { pos: [32, 1.8, -3], tgt: [0, 8, 0], fov: 46 }],
 ];
+// Facade tints per tower (stone, blue glass, terracotta, sand, graphite, pale green glass) so the day build isn't white boxes.
+const FACADE = ['#F4EEE4', '#9FB6D0', '#C98A6A', '#E2C9A0', '#6E7076', '#A9C4B4'].map((c) => new THREE.Color(c));
 export const TALL = { x: 0, z: 0, h: 30 };
 function camAt(T: number): CamKey {
   const b = (T - B0) / BAR + 1;
@@ -257,7 +259,7 @@ export default class A4City extends Scene {
         qf.setFromEuler(this.e).premultiply(this.q2).multiply(this.q);
         I.set(idx, this.v, qf, this.s);
         // Body: clean -> grime + moss creeping up from the street -> dust coat.
-        this.c.copy(L.body);
+        this.c.copy(L.body).multiply(FACADE[Math.floor(h(bi, 77) * FACADE.length)]!);
         const m = decay * 1.3 - i / b.n - h(idx, 25) * 0.25;
         if (m > 0) this.c.lerp(h(idx, 26) < 0.55 ? moss : grime, Math.min(0.85, m * 2));
         if (tau > 0) this.c.lerp(ochre, Math.min(0.8, tau * 0.4));
