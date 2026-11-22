@@ -2,6 +2,7 @@
   "project": "agent_v2",
   "audio": "../../../public/audio/agent_cut.mp3",
   "audioFadeOut": 1.8,
+  "trimToTimeline": true,
   "entries": [
     {
       "scene": "agent_v2/s0_open",

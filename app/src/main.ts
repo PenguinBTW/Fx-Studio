@@ -2,7 +2,7 @@
 import { Engine, type AdaptiveSampling } from './engine/engine';
 import { PW, PH, SCALE } from './engine/gl';
 import { BRIDGE_VERSION, textureCanvases, type EngineBridge, type TextProbeRecord } from './engine/bridge';
-import { makeTimeline, makeTransitions, activeProjectName } from './timeline';
+import { makeTimeline, makeTransitions, activeProjectName, loadManifest } from './timeline';
 import { installFxStats, exposeFxStats } from './engine/fxstats';
 
 const params = new URLSearchParams(location.search);
@@ -25,6 +25,7 @@ async function boot() {
   const onlySet = ONLY ? new Set(ONLY.split(',')) : null;
   engine.project = activeProjectName(PROJECT);
   engine.transitions = makeTransitions(PROJECT);
+  engine.trimToTimeline = Boolean(loadManifest(PROJECT).trimToTimeline);
   await engine.init(onlySet ? (e) => onlySet.has(e.id) || (Boolean(e.file) && onlySet.has(e.file!)) : undefined);
   TIMELINE = engine.timeline;
   if (EXPORT) { exposeFxStats(engine.renderer); setupExport(); }
