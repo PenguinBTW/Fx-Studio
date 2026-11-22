@@ -12,7 +12,7 @@ import { C, BAR, BEAT, bar, sceneTime, lin, present } from './kit';
 
 const T0 = bar(105);
 const SEAL = bar(108);
-const CELL = 0.62, NX = 90, NZ = 52, X0 = -((NX - 1) * CELL) / 2, Z0 = -17.5;
+const CELL = 0.31, NX = 180, NZ = 104, X0 = -((NX - 1) * CELL) / 2, Z0 = -17.5;
 const h = (i: number, s = 0) => { const x = Math.sin(i * 127.1 + s * 311.7) * 43758.5453; return x - Math.floor(x); };
 
 const TOWER_VS = `attribute float aLogo; attribute float aEdge; attribute float aSeed; attribute float aRise;
@@ -90,8 +90,8 @@ export default class S12CityLogo extends Scene {
   private m = new THREE.Matrix4(); private p = new THREE.Vector3(); private s = new THREE.Vector3(); private q = new THREE.Quaternion();
   private hemi = new THREE.HemisphereLight(0x5a6a99, 0x0a0806, 0.5);
   private moon = new THREE.DirectionalLight(0x8899cc, 0.6);
-  private posC = new THREE.CatmullRomCurve3([[0.0, 1.7, 15.5], [0.0, 2.1, 5.0], [-3.5, 9.0, 7.0], [-1.5, 31, 29], [0, 36, 32]].map((v) => new THREE.Vector3(...(v as [number, number, number]))));
-  private tgtC = new THREE.CatmullRomCurve3([[0.0, 1.8, 0], [0.0, 3.2, -9], [0.5, 1.5, -6], [0, 0, -0.6], [0, 0, 0.6]].map((v) => new THREE.Vector3(...(v as [number, number, number]))));
+  private posC = new THREE.CatmullRomCurve3([[0.0, 1.7, 15.5], [0.0, 2.1, 5.0], [-15, 2.4, 0.8], [-3, 15, 24], [0, 36, 32]].map((v) => new THREE.Vector3(...(v as [number, number, number]))));
+  private tgtC = new THREE.CatmullRomCurve3([[0.0, 1.8, 0], [0.0, 3.2, -9], [6, 2.6, -1.6], [0, 1, -1.5], [0, 0, 0.6]].map((v) => new THREE.Vector3(...(v as [number, number, number]))));
 
   override async init() {
     // Rasterise the lockup into a mask on the block grid: 10 px per block.
@@ -121,9 +121,9 @@ export default class S12CityLogo extends Scene {
       // Letters read as a skyline: 2x2 tower groups, thin strokes and stroke ends rise highest; the rest of the city stays
       // as low lit blocks, stepping down beside the letters so the outline stays crisp.
       let dn = 0, nearL = 0;
-      for (let dj = -3; dj <= 3; dj++) for (let di = -3; di <= 3; di++) { const l = isLogo(i + di, j + dj); dn += l; if (l && Math.abs(di) <= 1 && Math.abs(dj) <= 1) nearL = 1; }
-      const hg = h(Math.floor(i / 2) + Math.floor(j / 2) * NX, 3);
-      const h1 = L ? (z < -1 ? 2.9 : 2.2) + 1.6 * (1 - dn / 49) ** 2 + 0.6 * hg : nearL ? 0.25 + 0.15 * h(id, 4) : 0.45 + 1.0 * h(id, 4) * h(id, 7);
+      for (let dj = -5; dj <= 5; dj++) for (let di = -5; di <= 5; di++) { const l = isLogo(i + di, j + dj); dn += l; if (l && Math.abs(di) <= 2 && Math.abs(dj) <= 2) nearL = 1; }
+      const hg = h(Math.floor(i / 3) + Math.floor(j / 3) * NX, 3);
+      const h1 = L ? (z < -1 ? 2.9 : 2.2) + 1.6 * (1 - dn / 121) ** 2 + 0.6 * hg : nearL ? 0.25 + 0.15 * h(id, 4) : 0.45 + 1.0 * h(id, 4) * h(id, 7);
       const ts = T0 + 0.5 * BAR + Math.floor(clamp((x - X0) / span) * 7) * BEAT + 0.06 * h(id, 5);
       this.cells.push({ x, z, h0, h1, ts, logo: L });
       aLogo.push(L); aEdge.push(edge); aSeed.push(h(id, 6));
@@ -137,7 +137,7 @@ export default class S12CityLogo extends Scene {
     bg.setAttribute('aRise', this.rise);
     this.tMat = new THREE.ShaderMaterial({ vertexShader: TOWER_VS, fragmentShader: TOWER_FS, uniforms: {
       uT: { value: 0 }, uSeal: { value: 0 }, uFlash: { value: 0 }, uSweep: { value: 0 }, uSig: { value: new THREE.Color(...lin(C.signal)) },
-      uBone: { value: new THREE.Color(...lin(C.bone)) }, uFog: { value: new THREE.Color(0.02, 0.016, 0.024) }, uFogD: { value: 0.006 } } });
+      uBone: { value: new THREE.Color(...lin(C.bone)) }, uFog: { value: new THREE.Color(0.02, 0.016, 0.024) }, uFogD: { value: 0.01 } } });
     this.towers = new THREE.InstancedMesh(bg, this.tMat, n);
     this.towers.frustumCulled = false;
     this.sky = new THREE.ShaderMaterial({ vertexShader: SKY_VS, fragmentShader: SKY_FS, side: THREE.BackSide, depthWrite: false, fog: false,
@@ -151,7 +151,10 @@ export default class S12CityLogo extends Scene {
     this.urlMat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, uniforms: { uTex: { value: utex }, uWipe: { value: 0 }, uBone: { value: new THREE.Color(...lin(C.bone)) }, uSig: { value: new THREE.Color(...lin(C.signal)) } },
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
       fragmentShader: 'uniform sampler2D uTex; uniform float uWipe; uniform vec3 uBone; uniform vec3 uSig; varying vec2 vUv; void main(){ float a = texture2D(uTex, vUv).a; float w = smoothstep(uWipe, uWipe - 0.02, vUv.x); float e = exp(-abs(vUv.x - uWipe) * 60.0) * step(0.001, uWipe) * step(uWipe, 0.999); vec2 g = fract(vUv * vec2(640.0, 50.0)) - 0.5; float dots = 0.45 + 0.55 * smoothstep(0.5, 0.1, length(g)); gl_FragColor = vec4(vec3(1.0, 0.78, 0.5) * 5.0 * dots * a * w + uSig * 6.0 * e * (0.3 + a), max(a * w, e * 0.6)); }' });
-    const ugeo = new THREE.PlaneGeometry(38, 38 * (160 / 2048)); ugeo.rotateX(-Math.PI / 2);
+    const ugeo = new THREE.PlaneGeometry(38, 38 * (160 / 2048), 96, 1); ugeo.rotateX(-Math.PI / 2);
+    // Bend the sign along the curve of the shore road.
+    const up = ugeo.getAttribute('position') as THREE.BufferAttribute;
+    for (let i = 0; i < up.count; i++) up.setZ(i, up.getZ(i) - 0.004 * up.getX(i) ** 2);
     const urlM = new THREE.Mesh(ugeo, this.urlMat); urlM.position.set(0, 0.06, Z0 + NZ * CELL + 0.9);
     this.moon.position.set(-60, 80, -40);
     this.scene.add(this.world.group, this.towers, skyM, urlM, this.hemi, this.moon);
@@ -193,7 +196,9 @@ export default class S12CityLogo extends Scene {
     this.world.update(T, { built: 1, night: 1, decay: 0, collapse: 0, top: this.top, bot: this.bot, sun: this.sun, sunCol: this.blk, fog: this.fogC, fogD: 0.006, tint: this.tint });
     present(this.ctx, out, this.scene, this.cam);
     const end = prog(T, 213.3, 214.45, ease.inOutQuad);
-    return { exposure: 1.0 + 0.3 * flash, bloom: 0.45 + 0.25 * seal + 0.4 * flash, bloomThreshold: 1.0, vignette: 0.5, ca: 0.25 * (1 - seal) + 0.6 * flash, grain: 0.04, fade: end, invert: 0, zoom: 1 };
+    // The low glide passes right beside the white-hot letter towers: pull exposure down so they don't burn out.
+    const glide = smoothstep(T0 + 1.2 * BAR, T0 + 1.8 * BAR, T) * (1 - smoothstep(T0 + 2.4 * BAR, SEAL, T));
+    return { exposure: (1.0 + 0.3 * flash) * (1 - 0.55 * glide), bloom: (0.45 + 0.25 * seal + 0.4 * flash) * (1 - 0.6 * glide), bloomThreshold: 1.0, vignette: 0.5, ca: 0.25 * (1 - seal) + 0.6 * flash, grain: 0.04, fade: end, invert: 0, zoom: 1 };
   }
 
   private top = new THREE.Color(0.004, 0.007, 0.02); private bot = new THREE.Color(0.05, 0.03, 0.045); private sun = new THREE.Vector3(-0.4, 0.3, -0.6);

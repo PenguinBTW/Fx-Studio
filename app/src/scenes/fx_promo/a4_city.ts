@@ -67,6 +67,7 @@ const CUTS: [number, number, CamKey, CamKey][] = [
 ];
 // Facade tints per tower (stone, blue glass, terracotta, sand, graphite, pale green glass) so the day build isn't white boxes.
 const FACADE = ['#F4EEE4', '#9FB6D0', '#C98A6A', '#E2C9A0', '#6E7076', '#A9C4B4'].map((c) => new THREE.Color(c));
+const CONCRETE = new THREE.Color(0.62, 0.6, 0.57);
 export const TALL = { x: 0, z: 0, h: 30 };
 function camAt(T: number): CamKey {
   const b = (T - B0) / BAR + 1;
@@ -123,7 +124,7 @@ export default class A4City extends Scene {
   private brk: { t: number; p: THREE.Vector3; q: THREE.Quaternion; v: THREE.Vector3 }[][] = [];
   private shocks: THREE.Vector3[] = [];
   private hero = -1; private heroDir = 0; private heroL = new THREE.PointLight(0xff7a30, 0, 16, 1.6);
-  private debrisMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85 });
+  private debrisMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85, vertexColors: true, emissive: 0x1c1814 });
   private dm = new THREE.Matrix4(); private dp = new THREE.Vector3(); private dq = new THREE.Quaternion();
 
   /** Closed-form pose of floor i of a falling tower at tau s after it starts to go; returns its height above the rubble. */
@@ -211,7 +212,7 @@ export default class A4City extends Scene {
     deb.root.traverse((o) => {
       const m = o as THREE.Mesh;
       if (!m.isMesh) return;
-      const k = this.chunks.length, im = new THREE.InstancedMesh(m.geometry, this.debrisMat, Math.max(1, this.nFloors));
+      const k = this.chunks.length, im = new THREE.InstancedMesh(m.geometry, this.debrisMat, Math.max(1, this.nFloors * 3));
       im.name = `city_debris.${m.name}`; im.userData.fx_entity = `city_debris.${m.name}`;
       im.castShadow = true; im.receiveShadow = true; im.frustumCulled = false; im.setColorAt(0, this.c.set(0xffffff)); im.count = 0;
       this.chunks.push({ im, off: m.getWorldPosition(new THREE.Vector3()), ax: new THREE.Vector3(h(k, 81) - 0.5, h(k, 82) - 0.5, h(k, 83) - 0.5).normalize(), w: 4 + 8 * h(k, 84) });
@@ -367,14 +368,17 @@ export default class A4City extends Scene {
     let nd = 0;
     const GR = 6.5;
     this.B.forEach((b, bi) => {
-      const bc = this.c.copy(L.body).multiply(FACADE[Math.floor(h(bi, 77) * FACADE.length)]!).lerp(ochre, 0.55);
+      const bc = this.c.copy(L.body).multiply(FACADE[Math.floor(h(bi, 77) * FACADE.length)]!).lerp(CONCRETE, 0.6);
       for (let i = 0; i < b.n; i++) {
         const br = this.brk[bi]![i]!, t = T - br.t;
         if (t < 0) continue;
         const idx = b.fo + i;
+        // The hero tower also sheds gravel: two extra sets of small, fast fragments per floor.
+        for (let rep = 0; rep < (bi === this.hero ? 3 : 1); rep++) {
+        const gs = rep ? 0.22 + 0.12 * h(idx * 3 + rep, 88) : 1;
         this.chunks.forEach((ch, k) => {
-          const o = this.v.set(ch.off.x * b.sc, ch.off.y, ch.off.z * b.sc).applyQuaternion(br.q), j = idx * 16 + k;
-          const hr = Math.hypot(o.x, o.z) + 1e-3, kick = 1.2 + 2.8 * h(j, 85);
+          const o = this.v.set(ch.off.x * b.sc, ch.off.y, ch.off.z * b.sc).applyQuaternion(br.q), j = idx * 16 + k + rep * 7919;
+          const hr = Math.hypot(o.x, o.z) + 1e-3, kick = (1.2 + 2.8 * h(j, 85)) * (rep ? 1.8 : 1);
           const vx = br.v.x * 0.35 + (o.x / hr) * kick, vz = br.v.z * 0.35 + (o.z / hr) * kick, vy = Math.max(0, br.v.y * 0.2) + 1 + 3 * h(j, 86);
           const y0 = Math.max(0.06, br.p.y + o.y), t1 = (vy + Math.sqrt(vy * vy + 2 * GR * (y0 - 0.05))) / GR;
           let y: number, run: number, spin: number;
@@ -382,11 +386,12 @@ export default class A4City extends Scene {
           else { const tb = t - t1, vb = 0.25 * (GR * t1 - vy), sl = Math.min(tb, 0.5), tt = Math.min(tb, (2 * vb) / GR); y = 0.05 + Math.max(0, vb * tt - 0.5 * GR * tt * tt); run = t1 + 0.35 * sl; spin = t1 + 0.3 * sl; }
           this.dp.set(br.p.x + o.x + vx * run, y, br.p.z + o.z + vz * run);
           this.dq.setFromAxisAngle(ch.ax, ch.w * spin).multiply(br.q);
-          const ks = 0.7 + 0.6 * h(j, 87);
+          const ks = (0.7 + 0.6 * h(j, 87)) * gs;
           ch.im.setMatrixAt(nd, this.dm.compose(this.dp, this.dq, this.s.set(b.sc * ks, ks, b.sc * ks)));
           ch.im.setColorAt(nd, bc);
         });
         nd++;
+        }
       }
     });
     for (const ch of this.chunks) { ch.im.count = nd; ch.im.instanceMatrix.needsUpdate = true; if (ch.im.instanceColor) ch.im.instanceColor.needsUpdate = true; }
@@ -395,10 +400,19 @@ export default class A4City extends Scene {
     // Dust: each collapsing tower exhales a billow from its base that rises and drifts downwind.
     const geo = this.dust.geometry;
     const pos = geo.getAttribute('position') as THREE.BufferAttribute, aA = geo.getAttribute('aA') as THREE.BufferAttribute, aS = geo.getAttribute('aS') as THREE.BufferAttribute;
-    const fallers = this.B.filter((b) => b.falls);
+    const fallers = this.B.filter((b) => b.falls), hb = this.B[this.hero];
     for (let i = 0; i < ND; i++) {
-      const b = fallers[i % fallers.length]!;
-      const age = T - (b.tc + 0.25 + h(i, 30) * 1.2);
+      // A quarter of the dust is the hero tower's impact plume, rolling out toward the close-up camera.
+      const heroDust = hb && i % 4 === 0;
+      const b = heroDust ? hb : fallers[i % fallers.length]!;
+      const age = heroDust ? T - (this.brk[this.hero]![0]!.t + h(i, 30) * 0.5) : T - (b.tc + 0.25 + h(i, 30) * 1.2);
+      if (heroDust && age > 0) {
+        const ang = this.heroDir + (h(i, 31) - 0.5) * 2.4, sp = (0.6 + 6 * h(i, 32)) * (1 - Math.exp(-age * 1.6));
+        pos.setXYZ(i, b.x + Math.cos(ang) * sp, 0.2 + 2.2 * h(i, 33) * (1 - Math.exp(-age * 1.2)) + age * 0.3, b.z + Math.sin(ang) * sp);
+        aA.setX(i, 0.22 * clamp(age / 0.15) * Math.exp(-age * 0.35) * (0.5 + 0.5 * h(i, 34)));
+        aS.setX(i, 1.5 + 4 * h(i, 35) + age * 1.5);
+        continue;
+      }
       if (age <= 0) { aA.setX(i, 0); continue; }
       const ang = h(i, 31) * Math.PI * 2, spread = (1.5 + 5 * h(i, 32)) * (1 - Math.exp(-age * 0.9));
       pos.setXYZ(i, b.x + Math.cos(ang) * spread + age * 0.9, 0.3 + b.n * FH * 0.6 * h(i, 33) * (1 - Math.exp(-age * 0.7)) + age * 0.25, b.z + Math.sin(ang) * spread);
@@ -410,7 +424,7 @@ export default class A4City extends Scene {
 
     // The Thread brightens with the vocal at night and keeps glowing after everything else dies.
     this.thread.color.set(C.signal).multiplyScalar(1.2 + night * (1 + 1.5 * a.vocal) * (1 - decay * 0.5) + dustK * 2);
-    const bn = (T - B0) / BAR + 1, hb = this.B[this.hero];
+    const bn = (T - B0) / BAR + 1;
     let key = camAt(T);
     if (hb && bn >= 46 && bn < 46.5) {
       const k = (bn - 46) / 0.5, fx = Math.cos(hb.psi), fz = Math.sin(hb.psi), d = 9.5 - 1.5 * k;

@@ -24,7 +24,7 @@ const H = 0.24;
 const DUR = 7.771;
 
 const FRAG = `uniform sampler2D L0; uniform sampler2D L1; uniform sampler2D L2; uniform vec2 c0; uniform vec2 c1;
-uniform vec3 uG; uniform vec2 uS; uniform vec3 uC0; uniform vec3 uC1; uniform float uF; uniform float uDepth; uniform float uBlur; uniform float uKick; uniform float uRgb;
+uniform vec3 uG; uniform vec2 uS; uniform vec3 uC0; uniform vec3 uC1; uniform float uF; uniform float uRoll; uniform float uDepth; uniform float uBlur; uniform float uKick; uniform float uRgb;
 const float H = ${H.toFixed(3)};
 float nrm(vec2 d, float s){
   d = abs(d);
@@ -37,6 +37,8 @@ float nrm(vec2 d, float s){
 }
 vec3 look(vec2 s, out float glow, out vec3 rim){
   vec2 P = (c0 - 0.5 * H) / (1.0 - H);
+  // Bank through each dive (zero at both ends so the hand-offs stay seamless).
+  vec2 q = s - 0.5; q.x *= 1.7778; q = mat2(cos(uRoll), -sin(uRoll), sin(uRoll), cos(uRoll)) * q; q.x /= 1.7778; s = q + 0.5;
   vec2 x = P + (s - P) * pow(H, uF);
   glow = 0.0;
   vec2 d = (x - c0) / (0.5 * H);
@@ -47,9 +49,11 @@ vec3 look(vec2 s, out float glow, out vec3 rim){
   rim = uC0;
   if (e < 0.0) {
     // The host world bends around the opening like a lens rim, so the portal sits in it rather than on it.
-    vec2 xb = x + (x - c0) * 0.18 * exp(es * 45.0);
+    // Parallax: the host world rushes outward past the opening faster than the opening grows.
+    float fade = 1.0 - smoothstep(0.45, 0.9, uF), par = sin(3.14159 * uF);
+    vec2 xb = c0 + (x - c0) * (1.0 - 0.3 * par) + (x - c0) * 0.18 * fade * exp(es * 45.0);
     glow += exp(es * 900.0) * 0.8 + exp(es * 70.0) * 0.12;
-    return uG.x * texture2D(L0, xb).rgb * (1.0 - 0.5 * exp(es * 60.0));
+    return uG.x * texture2D(L0, xb).rgb * (1.0 - 0.5 * fade * exp(es * 60.0));
   }
   glow += exp(-es * 900.0) * 1.2 + exp(-es * 70.0) * 0.06;
   vec2 x1 = 0.5 + (x - c0) / H;
@@ -83,7 +87,7 @@ export default class FxpInfiniteZoom implements Transition {
   constructor(private ctx: TransitionCtx) {
     this.pass = new ShaderPass(ctx, FRAG, {
       L0: { value: null }, L1: { value: null }, L2: { value: null }, c0: { value: new THREE.Vector2() }, c1: { value: new THREE.Vector2() },
-      uG: { value: new THREE.Vector3(1, 1, 1) }, uS: { value: new THREE.Vector2() }, uC0: { value: new THREE.Vector3() }, uC1: { value: new THREE.Vector3() }, uF: { value: 0 }, uDepth: { value: 2 }, uBlur: { value: 0 }, uKick: { value: 0 }, uRgb: { value: 0 },
+      uG: { value: new THREE.Vector3(1, 1, 1) }, uS: { value: new THREE.Vector2() }, uC0: { value: new THREE.Vector3() }, uC1: { value: new THREE.Vector3() }, uF: { value: 0 }, uDepth: { value: 2 }, uBlur: { value: 0 }, uKick: { value: 0 }, uRgb: { value: 0 }, uRoll: { value: 0 },
     });
   }
   render(f: Frame, out: THREE.WebGLRenderTarget, a: THREE.Texture, b: THREE.Texture, api: TransitionAPI): PostOverrides | void {
@@ -106,7 +110,7 @@ export default class FxpInfiniteZoom implements Transition {
     const speed = 1 - Math.abs(fr - 0.5) * 2;
     this.pass.draw(out, a, b, api.u, {
       L0: tex(k), L1: tex(k + 1), L2: k + 2 <= N ? tex(k + 2) : b, c0: ctr(k), c1: k + 1 < N ? ctr(k + 1) : new THREE.Vector2(0.5, 0.5),
-      uG: new THREE.Vector3(WORLDS[k]![4], WORLDS[k + 1]?.[4] ?? 1, WORLDS[k + 2]?.[4] ?? 1), uS: new THREE.Vector2(SHAPE[k]!, SHAPE[k + 1] ?? 2), uC0: new THREE.Vector3(...RIM[k]!), uC1: new THREE.Vector3(...(RIM[k + 1] ?? RIM[0]!)), uF: fe, uDepth: k + 1 < N ? 2 : 1, uBlur: 0.02 + 0.07 * speed, uKick: f.a.kick, uRgb: 0.004 + 0.01 * speed,
+      uG: new THREE.Vector3(WORLDS[k]![4], WORLDS[k + 1]?.[4] ?? 1, WORLDS[k + 2]?.[4] ?? 1), uS: new THREE.Vector2(SHAPE[k]!, SHAPE[k + 1] ?? 2), uC0: new THREE.Vector3(...RIM[k]!), uC1: new THREE.Vector3(...(RIM[k + 1] ?? RIM[0]!)), uRoll: (k % 2 ? -1 : 1) * 0.22 * Math.sin(Math.PI * fe), uF: fe, uDepth: k + 1 < N ? 2 : 1, uBlur: 0.02 + 0.07 * speed, uKick: f.a.kick, uRgb: 0.004 + 0.01 * speed,
     });
     const hit = Math.exp(-fr * 9) * (k > 0 ? 1 : 0);
     return { invert: 0, zoom: 1, flash: 0, ca: 0.4 + 1.4 * hit, bloom: 0.45 + 0.4 * hit, bloomThreshold: 0.9, exposure: 1 + 0.25 * hit, shake: [6 * hit, 6 * hit] };
