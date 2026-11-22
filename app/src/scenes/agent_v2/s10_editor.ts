@@ -10,7 +10,7 @@ import { F, font } from '../../engine/type';
 import { bar, BEAT, BAR } from '../agent_promo/kit';
 import { term, type TLine } from './term';
 import { DragonRig, LEN } from './rig';
-import { FIRE_V, FIRE_F, N, firePath } from './s8_fire';
+import { FIRE_V, FIRE_F, N, firePath, mouthAt } from './s8_fire';
 import { FlameVolume } from './fire_vol';
 
 export const T63 = bar(63), T64 = bar(64), T65 = bar(65), T67 = bar(67), S10_END = bar(69);
@@ -78,7 +78,7 @@ export default class S10Editor extends Scene {
     const lt = take ? ft - FR : ft - F0; const head = 10.5 + 0.35 * lt - 0.4 * b; this.rig.dragon.pose(firePath, head, LEN); this.rig.reveal.value = 1;
     this.rig.jaw.value = 0.08 + (take ? 0.75 : 0.55) * b + 0.05 * Math.sin(ft * 30) * b;
     const m = new THREE.Vector3(), m2 = new THREE.Vector3(); firePath(head - 0.45, m); firePath(head + 0.4, m2);
-    const dir = m2.clone().sub(m).normalize(); dir.y -= 0.12; dir.normalize(); this.u.uMouth.value.copy(m).addScaledVector(dir, 0.35); this.u.uDir.value.copy(dir);
+    const dir = m2.clone().sub(m).normalize(); dir.y -= 0.12; dir.normalize(); mouthAt(m, dir, this.rig.jaw.value, this.rig.dragon.scale.value, this.u.uMouth.value); this.u.uDir.value.copy(dir);
     this.fireL.position.copy(m).addScaledVector(dir, 1.6); this.fireL.intensity = (take ? 110 : 60) * b * (0.85 + 0.15 * Math.sin(ft * 37) * Math.sin(ft * 23));
     // full-screen growth of the viewport on the replay downbeat
     const grow = sm(T67 + 0.05, T67 + 0.75 * BAR, T), k = 1 + (1920 / VP.w - 1) * grow;
