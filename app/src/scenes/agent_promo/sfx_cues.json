@@ -1,0 +1,625 @@
+{
+  "_note": "Procedural SFX for agent_promo. Cue ids are <act>.<visual event>; times mirror the scene constants.",
+  "cues": [
+    {
+      "id": "a0.type",
+      "recipe": "tick",
+      "seed": 44,
+      "at": 0.45,
+      "params": {
+        "count": 42,
+        "spacing": 0.058823529411764705,
+        "freq": 4200,
+        "spread": 5,
+        "jitter": 0.15,
+        "decayMs": 4
+      }
+    },
+    {
+      "id": "t.cursor_dive",
+      "recipe": "whoosh",
+      "seed": 81,
+      "at": 5.2,
+      "params": {
+        "dur": 0.7,
+        "cutLo": 900,
+        "cutHi": 7000,
+        "q": 1.2,
+        "peakAt": 0.6
+      }
+    },
+    {
+      "id": "a1.punch",
+      "recipe": "tick",
+      "seed": 118,
+      "at": 7.457,
+      "params": {
+        "count": 42,
+        "spacing": 0.116848125,
+        "freq": 3400,
+        "spread": 3,
+        "jitter": 0.05,
+        "decayMs": 9,
+        "accent": 1
+      }
+    },
+    {
+      "id": "t.tape_lift",
+      "recipe": "whoosh",
+      "seed": 155,
+      "at": 16.35,
+      "params": {
+        "dur": 0.6,
+        "cutLo": 400,
+        "cutHi": 4500,
+        "q": 0.9,
+        "peakAt": 0.45
+      }
+    },
+    {
+      "id": "t.flare",
+      "recipe": "reverseReverb",
+      "seed": 192,
+      "at": 27.02,
+      "params": {
+        "source": "ping",
+        "lead": 1.0,
+        "tail": 1.0,
+        "freq": 3600
+      }
+    },
+    {
+      "id": "a3.rotors",
+      "recipe": "granularCloud",
+      "seed": 229,
+      "at": 28.2,
+      "params": {
+        "dur": 9,
+        "kind": "tick",
+        "density": 60,
+        "freq": 5200
+      }
+    },
+    {
+      "id": "t.slice",
+      "recipe": "whoosh",
+      "seed": 266,
+      "at": 37.0,
+      "params": {
+        "dur": 0.35,
+        "cutLo": 2500,
+        "cutHi": 9000,
+        "q": 1.6,
+        "peakAt": 0.6
+      }
+    },
+    {
+      "id": "t.slice_hit",
+      "recipe": "subHit",
+      "seed": 303,
+      "at": 37.35,
+      "params": {
+        "dur": 1.4,
+        "f0": 110,
+        "f1": 36
+      }
+    },
+    {
+      "id": "a4.verbs",
+      "recipe": "pops",
+      "seed": 340,
+      "at": 37.42,
+      "params": {
+        "count": 7,
+        "spacing": 0.4673925,
+        "root": 3136,
+        "scale": [
+          0,
+          2,
+          4,
+          7,
+          9,
+          12,
+          14
+        ],
+        "decayMs": 12
+      }
+    },
+    {
+      "id": "t.shutter",
+      "recipe": "click",
+      "seed": 377,
+      "at": 57.95,
+      "params": {
+        "freq": 3800
+      }
+    },
+    {
+      "id": "t.shutter_ping",
+      "recipe": "glassPing",
+      "seed": 414,
+      "at": 57.3,
+      "params": {
+        "freq": 3520,
+        "decay": 1.0,
+        "leadIn": 0.9
+      }
+    },
+    {
+      "id": "a5.print0",
+      "recipe": "pressure",
+      "seed": 451,
+      "at": 58.085,
+      "params": {
+        "dur": 1.2,
+        "cutLo": 2600,
+        "cutHi": 5200,
+        "q": 1.2
+      }
+    },
+    {
+      "id": "a5.print1",
+      "recipe": "pressure",
+      "seed": 488,
+      "at": 61.05,
+      "params": {
+        "dur": 1.2,
+        "cutLo": 2600,
+        "cutHi": 5200,
+        "q": 1.2
+      }
+    },
+    {
+      "id": "a5.print2",
+      "recipe": "pressure",
+      "seed": 525,
+      "at": 63.05,
+      "params": {
+        "dur": 1.2,
+        "cutLo": 2600,
+        "cutHi": 5200,
+        "q": 1.2
+      }
+    },
+    {
+      "id": "a5.print3",
+      "recipe": "pressure",
+      "seed": 562,
+      "at": 64.98,
+      "params": {
+        "dur": 1.2,
+        "cutLo": 2600,
+        "cutHi": 5200,
+        "q": 1.2
+      }
+    },
+    {
+      "id": "a5.print4",
+      "recipe": "pressure",
+      "seed": 599,
+      "at": 66.82,
+      "params": {
+        "dur": 1.2,
+        "cutLo": 2600,
+        "cutHi": 5200,
+        "q": 1.2
+      }
+    },
+    {
+      "id": "a5.print5",
+      "recipe": "pressure",
+      "seed": 636,
+      "at": 67.82,
+      "params": {
+        "dur": 1.2,
+        "cutLo": 2600,
+        "cutHi": 5200,
+        "q": 1.2
+      }
+    },
+    {
+      "id": "a5.print6",
+      "recipe": "pressure",
+      "seed": 673,
+      "at": 68.287,
+      "params": {
+        "dur": 1.2,
+        "cutLo": 2600,
+        "cutHi": 5200,
+        "q": 1.2
+      }
+    },
+    {
+      "id": "a5.print7",
+      "recipe": "pressure",
+      "seed": 710,
+      "at": 68.755,
+      "params": {
+        "dur": 1.2,
+        "cutLo": 2600,
+        "cutHi": 5200,
+        "q": 1.2
+      }
+    },
+    {
+      "id": "t.drop",
+      "recipe": "subHit",
+      "seed": 747,
+      "at": 69.15,
+      "params": {
+        "dur": 1.8,
+        "f0": 120,
+        "f1": 34
+      }
+    },
+    {
+      "id": "a6.mark0",
+      "recipe": "pressure",
+      "seed": 784,
+      "at": 72.892,
+      "params": {
+        "dur": 0.9,
+        "cutLo": 3200,
+        "cutHi": 6500,
+        "q": 2.0
+      }
+    },
+    {
+      "id": "a6.reject0",
+      "recipe": "thrum",
+      "seed": 821,
+      "at": 73.792,
+      "params": {
+        "dur": 0.22,
+        "f": 96,
+        "am": 30,
+        "amDepth": 0.8
+      }
+    },
+    {
+      "id": "a6.mark1",
+      "recipe": "pressure",
+      "seed": 858,
+      "at": 75.696,
+      "params": {
+        "dur": 0.9,
+        "cutLo": 3200,
+        "cutHi": 6500,
+        "q": 2.0
+      }
+    },
+    {
+      "id": "a6.reject1",
+      "recipe": "thrum",
+      "seed": 895,
+      "at": 76.596,
+      "params": {
+        "dur": 0.22,
+        "f": 96,
+        "am": 30,
+        "amDepth": 0.8
+      }
+    },
+    {
+      "id": "a6.mark2",
+      "recipe": "pressure",
+      "seed": 932,
+      "at": 78.5,
+      "params": {
+        "dur": 0.9,
+        "cutLo": 3200,
+        "cutHi": 6500,
+        "q": 2.0
+      }
+    },
+    {
+      "id": "a6.reject2",
+      "recipe": "thrum",
+      "seed": 969,
+      "at": 79.4,
+      "params": {
+        "dur": 0.22,
+        "f": 96,
+        "am": 30,
+        "amDepth": 0.8
+      }
+    },
+    {
+      "id": "a6.mark3",
+      "recipe": "pressure",
+      "seed": 1006,
+      "at": 81.305,
+      "params": {
+        "dur": 0.9,
+        "cutLo": 3200,
+        "cutHi": 6500,
+        "q": 2.0
+      }
+    },
+    {
+      "id": "a6.reject3",
+      "recipe": "thrum",
+      "seed": 1043,
+      "at": 82.205,
+      "params": {
+        "dur": 0.22,
+        "f": 96,
+        "am": 30,
+        "amDepth": 0.8
+      }
+    },
+    {
+      "id": "a6.mark4",
+      "recipe": "pressure",
+      "seed": 1080,
+      "at": 84.109,
+      "params": {
+        "dur": 0.9,
+        "cutLo": 3200,
+        "cutHi": 6500,
+        "q": 2.0
+      }
+    },
+    {
+      "id": "a6.reject4",
+      "recipe": "thrum",
+      "seed": 1117,
+      "at": 85.009,
+      "params": {
+        "dur": 0.22,
+        "f": 96,
+        "am": 30,
+        "amDepth": 0.8
+      }
+    },
+    {
+      "id": "a6.mark5",
+      "recipe": "pressure",
+      "seed": 1154,
+      "at": 86.913,
+      "params": {
+        "dur": 0.9,
+        "cutLo": 3200,
+        "cutHi": 6500,
+        "q": 2.0
+      }
+    },
+    {
+      "id": "a6.reject5",
+      "recipe": "thrum",
+      "seed": 1191,
+      "at": 87.813,
+      "params": {
+        "dur": 0.22,
+        "f": 96,
+        "am": 30,
+        "amDepth": 0.8
+      }
+    },
+    {
+      "id": "a6.mark6",
+      "recipe": "pressure",
+      "seed": 1228,
+      "at": 89.718,
+      "params": {
+        "dur": 0.9,
+        "cutLo": 3200,
+        "cutHi": 6500,
+        "q": 2.0
+      }
+    },
+    {
+      "id": "a6.reject6",
+      "recipe": "thrum",
+      "seed": 1265,
+      "at": 90.618,
+      "params": {
+        "dur": 0.22,
+        "f": 96,
+        "am": 30,
+        "amDepth": 0.8
+      }
+    },
+    {
+      "id": "a6.accept",
+      "recipe": "shimmer",
+      "seed": 1302,
+      "at": 77.417,
+      "params": {
+        "dur": 1.4,
+        "freq": 3200,
+        "voices": 4,
+        "decay": 0.9
+      }
+    },
+    {
+      "id": "t.rewind",
+      "recipe": "reverseReverb",
+      "seed": 1339,
+      "at": 98.2,
+      "params": {
+        "source": "noise",
+        "lead": 0.6,
+        "tail": 0.6,
+        "freq": 2400
+      }
+    },
+    {
+      "id": "a7.back",
+      "recipe": "whoosh",
+      "seed": 1376,
+      "at": 105.609,
+      "params": {
+        "dur": 1.6,
+        "cutLo": 4000,
+        "cutHi": 700,
+        "q": 1.0,
+        "peakAt": 0.5
+      }
+    },
+    {
+      "id": "a7.rewrite",
+      "recipe": "riser",
+      "seed": 1413,
+      "at": 106.594,
+      "params": {
+        "rise": 1.6,
+        "tail": 0.4
+      }
+    },
+    {
+      "id": "a7.rebuild",
+      "recipe": "subHit",
+      "seed": 1450,
+      "at": 108.194,
+      "params": {
+        "dur": 1.6,
+        "f0": 120,
+        "f1": 40
+      }
+    },
+    {
+      "id": "a7.split",
+      "recipe": "click",
+      "seed": 1487,
+      "at": 119.631,
+      "params": {
+        "freq": 3600
+      }
+    },
+    {
+      "id": "t.pullout",
+      "recipe": "whoosh",
+      "seed": 1524,
+      "at": 128.6,
+      "params": {
+        "dur": 0.6,
+        "cutLo": 5000,
+        "cutHi": 1200,
+        "q": 1.0,
+        "peakAt": 0.4
+      }
+    },
+    {
+      "id": "a8.seek",
+      "recipe": "whoosh",
+      "seed": 1561,
+      "at": 136.457,
+      "params": {
+        "dur": 0.35,
+        "cutLo": 6000,
+        "cutHi": 1500,
+        "q": 1.4,
+        "peakAt": 0.3
+      }
+    },
+    {
+      "id": "a8.same",
+      "recipe": "glassPing",
+      "seed": 1598,
+      "at": 139.296,
+      "params": {
+        "freq": 2640,
+        "decay": 1.2,
+        "leadIn": 0.9
+      }
+    },
+    {
+      "id": "a9.cuts0",
+      "recipe": "tick",
+      "seed": 1635,
+      "at": 151.414,
+      "params": {
+        "count": 8,
+        "spacing": 0.934785,
+        "freq": 3000,
+        "spread": 4,
+        "decayMs": 7
+      }
+    },
+    {
+      "id": "a9.cuts1",
+      "recipe": "tick",
+      "seed": 1672,
+      "at": 158.892,
+      "params": {
+        "count": 16,
+        "spacing": 0.4673925,
+        "freq": 3400,
+        "spread": 4,
+        "decayMs": 7
+      }
+    },
+    {
+      "id": "a9.cuts2",
+      "recipe": "tick",
+      "seed": 1709,
+      "at": 166.37,
+      "params": {
+        "count": 16,
+        "spacing": 0.23369625,
+        "freq": 3800,
+        "spread": 4,
+        "decayMs": 7
+      }
+    },
+    {
+      "id": "a9.cuts3",
+      "recipe": "tick",
+      "seed": 1746,
+      "at": 170.109,
+      "params": {
+        "count": 24,
+        "spacing": 0.116848125,
+        "freq": 4200,
+        "spread": 4,
+        "decayMs": 7
+      }
+    },
+    {
+      "id": "a9.rise",
+      "recipe": "shepardRise",
+      "seed": 1783,
+      "at": 158.892,
+      "params": {
+        "dur": 14.956559999999996,
+        "rate": 0.25
+      }
+    },
+    {
+      "id": "t.collapse",
+      "recipe": "collapse",
+      "seed": 1820,
+      "at": 173.6,
+      "params": {
+        "dur": 2.5,
+        "f": 880,
+        "voices": 6
+      }
+    },
+    {
+      "id": "t.vortex",
+      "recipe": "whoosh",
+      "seed": 1857,
+      "at": 188.4,
+      "params": {
+        "dur": 0.9,
+        "cutLo": 600,
+        "cutHi": 5000,
+        "q": 1.0,
+        "peakAt": 0.6
+      }
+    },
+    {
+      "id": "a11.lock",
+      "recipe": "subHit",
+      "seed": 1894,
+      "at": 190.675,
+      "params": {
+        "dur": 2.2,
+        "f0": 110,
+        "f1": 34
+      }
+    }
+  ]
+}

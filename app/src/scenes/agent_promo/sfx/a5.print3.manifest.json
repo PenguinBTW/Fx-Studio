@@ -1,0 +1,18 @@
+{
+  "id": "a5.print3",
+  "eventId": null,
+  "recipe": "pressure",
+  "seed": 562,
+  "file": "a5.print3.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 1.2,
+  "hitOffsetSec": 0,
+  "peak": 0.39810717055349715,
+  "peakDb": -8.000000000000004,
+  "rms": 0.0820270438613742,
+  "rmsDb": -21.720858790515734,
+  "eventTime": null,
+  "startTime": null
+}

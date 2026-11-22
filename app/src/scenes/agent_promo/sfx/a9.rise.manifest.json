@@ -1,0 +1,18 @@
+{
+  "id": "a9.rise",
+  "eventId": null,
+  "recipe": "shepardRise",
+  "seed": 1783,
+  "file": "a9.rise.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 14.9565625,
+  "hitOffsetSec": 0,
+  "peak": 0.3981071705534972,
+  "peakDb": -8.000000000000002,
+  "rms": 0.17772729108521385,
+  "rmsDb": -15.004917571337293,
+  "eventTime": null,
+  "startTime": null
+}

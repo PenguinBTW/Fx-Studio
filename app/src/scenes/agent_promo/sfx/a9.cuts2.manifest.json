@@ -1,0 +1,18 @@
+{
+  "id": "a9.cuts2",
+  "eventId": null,
+  "recipe": "tick",
+  "seed": 1709,
+  "file": "a9.cuts2.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 3.8391458333333333,
+  "hitOffsetSec": 0,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.017576774087806075,
+  "rmsDb": -35.10121658344894,
+  "eventTime": null,
+  "startTime": null
+}

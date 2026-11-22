@@ -1,0 +1,18 @@
+{
+  "id": "t.slice",
+  "eventId": null,
+  "recipe": "whoosh",
+  "seed": 266,
+  "file": "t.slice.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 0.35,
+  "hitOffsetSec": 0.21,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.09270981231986711,
+  "rmsDb": -20.657485962017983,
+  "eventTime": null,
+  "startTime": null
+}

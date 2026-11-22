@@ -1,0 +1,18 @@
+{
+  "id": "t.shutter",
+  "eventId": null,
+  "recipe": "click",
+  "seed": 377,
+  "file": "t.shutter.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 0.06,
+  "hitOffsetSec": 0,
+  "peak": 0.06743183924499964,
+  "peakDb": -23.422699890239826,
+  "rms": 0.006084566021232717,
+  "rmsDb": -44.315407843518635,
+  "eventTime": null,
+  "startTime": null
+}

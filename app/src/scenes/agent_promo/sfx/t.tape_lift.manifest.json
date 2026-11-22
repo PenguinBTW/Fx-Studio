@@ -1,0 +1,18 @@
+{
+  "id": "t.tape_lift",
+  "eventId": null,
+  "recipe": "whoosh",
+  "seed": 155,
+  "file": "t.tape_lift.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 0.6,
+  "hitOffsetSec": 0.27,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.08482852914507147,
+  "rmsDb": -21.429161264638914,
+  "eventTime": null,
+  "startTime": null
+}

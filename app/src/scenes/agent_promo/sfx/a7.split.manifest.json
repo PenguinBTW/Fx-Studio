@@ -1,0 +1,18 @@
+{
+  "id": "a7.split",
+  "eventId": null,
+  "recipe": "click",
+  "seed": 1487,
+  "file": "a7.split.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 0.06,
+  "hitOffsetSec": 0,
+  "peak": 0.0763299647364099,
+  "peakDb": -22.34609876515101,
+  "rms": 0.0056390535718314535,
+  "rmsDb": -44.97587559062247,
+  "eventTime": null,
+  "startTime": null
+}

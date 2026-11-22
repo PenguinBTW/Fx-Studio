@@ -1,0 +1,18 @@
+{
+  "id": "a7.rewrite",
+  "eventId": null,
+  "recipe": "riser",
+  "seed": 1413,
+  "file": "a7.rewrite.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 4,
+  "hitOffsetSec": 4,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.05499912346812063,
+  "rmsDb": -25.19288463774852,
+  "eventTime": null,
+  "startTime": null
+}

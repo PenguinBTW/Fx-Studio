@@ -1,0 +1,18 @@
+{
+  "id": "t.vortex",
+  "eventId": null,
+  "recipe": "whoosh",
+  "seed": 1857,
+  "file": "t.vortex.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 0.9,
+  "hitOffsetSec": 0.54,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.08523212040991283,
+  "rmsDb": -21.387934140365555,
+  "eventTime": null,
+  "startTime": null
+}

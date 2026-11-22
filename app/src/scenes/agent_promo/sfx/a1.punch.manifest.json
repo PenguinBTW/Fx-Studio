@@ -1,0 +1,18 @@
+{
+  "id": "a1.punch",
+  "eventId": null,
+  "recipe": "tick",
+  "seed": 118,
+  "file": "a1.punch.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 5.007625,
+  "hitOffsetSec": 0,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.025425206576484657,
+  "rmsDb": -31.89471019609813,
+  "eventTime": null,
+  "startTime": null
+}
