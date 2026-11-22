@@ -111,8 +111,8 @@ export default class S4Verbs extends Scene {
     this.hemi.intensity = day ? 0.3 : 0.05; this.lampL.intensity = night ? 9 : 0;
     (this.bulb.material as THREE.MeshBasicMaterial).color.setRGB(night ? 6 : 0.3, night ? 4.2 : 0.25, night ? 2.2 : 0.2);
     const wm = this.win.material as THREE.MeshBasicMaterial; wm.map = day ? this.winDay : this.winNight; wm.color.setRGB(day ? 2.2 : neon ? 1.3 : 1.5, day ? 2.2 : neon ? 0.45 : 1.5, day ? 2.2 : neon ? 1.5 : 1.5);
-    this.rimA.intensity = neon ? 22 : 0; this.rimB.intensity = neon ? 22 : 0; this.scan.intensity = neon ? 5 : 0; this.scanBar.visible = this.neon.visible = neon;
-    const ph = ((T - T20) / BEAT) % 1; this.scan.target.position.set(-4 + 10 * ease(ph), 0, 0.5); this.scanBar.position.x = -4 + 10 * ease(ph);
+    this.rimA.intensity = neon ? 14 : 0; this.rimB.intensity = neon ? 14 : 0; this.scan.intensity = neon ? 5 : 0; this.scanBar.visible = this.neon.visible = neon;
+    const ph = ((T - T20) / BEAT) % 1; this.scan.target.position.set(-4 + 10 * ease(ph), 0, 0.5); this.scanBar.position.x = -1.5 + 4.5 * (0.5 - 0.5 * Math.cos(2 * Math.PI * ph));
     this.scene.environmentIntensity = day ? 0.22 : 0.08; return L;
   }
   /** where the main camera will be this frame (the magnifier needs it before the sheets are drawn) */
@@ -148,12 +148,12 @@ export default class S4Verbs extends Scene {
     for (const y of [0.0, 2.2]) { let x = 0; while (x < 7) { const w = 0.22 + 0.25 * rnd2(), h = 1.3 + 0.6 * rnd2(); const bk = new THREE.Mesh(new THREE.BoxGeometry(w, h, 1.2), new THREE.MeshStandardMaterial({ color: cols[Math.floor(rnd2() * cols.length)], roughness: 0.7 })); bk.position.set(x + w / 2, y + h / 2, 0); shelf.add(bk); x += w + 0.02; }
       const board = new THREE.Mesh(new THREE.BoxGeometry(7.2, 0.12, 1.4), new THREE.MeshStandardMaterial({ color: 0x3a2618, roughness: 0.6 })); board.position.set(3.5, y - 0.06, 0); shelf.add(board); }
     shelf.position.set(4.5, 0, -8.2);
-    this.rimA.position.set(-7, 1.2, -6); this.rimB.position.set(7.5, 1.2, -6); this.rimA.target.position.set(0.5, 0, 0.8); this.rimB.target.position.set(1.5, 0, 0.5);
+    this.rimA.position.set(-7, 0.35, -6); this.rimB.position.set(7.5, 0.35, -6); this.rimA.target.position.set(0.5, 0, 0.8); this.rimB.target.position.set(1.5, 0, 0.5);
     // neon look: two tubes on the back wall and a crisp scan line that sweeps the desk
     const tube = (c: THREE.Color, len: number, x: number, y: number) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, len, 16).rotateZ(Math.PI / 2), new THREE.MeshBasicMaterial({ color: c })); m.position.set(x, y, -8.85); return m; };
     this.neon.add(tube(new THREE.Color(7, 0.6, 4.2), 3.2, 3.4, 5.4), tube(new THREE.Color(0.5, 4.2, 6.5), 2.2, 3.9, 4.8));
-    const bar = (w: number, c: THREE.Color) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, 14).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: c, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); m.position.y = 0.02; return m; };
-    this.scanBar.add(bar(0.035, new THREE.Color(1.5, 6, 7)), bar(0.5, new THREE.Color(0.02, 0.12, 0.16))); this.scanBar.position.z = 0.5;
+    const bar = (w: number, c: THREE.Color) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, 14).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: c, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); m.position.y = 0.06; return m; };
+    this.scanBar.add(bar(0.05, new THREE.Color(3, 12, 14)), bar(0.6, new THREE.Color(0.03, 0.16, 0.2))); this.scanBar.position.z = 0.5;
     this.scene.add(this.rimA.target, this.rimB.target, this.neon, this.scanBar);
     this.scene.add(desk, wall, this.win, frame, this.key, this.key.target, this.scan, this.scan.target, lamp, this.lampL, this.lampL.target, shelf, this.hemi, this.rimA, this.rimB, this.cam);
     // Blender prop kit; every mesh gets its own physical material
@@ -243,7 +243,7 @@ export default class S4Verbs extends Scene {
     const burn = T - kOf('burn'), st = ease((burn + 0.22) / 0.22), lift = ease(burn / 0.35), mt = n.match!;
     mt.position.x += 0.4 * st; mt.position.y += 0.55 * lift; mt.position.z -= 0.2 * lift; mt.rotation.z = 0.8 * lift;
     const lit = burn > 0 ? 1 - ease((T - fmt) / 0.2) : 0, fl = lit * (0.9 + 0.1 * Math.sin(T * 41) + 0.06 * Math.sin(T * 97));
-    this.flame.scale.set(0.6 * fl + 1e-3, (2.4 + 1.6 * slam(burn)) * fl + 1e-3, 0.6 * fl + 1e-3); this.flameLight.intensity = 5 * fl + 40 * lit * slam(burn * 0.6);
+    this.flame.scale.set(1.0 * fl + 1e-3, (3.2 + 1.6 * slam(burn)) * fl + 1e-3, 1.0 * fl + 1e-3); this.flameLight.intensity = 5 * fl + 40 * lit * slam(burn * 0.6);
     // bell, magnifier
     const bh = since(hitsOf('B'), T); n.bell_btn!.position.y = 0.41 - 0.05 * (bh.n && bh.d < 0.15 ? 1 : 0); const ring = slam(bh.d / 2) * 0.03 * (bh.n ? 1 : 0); n.bell_dome!.scale.set(1 + ring * Math.sin(T * 120), 1, 1 + ring * Math.cos(T * 120));
     let mp = this.rest.mag!.clone(); for (const [v, p] of Object.entries(MAG)) { const e = ease((T - kOf(v) + 0.2) / 0.25); mp = mp.lerp(new THREE.Vector3(p[0] + (v === 'scan' ? -1.2 * (1 - ease((T - kOf(v)) / BEAT)) : 0), 0.4, p[1]), e); }
@@ -323,12 +323,12 @@ export default class S4Verbs extends Scene {
     const auto = rr.autoClear; rr.autoClear = false; let focus = 4, whip = 0, panels = 0;
     const draw = (target: THREE.WebGLRenderTarget, cam: THREE.Camera, clear: boolean) => { rr.setRenderTarget(target); if (clear) { rr.setClearColor(0x000000, 1); rr.clear(true, true, true); } rr.render(this.scene, cam); };
     if (b <= 9) {
-      const WH = 0.075, shut = 1 / 60 / BARL, s = SHOTS[b]!, prev = b > 0 ? SHOTS[b - 1] : undefined, N = prev && q < WH + shut ? 24 : 1;
+      const WH = 0.075, shut = 1 / 60 / BARL, s = SHOTS[b]!, prev = b > 0 ? SHOTS[b - 1] : undefined, N = prev && q < WH + shut ? 48 : 1;
       const camAt = (qq: number) => this.place(this.cam, s, Math.max(0, qq), 16 / 9, prev && qq < WH ? { s: prev, e: ease(Math.max(0, qq) / WH) } : undefined);
       for (let i = 0; i < N - 1; i++) { camAt(q - shut * (1 - (i + 0.5 * Math.sin(i * 12.9898 + T * 78.233)) / (N - 1))); this.moteU.uFocus.value = focus; draw(this.rtTmp, this.cam, true); this.ctx.comp.draw(rr, this.rtTmp.texture, this.rtAcc, { mode: 'normal', opacity: 1 / (i + 1) }); }
       focus = camAt(q); this.moteU.uFocus.value = focus; draw(out, this.cam, true);
       if (N > 1) { this.ctx.comp.draw(rr, this.rtAcc.texture, out, { mode: 'normal', opacity: (N - 1) / N }); whip = 1 - q / (WH + shut); }
-      this.callout(g, k, T, this.cam, [0, 0, 1920, 1080], alpha * (prev ? sm(WH * 0.6, WH * 1.4, q) : 1));
+      this.callout(g, k, T, this.cam, [0, 0, 1920, 1080], alpha * (prev ? sm(WH, WH * 1.6, q) : 1));
     } else if (b === 11 && beat === 3) {
       focus = this.topDown(this.cam, (q - 0.75) / 0.02); this.moteU.uFocus.value = focus; draw(out, this.cam, true);
     } else {
