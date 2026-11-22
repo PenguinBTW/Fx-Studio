@@ -6,6 +6,7 @@ import { Layer2D, W, H } from '../../engine/gl';
 import { F } from '../../engine/type';
 import type { Frame, PostOverrides, Scene, SceneCtx } from '../../engine/scene';
 import { BAR, BEAT, B0 } from '../agent_promo/kit';
+import { overlayTextDuck } from '../../engine/transition';
 import { term, TERM, type TLine } from '../agent_v2/term';
 
 TERM.off = true;
@@ -19,6 +20,8 @@ export interface SegOpts {
   k?: number;
   /** Horizontal centre of the 9:16 window across the source frame (0 left .. 1 right). */
   cx?: number;
+  /** Title baseline as a fraction of the canvas height (default 0.64, inside the Shorts/TikTok safe core). */
+  ty?: number;
   /** Teaser lines, `at` in seconds from the segment start. */
   lines?: TLine[];
 }
@@ -57,9 +60,9 @@ export function seg(Base: SceneCtor, o: SegOpts): SceneCtor {
       const t = src0 + (f.t - f.start), [s, e] = o.win;
       const r = super.render({ ...f, t, start: s, end: e, lt: t - s, p: (t - s) / (e - s), beat: (t - B0) / BEAT, bar: (t - B0) / BAR,
         beatPhase: (((t - B0) / BEAT) % 1 + 1) % 1, barPhase: (((t - B0) / BAR) % 1 + 1) % 1, under: null, tin: 1, tout: 0 }, out);
-      if (o.lines?.length) {
+      if (o.lines?.length && f.tout < 0.5) {
         const g = this.tl.ctx; this.tl.clear();
-        term(g, o.lines, f.t - f.start, { force: true, size: 96, x: W / 2, y: H * 0.64, family: F.archivo(100, 800), align: 'center', halo: 'rgba(0,0,0,0.7)', cursor: '#ff4d12' });
+        term(g, o.lines, f.t - f.start, { force: true, size: 96, x: W / 2, y: H * (o.ty ?? 0.64), family: F.archivo(100, 800), align: 'center', halo: 'rgba(0,0,0,0.7)', cursor: '#ff4d12', alpha: overlayTextDuck(f.tin, f.tout) });
         this.ctx.comp.draw(this.ctx.renderer, this.tl.upload(), out, { mode: 'normal', opacity: 1 }); this.ctx.renderer.resetState();
       }
       return r;
