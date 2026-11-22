@@ -8,7 +8,7 @@ import { Layer2D } from '../../engine/gl';
 import { overlayTextDuck } from '../../engine/transition';
 import { F, font } from '../../engine/type';
 import { clamp, ease, prog } from '../../engine/util';
-import { C, BEAT, bar, model, part, present, sceneTime, heroLights, enableShadows, Instanced, camPath, applyCam, typeLine, barOf, h1, studioEnv, HALO, type CamKey } from './kit';
+import { release, C, BEAT, bar, model, part, present, sceneTime, heroLights, enableShadows, Instanced, camPath, applyCam, typeLine, barOf, h1, studioEnv, HALO, type CamKey } from './kit';
 
 const V1_URL = Object.values(import.meta.glob<string>('./prints/v1_07_*.jpg', { eager: true, query: '?url', import: 'default' }))[0]!;
 const SP = 1.3, GX = 6, GZ = 16, lotZ = (gz: number) => 6 - gz * SP;
@@ -108,9 +108,14 @@ export default class A7Rewrite extends Scene {
       g.save(); g.beginPath(); g.rect(0, 0, 960 * split, 1080); g.clip(); g.drawImage(this.img, 0, 0, 1920, 1080); g.restore();
       g.fillStyle = C.signal; g.fillRect(960 * split - 4, 0, 8, 1080);
       tag('v1', 60, C.bone); if (split >= 1) tag('v2', 1860 - 50, C.bone);
+      const l = prog(T, T_SPLIT + 0.9, T_SPLIT + 1.5, ease.outCubic);
+      if (l > 0) { g.save(); g.strokeStyle = '#D9262B'; g.lineWidth = 7; g.lineCap = 'round'; g.beginPath(); g.ellipse(480, 500, 340, 300, -0.08, -2.2, -2.2 + l * 2.08 * Math.PI); g.stroke(); g.restore(); }
+      typeLine(g, '+2 stops', 480, 880, T, T_SPLIT + 1.5, { size: 40, cps: 20, align: 'center', color: '#D9262B', cursor: false, plate: true });
       typeLine(g, 'same camera. same bars.', 960, 1000, T, T_SPLIT + 1.2, { size: 36, cps: 24, align: 'center', color: C.bone, cursor: false, plate: true });
     }
     present(this.ctx, out, this.scene, this.cam, this.layer, extra, 0x07090a, split > 0 ? Math.max(duck, 1) : duck);
     return { exposure: 1.0, bloom: 0.7, bloomThreshold: 0.85, vignette: 0.5, grain: 0.04 };
   }
+
+  override dispose() { release(this.scene); }
 }

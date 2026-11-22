@@ -24,12 +24,15 @@ export const beatAt = (k: number, b = 0) => bar(k) + b * BEAT;
 export const sceneTime = (ctx: SceneCtx, t: number) => t + (Number(ctx.params?.shift) || 0);
 
 /** Instances share the cached GLTF's materials; clone them so one scene's grade never leaks into another (seek determinism). */
-/** Text painted into a 3D texture canvas: canvas coords are not screen coords, so it stays out of the 2D text probe. */
-export function textureText(fn: () => void) {
-  const w = window as unknown as { __motion?: { recordText?: boolean }; __pdoom?: { recordText?: boolean } };
-  const P = w.__motion ?? w.__pdoom, was = P?.recordText;
-  if (P) P.recordText = false;
-  try { fn(); } finally { if (P) P.recordText = was; }
+
+/** Free what a scene allocated (geometry, materials, shadow maps), like DSL scenes do on dispose. */
+export function release(root: THREE.Object3D) {
+  root.traverse((o) => {
+    const m = o as THREE.Mesh;
+    m.geometry?.dispose();
+    if (m.material) for (const x of ([] as THREE.Material[]).concat(m.material)) x.dispose();
+    (o as unknown as { shadow?: { dispose(): void } }).shadow?.dispose();
+  });
 }
 
 export async function model(ctx: SceneCtx, id: string): Promise<GLTFInstance> {

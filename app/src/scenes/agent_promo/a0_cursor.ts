@@ -5,7 +5,7 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { Layer2D } from '../../engine/gl';
 import { F, font } from '../../engine/type';
 import { clamp, ease, prog } from '../../engine/util';
-import { C, BEAT, bar, model, part, present, sceneTime, PROMPT, heroLights, HALO } from './kit';
+import { release, C, BEAT, bar, model, part, present, sceneTime, PROMPT, heroLights, HALO } from './kit';
 
 const T0 = 0.45, CPS = 17, SIZE = 44, Y = 540;
 const typedAt = (T: number) => clamp(Math.floor((T - T0) * CPS), 0, PROMPT.length);
@@ -68,5 +68,7 @@ export default class A0Cursor extends Scene {
     present(this.ctx, out, this.scene, this.cam, this.layer, undefined, 0x07070a);
     return { exposure: 1, bloom: 0.75, bloomThreshold: 0.85, vignette: 0.55, grain: 0.05 };
   }
+
+  override dispose() { release(this.scene); }
 }
 const B_OFF = bar(1);

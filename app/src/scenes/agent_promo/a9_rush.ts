@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { Layer2D } from '../../engine/gl';
 import { overlayTextDuck } from '../../engine/transition';
-import { C, bar, model, part, present, sceneTime, typeLine } from './kit';
+import { release, C, bar, model, part, present, sceneTime, typeLine } from './kit';
 import { makePrint, loadPrints } from './a5_print';
 
 const N = 48, GAP = 1.4, L = N / 4 * GAP, T0 = bar(81);
@@ -50,5 +50,5 @@ export default class A9Rush extends Scene {
     present(this.ctx, out, this.scene, this.cam, this.layer, undefined, 0x060608, overlayTextDuck(f.tin, f.tout));
     return { exposure: 1.0, bloom: 0.8, bloomThreshold: 0.8, vignette: 0.6, grain: 0.05 };
   }
-  override dispose() { for (const t of this.texs) t.dispose(); }
+  override dispose() { release(this.scene); for (const t of this.texs) t.dispose(); }
 }

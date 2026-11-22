@@ -8,7 +8,8 @@ import { Layer2D } from '../../engine/gl';
 import { overlayTextDuck } from '../../engine/transition';
 import { F, font } from '../../engine/type';
 import { clamp, ease, prog } from '../../engine/util';
-import { C, bar, model, part, present, sceneTime, heroLights, enableShadows, shadows, camPath, applyCam, typeLine, barOf, ACT_BARS, FACTS, textureText, type CamKey } from './kit';
+import { release, C, bar, model, part, present, sceneTime, heroLights, enableShadows, shadows, camPath, applyCam, typeLine, barOf, ACT_BARS, FACTS, type CamKey } from './kit';
+import { markTextureCanvas } from '../../engine/bridge';
 
 const FPS = 60, DUR = 224.436, LEN = 18, tx = (t: number) => -LEN / 2 + (t / DUR) * LEN;
 const T_SEEK = bar(73), BACK = bar(73) - bar(69), T_SAME = bar(75), HOLD_END = bar(78.5);
@@ -47,7 +48,7 @@ export default class A8Meta extends Scene {
     part(sf, 'flap').visible = false;
     sf.root.position.set(0, 2.1, -1.2); sf.root.scale.setScalar(0.55); this.scene.add(sf.root);
     for (let i = 0; i < 6; i++) {
-      const cv = document.createElement('canvas'); cv.width = 128; cv.height = 192;
+      const cv = markTextureCanvas(document.createElement('canvas')); cv.width = 128; cv.height = 192;
       const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; this.digits.push({ cv, tex });
       const pl = new THREE.Mesh(new THREE.PlaneGeometry(0.86, 1.26), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.45, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.25 }));
       pl.position.set(-2.5 + i * 1.0, 0, 0.105); sf.root.add(pl);
@@ -70,7 +71,7 @@ export default class A8Meta extends Scene {
       const { cv, tex } = this.digits[i]!, g = cv.getContext('2d')!;
       g.fillStyle = '#0c0c0e'; g.fillRect(0, 0, 128, 192);
       g.font = font(F.mono(600), 150); g.textAlign = 'center'; g.textBaseline = 'middle';
-      g.fillStyle = i >= 6 - String(frame).length ? '#EDE6D6' : '#3a3936'; textureText(() => g.fillText(s[i]!, 64, 102));
+      g.fillStyle = i >= 6 - String(frame).length ? '#EDE6D6' : '#3a3936'; g.fillText(s[i]!, 64, 102);
       g.fillStyle = '#000'; g.fillRect(0, 94, 128, 4);
       tex.needsUpdate = true;
     }
@@ -83,4 +84,6 @@ export default class A8Meta extends Scene {
     present(this.ctx, out, this.scene, this.cam, this.layer, undefined, 0x07070a, overlayTextDuck(f.tin, f.tout));
     return { exposure: 1.0, bloom: 0.7, bloomThreshold: 0.8, vignette: 0.5, grain: 0.04 };
   }
+
+  override dispose() { release(this.scene); }
 }

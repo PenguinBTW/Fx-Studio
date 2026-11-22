@@ -7,7 +7,7 @@ import { Layer2D } from '../../engine/gl';
 import { overlayTextDuck } from '../../engine/transition';
 import { F, font } from '../../engine/type';
 import { clamp, ease, prog } from '../../engine/util';
-import { C, bar, model, part, present, sceneTime, heroLights, enableShadows, shadows, camPath, applyCam, typeLine, barOf, actOfBar, h1, FACTS, rmsAt, type CamKey } from './kit';
+import { release, C, bar, model, part, present, sceneTime, heroLights, enableShadows, shadows, camPath, applyCam, typeLine, barOf, actOfBar, h1, FACTS, rmsAt, type CamKey } from './kit';
 
 const N = 119, COLS = 17, ROWS = 7, SX = 0.42, SZ = 0.3, CW = 0.36, CD = 0.24;
 const T_DEAL0 = bar(9), T_DEAL1 = bar(12.4), T_RISE = bar(12.5);
@@ -106,7 +106,7 @@ export default class A2Plan extends Scene {
     this.glow.position.copy(this.marker.position).y += 0.2; this.glow.intensity = 2.5 + 3 * prog(T, bar(14), bar(14.9));
     const k = camPath(CAM, b), dive = prog(T, bar(14.2), bar(15), ease.inCubic);
     const mpw = this.marker.position;
-    const kk: CamKey = { pos: [k.pos[0] + (mpw.x - k.pos[0]) * dive * 0.85, k.pos[1] + (mpw.y + 0.15 - k.pos[1]) * dive * 0.85, k.pos[2] + (mpw.z + 0.3 - k.pos[2]) * dive * 0.85], tgt: [k.tgt[0] + (mpw.x - k.tgt[0]) * dive, k.tgt[1] + (mpw.y - k.tgt[1]) * dive, k.tgt[2] + (mpw.z - k.tgt[2]) * dive], fov: k.fov };
+    const kk: CamKey = { pos: [k.pos[0] + (mpw.x - k.pos[0]) * dive * 0.85, k.pos[1] + (mpw.y + 0.4 - k.pos[1]) * dive * 0.85 + Math.sin(Math.PI * dive) * 1.1, k.pos[2] + (mpw.z + 0.3 - k.pos[2]) * dive * 0.85], tgt: [k.tgt[0] + (mpw.x - k.tgt[0]) * dive, k.tgt[1] + (mpw.y - k.tgt[1]) * dive, k.tgt[2] + (mpw.z - k.tgt[2]) * dive], fov: k.fov };
     applyCam(this.cam, kk);
     const g = this.layer.ctx; this.layer.clear();
     typeLine(g, `${FACTS.bars} bars.`, 1770, 150, T, bar(10.5), { size: 40, cps: 22, align: 'right', cursor: false, t1: bar(14.3) });
@@ -114,5 +114,5 @@ export default class A2Plan extends Scene {
     present(this.ctx, out, this.scene, this.cam, this.layer, undefined, 0x07070a, overlayTextDuck(f.tin, f.tout));
     return { exposure: 1.05, bloom: 0.6 + 0.6 * dive, bloomThreshold: 0.8, vignette: 0.5, grain: 0.04 };
   }
-  override dispose() { this.tex.dispose(); }
+  override dispose() { release(this.scene); this.tex.dispose(); }
 }

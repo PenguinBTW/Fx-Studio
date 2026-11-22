@@ -6,7 +6,7 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { Layer2D } from '../../engine/gl';
 import { overlayTextDuck } from '../../engine/transition';
 import { ease, prog } from '../../engine/util';
-import { C, BEAT, bar, model, part, present, sceneTime, heroLights, enableShadows, shadows, camPath, applyCam, typeLine, barOf, type CamKey } from './kit';
+import { release, C, BEAT, bar, model, part, present, sceneTime, heroLights, enableShadows, shadows, camPath, applyCam, typeLine, barOf, type CamKey } from './kit';
 
 const PRINT_URLS = Object.entries(import.meta.glob<string>('./prints/v1_*.jpg', { eager: true, query: '?url', import: 'default' })).sort(([a], [b]) => a.localeCompare(b)).map(([, u]) => u);
 export const WALL_Z = -3.5, PW = 1.6, PH = 0.9;
@@ -91,5 +91,5 @@ export default class A5Print extends Scene {
     present(this.ctx, out, this.scene, this.cam, this.layer, undefined, 0x08090c, overlayTextDuck(f.tin, f.tout));
     return { exposure: 1.0, bloom: 0.5, bloomThreshold: 0.9, vignette: 0.5, grain: 0.04 };
   }
-  override dispose() { for (const t of this.texs) t.dispose(); }
+  override dispose() { release(this.scene); for (const t of this.texs) t.dispose(); }
 }

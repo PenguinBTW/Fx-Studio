@@ -6,7 +6,7 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { Layer2D } from '../../engine/gl';
 import { overlayTextDuck } from '../../engine/transition';
 import { clamp, ease, prog } from '../../engine/util';
-import { C, bar, BAR, model, present, sceneTime, heroLights, Instanced, camPath, applyCam, typeLine, barOf, h1, type CamKey } from './kit';
+import { release, C, bar, BAR, model, present, sceneTime, heroLights, Instanced, camPath, applyCam, typeLine, barOf, h1, type CamKey } from './kit';
 
 const N = 64, GENS = 6, T_SPLIT = bar(15.5), HALF = BAR / 2;
 const genOf = (i: number) => (i === 0 ? 0 : Math.floor(Math.log2(i)) + 1);
@@ -77,4 +77,6 @@ export default class A3Swarm extends Scene {
     present(this.ctx, out, this.scene, this.cam, this.layer, undefined, 0x06070c, overlayTextDuck(f.tin, f.tout));
     return { exposure: 1.1, bloom: 1.0, bloomThreshold: 0.7, vignette: 0.55, grain: 0.05 };
   }
+
+  override dispose() { release(this.scene); }
 }

@@ -7,7 +7,7 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { Layer2D } from '../../engine/gl';
 import { overlayTextDuck } from '../../engine/transition';
 import { clamp, ease, prog } from '../../engine/util';
-import { C, BEAT, bar, beatAt, model, part, present, sceneTime, heroLights, enableShadows, shadows, Instanced, camPath, applyCam, train, barOf, h1, spin, studioEnv, type CamKey } from './kit';
+import { release, C, BEAT, bar, beatAt, model, part, present, sceneTime, heroLights, enableShadows, shadows, Instanced, camPath, applyCam, train, barOf, h1, spin, studioEnv, type CamKey } from './kit';
 
 const SP = 1.3, GX = 6, GZ = 30, lotZ = (gz: number) => 6 - gz * SP;
 const W = (k: number) => beatAt(20, k);
@@ -160,4 +160,6 @@ export default class A4Build extends Scene {
     present(this.ctx, out, this.scene, this.cam, this.layer, undefined, 0x07090a, overlayTextDuck(f.tin, f.tout));
     return { exposure: 1.0, bloom: 0.7, bloomThreshold: 0.85, vignette: 0.5, grain: 0.04 };
   }
+
+  override dispose() { release(this.scene); }
 }

@@ -6,7 +6,7 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { Layer2D } from '../../engine/gl';
 import { overlayTextDuck } from '../../engine/transition';
 import { clamp, ease } from '../../engine/util';
-import { C, BEAT, bar, model, part, present, sceneTime, PROMPT, heroLights, enableShadows, shadows, camPath, applyCam, typeLine, spin, barOf, type CamKey } from './kit';
+import { release, C, BEAT, bar, model, part, present, sceneTime, PROMPT, heroLights, enableShadows, shadows, camPath, applyCam, typeLine, spin, barOf, type CamKey } from './kit';
 
 const P = 0.1, COLS = PROMPT.length, DECK = 0.745, LEAD = 6;
 const T_PUNCH = bar(4), STEP = BEAT / 4;
@@ -91,10 +91,10 @@ export default class A1Tape extends Scene {
     applyCam(this.cam, { ...k, pos: [k.pos[0] + 0.02 * Math.sin(T * 0.7), k.pos[1], k.pos[2]] }, strike * 0.3);
     const g = this.layer.ctx; this.layer.clear();
     const nb = PROMPT.length;
-    typeLine(g, 'its last line.', 150, 860, T, bar(6.75), { size: 40, cps: 22, cursor: false });
+    typeLine(g, 'its last words.', 150, 860, T, bar(6.75), { size: 40, cps: 22, cursor: false });
     typeLine(g, `${nb} bytes.`, 150, 916, T, bar(7.25), { size: 40, cps: 22, color: C.signal, t1: bar(8.6) });
     present(this.ctx, out, this.scene, this.cam, this.layer, undefined, 0x07070a, overlayTextDuck(f.tin, f.tout));
     return { exposure: 1.05, bloom: 0.55, bloomThreshold: 0.95, vignette: 0.5, grain: 0.04 };
   }
-  override dispose() { this.tex.dispose(); }
+  override dispose() { release(this.scene); this.tex.dispose(); }
 }

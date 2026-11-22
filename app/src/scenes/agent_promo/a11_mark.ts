@@ -6,7 +6,7 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { Layer2D } from '../../engine/gl';
 import { overlayTextDuck } from '../../engine/transition';
 import { clamp, ease, prog } from '../../engine/util';
-import { C, BEAT, bar, model, part, present, sceneTime, heroLights, shadows, applyCam, typeLine, type CamKey } from './kit';
+import { release, C, BEAT, bar, model, part, present, sceneTime, heroLights, shadows, applyCam, typeLine, type CamKey } from './kit';
 
 const T_LOCK = bar(102), END = 224.436;
 
@@ -42,7 +42,7 @@ export default class A11Mark extends Scene {
     const cu = prog(T, T_LOCK, T_LOCK + 0.25, ease.outBack), b0 = this.base.get(this.cur)!;
     this.cur.position.set(b0.x + this.curDx, b0.y + 2 * (1 - cu), b0.z); this.cur.visible = T >= T_LOCK - 0.05;
     const blink = T < T_LOCK + 0.3 || Math.floor((T - T_LOCK) / BEAT) % 2 === 0 ? 1 : 0.1;
-    this.cur.traverse((o) => { const mm = (o as THREE.Mesh).material as THREE.MeshStandardMaterial; if (mm?.emissive) mm.emissiveIntensity = 6 * blink; });
+    this.cur.traverse((o) => { const mm = (o as THREE.Mesh).material as THREE.MeshStandardMaterial; if (mm?.emissive) mm.emissiveIntensity = 2.2 * blink; });
     this.glow.position.set(b0.x + this.curDx - 0.08, b0.y + 0.5, 1.0); this.glow.intensity = 3 * blink * cu;
     const push = prog(T, T_LOCK, END, ease.linear);
     const k: CamKey = { pos: [0.2 + 0.3 * Math.sin(T * 0.15), 0.35, 9.5 - 1.2 * push], tgt: [0.2, 0.05, 0], fov: 30 };
@@ -55,4 +55,6 @@ export default class A11Mark extends Scene {
     present(this.ctx, out, this.scene, this.cam, this.layer, undefined, 0x07070a, overlayTextDuck(f.tin, f.tout));
     return { exposure: 1.0 * clamp(fade), bloom: 0.8, bloomThreshold: 0.75, vignette: 0.55, grain: 0.04 };
   }
+
+  override dispose() { release(this.scene); }
 }

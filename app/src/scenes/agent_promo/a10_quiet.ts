@@ -7,7 +7,7 @@ import { Layer2D } from '../../engine/gl';
 import { overlayTextDuck } from '../../engine/transition';
 import { F } from '../../engine/type';
 import { ease, prog } from '../../engine/util';
-import { C, bar, model, part, present, sceneTime, heroLights, enableShadows, shadows, camPath, applyCam, typeLine, barOf, type CamKey } from './kit';
+import { release, C, bar, model, part, present, sceneTime, heroLights, enableShadows, shadows, camPath, applyCam, typeLine, barOf, type CamKey } from './kit';
 import { makePrint, loadPrints } from './a5_print';
 
 const CAM: [number, CamKey][] = [
@@ -50,5 +50,5 @@ export default class A10Quiet extends Scene {
     present(this.ctx, out, this.scene, this.cam, this.layer, undefined, 0x060506, overlayTextDuck(f.tin, f.tout));
     return { exposure: 0.95, bloom: 0.6 + 0.4 * prog(T, bar(99.5), bar(100.9), ease.inCubic), bloomThreshold: 0.8, vignette: 0.6, grain: 0.05 };
   }
-  override dispose() { for (const t of this.texs) t.dispose(); }
+  override dispose() { release(this.scene); for (const t of this.texs) t.dispose(); }
 }
