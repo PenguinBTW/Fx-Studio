@@ -35,7 +35,7 @@ export default class A0Cursor extends Scene {
     const fam = F.mono(400);
     g.font = font(fam, SIZE);
     const line = '> …' + PROMPT, full = g.measureText(line).width;
-    const x0 = 960 - full / 2, n = typedAt(T), shown = line.slice(0, 2 + n);
+    const x0 = 960 - full / 2, n = typedAt(T), shown = line.slice(0, 3 + n);
     const fadeType = 1 - prog(T, bar(2.6), bar(3) - 0.1, ease.inCubic);
     g.textBaseline = 'middle'; g.textAlign = 'left';
     g.globalAlpha = fadeType * clamp(T / 0.25);
