@@ -38,6 +38,9 @@ export default class S1Boot extends Scene {
   private layer = new Layer2D();
   private lines = new LineBatch(2 * (N * 260 + 64), { screen2D: false, worldWidth: true, blend: 'add', depthTest: false });
   private pen!: GLTFInstance;
+  // The opening captions are a light sign standing behind the pen (in depth, occluded by the pen, crossed by the lines), not a screen overlay.
+  private sign = new Layer2D();
+  private signM = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 2.5875), new THREE.MeshBasicMaterial({ transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, color: new THREE.Color(1.6, 1.6, 1.6) }));
   private floorU = { uSig: { value: new THREE.Vector3(...lin(C.signal, 1)) }, uIce: { value: new THREE.Vector3(...lin(C.ice, 1)) }, uHead: { value: new THREE.Vector3() }, uKick: { value: 0 }, uRing: { value: 99 }, uT: { value: 0 } };
 
   override async init() {
@@ -55,7 +58,8 @@ export default class S1Boot extends Scene {
     fl.rotation.x = -Math.PI / 2; fl.position.y = FLOOR;
     const sky = new THREE.Mesh(new THREE.SphereGeometry(110, 32, 16), new THREE.ShaderMaterial({ vertexShader: SKY_VS, fragmentShader: SKY_FS, side: THREE.BackSide, depthWrite: false, uniforms: { uSig: this.floorU.uSig, uT: this.floorU.uT } }));
     sky.renderOrder = -1;
-    this.scene.add(fl, sky);
+    (this.signM.material as THREE.MeshBasicMaterial).map = this.sign.texture;
+    this.scene.add(fl, sky, this.signM);
   }
 
   private headX(T: number) { return X0 + (X1 - X0) * prog(T, 0.4, bar(4), ease.inOutCubic); }
@@ -150,13 +154,17 @@ export default class S1Boot extends Scene {
     this.layer.clear();
     const fade = 1 - collapse;
     g.globalAlpha = 1;
-    typeLine(g, 'every frame', 960, 900, T, bar(1.5), { size: 92, align: 'center', family: F.archivo(100, 800), t1: bar(2.75) - 0.1, cps: 30 });
-    typeLine(g, 'is a function', 960, 900, T, bar(2.75), { size: 92, align: 'center', family: F.archivo(100, 800), t1: bar(4) - 0.1, cps: 30 });
-    typeLine(g, 'of time.', 960, 900, T, bar(4), { size: 92, align: 'center', family: F.archivo(100, 800), color: C.signal, t1: bar(5) - 0.1, cps: 30 });
+    const sg = this.sign.ctx; this.sign.clear();
+    typeLine(sg, 'every frame', 960, 760, T, bar(1.5), { size: 92, align: 'center', family: F.archivo(100, 800), t1: bar(2.75) - 0.1, cps: 30 });
+    typeLine(sg, 'is a function', 960, 760, T, bar(2.75), { size: 92, align: 'center', family: F.archivo(100, 800), t1: bar(4) - 0.1, cps: 30 });
+    typeLine(sg, 'of time.', 960, 760, T, bar(4), { size: 92, align: 'center', family: F.archivo(100, 800), color: C.signal, t1: bar(5) - 0.1, cps: 30 });
     const FX = ['y = sin(x - t)', 'y = tanh(3 sin x)', 'y = saw(x - t)', 'y = sin x cos(t)'];
-    for (let b = 0; b < 4; b++) slam(g, FX[b]!, 960, 190, T, { t0: bar(5 + b), t1: bar(6 + b) - 0.05, size: 72, family: F.mono(600), from: 1.3, shake: 3, out: 0.12, color: b % 2 ? C.signal : C.bone });
+    for (let b = 0; b < 4; b++) slam(g, FX[b]!, 960, 190, T, { t0: bar(5 + b), t1: bar(6 + b) - 0.2, size: 72, family: F.mono(600), from: 1.3, shake: 3, out: 0.12, color: b % 2 ? C.signal : C.bone });
     slam(g, 'Frame = f(t)', 960, 300, T, { t0: bar(9), t1: bar(10.3), size: 150, family: F.mono(600), from: 1.45, shake: 5, out: 0.25 });
 
+    this.sign.upload();
+    this.signM.visible = T < bar(5);
+    { const P = new THREE.Vector3(...k.pos), D = new THREE.Vector3(...k.tgt).sub(P).normalize(); this.signM.position.copy(P).addScaledVector(D, 4.6); this.signM.position.y += 0.3; this.signM.lookAt(P); }
     present(this.ctx, out, this.scene, this.cam, this.layer, () => L.render(this.ctx.renderer, out, this.cam));
 
     const pre = prog(T, bar(10), bar(11), ease.inQuad);
