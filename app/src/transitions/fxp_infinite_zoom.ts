@@ -13,7 +13,7 @@ import { overlay } from '../scenes/fx_promo/kit';
 // The fifth value is a gain: sampled worlds arrive before their own exposure/grade, so the bright ones are pulled down.
 const WORLDS: [string, number, number, number, number][] = [
   ['', 0, 0.5, 0.47, 0.75], ['a4_city', 80, 0.585, 0.6, 1], ['a7_paper', 140, 0.6, 0.42, 0.8], ['s2b_prism', 23.5, 0.5, 0.42, 0.5],
-  ['s3_type', 44, 0.53, 0.47, 0.85], ['s1_boot_c', 13.5, 0.5, 0.71, 1], ['s2_surface', 32, 0.5, 0.3, 1], ['a4_city', 62, 0.62, 0.45, 0.9],
+  ['s3_type', 44, 0.53, 0.47, 0.85], ['s1_boot_c', 13.5, 0.5, 0.71, 1], ['s2_surface', 32, 0.5, 0.3, 1], ['s10_finale', 202.5, 0.5, 0.52, 1],
 ];
 const N = WORLDS.length;
 const H = 0.24;
