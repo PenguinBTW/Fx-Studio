@@ -4,7 +4,7 @@
 // The last two bars split into 2 then 4 cameras; "format" sweeps the desk and lands top-down on a blank sheet.
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
-import { Layer2D } from '../../engine/gl';
+import { Layer2D, FSPass } from '../../engine/gl';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { overlayTextDuck } from '../../engine/transition';
 import { F, font } from '../../engine/type';
@@ -82,7 +82,10 @@ export default class S4Verbs extends Scene {
   private key = new THREE.SpotLight(0xffa548, 9, 0, 0.55, 0.2, 0); private scan = new THREE.SpotLight(0x9ff6ff, 0, 0, 0.75, 0.05, 0);
   private lampL = new THREE.SpotLight(0xffb070, 0, 0, 0.95, 0.6, 0); private hemi = new THREE.HemisphereLight(0x8fa6d8, 0x3a2414, 0.35);
   private rimA = new THREE.SpotLight(0xff2fa8, 0, 0, 0.5, 0.3, 0); private rimB = new THREE.SpotLight(0x26e0ff, 0, 0, 0.5, 0.3, 0);
-  private scanBar = new THREE.Group(); private neon = new THREE.Group();
+  // averages whip sub-frames with highlights clamped, so a thin HDR glint smears instead of stepping into contours
+  private accum = (() => { const p = new FSPass(`uniform sampler2D tex; uniform float opacity; void main() { fragColor = vec4(min(texture(tex, vUv).rgb, vec3(1.4)), 1.0) * opacity; }`, { tex: { value: null }, opacity: { value: 1 } }, { blending: THREE.CustomBlending, transparent: true });
+    const m = p.mat; m.blendEquation = THREE.AddEquation; m.blendSrc = m.blendSrcAlpha = THREE.OneFactor; m.blendDst = m.blendDstAlpha = THREE.OneMinusSrcAlphaFactor; return p; })();
+  private glowTex?: THREE.DataTexture; private scanBar = new THREE.Group(); private neon = new THREE.Group();
   private win!: THREE.Mesh; private bulb!: THREE.Mesh; private winDay!: THREE.Texture; private winNight!: THREE.Texture;
   private flameU = { uT: { value: 0 } }; private scratch = new THREE.PerspectiveCamera(26, 16 / 9, 0.05, 200);
   /** blinds cookie for the key light (slats + window mullion), or a single scan line */
@@ -107,11 +110,11 @@ export default class S4Verbs extends Scene {
   /** lighting look per lyric section: golden afternoon (bars 20-23), night with the desk lamp (24-27), neon scanner (28-31) */
   private look(b: number, T: number) {
     const L = b < 4 ? 0 : b < 8 ? 1 : 2, day = L === 0, night = L === 1, neon = L === 2;
-    this.key.color.set(day ? 0xffa548 : night ? 0x7d9bff : 0xe8ecf5); this.key.intensity = day ? 9 : night ? 2.4 : 2.0;
+    this.key.color.set(day ? 0xffa548 : night ? 0x7d9bff : 0xe8ecf5); this.key.intensity = day ? 9 : night ? 2.4 : 3.2;
     this.hemi.intensity = day ? 0.3 : 0.05; this.lampL.intensity = night ? 9 : 0;
     (this.bulb.material as THREE.MeshBasicMaterial).color.setRGB(night ? 6 : 0.3, night ? 4.2 : 0.25, night ? 2.2 : 0.2);
     const wm = this.win.material as THREE.MeshBasicMaterial; wm.map = day ? this.winDay : this.winNight; wm.color.setRGB(day ? 2.2 : neon ? 1.3 : 1.5, day ? 2.2 : neon ? 0.45 : 1.5, day ? 2.2 : neon ? 1.5 : 1.5);
-    this.rimA.intensity = neon ? 14 : 0; this.rimB.intensity = neon ? 14 : 0; this.scan.intensity = neon ? 5 : 0; this.scanBar.visible = this.neon.visible = neon;
+    this.rimA.intensity = neon ? 8 : 0; this.rimB.intensity = neon ? 8 : 0; this.scan.intensity = neon ? 5 : 0; this.scanBar.visible = this.neon.visible = neon;
     const ph = ((T - T20) / BEAT) % 1; this.scan.target.position.set(-4 + 10 * ease(ph), 0, 0.5); this.scanBar.position.x = -1.5 + 4.5 * (0.5 - 0.5 * Math.cos(2 * Math.PI * ph));
     this.scene.environmentIntensity = day ? 0.22 : 0.08; return L;
   }
@@ -152,8 +155,9 @@ export default class S4Verbs extends Scene {
     // neon look: two tubes on the back wall and a crisp scan line that sweeps the desk
     const tube = (c: THREE.Color, len: number, x: number, y: number) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, len, 16).rotateZ(Math.PI / 2), new THREE.MeshBasicMaterial({ color: c })); m.position.set(x, y, -8.85); return m; };
     this.neon.add(tube(new THREE.Color(7, 0.6, 4.2), 3.2, 3.4, 5.4), tube(new THREE.Color(0.5, 4.2, 6.5), 2.2, 3.9, 4.8));
-    const bar = (w: number, c: THREE.Color) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, 14).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: c, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); m.position.y = 0.06; return m; };
-    this.scanBar.add(bar(0.05, new THREE.Color(3, 12, 14)), bar(0.6, new THREE.Color(0.03, 0.16, 0.2))); this.scanBar.position.z = 0.5;
+    const glow = new THREE.DataTexture(Uint8Array.from({ length: 64 * 4 }, (_, i) => i % 4 === 3 ? 255 : Math.round(255 * Math.exp(-((((i >> 2) - 31.5) / 9) ** 2)))), 64, 1); glow.needsUpdate = true; glow.colorSpace = THREE.NoColorSpace; this.glowTex = glow;
+    const bar = (w: number, c: THREE.Color, map?: THREE.Texture) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, 14).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: c, map, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); m.position.y = 0.06; return m; };
+    this.scanBar.add(bar(0.05, new THREE.Color(3, 12, 14)), bar(0.9, new THREE.Color(0.06, 0.3, 0.38), glow)); this.scanBar.position.z = 0.5;
     this.scene.add(this.rimA.target, this.rimB.target, this.neon, this.scanBar);
     this.scene.add(desk, wall, this.win, frame, this.key, this.key.target, this.scan, this.scan.target, lamp, this.lampL, this.lampL.target, shelf, this.hemi, this.rimA, this.rimB, this.cam);
     // Blender prop kit; every mesh gets its own physical material
@@ -334,7 +338,7 @@ export default class S4Verbs extends Scene {
         const f1 = camAt(q), P = this.cam.getWorldDirection(new THREE.Vector3()).multiplyScalar(f1).add(this.cam.position), p1 = P.clone().project(this.cam);
         camAt(q - shut); const p0 = P.project(this.cam); du = (p1.x - p0.x) / 2 / (N - 1); dv = (p1.y - p0.y) / 2 / (N - 1);
       }
-      for (let i = 0; i < N - 1; i++) { camAt(q - shut * (1 - (i + 0.5 * Math.sin(i * 12.9898 + T * 78.233)) / (N - 1))); this.moteU.uFocus.value = focus; this.moteU.uPx.value = Ht / 2160; draw(this.rtTmp, this.cam, true); this.ctx.comp.draw(rr, this.rtTmp.texture, this.rtAcc, { mode: 'normal', opacity: 1 / (i + 1) }); }
+      for (let i = 0; i < N - 1; i++) { camAt(q - shut * (1 - (i + 0.5 * Math.sin(i * 12.9898 + T * 78.233)) / (N - 1))); this.moteU.uFocus.value = focus; this.moteU.uPx.value = Ht / 2160; draw(this.rtTmp, this.cam, true); this.accum.u.tex!.value = this.rtTmp.texture; this.accum.u.opacity!.value = 1 / (i + 1); this.accum.render(rr, this.rtAcc); rr.resetState(); }
       focus = camAt(q); this.moteU.uFocus.value = focus; this.moteU.uPx.value = Ht / 1080; draw(out, this.cam, true);
       if (N > 1) {
         // 4 taps along the motion step blur the stepping out of thin bright edges (the magnifier ring)
@@ -368,6 +372,6 @@ export default class S4Verbs extends Scene {
       depthDof: { enabled: true, focusDistance: focus, aperture: panels ? 8 : 15, blades: 9, maxRadius: 30, near: 0.05, far: 200 } };
   }
   private pcams = [0, 1, 2, 3].map(() => new THREE.PerspectiveCamera(24, 16 / 9, 0.05, 200));
-  override dispose() { this.layer.texture.dispose(); this.oak?.dispose(); this.env?.dispose(); this.winDay?.dispose(); this.winNight?.dispose(); this.key.map?.dispose(); this.scan.map?.dispose(); this.key.shadow.map?.dispose(); this.lampL.shadow.map?.dispose(); this.rtTmp?.dispose(); this.rtAcc?.dispose(); for (const s of [this.A, this.B, this.strip]) s.tex.dispose();
+  override dispose() { this.layer.texture.dispose(); this.oak?.dispose(); this.env?.dispose(); this.winDay?.dispose(); this.winNight?.dispose(); this.key.map?.dispose(); this.scan.map?.dispose(); this.key.shadow.map?.dispose(); this.lampL.shadow.map?.dispose(); this.rtTmp?.dispose(); this.rtAcc?.dispose(); this.accum.dispose(); this.glowTex?.dispose(); for (const s of [this.A, this.B, this.strip]) s.tex.dispose();
     for (const sc of [this.scene, this.tscene]) sc.traverse((o) => { const m = o as THREE.Mesh; m.geometry?.dispose(); (m.material as THREE.Material | undefined)?.dispose(); }); }
 }
