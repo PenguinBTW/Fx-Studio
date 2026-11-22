@@ -16,6 +16,8 @@ const h = (i: number, s = 0) => { const x = Math.sin(i * 127.1 + s * 311.7) * 43
 const FH = 0.3, G = 15, CELL = 3.2, ND = 4200;
 const qBeat = (t: number, div = 1) => B0 + Math.ceil((t - B0) / (BEAT / div)) * (BEAT / div);
 const VAR = ['floor_a', 'floor_b', 'floor_c'] as const;
+const WHITE = new THREE.Color(0xffffff);
+const DC = new THREE.Color(), SOOT = new THREE.Color(0.36, 0.33, 0.29);
 
 interface Bld { x: number; z: number; v: number; n: number; rot: number; sc: number; r: number; tb: number; tc: number; band: number; psi: number; fo: number; falls: boolean; crane: boolean }
 
@@ -177,16 +179,18 @@ export default class A4City extends Scene {
     this.B[this.tallest]!.tc = qBeat(bar(48.5));
     { const t = this.B[this.tallest]!; TALL.x = t.x; TALL.z = t.z; TALL.h = t.n * FH; }
     [...this.B].sort((a, b) => b.n - a.n).slice(0, 9).forEach((b) => (b.crane = true));
-    this.brk = this.B.map((b, bi) => Array.from({ length: b.n }, (_, i) => {
-      const p = new THREE.Vector3(), q = new THREE.Quaternion(), p0 = new THREE.Vector3(), q0 = new THREE.Quaternion();
-      let tau = 0.2;
-      for (; tau < 4; tau += 1 / 60) if (this.pose(b, bi, i, tau, p, q) < 0.02) break;
-      this.pose(b, bi, i, tau, p, q); this.pose(b, bi, i, tau - 1 / 60, p0, q0);
-      return { t: b.tc + tau, p, q, v: p.clone().sub(p0).multiplyScalar(60) };
-    }));
     // Hero close-up (bar 46-46.5): the camera stands at the foot of one tower as its lower floors burst into chunks.
     let hd = 1e9;
     this.B.forEach((b, bi) => { const d = Math.abs(b.tc - bar(45.85)); if (b.n >= 10 && bi !== this.tallest && d < hd) { hd = d; this.hero = bi; } });
+    this.brk = this.B.map((b, bi) => Array.from({ length: b.n }, (_, i) => {
+      const p = new THREE.Vector3(), q = new THREE.Quaternion(), p0 = new THREE.Vector3(), q0 = new THREE.Quaternion();
+      let tau = 0.2;
+      // Hero-tower slabs crack apart mid-fall as they slam into the floor below, rather than only on landing.
+      const crack = bi === this.hero ? 0.35 + 0.5 * h(b.fo + i, 29) : 0.02;
+      for (; tau < 4; tau += 1 / 60) if (this.pose(b, bi, i, tau, p, q) < crack) break;
+      this.pose(b, bi, i, tau, p, q); this.pose(b, bi, i, tau - 1 / 60, p0, q0);
+      return { t: b.tc + tau, p, q, v: p.clone().sub(p0).multiplyScalar(60) };
+    }));
     // Pick the clearest line of sight to it: sample around the tower and keep the angle whose sight line misses every other tower.
     const hb0 = this.B[this.hero];
     if (hb0) {
@@ -333,6 +337,9 @@ export default class A4City extends Scene {
         // Falling slabs pick up soot and dirt, unevenly per floor, so they read as concrete rather than card.
         if (tau > 0) this.c.lerp(grime, Math.min(0.7, tau * 0.6) * (0.4 + 0.6 * h(idx, 28)));
         I.color(idx, this.c, 'body');
+        // The cream floor plates (detail meshes) share the falling grime so the slabs don't stay pristine.
+        if (tau > 0) DC.copy(WHITE).multiplyScalar(0.8 + 0.15 * h(idx, 31)).lerp(SOOT, 0.3 + 0.4 * h(idx, 28));
+        I.color(idx, tau > 0 ? DC : WHITE, 'detail');
         // Windows: glass by day; at night each facade is one band of the mix; they die one by one on off-beats.
         const td = qBeat(bar(41) + h(idx, 27) * 3.6 * BAR, 2) + BEAT / 4;
         const alive = T < td ? 1 : 0;
