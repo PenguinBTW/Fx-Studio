@@ -79,10 +79,15 @@ float occ(vec2 uv, out float edge){
   float grow = pow(1.0 / H, uF * 1.25), m = 0.0;
   if (uS.x > 0.5 && uS.x < 2.5) {
     // Tunnel ribs / lens rings: concentric bands expanding past the camera.
+    // Thick extruded ribs: each has a lit inner bevel (the face toward the camera's path) and a dark outer body.
+    float ang = atan(p.y, p.x);
     for (int j = 0; j < 3; j++) {
-      float r = (0.16 + 0.11 * float(j)) * grow, w = 0.025 * grow;
-      float dd = abs(length(p) - r) - w;
-      m = max(m, smoothstep(0.004, -0.004, dd)); edge = max(edge, exp(-abs(dd + w * 0.7) * 260.0));
+      float r = (0.16 + 0.12 * float(j)) * grow, w = 0.055 * grow;
+      float rr = length(p), dd = abs(rr - r) - w;
+      float rib = smoothstep(0.006, -0.006, dd) * (0.75 + 0.25 * step(0.0, sin(ang * 8.0)));
+      m = max(m, rib);
+      float inner = clamp((r + w - rr) / (2.0 * w), 0.0, 1.0);
+      edge = max(edge, rib * (pow(inner, 4.0) * 0.9 + exp(-abs(rr - (r - w)) * 300.0)));
     }
   } else {
     // Towers / monoliths / paper strips: slabs either side of the opening sliding outward.

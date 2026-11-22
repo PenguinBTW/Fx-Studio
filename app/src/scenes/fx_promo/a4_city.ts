@@ -330,6 +330,8 @@ export default class A4City extends Scene {
         const m = decay * 1.3 - i / b.n - h(idx, 25) * 0.25;
         if (m > 0) this.c.lerp(h(idx, 26) < 0.55 ? moss : grime, Math.min(0.85, m * 2));
         if (tau > 0) this.c.lerp(ochre, Math.min(0.8, tau * 0.4));
+        // Falling slabs pick up soot and dirt, unevenly per floor, so they read as concrete rather than card.
+        if (tau > 0) this.c.lerp(grime, Math.min(0.7, tau * 0.6) * (0.4 + 0.6 * h(idx, 28)));
         I.color(idx, this.c, 'body');
         // Windows: glass by day; at night each facade is one band of the mix; they die one by one on off-beats.
         const td = qBeat(bar(41) + h(idx, 27) * 3.6 * BAR, 2) + BEAT / 4;

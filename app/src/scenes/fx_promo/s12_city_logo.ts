@@ -33,7 +33,8 @@ void main(){
     // Roofs: logo roofs are the letter faces, bone white with a cool rim; the rest dark with a few rooftop lights.
     vec2 q = abs(vL.xz) * 2.0;
     float rim = smoothstep(0.78, 0.98, max(q.x, q.y));
-    vec3 roof = uBone * (0.55 + 0.35 * uSeal) + uSig * rim * 0.6 * (1.0 - uSeal);
+    // Letter roofs are one uniform bright cap so each glyph reads as a clean shape from above; only outline towers get a rim.
+    vec3 roof = uBone * (1.0 + 0.6 * uSeal);
     roof = mix(roof, uSig * 2.2, vEdge * rim);
     float spot = step(0.93, hs(vec3(floor(vW.xz * 3.0), vSeed))) * 0.6;
     c = mix(base + vec3(1.0, 0.55, 0.25) * spot * 0.4, roof, logo);
