@@ -37,9 +37,19 @@ void main() { mat3 M; vec3 p0 = shardPos(position, uTauF, 0.0, ${R.toFixed(2)}, 
   vN = roty(uRot) * aD; vK = aK; vDepth = length(position) / ${R.toFixed(2)};
   vec4 w = modelMatrix * vec4(p, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
 const CORE_F = /* glsl */ `uniform float uT, uCore; varying vec2 vUv; varying vec3 vW; void main() {
-  float a = vUv.x * 6.2832, y = vUv.y; float s = 0.5 + 0.5 * sin(a * 7.0 + y * 30.0 - uT * 14.0) * sin(a * 3.0 - y * 11.0 + uT * 6.0);
-  float e = pow(s, 3.0) * smoothstep(0.0, 0.25, y) * smoothstep(1.0, 0.6, y);
+  float a = vUv.x * 6.2832, y = vUv.y; vec2 q = vec2(cos(a), sin(a)) * 1.3 + vec2(y * 4.0 - uT * 1.5, uT * 0.6 + y * 2.0);
+  float s = 0.0, am = 0.5; vec2 qq = q + vec2(y * 3.0, -uT * 2.0); for (int i = 0; i < 5; i++) { s += am * (0.5 + 0.5 * sin(qq.x * 2.1 + sin(qq.y * 1.7 + uT)) * sin(qq.y * 2.3 - uT * 1.3 + a * 2.0)); qq = mat2(1.6, 1.2, -1.2, 1.6) * qq; am *= 0.5; }
+  s = clamp(s * 1.25, 0.0, 1.0); float e = pow(s, 2.5) * smoothstep(0.0, 0.25, y) * smoothstep(1.0, 0.6, y) * (0.6 + 0.4 * sin(a * 2.0 - y * 18.0 + uT * 9.0));
   gl_FragColor = vec4(vec3(1.0, 0.5, 0.15) * e * 1.4 * uCore + vec3(1.0, 0.85, 0.6) * pow(s, 12.0) * 2.0 * uCore * e, 1.0); }`;
+
+const SPARK_V = /* glsl */ `uniform float uT, uCore, uT15; attribute vec3 aR; varying vec3 vC; varying float vA;
+void main() { float life = 0.8 + 1.6 * aR.z, t = mod(uT - uT15 + aR.x * 7.0, life), k = t / life;
+  float ang = aR.y * 6.2832 + t * (3.5 + 4.0 * (1.0 - aR.z)) * (1.0 - 0.5 * k); float rad = 0.4 + (0.6 + 3.8 * aR.x) * k + 0.3 * k * k * aR.y * 6.0;
+  vec3 p = vec3(cos(ang) * rad, -4.5 + 8.5 * (aR.z * 0.6 + 0.4 * k) + 1.5 * k * (aR.x - 0.3), sin(ang) * rad);
+  vec4 mv = viewMatrix * modelMatrix * vec4(p, 1.0); gl_Position = projectionMatrix * mv; float heat = 1.0 - k;
+  vC = mix(vec3(1.0, 0.25, 0.04), vec3(1.0, 0.85, 0.55), heat * heat) * (0.6 + 2.6 * heat); vA = uCore * smoothstep(0.0, 0.08, k) * (1.0 - k);
+  gl_PointSize = (1.0 + 3.0 * aR.y * aR.y) * 18.0 / max(-mv.z, 0.3); }`;
+const SPARK_F = 'varying vec3 vC; varying float vA; void main() { vec2 q = gl_PointCoord - 0.5; float d = dot(q, q); if (d > 0.25) discard; gl_FragColor = vec4(vC * vA * smoothstep(0.25, 0.0, d), 1.0); }';
 
 export default class S3Forge extends Scene {
   private layer = new Layer2D();
@@ -55,7 +65,11 @@ export default class S3Forge extends Scene {
     const sh = new THREE.Mesh(fractureSphere(R), new THREE.ShaderMaterial({ uniforms: this.u, vertexShader: VORTEX_V, fragmentShader: SHARD_F, side: THREE.DoubleSide })); sh.frustumCulled = false;
     const core = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 1.6, 8, 64, 1, true), new THREE.ShaderMaterial({ uniforms: this.u, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
       vertexShader: 'varying vec2 vUv; varying vec3 vW; void main() { vUv = uv; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }', fragmentShader: CORE_F }));
-    core.position.y = -1; this.scene.add(sh, core, starfield());
+    core.position.y = -1; const core2 = core.clone(); core2.scale.set(0.55, 1.1, 0.55); core2.rotation.y = 1.3; const core3 = core.clone(); core3.scale.set(1.6, 0.9, 1.6); core3.rotation.y = 2.6;
+    const NS = 9000, sa = new Float32Array(NS * 3); for (let i = 0; i < NS; i++) { const x = Math.sin(i * 12.9898) * 43758.5453, y = Math.sin(i * 78.233) * 12543.11, z = Math.sin(i * 39.425) * 24634.63; sa.set([x - Math.floor(x), y - Math.floor(y), z - Math.floor(z)], i * 3); }
+    const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(NS * 3), 3)); sg.setAttribute('aR', new THREE.BufferAttribute(sa, 3));
+    const sparks = new THREE.Points(sg, new THREE.ShaderMaterial({ uniforms: this.u, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexShader: SPARK_V, fragmentShader: SPARK_F })); sparks.frustumCulled = false;
+    this.scene.add(sh, core, core2, core3, sparks, starfield());
     const pm = new THREE.PMREMGenerator(this.ctx.renderer); this.env = pm.fromScene(new RoomEnvironment(), 0.04).texture; pm.dispose(); this.ctx.renderer.resetState();
     this.scene.environment = this.env; this.scene.environmentIntensity = 0.09;
     const key = new THREE.DirectionalLight(0xff9a60, 3.2); key.position.copy(SUN).multiplyScalar(10);
