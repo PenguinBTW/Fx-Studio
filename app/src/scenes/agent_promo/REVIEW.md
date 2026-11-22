@@ -49,7 +49,7 @@ real v1 still (`prints/v1_07`) with the live v2 render from the same camera.
 | TRUTH-2 | the on-screen prompt and "42 bytes" were invented | real verbatim excerpt of the user's request, real byte count (see Sources) |
 | TRUTH-3 | sha line had no recorded command | command recorded above; full digest in facts, truncation shown with an ellipsis |
 | TRUTH-4 | REVIEW totals vs rows, mojibake | totals reconciled, file re-encoded as UTF-8 |
-| TRUTH-5 | v2 rooftops (`lit_a` caps) clipped to white | caps get their own material: emissive 0.3 in A4 and A7 v2, 1.8 in A7 v1 |
+| TRUTH-5 | v2 rooftops (`lit_a` caps) clipped to white | caps get their own material: emissive 0.3 in A4 and A7 v2, 1.0 in A7 v1 |
 | TRUTH-6 | "i don't work alone." vs 1 sub-agent | line is now "i split the work." |
 | ART-1 | A2 lamp hotspot | spot 8 → 4, penumbra 0.55 → 0.9 |
 | ART-2 | "so i rewrite it." illegible on the v1 city | dark plate behind the line (`typeLine` `plate`) |
@@ -82,3 +82,20 @@ Round 1 verification (after the fixes):
 ## Later rounds (independent reviewer)
 
 Appended below per round: score (art direction / engine use), notes received, notes fixed, waived notes with reasons.
+
+### Round 2 (f59eb94): 7.8 art / 8.2 engine, 0 blockers, 9 notes, all addressed
+
+| id | note | fix |
+|---|---|---|
+| ART-r2-1 | A7 split v1 half reads as a white slab | the A6 red lasso and "+2 stops" are redrawn on the v1 half as the split opens; the still stays the real, unedited v1 |
+| REPO-r2-1 | master mix (with the song) committed | `master/agent_promo_mix.mp3` untracked and gitignored; it is still in earlier branch commits, so squash-merge (or a history rewrite) is needed before it leaves the branch |
+| TRUTH-r2-1 | "its last line." | "its last words." |
+| TRUTH-r2-2 | TRUTH-5 row said 1.8 | corrected to 1.0 |
+| ART-r2-2 | A2→A3 camera clips a column at 27.7 s | the dive arcs over the stacks (+1.1 m at mid-dive) |
+| ART-r2-3 | A11 cursor core blooms to white | emissive 6 → 2.2; core is orange at 210 s |
+| AUD-r2-1 | `t.rewind`/`a8.same` in the reserved 1–4 kHz band | 2400 → 5600 Hz, 2640 → 5280 Hz; stems and mix regenerated |
+| ENG-r2-1 | cloned materials never disposed | `kit.release()` frees geometry, materials and shadow maps; every scene calls it in `dispose()` |
+| ENG-r2-2 | project code toggles the global `recordText` | moved to the engine: `markTextureCanvas()` in `engine/bridge.ts`, and the 2D text probe skips marked canvases |
+
+Verification after round 2: the frame hash at 128.98333 s changed because the A7 lasso is visible in that transition frame. It is now
+`3ddee955…` in two processes and after a 104 s seek, and `facts.frameHash` is updated. `bun run test`, `typecheck` and `assets:check` pass.
