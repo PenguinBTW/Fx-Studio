@@ -179,7 +179,8 @@ export default class S4Verbs extends Scene {
     P('pen', 1.0, 0.02, 1.3); P('scissors', 1.35, 0.003, 1.62, Math.PI); P('inkpad', -1.9, 0, -0.9); P('stamp', -1.9, 0.07, -0.9); P('drive', -3.4, 0, 1.0); P('floppy', -3.4, 0.004, 2.7);
     P('deck', 3.8, 0, -2.3, -0.15); P('lock', -1.0, 0, 2.4, 0.35); P('matchbox', 2.75, 0, 2.7, 0.4); P('match', 2.4, 0.18, 2.55, 0.5); P('bell', 4.7, 0, 0.9); P('mag', -1.7, 0.05, 1.0); P('mug', -4.9, 0, -1.6); P('plug', 6.2, 0.31, -2.0, -0.15);
     this.mkMotes(); this.mkText();
-    const o = { type: THREE.HalfFloatType, depthBuffer: true }; this.rtTmp = new THREE.WebGLRenderTarget(this.ctx.W, this.ctx.H, o); this.rtAcc = new THREE.WebGLRenderTarget(this.ctx.W, this.ctx.H, o);
+    const o = { type: THREE.HalfFloatType, depthBuffer: true }; // whip sub-frames render at half resolution: they are smeared anyway, and it keeps software-WebGL frames in budget
+    const hw = Math.ceil(this.ctx.W / 2), hh = Math.ceil(this.ctx.H / 2); this.rtTmp = new THREE.WebGLRenderTarget(hw, hh, o); this.rtAcc = new THREE.WebGLRenderTarget(hw, hh, o);
   }
 
   private mkMotes() {
@@ -325,11 +326,21 @@ export default class S4Verbs extends Scene {
     const shAuto = rr.shadowMap.autoUpdate; rr.shadowMap.autoUpdate = false; rr.shadowMap.needsUpdate = true;
     const draw = (target: THREE.WebGLRenderTarget, cam: THREE.Camera, clear: boolean) => { rr.setRenderTarget(target); if (clear) { rr.setClearColor(0x000000, 1); rr.clear(true, true, true); } rr.render(this.scene, cam); };
     if (b <= 9) {
-      const WH = 0.075, shut = 1 / 60 / BARL, s = SHOTS[b]!, prev = b > 0 ? SHOTS[b - 1] : undefined, N = prev && q < WH + shut ? 48 : 1;
+      const WH = 0.075, shut = 1 / 96 / BARL, s = SHOTS[b]!, prev = b > 0 ? SHOTS[b - 1] : undefined, N = prev && q < WH + shut ? 32 : 1;
       const camAt = (qq: number) => this.place(this.cam, s, Math.max(0, qq), 16 / 9, prev && qq < WH ? { s: prev, e: ease(Math.max(0, qq) / WH) } : undefined);
-      for (let i = 0; i < N - 1; i++) { camAt(q - shut * (1 - (i + 0.5 * Math.sin(i * 12.9898 + T * 78.233)) / (N - 1))); this.moteU.uFocus.value = focus; draw(this.rtTmp, this.cam, true); this.ctx.comp.draw(rr, this.rtTmp.texture, this.rtAcc, { mode: 'normal', opacity: 1 / (i + 1) }); }
-      focus = camAt(q); this.moteU.uFocus.value = focus; draw(out, this.cam, true);
-      if (N > 1) { this.ctx.comp.draw(rr, this.rtAcc.texture, out, { mode: 'normal', opacity: (N - 1) / N }); whip = 1 - q / (WH + shut); }
+      // screen-space step between sub-frames, measured at the focus point: used to fill the gaps between samples
+      let du = 0, dv = 0;
+      if (N > 1) {
+        const f1 = camAt(q), P = this.cam.getWorldDirection(new THREE.Vector3()).multiplyScalar(f1).add(this.cam.position), p1 = P.clone().project(this.cam);
+        camAt(q - shut); const p0 = P.project(this.cam); du = (p1.x - p0.x) / 2 / (N - 1); dv = (p1.y - p0.y) / 2 / (N - 1);
+      }
+      for (let i = 0; i < N - 1; i++) { camAt(q - shut * (1 - (i + 0.5 * Math.sin(i * 12.9898 + T * 78.233)) / (N - 1))); this.moteU.uFocus.value = focus; this.moteU.uPx.value = Ht / 2160; draw(this.rtTmp, this.cam, true); this.ctx.comp.draw(rr, this.rtTmp.texture, this.rtAcc, { mode: 'normal', opacity: 1 / (i + 1) }); }
+      focus = camAt(q); this.moteU.uFocus.value = focus; this.moteU.uPx.value = Ht / 1080; draw(out, this.cam, true);
+      if (N > 1) {
+        // 4 taps along the motion step blur the stepping out of thin bright edges (the magnifier ring)
+        for (let j = 0; j < 4; j++) this.ctx.comp.draw(rr, this.rtAcc.texture, this.rtTmp, { mode: j ? 'normal' : 'replace', opacity: 1 / (j + 1), offset: [du * (j / 4 - 0.375), dv * (j / 4 - 0.375)] });
+        this.ctx.comp.draw(rr, this.rtTmp.texture, out, { mode: 'normal', opacity: (N - 1) / N }); whip = 1 - q / (WH + shut);
+      }
       this.callout(g, k, T, this.cam, [0, 0, 1920, 1080], alpha * (prev ? sm(WH, WH * 1.6, q) : 1));
     } else if (b === 11 && beat === 3) {
       focus = this.topDown(this.cam, (q - 0.75) / 0.02); this.moteU.uFocus.value = focus; draw(out, this.cam, true);

@@ -12,7 +12,7 @@ const vec2 gH0 = vec2(0.312, 0.392); // the sheet's half-size in the top-down de
 float mapA; float gBack;
 vec3 S(sampler2D T, vec2 q) { return texture2D(T, mix(q, gC + (q - 0.5) * 2.0 * gH0, mapA)).rgb; }
 // back faces: plain paper with a faint mirrored show-through of the ink; lit by the desk light in main()
-vec3 back(vec3 src, float c, float g) { gBack = 1.0; float lum = dot(src, vec3(0.3, 0.55, 0.15)); return PAPER * (0.92 - 0.3 * (1.0 - smoothstep(0.15, 0.6, lum))) * (0.72 + 0.28 * (-c)) * (1.0 - 0.25 * smoothstep(0.95, 1.0, g)); }
+vec3 back(vec3 src, float c, float g) { gBack = 1.0; float lum = dot(src, vec3(0.3, 0.55, 0.15)); return PAPER * (0.94 - 0.42 * (1.0 - smoothstep(0.2, 0.9, lum))) * (0.72 + 0.28 * (-c)) * (1.0 - 0.25 * smoothstep(0.95, 1.0, g)); }
 vec4 f1(vec2 p, float th, sampler2D T) {
   float c = cos(th), sn = sin(th), Y = p.y - 0.5, den = c + K * Y * sn;
   if (abs(den) > 1e-4) { float s = Y / den;
