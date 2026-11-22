@@ -13,73 +13,73 @@
       "scene": "agent_teaser/t00_fire",
       "id": "t00_fire",
       "start": 0.0,
-      "end": 2.2196
+      "end": 2.3196
     },
     {
       "scene": "agent_teaser/t01_world",
       "id": "t01_world",
       "start": 1.8696,
-      "end": 4.0891
+      "end": 4.3391
     },
     {
       "scene": "agent_teaser/t02_crumble",
       "id": "t02_crumble",
       "start": 3.7391,
-      "end": 5.9587
+      "end": 6.2087
     },
     {
       "scene": "agent_teaser/t03_forge",
       "id": "t03_forge",
       "start": 5.6087,
-      "end": 7.8283
+      "end": 7.9283
     },
     {
       "scene": "agent_teaser/t04_paper",
       "id": "t04_paper",
       "start": 7.4783,
-      "end": 9.6978
+      "end": 9.9478
     },
     {
       "scene": "agent_teaser/t05_comic",
       "id": "t05_comic",
       "start": 9.3478,
-      "end": 11.5674
+      "end": 11.6674
     },
     {
       "scene": "agent_teaser/t06_roulette",
       "id": "t06_roulette",
       "start": 11.2174,
-      "end": 15.3066
+      "end": 15.5566
     },
     {
       "scene": "agent_teaser/t08_fire",
       "id": "t08_fire",
       "start": 14.9566,
-      "end": 19.0457
+      "end": 19.2957
     },
     {
       "scene": "agent_teaser/t10_ocean",
       "id": "t10_ocean",
       "start": 18.6957,
-      "end": 20.9153
+      "end": 21.0153
     },
     {
       "scene": "agent_teaser/t11_zoom",
       "id": "t11_zoom",
       "start": 20.5653,
-      "end": 22.7848
+      "end": 23.1348
     },
     {
       "scene": "agent_teaser/t12_rush",
       "id": "t12_rush",
       "start": 22.4348,
-      "end": 24.6544
+      "end": 25.3044
     },
     {
       "scene": "agent_teaser/t13_quiet",
       "id": "t13_quiet",
       "start": 24.3044,
-      "end": 26.524
+      "end": 26.974
     },
     {
       "scene": "agent_teaser/t14_logo",
@@ -95,7 +95,7 @@
       "from": "t00_fire",
       "to": "t01_world",
       "at": 1.8696,
-      "dur": 0.3
+      "dur": 0.45
     },
     {
       "id": "t-01",
@@ -103,7 +103,7 @@
       "from": "t01_world",
       "to": "t02_crumble",
       "at": 3.7391,
-      "dur": 0.3
+      "dur": 0.6
     },
     {
       "id": "t-02",
@@ -111,15 +111,15 @@
       "from": "t02_crumble",
       "to": "t03_forge",
       "at": 5.6087,
-      "dur": 0.3
+      "dur": 0.6
     },
     {
       "id": "t-03",
-      "transition": "v2_fold",
+      "transition": "v2_flash",
       "from": "t03_forge",
       "to": "t04_paper",
       "at": 7.4783,
-      "dur": 0.3
+      "dur": 0.45
     },
     {
       "id": "t-04",
@@ -127,7 +127,7 @@
       "from": "t04_paper",
       "to": "t05_comic",
       "at": 9.3478,
-      "dur": 0.3
+      "dur": 0.6
     },
     {
       "id": "t-05",
@@ -135,7 +135,7 @@
       "from": "t05_comic",
       "to": "t06_roulette",
       "at": 11.2174,
-      "dur": 0.3
+      "dur": 0.45
     },
     {
       "id": "t-06",
@@ -143,7 +143,7 @@
       "from": "t06_roulette",
       "to": "t08_fire",
       "at": 14.9566,
-      "dur": 0.3
+      "dur": 0.6
     },
     {
       "id": "t-07",
@@ -151,7 +151,7 @@
       "from": "t08_fire",
       "to": "t10_ocean",
       "at": 18.6957,
-      "dur": 0.3
+      "dur": 0.6
     },
     {
       "id": "t-08",
@@ -159,7 +159,7 @@
       "from": "t10_ocean",
       "to": "t11_zoom",
       "at": 20.5653,
-      "dur": 0.3
+      "dur": 0.45
     },
     {
       "id": "t-09",
@@ -167,7 +167,7 @@
       "from": "t11_zoom",
       "to": "t12_rush",
       "at": 22.4348,
-      "dur": 0.3
+      "dur": 0.7
     },
     {
       "id": "t-10",
@@ -175,7 +175,7 @@
       "from": "t12_rush",
       "to": "t13_quiet",
       "at": 24.3044,
-      "dur": 0.3
+      "dur": 1.0
     },
     {
       "id": "t-11",
@@ -183,7 +183,7 @@
       "from": "t13_quiet",
       "to": "t14_logo",
       "at": 26.174,
-      "dur": 0.3
+      "dur": 0.8
     }
   ]
 }
