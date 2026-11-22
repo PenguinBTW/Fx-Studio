@@ -7,6 +7,6 @@ void main(){ vec2 p=vUv-0.5; float s=exp(-pow((u-0.48)*9.0,2.0)); vec2 qa=0.5+p*
   vec3 st=vec3(0.0); for(int i=-8;i<=8;i++){ vec3 sA=texture2D(texA,qa+vec2(float(i)*0.03,0.0)).rgb; st+=max(sA-0.55,0.0)*exp(-abs(float(i))*0.35); }
   A+=st*vec3(0.6,0.8,1.2)*0.35*(0.2+u);
   vec3 aft=texture2D(texA,0.5+p*0.94).rgb; float lf=dot(aft,vec3(0.3,0.59,0.11)); B=mix(B,B*vec3(0.55,0.75,1.1)+vec3(0.12,0.0,0.15)*lf,smoothstep(0.45,0.6,u)*(1.0-smoothstep(0.6,1.0,u))*0.5);
-  vec3 c=mix(A,B,smoothstep(0.44,0.52,u)); c=mix(c,vec3(1.0,0.97,0.92),s); gl_FragColor=vec4(c,1.0);}`;
+  vec3 c=mix(A,B,smoothstep(0.44,0.52,u)); c=mix(c,vec3(1.0,0.97,0.92),0.42*s)+0.5*s*c; gl_FragColor=vec4(c,1.0);}`;
 
 export default v2Transition(FRAG, { dur: 0.45 });
