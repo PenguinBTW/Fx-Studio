@@ -7,12 +7,12 @@
   "sampleRate": 48000,
   "bitDepth": 24,
   "channels": 2,
-  "durationSec": 5.007625,
+  "durationSec": 5.708708333333333,
   "hitOffsetSec": 0,
   "peak": 0.5011872336272722,
   "peakDb": -6.000000000000001,
-  "rms": 0.029732805613801594,
-  "rmsDb": -30.53528216901058,
+  "rms": 0.02971792625713932,
+  "rmsDb": -30.539629986051185,
   "eventTime": null,
   "startTime": null
 }

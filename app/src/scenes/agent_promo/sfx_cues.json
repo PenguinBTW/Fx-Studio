@@ -7,7 +7,7 @@
       "seed": 44,
       "at": 0.45,
       "params": {
-        "count": 42,
+        "count": 48,
         "spacing": 0.058823529411764705,
         "freq": 5200,
         "spread": 5,
@@ -34,7 +34,7 @@
       "seed": 118,
       "at": 7.457,
       "params": {
-        "count": 42,
+        "count": 48,
         "spacing": 0.116848125,
         "freq": 5200,
         "spread": 3,
@@ -463,8 +463,7 @@
       "seed": 1413,
       "at": 106.594,
       "params": {
-        "rise": 1.6,
-        "tail": 0.4
+        "dur": 1.6
       }
     },
     {
