@@ -164,7 +164,6 @@ export default class S11Mark extends Scene {
       U.uSeal!.value = seal;
       U.uSweep!.value = -5 + 10 * ease.inOutCubic(clamp(ph * 1.6));
       U.uFlash!.value = (hit === g.k ? 1.2 : 0) * Math.exp(-(beatF - beatN) * 4) * (1 - seal);
-      (U.uOff!.value as THREE.Vector2).set(-this.cam.position.x * 0.012 + (hash(g.k, 3) - 0.5) * 0.06, -this.cam.position.y * 0.012);
     });
     for (const m of this.ribbons) m.update(T);
     const su = (this.sky.material as THREE.ShaderMaterial).uniforms;
@@ -195,6 +194,7 @@ export default class S11Mark extends Scene {
       v.set(g.box.min.x, g.box.min.y, g.box.max.z).project(this.cam);
       const h = Math.max(4, Math.abs(ty - (v.y * 0.5 + 0.5) * out.height));
       (g.u.uBox!.value as THREE.Vector3).set(cx, cy, h);
+      (g.u.uOff!.value as THREE.Vector2).set(-this.cam.position.x * 0.012 + (hash(g.k, 3) - 0.5) * 0.06, -this.cam.position.y * 0.012);
     }
     r.localClippingEnabled = true;
     r.setRenderTarget(out);
