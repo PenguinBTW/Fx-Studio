@@ -111,7 +111,7 @@ export default class S11Mark extends Scene {
       fragmentShader: SKY_FS,
     }));
     this.scene.add(this.sky);
-    this.floor = new Reflector(new THREE.PlaneGeometry(400, 400), { textureWidth: 960, textureHeight: 540, clipBias: 0.003, color: new THREE.Color(...lin(C.signal, 0.12)).addScalar(0.002), shader: FLOOR });
+    this.floor = new Reflector(new THREE.PlaneGeometry(400, 400), { textureWidth: 960, textureHeight: 540, clipBias: 0.003, color: new THREE.Color(...lin(C.signal, 0.06)).addScalar(0.002), shader: FLOOR });
     this.floor.rotation.x = -Math.PI / 2;
     this.floor.position.y = -1.32;
     // The URL stays out of the mirror: its blurred reflection read as a garbled strip under it.
