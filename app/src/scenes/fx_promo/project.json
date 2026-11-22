@@ -309,7 +309,7 @@
     },
     {
       "id": "t-multiverse",
-      "transition": "fxp_multiverse",
+      "transition": "fxp_infinite_zoom",
       "from": "recap7_s7_tunnel",
       "to": "s10_finale",
       "at": 196.15,
