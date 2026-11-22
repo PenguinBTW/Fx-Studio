@@ -122,11 +122,15 @@ TONG = [(x, table(JAW, x)[0] * 0.8, 0.004, 0.004, -0.03, 2.0) for x in span(9.3,
 jm = loft(TONG, 'jawmouth', span(9.3, 10.74, 0.01), 24); assign(jm, MO)
 # teeth: upper row follows the lip outline, big canines near the front
 up, lo = [], []
-for i in range(16):
-    x = 9.58 + i * 0.074; w, zb, _ = under(x); can = math.exp(-((x - 10.55) / 0.04) ** 2)
+xs, xq = [], 9.58
+for i in range(40):
+    if xq > 10.72: break
+    xs.append(xq); xq += 0.07 + 0.09 * ((i * 0.7548776) % 1) ** 2
+for i, x in enumerate(xs):
+    w, zb, _ = under(x); can = math.exp(-((x - 10.55) / 0.04) ** 2)
     for s in (-1, 1):
-        hj = ((i * 7 + (s + 1) * 13) * 0.6180339) % 1; L_ = 0.035 + 0.07 * can + 0.045 * hj * hj + 0.03 * (i % 3 == 0)
-        up.append(fang((x + 0.02 * (hj - 0.5), (w - 0.03) * s, zb + 0.02), L_, 0.012 + 0.012 * can + 0.006 * hj, (-0.15 - 0.2 * (hj - 0.5), (0.05 + 0.08 * (hj - 0.5)) * s, -1), (0.25 + 0.2 * hj, 0, 0)))
+        hj = ((i * 7 + (s + 1) * 13) * 0.6180339) % 1; L_ = 0.03 + 0.08 * can + 0.07 * hj * hj + 0.025 * (i % 4 == 1)
+        up.append(fang((x + 0.02 * (hj - 0.5), (w - 0.03) * s, zb + 0.02), L_, 0.012 + 0.012 * can + 0.006 * hj, (-0.15 - 0.2 * (hj - 0.5), (0.05 + 0.08 * (hj - 0.5)) * s, -1), (0.35 + 0.35 * hj, 0, 0)))
         wj = table(JAW, x + 0.03)[0]; cl = math.exp(-((x - 10.42) / 0.04) ** 2)
         hk = ((i * 11 + (s + 1) * 5) * 0.381966) % 1; lo.append(fang((x + 0.03, (wj - 0.035) * s, -0.04), 0.03 + 0.06 * cl + 0.035 * hk * hk, 0.01 + 0.008 * cl + 0.005 * hk, (-0.1 + 0.2 * (hk - 0.5), 0.03 * s, 1), (0.2 + 0.15 * hk, 0, 0)))
 teeth = join(up, 'teeth'); assign(teeth, TO)
