@@ -441,7 +441,7 @@
         "source": "noise",
         "lead": 0.6,
         "tail": 0.6,
-        "freq": 2400
+        "freq": 5600
       }
     },
     {
@@ -518,7 +518,7 @@
       "seed": 1598,
       "at": 139.296,
       "params": {
-        "freq": 2640,
+        "freq": 5280,
         "decay": 1.2,
         "leadIn": 0.9
       }
