@@ -26,7 +26,7 @@ export const LOOKS: Look[] = [
   { m: STYLE.glass, paper: 0, fold: 0, a: 0x40062a, b: 0xe02a80, pat: 3, tag: 'stained-glass' },
   { m: STYLE.woodblock, paper: 0, fold: 0, a: 0xf2e6cc, b: 0xc8301e, pat: 0, tag: 'woodblock' },
   { m: STYLE.xray, paper: 0, fold: 0, a: 0x000000, b: 0x06222a, pat: 1, tag: 'x-ray' },
-  { m: STYLE.paint, paper: 0, fold: 0, a: 0xe86a1a, b: 0x2a4a8a, pat: 0, tag: 'oil-paint' },
+  { m: STYLE.paint, paper: 1, fold: 0, a: 0xe86a1a, b: 0x2a4a8a, pat: 0, tag: 'oil-paint' },
   { m: STYLE.none, paper: 1, fold: 0, a: 0xece2cc, b: 0xb8a888, pat: 2, tag: 'paper' },
 ];
 /** look index + start time of the current slot: one per beat for 4 bars, then one per half beat */

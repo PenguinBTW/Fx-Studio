@@ -49,7 +49,8 @@ void main() {
     float cs = 12.0; vec2 q = (floor(frag / cs) + 0.5) * cs; vec3 s = src(q / uRes); float l = L(s) * 1.4;
     int n = l < 0.08 ? 0 : l < 0.16 ? 4096 : l < 0.26 ? 65600 : l < 0.36 ? 332772 : l < 0.48 ? 15255086 : l < 0.6 ? 23385164 : l < 0.72 ? 15252014 : l < 0.85 ? 13199452 : 11512810;
     vec2 p = mod(frag / cs * 2.0, 2.0) - 1.0;
-    o = vec3(0.35, 1.0, 0.55) * glyph(n, p) * (0.4 + 0.8 * l);
+    vec3 hue = s / max(max(s.r, max(s.g, s.b)), 1e-3);
+    o = mix(vec3(0.35, 1.0, 0.55), hue, 0.35) * glyph(n, p) * (0.5 + 1.0 * l) + s * 0.07;
   } else if (uMode == 4) {
     float e = edges(uv, 1.5); vec2 g = abs(fract(frag / 48.0) - 0.5); float grid = smoothstep(0.485, 0.5, max(g.x, g.y));
     vec2 g2 = abs(fract(frag / 12.0) - 0.5); float fine = smoothstep(0.47, 0.5, max(g2.x, g2.y));
@@ -58,10 +59,15 @@ void main() {
     float d = lin(uv); float t = L(c) * 1.3 + 0.35 * smoothstep(30.0, 3.0, d) - 0.1; o = heatPal(t + 0.03 * h21(frag + uTime));
   } else if (uMode == 6) {
     vec3 m[4]; vec3 v[4]; for (int k = 0; k < 4; k++) { m[k] = vec3(0); v[k] = vec3(0); }
-    for (int j = -5; j <= 5; j++) for (int i = -5; i <= 5; i++) { vec3 s = src(uv + vec2(i, j) / uRes);
+    for (int j = -5; j <= 5; j++) for (int i = -5; i <= 5; i++) { vec3 s = src(uv + vec2(i, j) * 2.0 / uRes);
       int k = (i <= 0 ? 0 : 1) + (j <= 0 ? 0 : 2); m[k] += s; v[k] += s * s; }
     float best = 1e9; for (int k = 0; k < 4; k++) { vec3 mu = m[k] / 36.0; vec3 va = abs(v[k] / 36.0 - mu * mu); float s = va.r + va.g + va.b; if (s < best) { best = s; o = mu; } }
-    o = pow(o, vec3(0.9)) * 1.15; o = mix(vec3(L(o)), o, 1.45);
+    vec2 gr = vec2(L(src(uv + vec2(3.0, 0.0) / uRes)) - L(src(uv - vec2(3.0, 0.0) / uRes)), L(src(uv + vec2(0.0, 3.0) / uRes)) - L(src(uv - vec2(0.0, 3.0) / uRes)));
+    float an = atan(gr.y, gr.x) + 1.5708; vec2 sp = mat2(cos(an), sin(an), -sin(an), cos(an)) * frag / vec2(22.0, 3.5);
+    vec2 fi = floor(sp), ff = fract(sp); ff = ff * ff * (3.0 - 2.0 * ff);
+    float st = mix(mix(h21(fi), h21(fi + vec2(1, 0)), ff.x), mix(h21(fi + vec2(0, 1)), h21(fi + vec2(1, 1)), ff.x), ff.y);
+    o = pow(o, vec3(0.9)) * 1.15; o = mix(o, mix(vec3(0.12, 0.22, 0.55), vec3(1.0, 0.62, 0.28), smoothstep(0.1, 0.75, L(o))) * (0.6 + L(o)), 0.45); o = mix(vec3(L(o)), o, 1.6) * (0.84 + 0.3 * st) * (0.95 + 0.05 * sin(frag.x * 1.7) * sin(frag.y * 1.7));
+    o += vec3(1.0, 0.95, 0.85) * 0.25 * smoothstep(0.02, 0.0, abs(L(o) - 0.7) - 0.0) * st * 0.3;
   } else if (uMode == 7) {
     float e = edges(uv, 1.5); float l = L(c); o = vec3(0.55, 0.85, 1.0) * (pow(1.0 - l, 3.0) * 0.12 + e * 0.9 + l * 0.5);
   } else if (uMode == 8) {
