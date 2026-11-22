@@ -9,7 +9,7 @@ bar map, `visual_plan.md` for the art direction, `REVIEW.md` for the review roun
 The song is copyrighted and is not in git. To render with sound, put the cut at `app/public/audio/agent_cut.mp3`
 (the path `mix.json` expects) and its analysis at `app/public/data/agent_promo/audio.json`. The picture does not need
 either: A2 and A6 read the song's loudness from the baked `rms.json`, and timing comes from `kit.ts` (`BAR`, `B0`).
-`master/agent_promo_mix.mp3` is the finished mix (song + procedural SFX at -18 to -24 dB under the music).
+`master/agent_promo_mix.mp3` is the finished mix (song + procedural SFX at -18 to -24 dB under the music). It contains the song, so it is gitignored: build it locally with the mixdown command below.
 
 ## Rebuild
 
