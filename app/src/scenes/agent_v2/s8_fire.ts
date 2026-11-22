@@ -92,7 +92,7 @@ export default class S8Fire extends Scene {
     rr.setRenderTarget(out); rr.setClearColor(0x020203, 1); rr.clear(true, true, true); rr.render(this.scene, this.cam);
     const g = this.layer.ctx; this.layer.clear(); term(g, S8_LINES, T, { size: 46, x: 200, align: 'left', y: 930, halo: 'rgba(0,0,0,0.6)', alpha: overlayTextDuck(f.tin, f.tout) });
     this.ctx.comp.draw(rr, this.layer.upload(), out, { mode: 'normal', opacity: 1 }); rr.resetState();
-    return { toneMap: 'aces', exposure: 0.8, bloom: 0.4 + 0.15 * b, bloomThreshold: 0.75, halation: 0.6, vignette: 0.5, grain: 0.06, ca: 0.3 + 0.8 * b, zoom: 1 + 0.01 * b };
+    return { toneMap: 'aces', exposure: 0.66, bloom: 0.3 + 0.1 * b, bloomThreshold: 0.92, halation: 0.6, vignette: 0.5, grain: 0.06, ca: 0.3 + 0.8 * b, zoom: 1 + 0.01 * b };
   }
   private buildClouds() {
     const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d')!; let s = 31; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;

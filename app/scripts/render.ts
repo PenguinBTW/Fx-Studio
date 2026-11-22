@@ -232,7 +232,7 @@ async function stills(page: Page, times: number[], outDir: string) {
         const pngBuf = await framePromise;
         await Bun.write(f, pngBuf);
       } else {
-        await page.screenshot({ path: f, clip: { x: 0, y: 0, width: 1920, height: 1080 } });
+        await page.screenshot({ path: f, clip: { x: 0, y: 0, width: 1920, height: 1080 }, timeout: 120000 });
       }
       files.push(f);
     }
@@ -355,10 +355,11 @@ async function video(page: Page, from: number, to: number, fps: number, out: str
   const defaultAudio = path.join(APP, 'public/audio/audio.mp3');
   let audio = explicitAudio ? resolveOut(explicitAudio) : (existsSync(defaultAudio) ? defaultAudio : '');
   let mixPath = opt('mix');
+  let audioFadeOut: number | undefined;
   if (!explicitAudio && !mixPath && !flag('noaudio')) {
     const { manifest, at } = await loadProject();
     const master = at(manifest.audio);
-    if (master && existsSync(master)) { audio = master; console.log(`[render] audio: ${master} (project.json "audio")`); }
+    if (master && existsSync(master)) { audio = master; audioFadeOut = manifest.audioFadeOut; console.log(`[render] audio: ${master} (project.json "audio")`); }
     else if (manifest.mix) { mixPath = at(manifest.mix); console.log(`[render] audio: mixdown of ${mixPath} (project.json "mix")`); }
   }
   let hasAudio = !flag('noaudio') && existsSync(audio);
@@ -406,6 +407,7 @@ async function video(page: Page, from: number, to: number, fps: number, out: str
     from,
     to,
     audioTrack: hasAudio ? audio : undefined,
+    audioFadeOut,
     audioMixed: mixedAudio || undefined,
     transparent: flag('transparent') || format === 'webm-alpha' || format === 'prores-4444',
     gpu: gpuEncode,

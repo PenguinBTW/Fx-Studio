@@ -1,6 +1,7 @@
 {
   "project": "agent_v2",
   "audio": "../../../public/audio/agent_cut.mp3",
+  "audioFadeOut": 1.8,
   "entries": [
     {
       "scene": "agent_v2/s0_open",
@@ -96,7 +97,7 @@
       "scene": "agent_v2/s15_logo",
       "id": "s15_logo",
       "start": 188.3,
-      "end": 224.436
+      "end": 211.24
     }
   ],
   "transitions": [

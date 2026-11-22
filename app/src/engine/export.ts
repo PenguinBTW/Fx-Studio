@@ -75,6 +75,8 @@ export interface ExportVideoOptions {
   from?: number;
   to?: number;
   audioTrack?: string;
+  /** seconds of audio fade-out ending at `to` (for films that end before their soundtrack does) */
+  audioFadeOut?: number;
   /** audioTrack is a finished mixdown already windowed to [from,to]: no -ss/-t, explicit pad/trim instead of -shortest. */
   audioMixed?: boolean;
   transparent?: boolean;
@@ -202,6 +204,9 @@ export class ExportPipeline {
 
     // Video filter: vertical flip (WebGL framebuffer readback is inverted)
     args.push('-vf', 'vflip');
+    if (opts.audioTrack && opts.audioFadeOut && opts.from !== undefined && opts.to !== undefined) {
+      args.push('-af', `afade=t=out:st=${Math.max(0, opts.to - opts.from - opts.audioFadeOut)}:d=${opts.audioFadeOut}`);
+    }
 
     // Codec & encoding options
     const effectiveCrf = opts.crf ?? preset.defaultCrf;

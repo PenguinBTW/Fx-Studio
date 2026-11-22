@@ -15,7 +15,7 @@ import { DragonRig, LEN } from './rig';
 import { StylePass, STYLE } from './style';
 import type { PathFn } from './dragon';
 
-export const T101 = bar(101), T_LOCK = bar(103), END = 224.436;
+export const T101 = bar(101), T_LOCK = bar(103), END = bar(113);
 const SEQ = [STYLE.blueprint, STYLE.ascii, STYLE.pixel, STYLE.comic, STYLE.thermal, STYLE.glass, STYLE.woodblock, STYLE.xray];
 export const S15_LINES: TLine[] = [{ text: 'enjoy.', at: bar(105) + 0.1, hold: 4.2, cps: 10 }];
 const sm = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -54,14 +54,14 @@ export default class S15Logo extends Scene {
     const blink = T < T_LOCK + 0.4 || Math.floor((T - T_LOCK) / BEAT) % 2 === 0 ? 1 : 0.12; this.curMat.emissiveIntensity = 2.4 * blink;
     const ph = lock ? (T - T_LOCK) % (2 * BAR) : 0, sw = sm(0.05, 1.6, ph); this.sweep.position.set(-9 + 18 * sw, 5, 7); this.sweep.target.position.set(-4 + 8 * sw, 0.4, 0); this.sweep.intensity = lock ? 160 * Math.sin(Math.PI * sw) : 0;
     const settle = lock ? Math.exp(-(T - T_LOCK) * 6) : 0, push = sm(T_LOCK, END, T), pre = 1 - sm(T101, T_LOCK, T);
-    const az = lock ? 0.22 * Math.sin((T - T_LOCK) * 0.11) : 0, rad = 8.2 + 3 * pre - 3.2 * push + 0.6 * settle;
-    this.cam.position.set(0.2 + 2.2 * pre * Math.sin((T - T101) * 0.9) + rad * Math.sin(az), 0.35 + 1.2 * pre + 0.5 * push, rad * Math.cos(az)); this.cam.lookAt(0.2, 0.15, 0); this.cam.updateProjectionMatrix();
+    const az = lock ? 0.06 * Math.sin((T - T_LOCK) * 0.2) : 0, rad = 8.2 + 3 * pre - 2.0 * push + 0.6 * settle;
+    this.cam.position.set(0.2 + 2.2 * pre * Math.sin((T - T101) * 0.9) + rad * Math.sin(az), 0.35 + 1.2 * pre, rad * Math.cos(az)); this.cam.lookAt(0.2 - 0.25 * (1 - pre), 0.15 - 0.4 * (1 - pre), 0); this.cam.updateProjectionMatrix();
     this.style.render(rr, this.scene, this.cam, out, mode, T); rr.resetState();
     const g = this.layer.ctx; this.layer.clear(); const duck = overlayTextDuck(f.tin, f.tout);
     term(g, S15_LINES, T, { size: 46, align: 'center', x: 960, y: 900, color: '#f4efe6', cursor: '#ff4d12', alpha: duck });
     if (T >= bar(110)) { const a = sm(bar(110), bar(110) + 0.8, T) * duck; g.save(); g.globalAlpha = a; g.fillStyle = 'rgba(244,239,230,0.6)'; g.font = font(F.mono(500), 24); g.letterSpacing = '6px'; g.textAlign = 'center'; g.fillText('GITHUB.COM/PENGUINBTW/FX-STUDIO', 960, 985); g.fillStyle = 'rgba(255,77,18,0.8)'; g.fillRect(930, 1006, 60, 2); g.restore(); }
     this.ctx.comp.draw(rr, this.layer.upload(), out, { mode: 'normal', opacity: 1 }); rr.resetState();
-    const fade = 1 - sm(bar(117), END - 0.6, T), kick = lock ? 0 : Math.exp(-(T - T101 - k * BEAT) * 12);
+    const fade = 1 - sm(bar(112), END - 0.25, T), kick = lock ? 0 : Math.exp(-(T - T101 - k * BEAT) * 12);
     return { toneMap: 'aces', exposure: 1.0 * fade + 0.4 * settle, bloom: 0.5, bloomThreshold: 0.8, halation: 0.2, vignette: 0.55, grain: 0.04, ca: 0.15 + 1.4 * kick + 0.6 * settle, zoom: 1 + 0.02 * kick + 0.015 * settle };
   }
   override dispose() { this.layer.texture.dispose(); this.env?.dispose(); this.rig.dispose(); this.style.dispose(); for (const o of this.own) o.dispose(); }
