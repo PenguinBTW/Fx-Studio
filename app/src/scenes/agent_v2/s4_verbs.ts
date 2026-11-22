@@ -137,7 +137,7 @@ export default class S4Verbs extends Scene {
   // terminal callouts live on a plane at the focus distance, so the depth of field keeps them sharp
   private tscene = new THREE.Scene(); private tcam = new THREE.PerspectiveCamera(26, 16 / 9, 0.01, 500);
   private mkText() {
-    const m = new THREE.MeshBasicMaterial({ map: this.layer.texture, color: new THREE.Color(1.5, 1.5, 1.5), transparent: true, alphaTest: 0.01, depthTest: false, depthWrite: true });
+    const m = new THREE.MeshBasicMaterial({ map: this.layer.texture, color: new THREE.Color(1.5, 1.5, 1.5), transparent: true, alphaTest: 0.01, depthTest: true, depthFunc: THREE.AlwaysDepth, depthWrite: true });
     this.txt = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), m); this.txt.renderOrder = 999; this.txt.frustumCulled = false; this.tcam.add(this.txt); this.tscene.add(this.tcam);
   }
 
