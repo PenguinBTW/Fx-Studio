@@ -204,9 +204,6 @@ export class ExportPipeline {
 
     // Video filter: vertical flip (WebGL framebuffer readback is inverted)
     args.push('-vf', 'vflip');
-    if (opts.audioTrack && opts.audioFadeOut && opts.from !== undefined && opts.to !== undefined) {
-      args.push('-af', `afade=t=out:st=${Math.max(0, opts.to - opts.from - opts.audioFadeOut)}:d=${opts.audioFadeOut}`);
-    }
 
     // Codec & encoding options
     const effectiveCrf = opts.crf ?? preset.defaultCrf;
@@ -256,12 +253,15 @@ export class ExportPipeline {
     }
 
     // Audio encoding options
+    const span = opts.from !== undefined && opts.to !== undefined ? opts.to - opts.from : 0;
+    const fd = opts.audioFadeOut && span > 0 ? Math.min(opts.audioFadeOut, span) : 0;
+    const fade = fd > 0 ? `afade=t=out:st=${(span - fd).toFixed(6)}:d=${fd.toFixed(6)}` : '';
     if (opts.audioTrack && opts.audioMixed) {
       const nFrames = Math.round((opts.to ?? 0) * fps) - Math.round((opts.from ?? 0) * fps);
       const vdur = (nFrames / fps).toFixed(6);
-      args.push('-map', '0:v:0', '-map', '1:a:0?', '-af', `apad=whole_dur=${vdur},atrim=duration=${vdur}`, '-c:a', 'aac', '-b:a', '320k', '-t', vdur);
+      args.push('-map', '0:v:0', '-map', '1:a:0?', '-af', `apad=whole_dur=${vdur},atrim=duration=${vdur}${fade ? ',' + fade : ''}`, '-c:a', 'aac', '-b:a', '320k', '-t', vdur);
     } else if (opts.audioTrack) {
-      args.push('-map', '0:v:0', '-map', '1:a:0?', '-c:a', 'aac', '-b:a', '320k', '-shortest');
+      args.push('-map', '0:v:0', '-map', '1:a:0?', ...(fade ? ['-af', fade] : []), '-c:a', 'aac', '-b:a', '320k', '-shortest');
     } else {
       args.push('-map', '0:v:0');
     }
