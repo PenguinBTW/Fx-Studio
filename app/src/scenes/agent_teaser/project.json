@@ -1,0 +1,92 @@
+{
+  "project": "agent_teaser",
+  "size": [
+    1080,
+    1920
+  ],
+  "audio": "../../../public/audio/agent_cut.mp3",
+  "audioOffset": 84.1091,
+  "audioFadeOut": 0.8,
+  "trimToTimeline": true,
+  "entries": [
+    {
+      "scene": "agent_teaser/t00_fire",
+      "id": "t00_fire",
+      "start": 0.0,
+      "end": 1.8696
+    },
+    {
+      "scene": "agent_teaser/t01_world",
+      "id": "t01_world",
+      "start": 1.8696,
+      "end": 3.7391
+    },
+    {
+      "scene": "agent_teaser/t02_crumble",
+      "id": "t02_crumble",
+      "start": 3.7391,
+      "end": 5.6087
+    },
+    {
+      "scene": "agent_teaser/t03_forge",
+      "id": "t03_forge",
+      "start": 5.6087,
+      "end": 7.4783
+    },
+    {
+      "scene": "agent_teaser/t04_paper",
+      "id": "t04_paper",
+      "start": 7.4783,
+      "end": 9.3478
+    },
+    {
+      "scene": "agent_teaser/t05_comic",
+      "id": "t05_comic",
+      "start": 9.3478,
+      "end": 11.2174
+    },
+    {
+      "scene": "agent_teaser/t06_roulette",
+      "id": "t06_roulette",
+      "start": 11.2174,
+      "end": 14.9566
+    },
+    {
+      "scene": "agent_teaser/t08_fire",
+      "id": "t08_fire",
+      "start": 14.9566,
+      "end": 18.6957
+    },
+    {
+      "scene": "agent_teaser/t10_ocean",
+      "id": "t10_ocean",
+      "start": 18.6957,
+      "end": 20.5653
+    },
+    {
+      "scene": "agent_teaser/t11_zoom",
+      "id": "t11_zoom",
+      "start": 20.5653,
+      "end": 22.4348
+    },
+    {
+      "scene": "agent_teaser/t12_rush",
+      "id": "t12_rush",
+      "start": 22.4348,
+      "end": 24.3044
+    },
+    {
+      "scene": "agent_teaser/t13_quiet",
+      "id": "t13_quiet",
+      "start": 24.3044,
+      "end": 26.174
+    },
+    {
+      "scene": "agent_teaser/t14_logo",
+      "id": "t14_logo",
+      "start": 26.174,
+      "end": 29.9131
+    }
+  ],
+  "transitions": []
+}
