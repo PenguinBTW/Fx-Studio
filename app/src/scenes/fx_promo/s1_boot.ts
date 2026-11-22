@@ -11,13 +11,34 @@ import { C, BAR, B0, bar, sceneTime, model, studioEnv, present, slam, typeLine, 
 
 const N = 28;
 const X0 = -6, X1 = 6;
+const FLOOR = -1.5;
+const FLOOR_VS = `varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
+const FLOOR_FS = `uniform vec3 uSig, uIce, uHead; uniform float uKick, uRing, uT; varying vec3 vW;
+void main(){
+  vec2 p = vW.xz; vec2 q = abs(fract(p * 2.0) - 0.5) / fwidth(p * 2.0); float g = 1.0 - min(min(q.x, q.y), 1.0);
+  vec2 Q = abs(fract(p * 0.5) - 0.5) / fwidth(p * 0.5); float G = 1.0 - min(min(Q.x, Q.y), 1.0);
+  float d = length(vW - cameraPosition), fade = exp(-d * 0.09);
+  vec3 c = vec3(0.004, 0.005, 0.008) + uIce * (0.025 * g + 0.07 * G) * fade * (0.6 + 0.8 * uKick);
+  float r = length(p), ring = exp(-pow((r - uRing) * 6.0, 2.0)) * exp(-uRing * 0.15);
+  c += uSig * (ring * 0.5 + 0.3 * exp(-length(p - uHead.xz) * 0.9));
+  c = mix(c, vec3(0.012, 0.016, 0.035), 1.0 - exp(-d * 0.035));
+  gl_FragColor = vec4(c, 1.0);
+}`;
+const SKY_VS = `varying vec3 vDir; void main(){ vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+const SKY_FS = `uniform vec3 uSig; uniform float uT; varying vec3 vDir;
+void main(){ vec3 d = normalize(vDir); float hz = exp(-abs(d.y + 0.02) * 9.0);
+  vec3 c = mix(vec3(0.012, 0.016, 0.035), vec3(0.002, 0.002, 0.006), smoothstep(0.0, 0.7, d.y));
+  float band = 0.5 + 0.5 * sin(atan(d.z, d.x) * 3.0 + uT * 0.2 + d.y * 6.0);
+  c += uSig * 0.06 * hz * (0.6 + 0.4 * band) + vec3(0.02, 0.05, 0.12) * exp(-abs(d.y - 0.25 - 0.08 * band) * 10.0) * 0.35;
+  gl_FragColor = vec4(c, 1.0); }`;
 
 export default class S1Boot extends Scene {
   private scene = new THREE.Scene();
   private cam = new THREE.PerspectiveCamera(35, 16 / 9, 0.05, 200);
   private layer = new Layer2D();
-  private lines = new LineBatch(N * 260 + 64, { screen2D: false, worldWidth: true, blend: 'add', depthTest: false });
+  private lines = new LineBatch(2 * (N * 260 + 64), { screen2D: false, worldWidth: true, blend: 'add', depthTest: false });
   private pen!: GLTFInstance;
+  private floorU = { uSig: { value: new THREE.Vector3(...lin(C.signal, 1)) }, uIce: { value: new THREE.Vector3(...lin(C.ice, 1)) }, uHead: { value: new THREE.Vector3() }, uKick: { value: 0 }, uRing: { value: 99 }, uT: { value: 0 } };
 
   override async init() {
     this.pen = await model(this.ctx, 'pen');
@@ -30,6 +51,11 @@ export default class S1Boot extends Scene {
     const rim = new THREE.DirectionalLight(new THREE.Color(C.ice), 2.5);
     rim.position.set(4, 1, -4);
     this.scene.add(key, rim);
+    const fl = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), new THREE.ShaderMaterial({ vertexShader: FLOOR_VS, fragmentShader: FLOOR_FS, uniforms: this.floorU }));
+    fl.rotation.x = -Math.PI / 2; fl.position.y = FLOOR;
+    const sky = new THREE.Mesh(new THREE.SphereGeometry(110, 32, 16), new THREE.ShaderMaterial({ vertexShader: SKY_VS, fragmentShader: SKY_FS, side: THREE.BackSide, depthWrite: false, uniforms: { uSig: this.floorU.uSig, uT: this.floorU.uT } }));
+    sky.renderOrder = -1;
+    this.scene.add(fl, sky);
   }
 
   private headX(T: number) { return X0 + (X1 - X0) * prog(T, 0.4, bar(4), ease.inOutCubic); }
@@ -87,6 +113,10 @@ export default class S1Boot extends Scene {
     k = mixKey(k, push, ease.inOutCubic(smoothstep(bar(9.6), bar(11), T)));
     applyCam(this.cam, k, f.a.snare * 0.3);
 
+    // Floor: grid breathes on the kick, a ring rolls out from the origin on each downbeat, a pool of light follows the pen.
+    const bt = T > B0 ? ((T - B0) / BAR) % 1 : 1;
+    this.floorU.uKick.value = f.a.kick; this.floorU.uT.value = T; this.floorU.uRing.value = T > B0 ? bt * BAR * 9 : 99;
+    this.floorU.uHead.value.set(hx, FLOOR, 0);
     // Curves.
     const L = this.lines;
     L.clear();
@@ -110,6 +140,7 @@ export default class S1Boot extends Scene {
         const col = near > 0.02 ? [bone[0] + (sig[0] - bone[0]) * near, bone[1] + (sig[1] - bone[1]) * near, bone[2] + (sig[2] - bone[2]) * near] : bone;
         const dim = pulse * (1 - 0.65 * collapse);
         L.seg(px, py, z, x, y, z, w, col[0]! * dim, col[1]! * dim, col[2]! * dim, fall);
+        L.seg(px, 2 * FLOOR - py, z, x, 2 * FLOOR - y, z, w * 1.8, col[0]! * dim * 0.18, col[1]! * dim * 0.18, col[2]! * dim * 0.18, fall);
         px = x; py = y;
       }
     }
