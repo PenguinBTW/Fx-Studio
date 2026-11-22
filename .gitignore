@@ -38,6 +38,8 @@ app/public/data/
 # Font assets
 **/font/
 **/fonts/
+# Runtime faces the engine loads (engine/type.ts) and Blender asset builds use; all SIL OFL 1.1.
+!app/public/fonts/
 
 # Local environment and machine-specific files
 .env
