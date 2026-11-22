@@ -13,12 +13,14 @@ const PROJECT = params.get('project'); // project folder in scenes/ (falls back 
 const FROM = params.get('t') ? parseFloat(params.get('t')!) : (params.get('from') ? parseFloat(params.get('from')!) : null);
 
 // The logical size is fixed at module load, so a project with its own "size" reloads with ?size= set.
-const WANT_SIZE = loadManifest(PROJECT).size;
-if (WANT_SIZE && (WANT_SIZE[0] !== W || WANT_SIZE[1] !== H)) {
+// An explicit ?size= (render.ts --size) wins; an unknown project falls through to the boot error handler.
+const MANIFEST = (() => { try { return loadManifest(PROJECT); } catch { return null; } })();
+const WANT_SIZE = MANIFEST?.size;
+if (WANT_SIZE && !params.has('size') && (WANT_SIZE[0] !== W || WANT_SIZE[1] !== H)) {
   params.set('size', `${WANT_SIZE[0]}x${WANT_SIZE[1]}`);
   location.replace(`${location.pathname}?${params}`);
 }
-const AUDIO_OFFSET = loadManifest(PROJECT).audioOffset ?? 0;
+const AUDIO_OFFSET = MANIFEST?.audioOffset ?? 0;
 
 const canvas = document.getElementById('c') as HTMLCanvasElement;
 // physical size: the logical W x H times ?scale= (the page CSS keeps showing it at W x H)
