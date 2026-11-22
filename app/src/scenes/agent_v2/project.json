@@ -37,7 +37,7 @@
     {
       "scene": "agent_v2/s5_paper",
       "id": "s5_paper",
-      "start": 59.4,
+      "start": 59.5,
       "end": 69.6
     },
     {
@@ -139,8 +139,8 @@
       "transition": "v2_fold",
       "from": "s4_verbs",
       "to": "s5_paper",
-      "at": 59.455,
-      "dur": 0.7
+      "at": 59.505,
+      "dur": 0.6
     },
     {
       "id": "t-halftone",

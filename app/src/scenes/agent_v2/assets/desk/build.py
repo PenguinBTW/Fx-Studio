@@ -84,7 +84,7 @@ pen = fin([
 
 # ---- scissors: two halves pivoting about Z at the screw
 def half(s, z0, name):
-    b = slab(name + '_bl', [(-0.08, 0.055 * s), (0.25, 0.065 * s), (0.8, 0.045 * s), (1.35, 0.012 * s), (1.46, 0.0), (1.3, -0.014 * s), (0.8, -0.02 * s), (0.25, -0.03 * s), (-0.08, -0.05 * s)], 0.024, STEEL, z0=z0, bev=0.005)
+    b = slab(name + '_bl', [(-0.1, 0.075 * s), (0.2, 0.13 * s), (0.7, 0.1 * s), (1.25, 0.04 * s), (1.46, 0.0), (1.3, -0.006 * s), (0.7, -0.012 * s), (0.2, -0.02 * s), (-0.1, -0.06 * s)], 0.03, STEEL, z0=z0, bev=0.005)
     ang = math.atan2(0.17 * s, -0.4)
     arm = rb(name + '_arm', 0.44, 0.085, 0.05, GRIP, x=-0.2, y=0.085 * s, z=z0 - 0.012, bev=0.02, rot=(0, 0, ang + math.pi))
     ring = torus(name + '_ring', 0.19, 0.048, GRIP, loc=(-0.6, 0.2 * s, z0 + 0.012), sx=1.35)
