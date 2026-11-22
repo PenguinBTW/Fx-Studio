@@ -144,7 +144,6 @@ export default class S3Type extends Scene {
     const bt = T0 + lead + wi * WB + nb * BEAT;
     if (lt >= 0 && lt < 8 * BAR) {
       if (wi >= 4) slam(g, ORDER[wi]!, 192, 900, T, { t0: bt, t1: bt + BEAT - 0.06, size: 190, family: wi === 5 ? FACES[nb % FACES.length]! : F.archivo(125, 900), align: 'left', from: 1.15, shake: 2, out: 0.05, halo: HALO, haloW: 8, color: nb % 4 === 3 ? C.signal : C.bone });
-      typeLine(g, `0${wi + 1} / 06`, 1728, 900, T, T0 + wi * WB, { size: 30, align: 'right', color: C.ash, cps: 80, cursor: false });
     }
 
     this.dof.render(this.ctx, out, this.scene, this.cam, { focus, aperture: inDZ ? 6 : 10, maxRadius: 14 }, this.layer, (rt) => L.render(this.ctx.renderer, rt, this.cam));

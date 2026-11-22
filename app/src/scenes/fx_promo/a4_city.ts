@@ -340,12 +340,10 @@ export default class A4City extends Scene {
       slam(g, w, x, 900, T, { t0: beatAt(29, i), t1: bar(31.5), size: 150, family: fam, align: 'left', from: 1.8, shake: 6, color: i === 3 ? C.signal : C.bone });
       g.font = font(fam, 150); x += g.measureText(w + ' ').width;
     });
-    typeLine(g, `assets/city_kit/build.py  →  model.glb  ·  ${this.nFloors.toLocaleString('en')} floors, one per 8th note`, 150, 980, T, bar(29.5), { size: 26, t1: bar(31.5), color: C.bone });
     slam(g, 'LIT BY THE MIX', 960, 540, T, { t0: bar(36), t1: bar(38) - 0.05, size: 170, family: fam, from: 2.2, shake: 10, color: '#FFB547' });
-    typeLine(g, 'facade[i] = audio.sample(t)[band]', 960, 640, T, bar(36.5), { size: 30, align: 'center', t1: bar(38) - 0.05, color: '#46E0FF' });
     if (T > bar(41.3) && T < bar(45.6)) {
       const yr = 2026 + Math.round(100 * prog(T, bar(41.5), bar(45.2), ease.inOutCubic));
-      typeLine(g, `year ${yr}`, 960, 960, T, bar(41.3), { size: 44, align: 'center', cps: 30, color: '#D8DCD6', cursor: false });
+      slam(g, `${yr}`, 960, 965, T, { t0: bar(41.3), t1: bar(45.6), size: 64, family: F.archivo(125, 700), from: 1.2, shake: 0, color: '#D8DCD6' });
     }
     slam(g, 'EVERYTHING IS f(t)', 960, 250, T, { t0: bar(46.5), t1: bar(48.2), size: 122, family: fam, from: 1.45, shake: 8, color: C.bone });
 
