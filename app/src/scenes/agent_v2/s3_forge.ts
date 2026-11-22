@@ -98,5 +98,5 @@ export default class S3Forge extends Scene {
     const roar = Math.exp(-Math.max(0, T - T19) * 4) * (T >= T19 ? 1 : 0);
     return { toneMap: 'aces', exposure: 1.0, bloom: 0.7 + 0.5 * roar, bloomThreshold: 0.8, halation: 0.3, vignette: 0.5, grain: 0.05, ca: 0.4 + 2.0 * roar, zoom: 1 + 0.03 * roar };
   }
-  override dispose() { this.layer.texture.dispose(); this.env?.dispose(); this.rig.dispose(); this.scene.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh && !this.rig.dragon.group.children.includes(m)) { m.geometry?.dispose(); (m.material as THREE.Material | undefined)?.dispose(); } }); }
+  override dispose() { this.layer.texture.dispose(); this.env?.dispose(); this.rig.dispose(); this.scene.traverse((o) => { const m = o as THREE.Mesh; if ((m.isMesh || (o as THREE.Points).isPoints) && !this.rig.dragon.group.children.includes(m)) { m.geometry?.dispose(); (m.material as THREE.Material | undefined)?.dispose(); } }); }
 }
