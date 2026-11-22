@@ -250,13 +250,13 @@ async function sheet(page: Page, times: number[], cols: number, out: string) {
   const shutter = numOpt('shutter', 0.5, 0, 1);
   const dataUrl: string = await page.evaluate(async ({ times, cols, samples, shutter }: any) => {
     const P = (window as any).__motion || (window as any).__pdoom;
-    const cw = 480, ch = 270, pad = 4, lab = 18;
+    const src = document.getElementById('c') as HTMLCanvasElement;
+    const cw = 480, ch = Math.round((cw * src.height) / src.width), pad = 4, lab = 18;
     const rows = Math.ceil(times.length / cols);
     const cv = document.createElement('canvas');
     cv.width = cols * (cw + pad) + pad; cv.height = rows * (ch + lab + pad) + pad;
     const c = cv.getContext('2d')!;
     c.fillStyle = '#222'; c.fillRect(0, 0, cv.width, cv.height);
-    const src = document.getElementById('c') as HTMLCanvasElement;
     for (let i = 0; i < times.length; i++) {
       const t = times[i];
       await P.still(t, samples, shutter);
