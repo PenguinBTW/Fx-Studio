@@ -18,6 +18,16 @@ const V = SP / (1.3 * BAR);
 const T0 = bar(19);
 const PASS: [number, number][] = [[0, 4.8], [-8.5, 0.4], [0, -4.8], [7.5, 0.8], [-6.5, 3.6], [6.5, -3.2]];
 const STREAKS = 420;
+// The type canyon: monolith walls either side of the flight path, light strips that chase toward camera on each kick,
+// and a gridded mirror-black floor, so the words fly through a place instead of a starfield.
+const SLOTS = 70, SLOT = 2.4, WALL = 17, FLOOR_Y = -8;
+const ACCENT = ['#46E0FF', '#FF5A1F', '#FFB547', '#FF3D8B', '#46E0FF', '#FF5A1F'];
+const TF_VS = `varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
+const TF_FS = `uniform vec3 uAcc; uniform float uKick; varying vec3 vW;
+void main(){ vec2 p = vW.xz * 0.25; vec2 q = abs(fract(p) - 0.5) / fwidth(p); float g = 1.0 - min(min(q.x, q.y), 1.0);
+  float d = length(vW - cameraPosition), fade = exp(-d * 0.03);
+  vec3 c = vec3(0.006, 0.008, 0.014) + uAcc * g * fade * (0.08 + 0.25 * uKick) + uAcc * 0.05 * exp(-abs(vW.x) * 0.25) * fade;
+  gl_FragColor = vec4(c, 1.0); }`;
 // Vertigo on "3D": a dolly-zoom (engine solveDollyZoom) holds the word's size while the lens opens 26 -> 88 deg.
 const T3 = T0 + (LEAD + 3 * SP) / V;
 const DZ0 = T3 - 2.4, DZ1 = T3 - 0.55;
@@ -31,6 +41,11 @@ export default class S3Type extends Scene {
   private sig = new THREE.PointLight(new THREE.Color(C.signal), 0, 60, 1.6);
   private dof = new DoFPresenter();
   private w3 = 6;
+  private slabs!: THREE.InstancedMesh;
+  private strips!: THREE.InstancedMesh;
+  private floorM!: THREE.Mesh;
+  private floorU = { uAcc: { value: new THREE.Vector3() }, uKick: { value: 0 } };
+  private m4 = new THREE.Matrix4(); private cc = new THREE.Color(); private pv = new THREE.Vector3(); private sv = new THREE.Vector3(); private qq = new THREE.Quaternion();
 
   override async init() {
     const inst = await model(this.ctx, 'type_words');
@@ -38,7 +53,15 @@ export default class S3Type extends Scene {
     inst.root.traverse((o) => { if (o.name.startsWith('word_') && !ORDER.slice(0, BLENDER).includes(o.name.slice(5))) o.visible = false; });
     this.scene.environment = studioEnv(this.ctx.renderer);
     this.scene.environmentIntensity = 0.22;
-    this.scene.fog = new THREE.FogExp2(0x050506, 0.014);
+    this.scene.fog = new THREE.FogExp2(0x070a14, 0.016);
+    this.scene.background = new THREE.Color(0x070a14);
+    const slabMat = new THREE.MeshStandardMaterial({ color: 0x1a1c22, metalness: 0.85, roughness: 0.32 });
+    this.slabs = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), slabMat, SLOTS * 2);
+    this.strips = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0xffffff }), SLOTS * 2 * 3);
+    this.slabs.frustumCulled = this.strips.frustumCulled = false;
+    this.floorM = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.ShaderMaterial({ vertexShader: TF_VS, fragmentShader: TF_FS, uniforms: this.floorU }));
+    this.floorM.rotation.x = -Math.PI / 2; this.floorM.position.y = FLOOR_Y;
+    this.scene.add(this.slabs, this.strips, this.floorM);
     const chrome = new THREE.MeshStandardMaterial({ color: 0xa8a49c, metalness: 0.9, roughness: 0.38 });
     const hot = new THREE.MeshStandardMaterial({ color: new THREE.Color(C.signal), metalness: 0.6, roughness: 0.25, emissive: new THREE.Color(C.signal), emissiveIntensity: 0.35 });
     ORDER.forEach((n, i) => {
@@ -119,6 +142,30 @@ export default class S3Type extends Scene {
     this.sig.position.set(p.x, p.y + 1, p.z - 12);
     this.sig.intensity = 6 + 30 * f.a.snare;
 
+    {
+      const wi = clamp(Math.floor((T - T0 + LEAD / V) / (1.3 * BAR)), 0, 5);
+      const acc = new THREE.Color(ACCENT[wi]!);
+      this.floorU.uAcc.value.set(acc.r, acc.g, acc.b); this.floorU.uKick.value = f.a.kick;
+      this.floorM.position.set(p.x, FLOOR_Y, p.z);
+      const span = SLOTS * SLOT, bt = ((T - bar(1)) / BEAT) % 1;
+      for (let i = 0; i < SLOTS; i++) for (let sd = 0; sd < 2; sd++) {
+        const k = i * 2 + sd, side = sd ? 1 : -1;
+        const z = p.z + 6 - ((((hash(k * 0.7) * 0 + i * SLOT - (p.z - LEAD)) % span) + span) % span);
+        const hgt = 10 + 26 * hash(k * 3.3), wd = 2 + 5 * hash(k * 5.1), dep = SLOT * (0.55 + 0.4 * hash(k * 2.2));
+        const x = side * (WALL + wd / 2 + 3 * hash(k * 1.9));
+        this.slabs.setMatrixAt(k, this.m4.compose(this.pv.set(x, FLOOR_Y + hgt / 2, z), this.qq.identity(), this.sv.set(wd, hgt, dep)));
+        const dist = p.z - z, wave = Math.exp(-Math.pow((dist / span - bt) * 7, 2)) * f.a.kick;
+        for (let j = 0; j < 3; j++) {
+          const yy = FLOOR_Y + hgt * (0.25 + 0.3 * j + 0.1 * hash(k * 7 + j));
+          this.strips.setMatrixAt(k * 3 + j, this.m4.compose(this.pv.set(x - side * (wd / 2 + 0.02), yy, z), this.qq.identity(), this.sv.set(0.06, 0.12, dep * 0.9)));
+          const on = hash(k * 11 + j + wi * 17) < 0.55 ? 1 : 0.08;
+          this.cc.copy(acc).multiplyScalar(on * (0.6 + 6 * wave + 1.2 * f.a.snare));
+          this.strips.setColorAt(k * 3 + j, this.cc);
+        }
+      }
+      this.slabs.instanceMatrix.needsUpdate = true; this.strips.instanceMatrix.needsUpdate = true;
+      if (this.strips.instanceColor) this.strips.instanceColor.needsUpdate = true;
+    }
     const L = this.streaks;
     L.clear();
     const ice = lin(C.ice, 1.1), bone = lin(C.bone, 0.9);
