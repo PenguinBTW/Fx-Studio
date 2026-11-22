@@ -335,12 +335,15 @@ async function audioOnly(page: Page, from: number, to: number, outOpt: string | 
       throw new Error(`[audio] No mix manifest found (pass --mix path/to/mix.json) and no audio track at ${defaultAudio}`);
     }
     console.log(`[audio] Extracting audio range (${from.toFixed(2)}s to ${to.toFixed(2)}s) from ${audioTrack}...`);
-    if (path.resolve(audioTrack) === path.resolve(out)) throw new Error(`[audio] refusing to overwrite the source soundtrack ${out}; pass --out`);
-    const off = explicitAudio ? 0 : (manifest.audioOffset ?? 0);
-    const p = Bun.spawn(['ffmpeg', '-y', '-v', 'error', '-i', audioTrack, '-ss', String(from + off), '-to', String(to + off), out]);
+    const same = (a: string, b: string) => path.resolve(a) === path.resolve(b);
+    // the default full-length target is the soundtrack itself: extract next to the other excerpts instead
+    const dst = !outOpt && same(out, audioTrack) ? path.join(ROOT, 'out/audio.wav') : out;
+    if (same(audioTrack, dst)) throw new Error(`[audio] refusing to overwrite the source soundtrack ${dst}; pass a different --out`);
+    const off = master && same(audioTrack, master) ? (manifest.audioOffset ?? 0) : 0;
+    const p = Bun.spawn(['ffmpeg', '-y', '-v', 'error', '-i', audioTrack, '-ss', String(from + off), '-to', String(to + off), dst]);
     const exitCode = await p.exited;
     if (exitCode !== 0) throw new Error(`[audio] FFmpeg export failed with code ${exitCode}`);
-    console.log(`\n[audio] Success! Exported audio track to: ${out}`);
+    console.log(`\n[audio] Success! Exported audio track to: ${dst}`);
   }
 
   if (flag('mp3') && !out.endsWith('.mp3')) {
