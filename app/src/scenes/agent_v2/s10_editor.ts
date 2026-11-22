@@ -87,7 +87,7 @@ export default class S10Editor extends Scene {
     const c1 = m.clone().add(new THREE.Vector3(2.8, 0.9, 5.2)), c2 = m.clone().addScaledVector(dir, 3.6).add(new THREE.Vector3(-1.0, 1.8, 10.0));
     const pos = c1.lerp(c2, take ? sm(T67, T67 + BAR * 1.5, T) : 0); pos.add(new THREE.Vector3(Math.sin(T * 31), Math.sin(T * 27), 0).multiplyScalar(0.035 * b * take));
     this.cam.position.copy(pos); this.cam.lookAt(m.clone().addScaledVector(dir, 1.6 + 1.6 * take * sm(T67, T67 + BAR * 1.5, T))); this.cam.aspect = vw / vh; this.cam.updateProjectionMatrix(); this.cam.updateMatrixWorld();
-    this.vol.update(this.cam, this.u.uMouth.value, dir, ft, take ? sm(FR - 0.05, FR + 0.7, ft) : 0, take * b);
+    this.vol.u.uGain.value = 0.6; this.vol.update(this.cam, this.u.uMouth.value, dir, ft, take ? sm(FR - 0.05, FR + 0.7, ft) : 0, take * b);
     // 3D viewport into its rect of the output target
     const sx = out.width / 1920, sy = out.height / 1080;
     rr.setRenderTarget(out); rr.setClearColor(0x0b0b0c, 1); rr.clear(true, true, true);

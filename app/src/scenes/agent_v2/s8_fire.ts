@@ -77,11 +77,11 @@ export default class S8Fire extends Scene {
     pos.add(new THREE.Vector3(Math.sin(T * 31), Math.sin(T * 27), 0).multiplyScalar(0.03 * b));
     this.cam.position.copy(pos); this.cam.lookAt(look); this.cam.updateProjectionMatrix(); this.cam.updateMatrixWorld();
     let a0 = -99; for (const [a] of BREATHS) if (T >= a - 0.1) a0 = a;
-    this.vol.update(this.cam, this.u.uMouth.value, dir, T, sm(a0 - 0.05, a0 + 0.6, T), b);
+    this.vol.u.uGain.value = 0.55; this.vol.update(this.cam, this.u.uMouth.value, dir, T, sm(a0 - 0.05, a0 + 0.6, T), b);
     rr.setRenderTarget(out); rr.setClearColor(0x020203, 1); rr.clear(true, true, true); rr.render(this.scene, this.cam);
     const g = this.layer.ctx; this.layer.clear(); term(g, S8_LINES, T, { size: 46, x: 200, align: 'left', y: 930, halo: 'rgba(0,0,0,0.6)', alpha: overlayTextDuck(f.tin, f.tout) });
     this.ctx.comp.draw(rr, this.layer.upload(), out, { mode: 'normal', opacity: 1 }); rr.resetState();
-    return { toneMap: 'agx', exposure: 1.0, bloom: 0.6 + 0.5 * b, bloomThreshold: 0.75, halation: 0.6, vignette: 0.5, grain: 0.06, ca: 0.3 + 0.8 * b, zoom: 1 + 0.01 * b };
+    return { toneMap: 'agx', exposure: 0.9, bloom: 0.45 + 0.35 * b, bloomThreshold: 0.75, halation: 0.6, vignette: 0.5, grain: 0.06, ca: 0.3 + 0.8 * b, zoom: 1 + 0.01 * b };
   }
   override dispose() { this.layer.texture.dispose(); this.env?.dispose(); this.rig.dispose(); this.fire.geometry.dispose(); (this.fire.material as THREE.Material).dispose(); this.vol.dispose(); }
 }
