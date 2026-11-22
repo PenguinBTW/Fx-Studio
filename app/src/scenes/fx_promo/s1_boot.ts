@@ -38,6 +38,7 @@ export default class S1Boot extends Scene {
   private layer = new Layer2D();
   private lines = new LineBatch(2 * (N * 260 + 64), { screen2D: false, worldWidth: true, blend: 'add', depthTest: false });
   private pen!: GLTFInstance;
+  private own: THREE.Mesh[] = [];
   // The opening captions are a light sign standing behind the pen (in depth, occluded by the pen, crossed by the lines), not a screen overlay.
   private sign = new Layer2D();
   private signM = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 2.5875), new THREE.MeshBasicMaterial({ transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, color: new THREE.Color(1.6, 1.6, 1.6) }));
@@ -60,6 +61,7 @@ export default class S1Boot extends Scene {
     sky.renderOrder = -1;
     (this.signM.material as THREE.MeshBasicMaterial).map = this.sign.texture;
     this.scene.add(fl, sky, this.signM);
+    this.own.push(fl, sky, this.signM);
   }
 
   private headX(T: number) { return X0 + (X1 - X0) * prog(T, 0.4, bar(4), ease.inOutCubic); }
@@ -178,5 +180,10 @@ export default class S1Boot extends Scene {
       fade: 1 - clamp((T - 0.9) / 0.4),
       zoom: 1 + 0.04 * pre,
     };
+  }
+
+  override dispose(): void {
+    for (const m of this.own) { m.geometry.dispose(); (m.material as THREE.Material).dispose(); }
+    this.sign.texture.dispose();
   }
 }

@@ -119,7 +119,7 @@ export class CityWorld {
     for (let i = 0; i < NRECLAIM; i++) this.reclaim.setColorAt(i, this.c.setRGB(0.12 + 0.1 * h(i, 31), 0.2 + 0.12 * h(i, 31), 0.07));
     for (const im of [this.cars, this.lamps, this.trees, this.reclaim]) im.frustumCulled = false;
     this.group.add(terrain, water, roads, this.lamps, this.cars, this.houses, this.windows, this.trees, this.reclaim);
-    this.disposables.push(tg, wg, this.terrainMat, this.water, roadMat, roads.geometry, this.lamps.geometry, this.lampMat, this.cars.geometry, this.carMat, hg, houseMat, this.winMat, cg, trMat);
+    this.disposables.push(tg, wg, this.terrainMat, this.water, roadMat, roads.geometry, this.lamps.geometry, this.lampMat, this.cars.geometry, this.carMat, hg, houseMat, this.winMat, cg, trMat, roads, this.lamps, this.cars, this.houses, this.windows, this.trees, this.reclaim);
   }
 
   /** built: 0..1 city finished; night: 0..1; decay: 0..1 abandonment; collapse: 0..1. */
