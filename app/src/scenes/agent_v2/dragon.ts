@@ -61,14 +61,15 @@ export function scaleFrag(s: THREE.WebGLProgramParametersWithUniforms) {
   s.fragmentShader = s.fragmentShader.replace('#include <common>', '#include <common>\n' + SCALE_GLSL).replace('#include <color_fragment>', `#include <color_fragment>
     vec3 sc_ = scl(vLoc);
     { float belly = smoothstep(-0.1, -0.24, vLoc.y) * (1.0 - smoothstep(9.0, 9.3, vLoc.x));
-      diffuseColor.rgb *= mix(0.45, 1.0, sc_.x) * (0.8 + 0.4 * sc_.y) * (1.0 - 0.75 * sc_.z);
+      float lf_ = 0.5 + 0.5 * sin(vLoc.x * 1.7 + 2.0 * sin(vLoc.x * 0.43) + vLoc.z * 2.0); float dor_ = smoothstep(0.0, 0.3, vLoc.y);
+      diffuseColor.rgb *= mix(0.45, 1.0, sc_.x) * (0.8 + 0.4 * sc_.y) * (1.0 - 0.75 * sc_.z) * (0.7 + 0.55 * lf_) * mix(1.0, 0.7, dor_);
       diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.32, 0.25, 0.16) * (0.7 + 0.3 * sc_.x), belly * 0.8); }`)
     .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
     totalEmissiveRadiance += sc_.z * uSeam * vec3(1.0, 0.28, 0.05) * (0.3 + 0.7 * smoothstep(-0.1, 0.3, vLoc.y));`)
     .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
     roughnessFactor = mix(0.7, roughnessFactor, sc_.x);`)
     .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
-    { float hgt = sc_.x * 0.012; vec3 dpx = dFdx(-vViewPosition), dpy = dFdy(-vViewPosition); float hx = dFdx(hgt), hy = dFdy(hgt);
+    { float hgt = sc_.x * 0.02; vec3 dpx = dFdx(-vViewPosition), dpy = dFdy(-vViewPosition); float hx = dFdx(hgt), hy = dFdy(hgt);
       vec3 r1 = cross(dpy, normal), r2 = cross(normal, dpx); float det = dot(dpx, r1);
       normal = normalize(abs(det) * normal - sign(det) * (hx * r1 + hy * r2)); }`);
 }
