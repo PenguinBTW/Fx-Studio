@@ -329,12 +329,14 @@ async function audioOnly(page: Page, from: number, to: number, outOpt: string | 
   } else {
     const explicitAudio = opt('audio');
     const defaultAudio = path.join(APP, 'public/audio/audio.mp3');
-    const audioTrack = explicitAudio ? resolveOut(explicitAudio) : (existsSync(defaultAudio) ? defaultAudio : '');
+    const master = at(manifest.audio);
+    const audioTrack = explicitAudio ? resolveOut(explicitAudio) : master && existsSync(master) ? master : (existsSync(defaultAudio) ? defaultAudio : '');
     if (!audioTrack || !existsSync(audioTrack)) {
       throw new Error(`[audio] No mix manifest found (pass --mix path/to/mix.json) and no audio track at ${defaultAudio}`);
     }
     console.log(`[audio] Extracting audio range (${from.toFixed(2)}s to ${to.toFixed(2)}s) from ${audioTrack}...`);
-    const off = (await loadProject()).manifest.audioOffset ?? 0;
+    if (path.resolve(audioTrack) === path.resolve(out)) throw new Error(`[audio] refusing to overwrite the source soundtrack ${out}; pass --out`);
+    const off = explicitAudio ? 0 : (manifest.audioOffset ?? 0);
     const p = Bun.spawn(['ffmpeg', '-y', '-v', 'error', '-i', audioTrack, '-ss', String(from + off), '-to', String(to + off), out]);
     const exitCode = await p.exited;
     if (exitCode !== 0) throw new Error(`[audio] FFmpeg export failed with code ${exitCode}`);
