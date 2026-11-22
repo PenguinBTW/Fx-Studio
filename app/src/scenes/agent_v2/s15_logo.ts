@@ -21,7 +21,7 @@ export const S15_LINES: TLine[] = [{ text: 'enjoy.', at: bar(105) + 0.1, hold: 4
 const sm = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 export const lapPath: PathFn = (p, o) => { const a = p * 0.36; const ex = Math.max(0, p - 9); return o.set(5.6 * Math.cos(a) + 0.1, 0.6 + 0.5 * Math.sin(p * 0.8) + ex * 0.45, 2.2 * Math.sin(a) - 5.2 - ex * 2.2); };
 
-export const outroPath: PathFn = (p, o) => o.set(-16 + p * 0.8, 2.6 + 0.5 * Math.sin(p * 0.35), -9 - 1.2 * Math.sin(p * 0.12));
+export const outroPath: PathFn = (p, o) => o.set(-16 + p * 0.8, 2.6 + 0.5 * Math.sin(p * 0.35), -6.5 - 1.0 * Math.sin(p * 0.12));
 
 export default class S15Logo extends Scene {
   private layer = new Layer2D();
@@ -40,7 +40,7 @@ export default class S15Logo extends Scene {
     const bf = new THREE.Box3().setFromObject(fx), bc = new THREE.Box3().setFromObject(this.cur); this.curBase.copy(this.cur.position); this.curBase.x += bf.max.x + 0.1 - bc.min.x;
     inst.root.position.set(-0.3, 0.5, 0); this.scene.add(inst.root, this.sweep, this.sweep.target);
     const pm = new THREE.PMREMGenerator(this.ctx.renderer); this.env = pm.fromScene(new RoomEnvironment(), 0.04).texture; pm.dispose(); this.ctx.renderer.resetState();
-    this.scene.environment = this.env; this.scene.environmentIntensity = 0.55; this.scene.background = new THREE.Color(0x050507); this.scene.fog = new THREE.Fog(0x050507, 7, 15);
+    this.scene.environment = this.env; this.scene.environmentIntensity = 0.55; this.scene.background = new THREE.Color(0x050507); this.scene.fog = new THREE.Fog(0x050507, 8, 21);
     const key = new THREE.DirectionalLight(0xffe2c4, 2.0); key.position.set(3, 4, 6); const rim = new THREE.DirectionalLight(0x9cc9e8, 3.6); rim.position.set(-4, 3, -5);
     this.scene.add(key, rim, new THREE.HemisphereLight(0x8a96a8, 0x0b0b0e, 0.12));
     const fm = new THREE.MeshBasicMaterial({ color: 0x050507 }); const fgeo = new THREE.PlaneGeometry(80, 80); this.own.push(fm, fgeo);
