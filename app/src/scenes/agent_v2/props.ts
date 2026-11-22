@@ -36,7 +36,7 @@ export class Sheet {
     this.mesh = new THREE.Mesh(geo, new THREE.MeshPhysicalMaterial({ color: tint, map: this.tex, roughness: 0.85, sheen: 0.3, sheenColor: new THREE.Color(0xffffff), side: THREE.DoubleSide }));
     this.mesh.receiveShadow = this.mesh.castShadow = true;
   }
-  draw(fn: (g: CanvasRenderingContext2D, w: number, h: number) => void) { const g = this.g; g.clearRect(0, 0, this.canvas.width, this.canvas.height); g.fillStyle = '#ffffff'; g.fillRect(0, 0, this.canvas.width, this.canvas.height);
+  draw(fn: (g: CanvasRenderingContext2D, w: number, h: number) => void) { const g = this.g; g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.clearRect(0, 0, this.canvas.width, this.canvas.height); g.fillStyle = '#ffffff'; g.fillRect(0, 0, this.canvas.width, this.canvas.height);
     g.fillStyle = 'rgba(120,150,190,0.25)'; for (let y = 160; y < this.canvas.height; y += 58) g.fillRect(60, y, this.canvas.width - 120, 2); fn(g, this.canvas.width, this.canvas.height); this.tex.needsUpdate = true; }
 }
 
