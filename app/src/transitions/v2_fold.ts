@@ -7,7 +7,7 @@ const vec3 PAPER = vec3(0.97, 0.94, 0.88);
 vec4 f1(vec2 p, float c1) {
   if (p.x < 0.0 || p.x > 1.0 || p.y < 0.0 || p.y > 1.0) return vec4(0.0);
   if (p.y < 0.5) {
-    if (c1 < 0.0 && p.y > 0.5 + c1) { float ys = 0.5 + (0.5 - p.y) * 0.5 / max(-c1, 1e-4); vec3 ink = texture2D(texA, vec2(p.x, ys)).rgb; float g = (0.5 - p.y) / max(-c1, 1e-4); return vec4(mix(PAPER, ink, 0.1) * (0.84 + 0.16 * (-c1 / 0.5)) * (1.06 - 0.14 * g) * (1.0 - 0.45 * smoothstep(0.95, 1.0, g)), 1.0); }
+    if (c1 < 0.0 && p.y > 0.5 + c1) { float ys = 0.5 + (0.5 - p.y) * 0.5 / max(-c1, 1e-4); vec3 ink = texture2D(texA, vec2(p.x, ys)).rgb; float g = (0.5 - p.y) / max(-c1, 1e-4); float lum = dot(ink, vec3(0.3, 0.55, 0.15)); return vec4(PAPER * (0.45 + 0.6 * lum) * (0.84 + 0.16 * (-c1 / 0.5)) * (1.06 - 0.14 * g) * (1.0 - 0.45 * smoothstep(0.95, 1.0, g)), 1.0); }
     float crease = c1 < 0.0 ? 1.0 - 0.35 * exp(-(0.5 + c1 - p.y) * 45.0) : 1.0;
     return vec4(texture2D(texA, p).rgb * crease, 1.0);
   }
@@ -16,7 +16,7 @@ vec4 f1(vec2 p, float c1) {
 }
 vec4 f2(vec2 p, float c1, float c2) {
   if (p.x < 0.5) {
-    if (c2 < 0.0 && p.x > 0.5 + c2) { vec4 b = f1(vec2(0.5 + (0.5 - p.x) * 0.5 / max(-c2, 1e-4), p.y), c1); if (b.a > 0.0) return vec4(PAPER * (0.82 + 0.18 * (-c2 / 0.5)), 1.0); }
+    if (c2 < 0.0 && p.x > 0.5 + c2) { vec4 b = f1(vec2(0.5 + (0.5 - p.x) * 0.5 / max(-c2, 1e-4), p.y), c1); if (b.a > 0.0) { float lum = dot(b.rgb, vec3(0.3, 0.55, 0.15)); float g = (0.5 - p.x) / max(-c2, 1e-4); return vec4(PAPER * (0.45 + 0.6 * lum) * (0.84 + 0.16 * (-c2 / 0.5)) * (1.06 - 0.14 * g) * (1.0 - 0.45 * smoothstep(0.95, 1.0, g)), 1.0); } }
     vec4 a = f1(p, c1); if (c2 < 0.0) a.rgb *= 1.0 - 0.3 * exp(-(0.5 + c2 - p.x) * 45.0); return a;
   }
   if (c2 > 0.0 && p.x < 0.5 + c2) { vec4 b = f1(vec2(0.5 + (p.x - 0.5) * 0.5 / max(c2, 1e-4), p.y), c1); return vec4(b.rgb * (0.72 + 0.28 * c2 / 0.5), b.a); }
