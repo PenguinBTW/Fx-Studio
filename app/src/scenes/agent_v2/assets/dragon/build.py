@@ -124,7 +124,7 @@ jm = loft(TONG, 'jawmouth', span(9.3, 10.74, 0.01), 24); assign(jm, MO)
 up, lo = [], []
 xs, xq = [], 9.58
 for i in range(40):
-    if xq > 10.72: break
+    if xq > 10.68: break
     xs.append(xq); xq += 0.07 + 0.09 * ((i * 0.7548776) % 1) ** 2
 for i, x in enumerate(xs):
     w, zb, _ = under(x); can = math.exp(-((x - 10.55) / 0.04) ** 2)

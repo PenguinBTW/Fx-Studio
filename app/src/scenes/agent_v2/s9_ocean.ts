@@ -77,7 +77,7 @@ export default class S9Ocean extends Scene {
     // above: wide side-on of the dive; at impact the camera follows it through the surface and trails it under water
     const ab = hp.clone().add(new THREE.Vector3(-1.5, 1.6, 11)); const look0 = hp.clone();
     const w = sm(TI - 0.3, TI + 0.6, T); const un = hp.clone().add(new THREE.Vector3(-7.5, 0.4, 5.5)); un.y = Math.min(un.y, -0.6 - 1.0 * w);
-    const pos = new THREE.Vector3(0, 1.2, 12).lerp(ab, sm(T59, T59 + 0.8, T) * (1 - w)).lerp(un, w); pos.y = w < 0.01 ? Math.max(pos.y, 0.8) : pos.y;
+    const pos = hp.clone().add(new THREE.Vector3(-0.8, 0.9, 6.0)).lerp(ab, sm(T59, T59 + 0.8, T) * (1 - w)).lerp(un, w); pos.y = w < 0.01 ? Math.max(pos.y, 0.8) : pos.y;
     this.cam.position.copy(pos); this.cam.lookAt(look0.clone().add(new THREE.Vector3(w * 2.0, 0, 0))); this.cam.updateProjectionMatrix();
     const under = this.cam.position.y < 0; this.scene.fog = under ? this.fog : null; this.bgU.visible = under; this.bgU.position.copy(this.cam.position);
     rr.setRenderTarget(out); rr.setClearColor(under ? 0x01080c : 0x01030a, 1); rr.clear(true, true, true); rr.render(this.scene, this.cam);
