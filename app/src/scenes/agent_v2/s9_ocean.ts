@@ -66,9 +66,9 @@ export default class S9Ocean extends Scene {
     const moon = new THREE.DirectionalLight(0xbcd0ff, 1.6); moon.position.set(-4, 3.5, -10); const glow = new THREE.PointLight(0x30e0ff, 0, 10, 1.5);
     const bg = new THREE.Mesh(new THREE.SphereGeometry(300, 32, 16), new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, fog: false,
       vertexShader: 'varying vec3 vD; void main() { vD = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-      fragmentShader: `varying vec3 vD; void main() { vec3 c = mix(vec3(0.0, 0.006, 0.01), vec3(0.02, 0.11, 0.14), smoothstep(-0.7, 0.0, vD.y));
-        if (vD.y > 0.0) { vec3 mD = normalize(vec3(-0.4, 0.35, -1.0)); float m = max(dot(vD, mD), 0.0); vec3 q = floor(vD * 420.0); float h = fract(sin(dot(q, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
-          c = mix(vec3(0.05, 0.08, 0.15), vec3(0.004, 0.008, 0.025), smoothstep(0.0, 0.45, vD.y)) + vec3(0.9, 0.95, 1.0) * smoothstep(0.99955, 0.9997, m) * 6.0 + vec3(0.35, 0.45, 0.7) * pow(m, 60.0) * 0.5 + vec3(0.8, 0.85, 1.0) * step(0.9975, h) * smoothstep(0.02, 0.3, vD.y) * 1.5; }
+      fragmentShader: `varying vec3 vD; void main() { vec3 vD = normalize(vD); vec3 c = cameraPosition.y > 0.0 ? vec3(0.035, 0.055, 0.11) : mix(vec3(0.0, 0.006, 0.01), vec3(0.02, 0.11, 0.14), smoothstep(-0.7, 0.0, vD.y));
+        if (vD.y > 0.0 && cameraPosition.y > 0.0) { vec3 mD = normalize(vec3(-0.4, 0.35, -1.0)); float m = max(dot(vD, mD), 0.0); vec3 q = floor(vD * 420.0); float h = fract(sin(dot(q, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
+          c = mix(vec3(0.035, 0.055, 0.11), vec3(0.003, 0.006, 0.02), smoothstep(0.0, 0.4, vD.y)) + vec3(0.9, 0.95, 1.0) * smoothstep(0.99955, 0.9997, m) * 6.0 + vec3(0.35, 0.45, 0.7) * pow(m, 60.0) * 0.5 + vec3(0.8, 0.85, 1.0) * step(0.9975, h) * smoothstep(0.02, 0.3, vD.y) * 1.5; }
         gl_FragColor = vec4(c, 1.0); }` }));
     bg.renderOrder = -1; this.bgU = bg;
     this.objs = [water, plk, moon, glow, bg]; this.scene.add(...this.objs, new THREE.HemisphereLight(0x203048, 0x000000, 0.25));
@@ -86,7 +86,7 @@ export default class S9Ocean extends Scene {
     const w = sm(TI - 0.3, TI + 0.6, T); const un = hp.clone().add(new THREE.Vector3(-7.5, 0.4, 5.5)); un.y = Math.min(un.y, -0.6 - 1.0 * w);
     const pos = hp.clone().add(new THREE.Vector3(-4.0, 0.9, 4.6)).lerp(ab, sm(T59, T59 + 0.8, T) * (1 - w)).lerp(un, w); pos.y = w < 0.01 ? Math.max(pos.y, 0.8) : pos.y;
     this.cam.position.copy(pos); this.cam.lookAt(look0.clone().add(new THREE.Vector3(w * 2.0, 0, 0))); this.cam.updateProjectionMatrix();
-    const under = this.cam.position.y < 0; this.scene.fog = under ? this.fog : null; this.bgU.visible = under; this.bgU.position.copy(this.cam.position);
+    const under = this.cam.position.y < 0; this.scene.fog = under ? this.fog : null; this.bgU.visible = true; this.bgU.position.copy(this.cam.position);
     rr.setRenderTarget(out); rr.setClearColor(under ? 0x01080c : 0x01030a, 1); rr.clear(true, true, true); rr.render(this.scene, this.cam);
     const g = this.layer.ctx; this.layer.clear(); term(g, S9_LINES, T, { size: 46, x: 200, align: 'left', y: 930, halo: 'rgba(0,0,0,0.6)', color: '#dff8ff', cursor: '#40e8ff', alpha: overlayTextDuck(f.tin, f.tout) });
     this.ctx.comp.draw(rr, this.layer.upload(), out, { mode: 'normal', opacity: 1 }); rr.resetState();
