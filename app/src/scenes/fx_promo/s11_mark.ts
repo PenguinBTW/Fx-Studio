@@ -32,7 +32,7 @@ const SKY_FS = `uniform float uT; uniform float uBeam; uniform vec3 uSig; unifor
 void main(){
   vec3 d = normalize(vD);
   float hz = exp(-abs(d.y + 0.08) * 9.0);
-  vec3 c = vec3(0.002, 0.002, 0.004) + uSig * (0.07 * hz + 0.12 * exp(-abs(d.y + 0.08) * 1.6)) + uIce * 0.012 * exp(-abs(d.y - 0.3) * 5.0);
+  vec3 c = vec3(0.002, 0.002, 0.004) + uSig * (0.07 * hz + 0.05 * exp(-abs(d.y + 0.08) * 4.0)) + uIce * 0.012 * exp(-abs(d.y - 0.3) * 5.0);
   float a = atan(d.x, d.y + 0.35);
   float beams = pow(0.5 + 0.5 * sin(a * 18.0 + sin(a * 5.0 + uT * 0.3) * 2.5), 90.0) * (0.4 + 0.6 * pow(0.5 + 0.5 * sin(a * 7.0 - uT * 0.5), 3.0)) * smoothstep(0.1, -0.7, d.z) * smoothstep(-0.25, 0.3, d.y);
   c += mix(uSig, vec3(1.0, 0.9, 0.8), 0.35) * beams * uBeam;
@@ -73,7 +73,7 @@ export default class S11Mark extends Scene {
     this.black.needsUpdate = true;
     const inst = await model(this.ctx, 'fx_wordmark');
     this.scene.add(inst.root);
-    const side = new THREE.MeshPhysicalMaterial({ color: 0x9a9ca4, metalness: 1, roughness: 0.1, envMap: this.cubeRT.texture, envMapIntensity: 1.25, clearcoat: 1, clearcoatRoughness: 0.06 });
+    const side = new THREE.MeshPhysicalMaterial({ color: 0x9a9ca4, metalness: 1, roughness: 0.1, envMap: this.cubeRT.texture, envMapIntensity: 0.9, clearcoat: 1, clearcoatRoughness: 0.06 });
     const url = new THREE.MeshStandardMaterial({ color: new THREE.Color(0xffffff), emissive: new THREE.Color(0xffffff).multiplyScalar(0.85), roughness: 0.35, metalness: 0.3, envMap: this.cubeRT.texture, clippingPlanes: [this.urlPlane] });
     this.mats.push(side, url);
     const col = (h: string) => new THREE.Vector3(...lin(h));
@@ -111,7 +111,7 @@ export default class S11Mark extends Scene {
       fragmentShader: SKY_FS,
     }));
     this.scene.add(this.sky);
-    this.floor = new Reflector(new THREE.PlaneGeometry(400, 400), { textureWidth: 960, textureHeight: 540, clipBias: 0.003, color: new THREE.Color(...lin(C.signal, 0.07)).addScalar(0.002), shader: FLOOR });
+    this.floor = new Reflector(new THREE.PlaneGeometry(400, 400), { textureWidth: 960, textureHeight: 540, clipBias: 0.003, color: new THREE.Color(...lin(C.signal, 0.12)).addScalar(0.002), shader: FLOOR });
     this.floor.rotation.x = -Math.PI / 2;
     this.floor.position.y = -1.32;
     // The URL stays out of the mirror: its blurred reflection read as a garbled strip under it.
