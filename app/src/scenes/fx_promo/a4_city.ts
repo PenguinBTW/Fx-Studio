@@ -122,6 +122,7 @@ export default class A4City extends Scene {
   private chunks: { im: THREE.InstancedMesh; off: THREE.Vector3; ax: THREE.Vector3; w: number }[] = [];
   private brk: { t: number; p: THREE.Vector3; q: THREE.Quaternion; v: THREE.Vector3 }[][] = [];
   private shocks: THREE.Vector3[] = [];
+  private hero = -1; private heroDir = 0; private heroL = new THREE.PointLight(0xff7a30, 0, 16, 1.6);
   private debrisMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85 });
   private dm = new THREE.Matrix4(); private dp = new THREE.Vector3(); private dq = new THREE.Quaternion();
 
@@ -180,6 +181,25 @@ export default class A4City extends Scene {
       this.pose(b, bi, i, tau, p, q); this.pose(b, bi, i, tau - 1 / 60, p0, q0);
       return { t: b.tc + tau, p, q, v: p.clone().sub(p0).multiplyScalar(60) };
     }));
+    // Hero close-up (bar 46-46.5): the camera stands at the foot of one tower as its lower floors burst into chunks.
+    let hd = 1e9;
+    this.B.forEach((b, bi) => { const d = Math.abs(b.tc - bar(45.85)); if (b.n >= 10 && bi !== this.tallest && d < hd) { hd = d; this.hero = bi; } });
+    // Pick the clearest line of sight to it: sample around the tower and keep the angle whose sight line misses every other tower.
+    const hb0 = this.B[this.hero];
+    if (hb0) {
+      let bestC = -1e9;
+      for (let a = 0; a < 48; a++) {
+        const ang = (a / 48) * Math.PI * 2;
+        let clr = 1e9;
+        for (let k = 1; k <= 6; k++) {
+          const px = hb0.x + Math.cos(ang) * 1.6 * k, pz = hb0.z + Math.sin(ang) * 1.6 * k;
+          this.B.forEach((b, bi) => { if (bi !== this.hero) clr = Math.min(clr, Math.hypot(px - b.x, pz - b.z) - b.sc * 0.8); });
+        }
+        const score = clr + 0.4 * Math.abs(Math.sin(ang - hb0.psi));
+        if (score > bestC) { bestC = score; this.heroDir = ang; }
+      }
+    }
+    this.scene.add(this.heroL);
     this.shocks = this.B.map((b, bi) => ({ b, bi })).sort((a, c) => c.b.n - a.b.n).slice(0, 4).map(({ b, bi }) => {
       const L = b.n * FH * 0.8;
       return new THREE.Vector3(b.x + Math.cos(b.psi) * L, b.z + Math.sin(b.psi) * L, b.tc + (bi === this.tallest ? 0.91 : 1.98));
@@ -362,7 +382,8 @@ export default class A4City extends Scene {
           else { const tb = t - t1, vb = 0.25 * (GR * t1 - vy), sl = Math.min(tb, 0.5), tt = Math.min(tb, (2 * vb) / GR); y = 0.05 + Math.max(0, vb * tt - 0.5 * GR * tt * tt); run = t1 + 0.35 * sl; spin = t1 + 0.3 * sl; }
           this.dp.set(br.p.x + o.x + vx * run, y, br.p.z + o.z + vz * run);
           this.dq.setFromAxisAngle(ch.ax, ch.w * spin).multiply(br.q);
-          ch.im.setMatrixAt(nd, this.dm.compose(this.dp, this.dq, this.s.set(b.sc, 1, b.sc)));
+          const ks = 0.7 + 0.6 * h(j, 87);
+          ch.im.setMatrixAt(nd, this.dm.compose(this.dp, this.dq, this.s.set(b.sc * ks, ks, b.sc * ks)));
           ch.im.setColorAt(nd, bc);
         });
         nd++;
@@ -389,7 +410,20 @@ export default class A4City extends Scene {
 
     // The Thread brightens with the vocal at night and keeps glowing after everything else dies.
     this.thread.color.set(C.signal).multiplyScalar(1.2 + night * (1 + 1.5 * a.vocal) * (1 - decay * 0.5) + dustK * 2);
-    applyCam(this.cam, camAt(T), a.kick * 0.5 * (1 - night * 0.5) + dustK * a.kick * 2);
+    const bn = (T - B0) / BAR + 1, hb = this.B[this.hero];
+    let key = camAt(T);
+    if (hb && bn >= 46 && bn < 46.5) {
+      const k = (bn - 46) / 0.5, fx = Math.cos(hb.psi), fz = Math.sin(hb.psi), d = 9.5 - 1.5 * k;
+      const cx = Math.cos(this.heroDir), cz = Math.sin(this.heroDir);
+      key = { pos: [hb.x + cx * d, 1.5 + 0.4 * k, hb.z + cz * d], tgt: [hb.x + fx * 1.2, 2.4, hb.z + fz * 1.2], fov: 50 };
+    }
+    if (hb) {
+      let heat = 0;
+      for (let i = 0; i < Math.min(5, hb.n); i++) { const d = T - this.brk[this.hero]![i]!.t; if (d > 0) heat += Math.exp(-d * 3); }
+      this.heroL.position.set(hb.x + Math.cos(hb.psi) * 0.8, 0.8, hb.z + Math.sin(hb.psi) * 0.8);
+      this.heroL.intensity = 30 * Math.min(1.5, heat);
+    }
+    applyCam(this.cam, key, a.kick * 0.5 * (1 - night * 0.5) + dustK * a.kick * 2);
     this.dustMat.uniforms.uScale!.value = 1080 / (2 * Math.tan((this.cam.fov * Math.PI) / 360));
 
     // Ash clears out of the sky before the tallest tower's fall so its silhouette reads; embers burst on each landing.
