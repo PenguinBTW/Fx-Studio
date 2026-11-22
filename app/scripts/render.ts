@@ -373,6 +373,8 @@ async function video(page: Page, from: number, to: number, fps: number, out: str
     if (master && existsSync(master)) { audio = master; audioFadeOut = manifest.audioFadeOut; audioOffset = manifest.audioOffset; console.log(`[render] audio: ${master} (project.json "audio")`); }
     else if (manifest.mix) { mixPath = at(manifest.mix); console.log(`[render] audio: mixdown of ${mixPath} (project.json "mix")`); }
   }
+  // --audio naming the project soundtrack keeps its offset
+  if (explicitAudio && !mixPath) { const { manifest, at } = await loadProject(); const m = at(manifest.audio); if (m && path.resolve(m) === path.resolve(audio)) audioOffset = manifest.audioOffset; }
   let hasAudio = !flag('noaudio') && existsSync(audio);
   let mixedAudio = false;
   const eventsOut = opt('events-out');
