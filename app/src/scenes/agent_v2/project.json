@@ -105,7 +105,7 @@
       "transition": "v2_cursor_bloom",
       "from": "s0_open",
       "to": "s1_world",
-      "at": 5.337,
+      "at": 5.359,
       "dur": 0.5
     },
     {
@@ -113,7 +113,7 @@
       "transition": "v2_shatter",
       "from": "s1_world",
       "to": "s2_crumble",
-      "at": 16.505,
+      "at": 16.526,
       "dur": 0.6
     },
     {
@@ -121,7 +121,7 @@
       "transition": "v2_vortex",
       "from": "s2_crumble",
       "to": "s3_forge",
-      "at": 27.722,
+      "at": 27.744,
       "dur": 0.6
     },
     {
@@ -129,7 +129,7 @@
       "transition": "v2_print",
       "from": "s3_forge",
       "to": "s4_verbs",
-      "at": 36.97,
+      "at": 36.991,
       "dur": 0.8
     },
     {
@@ -137,7 +137,7 @@
       "transition": "v2_fold",
       "from": "s4_verbs",
       "to": "s5_paper",
-      "at": 59.455,
+      "at": 59.476,
       "dur": 0.7
     },
     {
@@ -145,7 +145,7 @@
       "transition": "v2_halftone",
       "from": "s5_paper",
       "to": "s6_comic",
-      "at": 68.853,
+      "at": 68.874,
       "dur": 0.6
     },
     {
@@ -153,7 +153,7 @@
       "transition": "v2_glitch",
       "from": "s6_comic",
       "to": "s7_roulette",
-      "at": 83.884,
+      "at": 83.906,
       "dur": 0.45
     },
     {
@@ -161,7 +161,7 @@
       "transition": "v2_burn",
       "from": "s7_roulette",
       "to": "s8_fire",
-      "at": 98.766,
+      "at": 98.787,
       "dur": 0.6
     },
     {
@@ -169,7 +169,7 @@
       "transition": "v2_splash",
       "from": "s8_fire",
       "to": "s9_ocean",
-      "at": 109.983,
+      "at": 110.005,
       "dur": 0.6
     },
     {
@@ -177,7 +177,7 @@
       "transition": "v2_vhs",
       "from": "s9_ocean",
       "to": "s10_editor",
-      "at": 117.411,
+      "at": 117.433,
       "dur": 0.7
     },
     {
@@ -185,7 +185,7 @@
       "transition": "v2_viewport",
       "from": "s10_editor",
       "to": "s11_player",
-      "at": 128.579,
+      "at": 128.6,
       "dur": 0.8
     },
     {
@@ -193,7 +193,7 @@
       "transition": "v2_mosaic",
       "from": "s11_player",
       "to": "s12_zoom",
-      "at": 143.585,
+      "at": 143.607,
       "dur": 0.7
     },
     {
@@ -201,7 +201,7 @@
       "transition": "v2_flash",
       "from": "s12_zoom",
       "to": "s13_rush",
-      "at": 151.189,
+      "at": 151.21,
       "dur": 0.45
     },
     {
@@ -209,7 +209,7 @@
       "transition": "v2_ash",
       "from": "s13_rush",
       "to": "s14_quiet",
-      "at": 173.348,
+      "at": 173.37,
       "dur": 1.0
     },
     {
@@ -217,7 +217,7 @@
       "transition": "v2_ink",
       "from": "s14_quiet",
       "to": "s15_logo",
-      "at": 188.405,
+      "at": 188.427,
       "dur": 0.8
     }
   ]

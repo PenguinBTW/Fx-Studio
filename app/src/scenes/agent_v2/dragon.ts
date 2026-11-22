@@ -46,7 +46,8 @@ float shash(vec2 c) { return fract(sin(dot(c, vec2(12.9898, 78.233))) * 43758.54
 // overlapping shingle scales in the body's local (length, angle) space: x = height, y = cell id, z = crease
 vec3 scl(vec3 p) {
   float hd = smoothstep(9.1, 9.3, p.x); float ang = atan(p.z, p.y) / 6.28318;
-  vec2 g = vec2(p.x * mix(26.0, 42.0, hd), ang * mix(56.0, 88.0, hd));
+  float bel = smoothstep(-0.04, -0.2, p.y) * (1.0 - hd), nk = smoothstep(7.0, 8.8, p.x) * (1.0 - hd), dsl = smoothstep(0.15, 0.32, p.y) * (1.0 - hd); float rs = mix(1.0, 1.7, nk) * mix(1.0, 0.42, bel) * mix(1.0, 0.75, dsl);
+  vec2 g = vec2(p.x * mix(26.0, 42.0, hd) * rs, ang * mix(56.0, 88.0, hd) * rs);
   vec2 c0 = floor(g); float h1 = 0.0, h2 = 0.0, id = 0.0;
   for (int i = -1; i <= 1; i++) for (int j = -1; j <= 1; j++) {
     vec2 c = c0 + vec2(float(i), float(j)); vec2 q = (g - c - vec2(0.5, 0.5 + 0.5 * mod(c.x, 2.0))) * vec2(1.0, 1.2);

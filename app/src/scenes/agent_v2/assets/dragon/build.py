@@ -181,7 +181,7 @@ for k in range(34):
     x0 = 9.5 + 0.5 * ((k * 0.618) % 1); y0 = (((k * 0.381) % 1) - 0.5) * 0.25; ln = 0.35 + 0.25 * ((k * 0.7548) % 1)
     bd.append(strand([(x0 - ln * t * 0.9, y0 * (1 + t), -0.15 - ln * t * 0.9) for t in [i / 6 for i in range(7)]], 0.008))
 for s in (-1, 1):
-    ms.append(strand([(10.64 - 3.2 * t, (0.16 + 1.05 * math.sin(min(1, t * 1.6) * 1.5708) - 0.1 * t) * s, 0.02 - 0.12 * math.sin(t * 6.0) * (1 - t) + 0.6 * t * t) for t in [i / 23 for i in range(24)]], 0.009))
+    ms.append(strand([(10.64 - 1.9 * t, (0.16 + 0.7 * math.sin(min(1, t * 1.4) * 1.5708)) * s, 0.02 - 0.38 * math.sin(t * 2.8) + 0.3 * t ** 3) for t in [i / 23 for i in range(24)]], 0.007))
 mane = join(ms, 'mane'); assign(mane, MA)
 beard = join(bd, 'jawbeard'); assign(beard, MA)
 jaw = join([jaw, lowt], 'jaw')
