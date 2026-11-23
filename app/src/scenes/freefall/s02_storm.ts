@@ -27,7 +27,7 @@ void main() {
   vec3 sky = vec3(0.012, 0.014, 0.045) + vec3(0.25, 0.3, 0.65) * pow(max(dot(rd, MOON), 0.0), 8.0) * 0.4 + vec3(0.16, 0.12, 0.42) * exp(-abs(rd.y) * 28.0); ocean = mix(ocean, sky, smoothstep(-0.05, 0.01, rd.y));
   // towers: soft volumetric march (empty space skipped on the SDF), two shadow taps toward the moon per sample
   float t = max(0.0, (ro.y - 13.5) / max(-rd.y, 0.05)); float T = 1.0; vec3 L = vec3(0.0); float dim = 1.0 - 0.8 * smoothstep(12.0, 9.0, alt);
-  for (int i = 0; i < 72; i++) { vec3 p = ro + rd * t; if (p.y < 0.0 || t > toM || T < 0.03) break; float c = cloud(p);
+  for (int i = 0; i < 72; i++) { vec3 p = ro + rd * t; if (p.y < 0.0 || t > toM || T < 0.03 || (rd.y >= 0.0 && p.y > 13.5)) break; float c = cloud(p);
     if (c > 0.3) { t += c * 0.8; continue; } float d = clamp(0.2 - c * 1.6, 0.0, 1.0); float st = max(0.12, t * 0.012);
     if (d > 0.01) { float ld = clamp(0.2 - cloud(p + MOON * 0.9) * 1.6, 0.0, 1.0); float ld2 = clamp(0.2 - cloud(p + MOON * 2.4) * 1.6, 0.0, 1.0);
       float tr = exp(-(ld * 2.2 + ld2 * 1.6)); float ao = clamp((p.y - 1.0) / 11.0, 0.0, 1.0); float pw = 1.0 - exp(-d * 6.0);
