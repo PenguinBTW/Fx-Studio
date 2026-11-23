@@ -34,4 +34,4 @@ void main() {
   float stall = smoothstep(17.9, 18.15, uT) * (1.0 - smoothstep(19.4, 19.55, uT)); C *= 1.0 - 0.15 * stall;
   fragColor = vec4(C, 1.0); }`;
 
-export default shaderScene(FRAG, (t) => ({ toneMap: 'aces', exposure: 0.55, bloom: 0.6, bloomThreshold: 0.85, halation: 0.3, vignette: 0.5, grain: 0.045, ca: 0.25 + 0.05 * Math.abs(dZ(t)) }));
+export default shaderScene(FRAG, (t) => ({ toneMap: 'aces', exposure: 0.4, bloom: 0.45, bloomThreshold: 0.9, halation: 0.3, vignette: 0.5, grain: 0.045, ca: 0.25 + 0.05 * Math.abs(dZ(t)) }));

@@ -7,14 +7,16 @@ import { FFN, FF_SPEED } from './glsl';
 const FRAG = /* glsl */ `${FFN}${FF_SPEED}
 const int N = 8; const float SPAN = 2.2;
 vec3 cell(vec2 f, float r, float blur, float h, float flash, float ph) {
-  float d = length(f) / r; if (d > 1.6 + blur * 3.0) return vec3(0.0);
+  float d = length(f * (h < 0.35 ? vec2(1.0, 0.62) : vec2(1.0))) / r; if (d > 1.6 + blur * 3.0) return vec3(0.0);
   float body = smoothstep(1.0 + blur, 1.0 - blur - 0.02, d); float z = sqrt(max(0.0, 1.0 - d * d));
   float rim = pow(1.0 - z, 3.0) * body; float gran = ff_fbm(vec3(f / r * 4.0, h * 30.0), 3);
   vec2 nc = vec2(0.3 * (h - 0.5), 0.2 * (fract(h * 7.0) - 0.5)); float nuc = smoothstep(0.32 + blur, 0.2 - blur, length(f / r - nc));
   vec3 hueA = h > 0.86 ? vec3(0.9, 0.15, 1.0) : h > 0.74 ? vec3(0.5, 1.0, 0.25) : vec3(0.05, 0.75, 1.0);
-  vec3 c = hueA * (rim * 1.6 + body * gran * 0.25 + nuc * 0.5) * (0.35 + 2.2 * flash);
+  vec3 c = hueA * (rim * 1.6 + body * gran * 0.25 + nuc * 0.5) * (0.35 + 1.2 * flash);
+  float ang = atan(f.y, f.x); float hair = pow(abs(sin(ang * (22.0 + floor(h * 4.0) * 6.0) + h * 40.0 + uT * 2.5)), 30.0) * smoothstep(1.45, 1.02, d) * smoothstep(0.98, 1.04, d) * (1.0 - blur * 1.5);
+  c += hueA * hair * 0.7 + mix(hueA, vec3(1.0), 0.5) * smoothstep(0.09, 0.0, length(f / r - nc * -1.4)) * 0.6 * body;
   c += hueA * flash * exp(-d * d * 1.2) * 0.9; // flash halo
-  c += vec3(0.6, 0.9, 1.0) * flash * 3.0 * smoothstep(0.4, 0.0, d) * gran;
+  c += vec3(0.6, 0.9, 1.0) * flash * 1.1 * smoothstep(0.4, 0.0, d) * gran;
   return c; }
 void main() {
   vec2 q = ff_uv(); float w = (-2.3 - uZ) * 6.5; vec3 C = vec3(0.0, 0.012, 0.03);
@@ -32,4 +34,4 @@ void main() {
   C += vec3(0.2, 0.8, 1.0) * ff_speed(clamp(abs(uDZ) * 0.15, 0.0, 0.4), 4.0) * 0.5;
   fragColor = vec4(C, 1.0); }`;
 
-export default shaderScene(FRAG, (t) => ({ toneMap: 'aces', exposure: 1.5, bloom: 1.0, bloomThreshold: 0.45, halation: 0.4, vignette: 0.45, grain: 0.05, ca: 0.3 + 0.04 * Math.abs(dZ(t)) }));
+export default shaderScene(FRAG, (t) => ({ toneMap: 'aces', exposure: 1.15, bloom: 0.85, bloomThreshold: 0.6, halation: 0.4, vignette: 0.45, grain: 0.05, ca: 0.3 + 0.04 * Math.abs(dZ(t)) }));
