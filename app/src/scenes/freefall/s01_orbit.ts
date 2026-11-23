@@ -3,7 +3,7 @@
 import { shaderScene, Z } from './kit';
 import { FFN } from './glsl';
 
-const FRAG = /* glsl */ `${FFN}
+export const FRAG = /* glsl */ `${FFN}
 const float R = 6.371;
 vec3 cityLights(vec3 n, float px) {
   vec3 q = n * R; float land = smoothstep(0.47, 0.53, ff_fbm(n * 3.1 + 2.0, 6)); if (land <= 0.0) return vec3(0.0);

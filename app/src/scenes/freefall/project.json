@@ -1,13 +1,130 @@
 {
   "project": "freefall",
-  "size": [1080, 1920],
+  "size": [
+    1080,
+    1920
+  ],
   "trimToTimeline": true,
   "entries": [
-    { "scene": "freefall/s01_orbit", "id": "orbit", "start": 0, "end": 4.4 },
-    { "scene": "freefall/s02_storm", "id": "storm", "start": 3.6, "end": 8.4 },
-    { "scene": "freefall/s03_drop", "id": "drop", "start": 7.6, "end": 11.4 },
-    { "scene": "freefall/s04_plankton", "id": "plankton", "start": 10.6, "end": 15.4 },
-    { "scene": "freefall/s05_diatom", "id": "diatom", "start": 14.6, "end": 20.4 }
+    {
+      "scene": "freefall/s01_orbit",
+      "id": "orbit",
+      "start": 0,
+      "end": 4.41
+    },
+    {
+      "scene": "freefall/s02_storm",
+      "id": "storm",
+      "start": 3.6,
+      "end": 8.41
+    },
+    {
+      "scene": "freefall/s03_drop",
+      "id": "drop",
+      "start": 7.6,
+      "end": 11.41
+    },
+    {
+      "scene": "freefall/s04_plankton",
+      "id": "plankton",
+      "start": 10.6,
+      "end": 15.41
+    },
+    {
+      "scene": "freefall/s05_diatom",
+      "id": "diatom",
+      "start": 14.6,
+      "end": 20.41
+    },
+    {
+      "scene": "freefall/s06_lattice",
+      "id": "lattice",
+      "start": 19.6,
+      "end": 24.41
+    },
+    {
+      "scene": "freefall/s07_atom",
+      "id": "atom",
+      "start": 23.6,
+      "end": 28.41
+    },
+    {
+      "scene": "freefall/s08_quark",
+      "id": "quark",
+      "start": 27.6,
+      "end": 31.41
+    },
+    {
+      "scene": "freefall/s09_screen",
+      "id": "screen",
+      "start": 30.6,
+      "end": 38
+    }
   ],
-  "transitions": []
+  "transitions": [
+    {
+      "id": "t-1",
+      "transition": "ff_cloudpunch",
+      "from": "orbit",
+      "to": "storm",
+      "at": 3.6,
+      "dur": 0.8
+    },
+    {
+      "id": "t-2",
+      "transition": "ff_bolt",
+      "from": "storm",
+      "to": "drop",
+      "at": 7.6,
+      "dur": 0.8
+    },
+    {
+      "id": "t-3",
+      "transition": "ff_lens",
+      "from": "drop",
+      "to": "plankton",
+      "at": 10.6,
+      "dur": 0.8
+    },
+    {
+      "id": "t-4",
+      "transition": "ff_biolum",
+      "from": "plankton",
+      "to": "diatom",
+      "at": 14.6,
+      "dur": 0.8
+    },
+    {
+      "id": "t-5",
+      "transition": "ff_pore",
+      "from": "diatom",
+      "to": "lattice",
+      "at": 19.6,
+      "dur": 0.8
+    },
+    {
+      "id": "t-6",
+      "transition": "ff_ion",
+      "from": "lattice",
+      "to": "atom",
+      "at": 23.6,
+      "dur": 0.8
+    },
+    {
+      "id": "t-7",
+      "transition": "ff_nucleus",
+      "from": "atom",
+      "to": "quark",
+      "at": 27.6,
+      "dur": 0.8
+    },
+    {
+      "id": "t-8",
+      "transition": "ff_subpixel",
+      "from": "quark",
+      "to": "screen",
+      "at": 30.6,
+      "dur": 0.8
+    }
+  ]
 }

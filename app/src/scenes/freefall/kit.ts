@@ -7,7 +7,7 @@ import type { Compositor } from '../../engine/gl';
 
 export const BAR = 2, BEAT = 0.5, END = 38;
 // [t, Z] keys; the fall stalls at the midpoint (18-19.5) then slams
-const KEYS: [number, number][] = [[0, 6.9], [4, 5.0], [8, 2.6], [9.3, -1.3], [11, -2.3], [15, -3.4], [18, -4.05], [19.5, -4.12], [20, -4.9], [24, -9.2], [28, -14], [31, -18], [33, -3.6], [END, 6.9]];
+const KEYS: [number, number][] = [[0, 6.9], [4, 5.0], [8, 2.6], [9.3, -1.3], [11, -2.3], [15, -3.4], [18, -4.05], [19.5, -4.12], [20, -4.9], [24, -9.2], [28, -14], [31, -18], [31.8, -5.2], [33, -3.6], [35.5, -0.9], [END, 6.9]];
 const M = (() => { // Fritsch-Carlson monotone tangents
   const n = KEYS.length, d: number[] = [], m: number[] = [];
   for (let i = 0; i < n - 1; i++) d.push((KEYS[i + 1]![1] - KEYS[i]![1]) / (KEYS[i + 1]![0] - KEYS[i]![0]));
@@ -23,9 +23,9 @@ export function Z(t: number): number {
 /** dZ/dt (orders of magnitude per second), for speed lines and motion blur */
 export const dZ = (t: number) => (Z(t + 0.01) - Z(t - 0.01)) / 0.02;
 
-const LABELS: [number, string][] = [[0, 'low orbit'], [4, 'thunderhead'], [8, 'raindrop'], [11, 'plankton'], [15, 'diatom'], [20, 'salt crystal'], [24, 'sodium atom'], [28, 'quark'], [31, 'your screen'], [33.6, '']];
+const LABELS: [number, string][] = [[0, 'low orbit'], [4, 'thunderhead'], [8, 'raindrop'], [11, 'plankton'], [15, 'diatom'], [20, 'salt crystal'], [24, 'sodium atom'], [28, 'quark'], [31, 'your screen'], [33.4, ''], [35.5, 'low orbit']];
 const TEXT: { at: number; end: number; s: string }[] = [
-  { at: 0, end: 1.35, s: 'no footage.' }, { at: 1.4, end: 3.3, s: 'just code.' }, { at: 18.1, end: 19.45, s: 'closer.' }, { at: 31.3, end: 33.4, s: "that's your screen." }];
+  { at: 0, end: 1.35, s: 'no footage.' }, { at: 1.4, end: 3.3, s: 'just code.' }, { at: 18.1, end: 19.45, s: 'closer.' }, { at: 31.3, end: 33.4, s: "that's your screen." }, { at: 37.4, end: 38.5, s: 'no footage.' }];
 
 let layer: Layer2D | null = null;
 const SUP = '\u2070\u00b9\u00b2\u00b3\u2074\u2075\u2076\u2077\u2078\u2079';
@@ -53,9 +53,9 @@ export function hud(renderer: THREE.WebGLRenderer, comp: Compositor, out: THREE.
   g.fillStyle = 'rgba(255,255,255,0.22)'; g.fillRect(rx, r0, 3, r1 - r0); g.fillStyle = '#fff'; g.fillRect(rx - 9, r0 + p * (r1 - r0) - 2, 21, 5);
   for (const tx of TEXT) {
     if (t < tx.at || t > tx.end) continue; const lt = t - tx.at, n = tx.at === 0 ? tx.s.length : Math.min(tx.s.length, Math.floor(lt * 34) + 1), k = Math.min(1, (tx.end - t) / 0.18);
-    g.globalAlpha = alpha * k; g.font = `104px "${F.archivo(100, 900)}"`; g.fillStyle = '#fff'; g.shadowBlur = 28;
+    g.globalAlpha = alpha * k; g.font = `104px "${F.archivo(100, 900)}"`; const fs = Math.min(104, 104 * 840 / g.measureText(tx.s).width); g.font = `${fs}px "${F.archivo(100, 900)}"`; g.fillStyle = '#fff'; g.shadowBlur = 28;
     const str = tx.s.slice(0, n), w = g.measureText(tx.s).width; g.textAlign = 'left'; g.fillText(str, cx - w / 2, 1180);
-    if (Math.floor(t * 4) % 2 === 0 || n < tx.s.length) { g.fillStyle = '#7dfcff'; g.fillRect(cx - w / 2 + g.measureText(str).width + 8, 1100, 46, 86); }
+    if (Math.floor(t * 4) % 2 === 0 || n < tx.s.length) { g.fillStyle = '#7dfcff'; g.fillRect(cx - w / 2 + g.measureText(str).width + 8, 1180 - fs * 0.77, fs * 0.44, fs * 0.83); }
   }
   g.restore();
   comp.draw(renderer, layer.upload(), out, { mode: 'normal', opacity: 1 }); renderer.resetState();
