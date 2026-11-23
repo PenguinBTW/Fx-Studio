@@ -11,12 +11,13 @@ function haloTex() {
   const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.25, 'rgba(255,255,255,0.45)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
   g.fillStyle = gr; g.fillRect(0, 0, 128, 128); const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
+const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 const DEPTH = new THREE.MeshBasicMaterial({ colorWrite: false });
 const SHADOW = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
 const ENV = new WeakMap<THREE.WebGLRenderer, THREE.Texture>();
 
-/** hard terminal blink, phase-locked to the song: on for 1.2 beats of every 2 (fully off between, like a real cursor) */
-export const heroBlink = (t: number) => ((((t - DROP) / (2 * BEAT)) % 1) + 1) % 1 < 0.6 ? 1 : 0;
+/** hard terminal blink, phase-locked to the song: a short dim flicker once every 2 beats; it never fully disappears */
+export const heroBlink = (t: number) => ((((t - DROP) / (2 * BEAT)) % 1) + 1) % 1 < 0.88 ? 1 : 0;
 
 export class HeroPass {
   readonly scene = new THREE.Scene();
@@ -53,9 +54,9 @@ export class HeroPass {
     return root;
   }
 
-  update(t: number, on = heroBlink(t)) { void t;
-    const k = on >= 0.5 ? 1 : 0;
-    this.block.visible = k > 0; this.halo.opacity = 0.8 * k;
+  update(t: number, on = heroBlink(t)) {
+    const k = 0.3 + 0.7 * clamp01(on) * (0.97 + 0.03 * Math.sin(t * 90));
+    this.block.color.setRGB(k, 0.34 * k, 0.02 * k); this.halo.opacity = 0.8 * k * k;
   }
 
   /** draw the hero into `out` after the region's own passes. Pass `world` when `out` does not already hold the
