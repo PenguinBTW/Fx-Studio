@@ -105,7 +105,7 @@ export default class S11Finale extends Scene {
     const rk = clamp((t - SCREAM) / 1.2, 0, 1); (this.ring.material as THREE.MeshBasicMaterial).opacity = t > SCREAM ? 0.9 * (1 - rk) : 0; this.ring.scale.setScalar(1 + 90 * Math.sqrt(rk));
     // camera: slow crane over the quilt → tilt up to the sky on the scream → whip and fly into the phone
     const vk = sm(T0, SCREAM, t);
-    const p = new THREE.Vector3(lerp(3.5, -1.5, vk), lerp(14, 12.5, vk), lerp(12.5, 11, vk)).lerp(new THREE.Vector3(1.0, 6.6, 11.5), sm(SCREAM, SCREAM + 0.6, t));
+    const p = new THREE.Vector3(lerp(3.5, -1.5, vk), lerp(17.5, 15.5, vk), lerp(17.5, 14.5, vk)).lerp(new THREE.Vector3(1.0, 6.6, 11.5), sm(SCREAM, SCREAM + 0.6, t));
     const look = new THREE.Vector3(lerp(1, -0.5, vk), lerp(-2, 1, vk), -20).lerp(this.PH, sm(SCREAM + 0.1, SCREAM + 0.8, t));
     const wk = clamp((t - WHIP) / (END - HAND - WHIP), 0, 1), we = 1 - (1 - wk) ** 3;
     const dir = new THREE.Vector3(0, 10, 10).sub(this.PH).normalize(), end = this.PH.clone().addScaledVector(dir, 9.0);
