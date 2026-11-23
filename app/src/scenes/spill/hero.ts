@@ -21,7 +21,7 @@ export const heroBlink = (t: number) => ((((t - DROP) / (2 * BEAT)) % 1) + 1) % 
 export class HeroPass {
   readonly scene = new THREE.Scene();
   private block = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.0, 0.34, 0.02), toneMapped: false });
-  private halo = new THREE.SpriteMaterial({ map: haloTex(), color: new THREE.Color(1, 0.36, 0.05), transparent: true, opacity: 0.5,
+  private halo = new THREE.SpriteMaterial({ map: haloTex(), color: new THREE.Color(1, 0.36, 0.05), transparent: true, opacity: 0.8,
     blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
 
   constructor(rr: THREE.WebGLRenderer) {
@@ -55,7 +55,7 @@ export class HeroPass {
 
   update(t: number, on = heroBlink(t)) { void t;
     const k = on >= 0.5 ? 1 : 0;
-    this.block.visible = k > 0; this.halo.opacity = 0.5 * k;
+    this.block.visible = k > 0; this.halo.opacity = 0.8 * k;
   }
 
   /** draw the hero into `out` after the region's own passes. Pass `world` when `out` does not already hold the
