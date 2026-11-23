@@ -93,7 +93,7 @@ export default class S5Ink extends Scene {
     const t = f.t, rr = this.ctx.renderer, ts = stepped(t, 12);
     const CAP = GULP[0] + 0.07, H = [...this.hops, GULP[0]];
     // pre-gulp: lotus-pad hops on the off-beats
-    let cp = new THREE.Vector3(this.padX[3], 0.7, 0.3);
+    let cp = new THREE.Vector3(this.padX[t < H[0] ? 0 : 3], 0.7, 0.3);
     for (let i = 0; i < 3; i++) if (t >= H[i] && t < H[i + 1]) { const k = (t - H[i]) / (H[i + 1] - H[i]);
       cp = new THREE.Vector3(lerp(this.padX[i], this.padX[i + 1], k), 0.7 + 2.4 * Math.sin(Math.PI * k), 0.3 * ((i + k) % 2)); }
     this.cur.position.copy(cp); this.cur.rotation.z = -0.3 * Math.sin((t - T0) * 5); this.cur.visible = t < CAP;

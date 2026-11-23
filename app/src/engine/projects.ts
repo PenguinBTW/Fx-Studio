@@ -97,7 +97,7 @@ export function buildTransitionEntries(
       from: fromNorm,
       to: toNorm,
       start: t.at,
-      end: t.at + t.dur,
+      end: Math.round((t.at + t.dur) * 1e6) / 1e6,
       load: loadTransition(transNorm),
     };
   });

@@ -111,12 +111,12 @@ export default class S8Hose extends Scene {
       this.hoseTo(i, sh, hand, new THREE.Vector3(0, 0.3, 0).add(W(0, 0, s * 0.35).sub(W(0, 0, 0))), 0.09); this.gloves[i].position.copy(hand); this.gloves[i].rotation.set(0, this.cat.rotation.y + Math.PI, s * 0.6);
       const hip = W(0, 0.7, s * 0.22), foot = W(0.45 * sw, 0.12 + 0.25 * Math.max(0, Math.cos(step + (s > 0 ? 0 : Math.PI))), s * 0.3);
       this.hoseTo(2 + i, hip, foot, W(0.35, 0, 0).sub(W(0, 0, 0)), 0.1); this.shoes[i].position.copy(foot); this.shoes[i].rotation.y = this.cat.rotation.y + Math.PI; }
+    const hc = sm(0, 1, Math.sin(Math.PI * clamp((ts - this.TIP + 0.45) / 1.05, 0, 1)));
+    this.cam.position.set(cx - 7.5, 2.8 + 1.8 * hc, 5.8 + 2.4 * hc); this.cam.aspect = out.width / out.height; this.cam.updateProjectionMatrix(); this.cam.lookAt(cx + 2 + 1.2 * hc, 1.3 + 2.6 * hc, 0.3);
     // contact: the cursor bounces off the popped-up hat as the cat passes
     { const hk = sm(this.TIP - 0.3, this.TIP + 0.05, ts); if (hk > 0) { const hp = this.hat.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.5 * CS + 0.15, 0)); this.hatSh.position.copy(hp).y -= 0.5 * CS - 0.02; this.hatSh.scale.setScalar(0.55 * CS); (this.hatSh.material as THREE.MeshBasicMaterial).opacity = 0.55 * hk;
       this.cur.position.lerp(hp, hk); if (hk > 0.5) this.cur.rotation.set(0, Math.atan2(this.cam.position.x - this.cur.position.x, this.cam.position.z - this.cur.position.z), 0); const land = 1 - sm(0.06, 0.16, Math.abs(ts - this.TIP - 0.1)); this.cur.scale.set(CS * (1 + 0.3 * land), CS * (1 - 0.3 * land), CS); } }
     // camera: low dolly along the street, cat in the foreground
-    const hc = sm(0, 1, Math.sin(Math.PI * clamp((ts - this.TIP + 0.45) / 1.05, 0, 1)));
-    this.cam.position.set(cx - 7.5, 2.8 + 1.8 * hc, 5.8 + 2.4 * hc); this.cam.aspect = out.width / out.height; this.cam.updateProjectionMatrix(); this.cam.lookAt(cx + 2 + 1.2 * hc, 1.3 + 2.6 * hc, 0.3);
     if (!this.rt || this.rt.width !== out.width || this.rt.height !== out.height) { this.rt?.dispose(); this.rt = new THREE.WebGLRenderTarget(out.width, out.height, { type: THREE.HalfFloatType }); }
     rr.setRenderTarget(this.rt); rr.clear(); rr.render(this.s, this.cam);
     const fr = Math.floor(t * 12); this.filmU.tCol.value = this.rt.texture; this.filmU.uT.value = t; this.filmU.uF.value = 0.93 + 0.07 * hash(fr); this.filmU.uRes.value.set(out.width, out.height);
