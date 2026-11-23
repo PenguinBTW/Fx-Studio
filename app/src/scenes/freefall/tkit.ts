@@ -34,4 +34,8 @@ float ffth(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
 float fftn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(ffth(i), ffth(i + vec2(1, 0)), f.x), mix(ffth(i + vec2(0, 1)), ffth(i + vec2(1, 1)), f.x), f.y); }
 float fftf(vec2 p) { float s = 0.0, a = 0.5; for (int i = 0; i < 5; i++) { s += a * fftn(p); p *= 2.07; a *= 0.5; } return s; }
 vec3 radialA(vec2 p, float s, float k) { vec3 c = vec3(0.0); for (int i = 0; i < 8; i++) c += tapA(p, s * (1.0 + k * float(i) / 8.0)); return c / 8.0; }
+// Shared dive camera: one exponential zoom (x30 over the seam) for A, and the scale at which B, seen through an aperture
+// of radius R around the focal point, shows its whole frame (reaching 1 once the aperture is half the frame height).
+float diveZ(float e) { return exp(e * 3.4); }
+float diveS(float R) { return min(1.0, R / 0.5); }
 `;
