@@ -8,6 +8,7 @@ import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import { resolveAsset } from '../../engine/assets';
 import { SCREAM, WHIP, END, BEAT, lerp, sm, hash, clamp } from './kit';
 import { HeroPass } from './hero';
+import { groundDetail } from './ground';
 import { Cameos } from './cameo';
 import { screenAtlas, screenMaterial } from './screens';
 import S1Breakout from './s1_breakout';
@@ -75,12 +76,12 @@ export default class S11Finale extends Scene {
     { const g = new THREE.PlaneGeometry(56, 52, 224, 208).rotateX(-Math.PI / 2).translate(0, 0, -21), P = g.attributes.position, C = new Float32Array(P.count * 3), c = new THREE.Color();
       for (let k = 0; k < P.count; k++) { P.setY(k, terr(P.getX(k), P.getZ(k), c)); c.toArray(C, k * 3); }
       g.setAttribute('color', new THREE.BufferAttribute(C, 3)); g.computeVertexNormals();
-      const land = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85 })); land.castShadow = land.receiveShadow = true; this.s.add(land); }
+      const land = new THREE.Mesh(g, groundDetail(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 }), 1.0, 0.5, 0.9)); land.castShadow = land.receiveShadow = true; this.s.add(land); }
     PATCHES.forEach(([id, , x, z], pi) => {
       const kit = K[id]; kit.root.visible = false; this.s.add(kit.root);
-      const [geo, dc, em] = DETAIL[id]; const im = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ color: dc, roughness: 0.8, flatShading: true, emissive: em ? dc : 0x000000, emissiveIntensity: em }), 70);
-      const M = new THREE.Matrix4(); for (let k = 0; k < 70; k++) { const a = hash(pi * 100 + k) * 6.283, r = 4.6 * Math.sqrt(hash(pi * 100 + k + 0.5)), px = x + r * Math.cos(a), pz = z + r * Math.sin(a);
-        M.compose(new THREE.Vector3(px, terr(px, pz) - 0.05, pz), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, a * 3, 0)), new THREE.Vector3().setScalar(0.6 + 0.8 * hash(k * 3 + pi))); im.setMatrixAt(k, M); }
+      const [geo, dc, em] = DETAIL[id]; const im = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ color: dc, roughness: 0.8, flatShading: true, emissive: em ? dc : 0x000000, emissiveIntensity: em }), 240);
+      const M = new THREE.Matrix4(); for (let k = 0; k < 240; k++) { const a = hash(pi * 100 + k) * 6.283, r = 6.2 * Math.sqrt(hash(pi * 100 + k + 0.5)), px = x + r * Math.cos(a), pz = z + r * Math.sin(a);
+        M.compose(new THREE.Vector3(px, terr(px, pz) - 0.05, pz), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, a * 3, 0)), new THREE.Vector3().setScalar(0.35 + 0.75 * hash(k * 3 + pi))); im.setMatrixAt(k, M); }
       im.castShadow = im.receiveShadow = true; this.s.add(im);
       Array.from({ length: 5 }, () => PROPS[id] ?? []).flat().forEach((nm, j) => { let src: THREE.Object3D; try { src = kit.part(nm); } catch { return; }
         const o = src.clone(); const a = j * 2.4 + pi; const r = j === 0 ? 0 : 1.8 + 3.2 * Math.sqrt(hash(pi + j * 1.7));

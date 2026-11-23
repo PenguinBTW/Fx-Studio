@@ -1,32 +1,28 @@
 // SPILL hero: one look for the terminal cursor in every region. Regions restyle everything else (paint, pixels, film,
 // ink); the cursor is drawn in its own pass with its own light rig, after each region's style post, depth-tested
-// against that region's geometry, so it keeps the same glowing phosphor block from the phone to the vista.
+// against that region's geometry, so it keeps the same glowing block from the phone to the vista.
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import type { GLTFInstance } from '../../engine/gltf';
 import { BEAT, DROP } from './kit';
 
-const CORE_V = /* glsl */ `varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
-const CORE_F = /* glsl */ `uniform float uT, uOn; varying vec3 vP;
-void main(){
-  float row = smoothstep(0.25, 0.45, fract(vP.y * 26.0)) * smoothstep(0.95, 0.75, fract(vP.y * 26.0));
-  float roll = exp(-pow((fract(vP.y * 0.8 - uT * 0.55) - 0.5) * 8.0, 2.0));
-  float edge = smoothstep(0.0, 0.12, 0.215 - abs(vP.x));
-  vec3 hot = vec3(1.0, 0.52, 0.14), ember = vec3(1.0, 0.24, 0.02);
-  vec3 c = mix(ember * 1.4, hot * 3.0, row * edge) + hot * 1.2 * roll;
-  gl_FragColor = vec4(c * mix(0.07, 1.0, uOn) * (0.97 + 0.03 * sin(uT * 110.0)), 1.0);
-}`;
+function haloTex() {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 128; const g = cv.getContext('2d')!;
+  const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.25, 'rgba(255,255,255,0.45)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 128, 128); const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
 const DEPTH = new THREE.MeshBasicMaterial({ colorWrite: false });
 const SHADOW = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
 const ENV = new WeakMap<THREE.WebGLRenderer, THREE.Texture>();
 
-/** hard terminal blink, phase-locked to the song: on for 1.2 beats of every 2 */
+/** hard terminal blink, phase-locked to the song: on for 1.2 beats of every 2 (fully off between, like a real cursor) */
 export const heroBlink = (t: number) => ((((t - DROP) / (2 * BEAT)) % 1) + 1) % 1 < 0.6 ? 1 : 0;
 
 export class HeroPass {
   readonly scene = new THREE.Scene();
-  private coreU = { uT: { value: 0 }, uOn: { value: 1 } };
-  private shells: THREE.MeshPhysicalMaterial[] = [];
+  private block = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.0, 0.34, 0.02), toneMapped: false });
+  private halo = new THREE.SpriteMaterial({ map: haloTex(), color: new THREE.Color(1, 0.36, 0.05), transparent: true, opacity: 0.5,
+    blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
 
   constructor(rr: THREE.WebGLRenderer) {
     let env = ENV.get(rr);
@@ -37,32 +33,29 @@ export class HeroPass {
     this.scene.add(key, rim, new THREE.HemisphereLight(0xa8c0ff, 0x3a2418, 0.5));
   }
 
-  /** dress a cursor instance in the hero look. Overlay (default): the root moves into the hero scene and a
-   *  shadow-only twin stays in `world`. Inline: materials only, the caller keeps the root in its own scene. */
+  /** dress a cursor instance in the hero look: a solid, sharp-edged glowing block (terminal block cursor) with a
+   *  soft halo. Overlay (default): the root moves into the hero scene and a shadow-only twin stays in `world`.
+   *  Inline: the caller keeps the root in its own scene. */
   dress(inst: GLTFInstance, o: { world?: THREE.Scene; inline?: boolean } = {}) {
-    const root = inst.root;
-    root.traverse((q) => { const m = q as THREE.Mesh; if (!m.isMesh) return; const n = (m.material as THREE.Material).name;
-      if (n === 'Core') { m.material = new THREE.ShaderMaterial({ name: n, vertexShader: CORE_V, fragmentShader: CORE_F, uniforms: this.coreU }); m.renderOrder = 0; }
-      else if (n === 'Shell') { const p = new THREE.MeshPhysicalMaterial({ name: n, color: new THREE.Color(1, 0.32, 0.04), emissive: new THREE.Color(1, 0.24, 0.01), emissiveIntensity: 0.5,
-          roughness: 0.16, clearcoat: 1, clearcoatRoughness: 0.04, transparent: true, opacity: 0.68, depthWrite: false });
-        this.shells.push(p); m.material = p; m.renderOrder = 2; }
-      else { m.material = new THREE.MeshBasicMaterial({ name: n, color: new THREE.Color(0.16, 0.04, 0.0) }); m.renderOrder = 1; }
-      m.castShadow = true; });
+    const root = inst.root; root.updateMatrixWorld(true);
+    const bb = new THREE.Box3().setFromObject(root), sz = bb.getSize(new THREE.Vector3()), c = bb.getCenter(new THREE.Vector3());
+    root.traverse((q) => { if ((q as THREE.Mesh).isMesh) q.visible = false; });
+    const box = new THREE.Mesh(new THREE.BoxGeometry(sz.x, sz.y, sz.z), this.block); box.position.copy(c); box.castShadow = true; box.name = 'heroBlock';
+    const halo = new THREE.Sprite(this.halo); halo.position.copy(c); halo.scale.set(sz.y * 2.6, sz.y * 2.6, 1); halo.renderOrder = -1;
+    root.add(box, halo);
     if (o.inline) return root;
     this.scene.add(root);
     if (o.world) {
-      const twin = root.clone(true); twin.userData.heroProxy = true;
-      twin.traverse((q) => { const m = q as THREE.Mesh; if (m.isMesh) { m.material = SHADOW; m.castShadow = true; } });
-      const upd = THREE.Object3D.prototype.updateMatrixWorld;
-      twin.updateMatrixWorld = function (this: THREE.Object3D) { this.position.copy(root.position); this.quaternion.copy(root.quaternion); this.scale.copy(root.scale); this.visible = root.visible; upd.call(this, true); };
+      const twin = new THREE.Mesh(box.geometry, SHADOW); twin.castShadow = true; twin.userData.heroProxy = true;
+      twin.updateMatrixWorld = function (this: THREE.Object3D) { root.updateMatrixWorld(true); this.matrixWorld.copy(box.matrixWorld); this.visible = root.visible; this.matrixWorldNeedsUpdate = false; };
       o.world.add(twin);
     }
     return root;
   }
 
-  update(t: number, on = heroBlink(t)) {
-    this.coreU.uT.value = t; this.coreU.uOn.value = on;
-    for (const s of this.shells) s.emissiveIntensity = 0.14 + 0.5 * on;
+  update(t: number, on = heroBlink(t)) { void t;
+    const k = on >= 0.5 ? 1 : 0;
+    this.block.visible = k > 0; this.halo.opacity = 0.5 * k;
   }
 
   /** draw the hero into `out` after the region's own passes. Pass `world` when `out` does not already hold the
