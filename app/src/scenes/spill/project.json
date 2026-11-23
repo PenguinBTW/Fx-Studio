@@ -1,0 +1,9 @@
+{
+  "project": "spill",
+  "size": [1080, 1920],
+  "trimToTimeline": true,
+  "entries": [
+    { "scene": "spill/s1_breakout", "id": "breakout", "start": 0, "end": 6.43 }
+  ],
+  "audio": "../../../public/audio/feel_good_inc.wav"
+}
