@@ -32,13 +32,13 @@ vec3 lattice(float hgt, vec3 dir) {
   float t = 0.0, sp = 0.0, glow = 0.0, gNa = 0.0; bool hit = false;
   if (ro.y > 0.55) { if (rd.y >= -0.02) return bg(rd); t = (ro.y - 0.55) / -rd.y; }
   float t0 = t;
-  for (int i = 0; i < 120; i++) { vec3 p = ro + rd * t; float h = lat(p, sp); glow += exp(-h * 10.0) * 0.018; gNa += exp(-h * 10.0) * 0.018 * (1.0 - sp); if (h < 0.0015) { hit = true; break; } t += h * 0.85; if (t - t0 > 45.0) break; }
+  for (int i = 0; i < 200; i++) { vec3 p = ro + rd * t; float h = lat(p, sp); glow += exp(-h * 10.0) * 0.018; gNa += exp(-h * 10.0) * 0.018 * (1.0 - sp); if (h < 0.0015 + 0.0007 * (t - t0)) { hit = true; break; } t += h * 0.85; if (t - t0 > 45.0) break; }
   vec3 p = ro + rd * t; float dt = t - t0, fog = exp(-dt * 0.19); vec3 C = vec3(0.0);
   if (hit) { vec2 e = vec2(0.002, 0.0); float s2; vec3 n = normalize(vec3(lat(p + e.xyy, s2) - lat(p - e.xyy, s2), lat(p + e.yxy, s2) - lat(p - e.yxy, s2), lat(p + e.yyx, s2) - lat(p - e.yyx, s2)));
     vec3 f = p - floor(p + 0.5); bool bond = length(f) > (sp > 0.5 ? 0.34 : 0.2); float fr = pow(1.0 - abs(dot(rd, n)), 2.5);
     vec3 base = bond ? vec3(1.5, 0.7, 0.2) * (0.6 + 0.4 * sin(uT * 7.0 + dot(floor(p + 0.5), vec3(1.3, 2.1, 0.7)))) : sp > 0.5 ? vec3(0.08, 0.95, 0.35) : vec3(0.95, 0.08, 1.0);
     float dif = max(dot(n, LK), 0.0), head = max(dot(n, -rd), 0.0);
-    C = base * (0.03 + 0.55 * dif + 0.3 * head * head) + spec(fr + p.y * 0.05) * fr * 1.2 + base * fr * 0.7 + vec3(1.0) * pow(max(dot(reflect(rd, n), LK), 0.0), 50.0) * 0.8; C *= fog; }
+    C = base * (0.03 + 0.55 * dif + 0.3 * head * head) + spec(fr + p.y * 0.05) * fr * 1.2 + base * fr * 0.7 + vec3(1.0) * pow(max(dot(reflect(rd, n), LK), 0.0), 50.0) * 0.8; C *= fog; C = mix(vec3(0.12, 0.13, 0.17) * fog, C, smoothstep(2.0, 7.0, (sp > 0.5 ? 0.33 : 0.19) / (t * 6.8e-4))); }
   C += mix(vec3(0.3, 1.0, 0.5), vec3(0.8, 0.2, 1.0), gNa / max(glow, 1e-4)) * glow * 0.1 * (1.0 - fog * 0.6) + vec3(0.004, 0.008, 0.03) * (1.0 - fog);
   return C; }
 void main() {
@@ -47,7 +47,7 @@ void main() {
   float orb = 0.6 + uT * 0.18; vec3 dir = normalize(vec3(cos(orb) * 0.55, mix(0.5, 1.4, smoothstep(-5.2, -6.5, uZ)), sin(orb) * 0.55));
   float m = smoothstep(-6.2, -5.7, uZ); vec3 C = vec3(0.0);
   if (m > 0.0) C += m * crystal(mix(vec3(0.0, 0.15, 0.0), aim, smoothstep(-4.9, -6.0, uZ)), dir, fu / 1.092 * mix(2.4, 1.0, smoothstep(-5.0, -6.4, uZ)));
-  if (m < 1.0) { float hgt = -2.0 + 28.0 * pow(10.0, (uZ + 6.2) * 0.6); C += (1.0 - m) * lattice(hgt, normalize(vec3(0.45, 1.0, 0.3))); }
+  if (m < 1.0) { float hgt = -2.0 + 14.0 * pow(10.0, (uZ + 6.2) * 0.6); C += (1.0 - m) * lattice(hgt, normalize(vec3(0.45, 1.0, 0.3))); }
   fragColor = vec4(C, 1.0); }`;
 
 export default shaderScene(FRAG, (t) => ({ toneMap: 'aces', exposure: 1.1, bloom: 0.7, bloomThreshold: 0.7, halation: 0.25, vignette: 0.45, grain: 0.04, ca: 0.15 + 0.04 * Math.abs(dZ(t)) }));
