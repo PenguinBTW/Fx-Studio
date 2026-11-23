@@ -46,7 +46,7 @@ const VAL: Record<string, [number, number]> = { Ink: [0.1, 0], InkWash: [0.5, 0]
 export default class S5Ink extends Scene {
   private s = new THREE.Scene(); private curS = new THREE.Scene();
   private cam = new THREE.PerspectiveCamera(40, 9 / 16, 0.5, 400);
-  private cameos = new Cameos([{ k: 'pixfish', t0: 11.7, dur: 0.5, path: 'leap', x: 0.5, y: -0.2, s: 0.12, n: 2, dir: -1 }, { k: 'glass', t0: 13.6, dur: 1.2, path: 'fly', y: 0.35, s: 0.1, n: 2 }, { k: 'crane', t0: 13.8, dur: 1.3, path: 'fly', y: 0.6, s: 0.12, n: 3 }]);
+  private cameos = new Cameos([{ k: 'crayon', t0: 11.55, dur: 1.0, path: 'fly', y: 0.62, s: 0.12, n: 2, dir: -1 }, { k: 'pixfish', t0: 11.7, dur: 0.5, path: 'leap', x: 0.5, y: -0.2, s: 0.12, n: 2, dir: -1 }, { k: 'glass', t0: 13.6, dur: 1.2, path: 'fly', y: 0.35, s: 0.1, n: 2 }, { k: 'crane', t0: 13.8, dur: 1.3, path: 'fly', y: 0.6, s: 0.12, n: 3 }]);
   private insts: GLTFInstance[] = [];
   private glowU = { uGlowP: { value: new THREE.Vector3() }, uGlow: { value: 0 }, uGlowR: { value: 1.2 } };
   private heron!: THREE.Object3D; private neck!: THREE.Object3D; private head!: THREE.Object3D; private top!: THREE.Object3D; private bot!: THREE.Object3D;
@@ -96,7 +96,7 @@ export default class S5Ink extends Scene {
     let cp = new THREE.Vector3(this.padX[3], 0.7, 0.3);
     for (let i = 0; i < 3; i++) if (t >= H[i] && t < H[i + 1]) { const k = (t - H[i]) / (H[i + 1] - H[i]);
       cp = new THREE.Vector3(lerp(this.padX[i], this.padX[i + 1], k), 0.7 + 2.4 * Math.sin(Math.PI * k), 0.3 * ((i + k) % 2)); }
-    this.cur.position.copy(cp); this.cur.rotation.z = -(t - T0) * 5; this.cur.visible = t < CAP;
+    this.cur.position.copy(cp); this.cur.rotation.z = -0.3 * Math.sin((t - T0) * 5); this.cur.visible = t < CAP;
     const blink = ((t * 1.06) % 1) < 0.55 ? 1 : 0.12; this.hero.update(t, t > GULP[0] - 0.35 && t < CAP ? 1 : undefined); // lit as it's caught
     // heron: strike (smear held on 12s), gulp-swallow, puzzled stillness, hiccup-spit
     const st = sm(GULP[0] - 0.1, GULP[0] + 0.02, ts), back = sm(GULP[0] + 0.15, GULP[0] + 0.5, t), sp = t >= SPIT ? Math.max(0, spring(t - SPIT, 14, 5)) : 0;

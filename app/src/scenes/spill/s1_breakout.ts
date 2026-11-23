@@ -14,7 +14,15 @@ const CUT = PULSES[2];
 const GLASS_Z = 0.6, HIT_Z = GLASS_Z - 0.115;
 const INK = ['#e8202a', '#ffd21a', '#16b8e8', '#ffffff', '#e8202a', '#ffd21a', '#16b8e8', '#e8202a'];
 
-const WORDS = ['THUNK', 'THUNK!!', 'KRAK!', 'SKRSSH', 'FWOOM!', 'WHAM', 'zip', 'zip'];
+const WORDS = ['thunk', 'THUNK!!', 'KRAK!', 'SKRSSH', 'FWOOM!', 'WHAM', 'zip', 'zip'];
+let noSig: THREE.CanvasTexture | undefined;
+function noSignal() {
+  if (noSig) return noSig;
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 160; const g = cv.getContext('2d')!;
+  for (let y = 0; y < 160; y += 3) for (let x = 0; x < 256; x += 3) { const v = Math.floor(30 + 190 * hash(x * 13.1 + y * 7.7)); g.fillStyle = `rgb(${v},${v},${v})`; g.fillRect(x, y, 3, 3); }
+  g.fillStyle = '#0a0a12'; g.fillRect(0, 52, 256, 56); g.fillStyle = '#ffffff'; g.font = 'bold 40px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('NO SIGNAL', 128, 81);
+  noSig = new THREE.CanvasTexture(cv); noSig.colorSpace = THREE.SRGBColorSpace; noSig.magFilter = THREE.NearestFilter; return noSig;
+}
 function wordTex(w: string) {
   const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 256; const g = cv.getContext('2d')!;
   g.translate(512, 132); g.transform(1, 0, -0.18, 1, 0, 0); g.font = '900 190px Archivo, Impact, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
@@ -24,7 +32,7 @@ function wordTex(w: string) {
 }
 const QUAD_V = /* glsl */ `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`;
 const COMIC_F = /* glsl */ `
-uniform sampler2D tScene, tWord; uniform vec2 uRes, uC, uWP; uniform float uImp, uT, uWR; uniform vec3 uInk; varying vec2 vUv;
+uniform sampler2D tScene, tWord; uniform vec2 uRes, uC, uWP; uniform float uImp, uT, uWR, uWS; uniform vec3 uInk; varying vec2 vUv;
 float lum(vec2 uv) { vec3 c = texture2D(tScene, uv).rgb; c = c / (1.0 + c); return dot(c, vec3(0.299, 0.587, 0.114)); }
 float h1(float n) { return fract(sin(n * 91.345) * 47453.21); }
 void main() {
@@ -48,7 +56,7 @@ void main() {
   c = mix(c, vec3(1.0) - c * 0.0 , lines * (1.0 - smoothstep(0.42, 0.55, l)) * 0.0);
   c = mix(c, (uInk.r > 0.9 && uInk.g > 0.9 && uInk.b > 0.9) ? ink : vec3(1.0), lines);
   vec2 q = (vUv - uWP) * vec2(uRes.x / uRes.y, 1.0); q = mat2(cos(uWR), sin(uWR), -sin(uWR), cos(uWR)) * q;
-  vec2 wu = q / vec2(0.5, 0.125) + 0.5;
+  vec2 wu = q / (vec2(0.5, 0.125) * uWS) + 0.5;
   if (wu.x > 0.0 && wu.x < 1.0 && wu.y > 0.0 && wu.y < 1.0) { vec4 w = texture2D(tWord, wu); c = mix(c, w.rgb, w.a); }
   gl_FragColor = vec4(mix(col, c, uImp), 1.0);
 }`;
@@ -88,10 +96,11 @@ export default class S1Breakout extends Scene {
   private shards: Shard[] = [];
   private shardMat!: THREE.MeshPhysicalMaterial;
   private crackU = { uProg: { value: 0 }, uT: { value: 0 } };
-  private comicU = { tScene: { value: null as THREE.Texture | null }, uRes: { value: new THREE.Vector2(1080, 1920) }, uC: { value: new THREE.Vector2(0.5, 0.5) }, uImp: { value: 0 }, uT: { value: 0 }, uInk: { value: new THREE.Color() }, tWord: { value: null as THREE.Texture | null }, uWP: { value: new THREE.Vector2(0.5, 0.75) }, uWR: { value: 0 } };
+  private comicU = { uWS: { value: 1 }, tScene: { value: null as THREE.Texture | null }, uRes: { value: new THREE.Vector2(1080, 1920) }, uC: { value: new THREE.Vector2(0.5, 0.5) }, uImp: { value: 0 }, uT: { value: 0 }, uInk: { value: new THREE.Color() }, tWord: { value: null as THREE.Texture | null }, uWP: { value: new THREE.Vector2(0.5, 0.75) }, uWR: { value: 0 } };
   private words = WORDS.map(wordTex);
   private quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ vertexShader: QUAD_V, fragmentShader: COMIC_F, uniforms: this.comicU, depthTest: false, depthWrite: false }));
   private qs = new THREE.Scene();
+  private bump = new THREE.Group(); private bumpScr!: THREE.MeshBasicMaterial;
   private qc = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   private rt: THREE.WebGLRenderTarget | null = null;
   private screens!: THREE.InstancedMesh;
@@ -303,13 +312,13 @@ export default class S1Breakout extends Scene {
     g.font = 'bold 54px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.shadowColor = '#ff6a10'; g.shadowBlur = 10; g.fillStyle = '#ffb060';
     for (let i = 0; i < G.length; i++) g.fillText(G[i], 64 * i + 32, 34);
     const base = new THREE.CanvasTexture(cv); base.colorSpace = THREE.SRGBColorSpace; base.repeat.set(1 / G.length, 1);
-    for (let i = 0; i < 22; i++) { const tx = base.clone(); tx.offset.x = Math.floor(hash(i * 4.7) * G.length) / G.length; tx.needsUpdate = true;
+    for (let i = 0; i < 34; i++) { const tx = base.clone(); tx.offset.x = Math.floor(hash(i * 4.7) * G.length) / G.length; tx.needsUpdate = true;
       const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tx, transparent: true, depthWrite: false, toneMapped: false, color: new THREE.Color(2.2, 1.1, 0.5) }));
       this.glyphs.push(sp); this.exS.add(sp); }
   }
   private poseTrail(t: number) {
     const on = sm(OUTSIDE - 0.4, OUTSIDE, t);
-    this.glyphs.forEach((sp, i) => { const lag = 0.022 * (i + 1), tt = Math.floor((t - lag) * 15) / 15; const p = this.fallP(tt);
+    this.glyphs.forEach((sp, i) => { const lag = 0.035 * (i + 1), tt = Math.floor((t - lag) * 15) / 15; const p = this.fallP(tt);
       p.x += 0.5 * (hash(i * 9.1) - 0.5); p.z += 0.5 * (hash(i * 3.3) - 0.5);
       const k = on * (1 - i / this.glyphs.length); sp.position.copy(p); sp.scale.setScalar(2.1 * (0.5 + 0.5 * k));
       (sp.material as THREE.SpriteMaterial).opacity = k * ((Math.floor(t * 15) + i) % 4 === 0 ? 0.55 : 1); sp.visible = k > 0.02; });
@@ -331,6 +340,11 @@ export default class S1Breakout extends Scene {
     const pal = [[0.2, 1.6, 0.5], [1.7, 0.4, 1.2], [0.3, 0.9, 1.9], [1.9, 1.5, 0.3], [1.6, 1.6, 1.7]], c = new THREE.Color();
     for (let i = 0; i < P; i++) { const q = pal[Math.floor(hash(i * 4.7) * 5)]; this.leakPx.setColorAt(i, c.setRGB(q[0], q[1], q[2])); }
     this.exS.add(body, glow, this.leakPx);
+    { // the screen it glances off mid-fall: a hanging monitor that swings away and drops to static
+      const fr = new THREE.Mesh(new THREE.BoxGeometry(6, 3.8, 0.5), new THREE.MeshStandardMaterial({ color: 0x1a1a22, roughness: 0.5 }));
+      this.bumpScr = new THREE.MeshBasicMaterial({ color: 0x3fd0ff, toneMapped: false }); const sc = new THREE.Mesh(new THREE.PlaneGeometry(5.4, 3.2), this.bumpScr); sc.position.z = 0.26;
+      const wire = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 40, 4), new THREE.MeshBasicMaterial({ color: 0x222222 })); wire.position.y = 21.9;
+      fr.position.y = 0; this.bump.add(fr, sc, wire); this.bump.position.copy(this.fallP(4.06)).add(new THREE.Vector3(-3.7, -0.4, 0.6)); this.exS.add(this.bump); }
   }
 
   private poseLeak(t: number) {
@@ -358,7 +372,7 @@ export default class S1Breakout extends Scene {
       const k = t < RAMS[1] ? 0 : 1, d = t - RAMS[k], u = d / (RAMS[k + 1] - RAMS[k]), back = [1.25, 1.9][k];
       z = HIT_Z - back * 4 * u * (1 - u); sq = 1 - 0.55 * Math.exp(-d * 15) + 0.28 * sm(0.55, 0.95, u); lean = -0.2 * sm(0.4, 0.9, u) + 0.25 * Math.exp(-d * 10);
       y = 0.12 * Math.max(0, Math.sin(Math.PI * u)) * (k + 1);
-    } else { const d = t - BREAK; z = HIT_Z + 7 * d; y = 1.6 * d - 2 * d * d; sq = 1 + 0.35 * Math.exp(-d * 6) - 0.5 * Math.exp(-d * 30); rx = -3.2 * d; }
+    } else { const d = t - BREAK; z = HIT_Z + 7 * d; y = 1.6 * d - 2 * d * d; sq = 1 + 0.35 * Math.exp(-d * 6) - 0.5 * Math.exp(-d * 30); rx = -0.45 * Math.sin(d * 3.2); }
     c.position.set(0, y, z); c.rotation.set(lean + rx, 0.08 * Math.sin(t * 3), 0);
     const s = Math.max(0.35, sq); c.scale.set(1 / Math.sqrt(s), 1 / Math.sqrt(s), s);
     const hitP = RAMS.map((h) => t >= h ? 1 : 0).reduce((a: number, b) => a + b, 0);
@@ -389,8 +403,12 @@ export default class S1Breakout extends Scene {
     const d = t - CUT, c = this.curX, p = this.fallP(t);
     const jolt = t > 4.06 ? Math.max(0, spring(t - 4.06, 30, 6)) : 0, flip = sm(4.72, 4.95, t);
     c.position.copy(p); c.scale.set(3.4 * (1 + 0.3 * jolt), 3.4 * (1 - 0.35 * jolt), 3.4 * (1 + 0.3 * jolt));
-    c.rotation.set(-5.5 * d - 3.1 * flip, 1.3 * d, 2.2 * d + 0.6 * Math.sin(d * 3) + 1.6 * flip);
+    { const rx = -0.55 * Math.sin(d * 2.4) - 3.1 * flip, ry = 0.5 * Math.sin(d * 1.7), rz = 2.2 * d + 0.6 * Math.sin(d * 3) + 1.6 * flip, fo = sm(4.75, 5.3, t), sn = (a: number) => lerp(a, Math.round(a / Math.PI) * Math.PI, fo);
+      c.rotation.set(sn(rx), sn(ry), sn(rz)); }
     this.poseLeak(t); this.poseTrail(t);
+    { const be = t - 4.06, sw = be > 0 ? Math.exp(-be * 2.2) * Math.sin(be * 7) : 0; this.bump.rotation.set(0.25 * sw, 0, -0.45 * sw - (be > 0 ? 0.12 : 0));
+      const ns = be > 0 ? noSignal() : null; if (this.bumpScr.map !== ns) { this.bumpScr.map = ns; this.bumpScr.needsUpdate = true; } if (ns) ns.offset.set(0.02 * (hash(Math.floor(be * 30)) - 0.5), 0);
+      this.bumpScr.color.setHex(be > 0 ? (Math.floor(be * 30) % 2 ? 0xffffff : 0xb8c0c8) : 0x3fd0ff); }
     const wide = sm(0, 0.9, d), dive = sm(OUTSIDE + 0.2, OUTSIDE + 1.4, t);
     const cam = new THREE.Vector3(lerp(3, 14, wide), lerp(1.5, 4, wide), lerp(18, 58, wide));
     const follow = new THREE.Vector3(p.x + 3, p.y + 6, p.z + 9);
@@ -404,7 +422,7 @@ export default class S1Breakout extends Scene {
     let focus: number;
     if (inside) { this.poseIn(t); focus = this.camIn(t); } else focus = this.poseOut(t);
     this.cam.aspect = out.width / out.height; this.cam.updateProjectionMatrix();
-    const b = this.blink(t); this.hero.update(t, b);
+    const dbl = t > 4.55 && t < 4.85 && ((t - 4.55) * 13.3) % 2 < 1 ? 0 : 1; const b = this.blink(t) * dbl; this.hero.update(t, b);
     this.curLight.intensity = 0.2 + 1.6 * b; this.curLightX.intensity = 5 + 45 * b;
     this.lampLight.intensity = 2.2 * (1 - 0.6 * Math.max(0, ...RAMS.map((h) => Math.exp(-Math.max(0, t - h) * 20) * (t >= h ? 1 : 0))));
     this.screenT.value = t; const imp = impactFrame(t);
@@ -419,14 +437,14 @@ export default class S1Breakout extends Scene {
       const cp = (inside ? this.cur : this.curX).getWorldPosition(new THREE.Vector3()).project(this.cam);
       Object.assign(this.comicU.uC.value, { x: cp.x * 0.5 + 0.5, y: cp.y * 0.5 + 0.5 }); this.comicU.uRes.value.set(out.width, out.height);
       this.comicU.tScene.value = this.rt.texture; this.comicU.uImp.value = imp.k; this.comicU.uT.value = t; this.comicU.uInk.value.set(INK[imp.i]);
-      this.comicU.tWord.value = this.words[imp.i]; this.comicU.uWR.value = (hash(imp.i * 7.3) - 0.5) * 0.5;
+      this.comicU.tWord.value = this.words[imp.i]; this.comicU.uWR.value = (hash(imp.i * 7.3) - 0.5) * 0.5; this.comicU.uWS.value = [0.7, 1.4, 1.15][imp.i] ?? 1;
       this.comicU.uWP.value.set(clamp(this.comicU.uC.value.x + (imp.i % 2 ? -0.08 : 0.08), 0.42, 0.58), clamp(this.comicU.uC.value.y + 0.24, 0.62, 0.8));
       rr.setRenderTarget(out); rr.clear(); rr.render(this.qs, this.qc);
     } else { rr.setRenderTarget(out); rr.setClearColor(0, 1); rr.clear(); rr.render(sc, this.cam); }
     rr.resetState();
     const kick = Math.max(0, ...[...RAMS, ...PULSES].map((h) => (t >= h ? Math.exp(-(t - h) * 12) : 0)));
     return { toneMap: imp.k > 0 ? 'legacy' : 'aces', exposure: inside ? 1.0 : 1.0, bloom: inside ? 0.12 : 0.2, bloomThreshold: 1.2, halation: 0.15, vignette: 0.45, grain: 0.04, blackPoint: 0.01,
-      ca: 0.2 + 1.4 * kick, shake: [26 * kick * Math.sin(t * 97), 26 * kick * Math.cos(t * 83)], zoom: 1 + 0.05 * kick,
+      ca: 0.2 + 1.4 * kick, shake: [26 * kick * Math.sin(t * 97) + (t < RAMS[0] ? 5 * Math.sin(t * 131) : 0), 26 * kick * Math.cos(t * 83) + (t < RAMS[0] ? 4 * Math.cos(t * 117) : 0)], zoom: 1 + 0.05 * kick,
       depthDof: imp.k > 0 ? undefined : { enabled: true, focusDistance: focus, aperture: inside ? 9 : 4, blades: 9, maxRadius: 22, near: 0.05, far: 4000 } };
   }
 

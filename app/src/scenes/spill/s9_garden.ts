@@ -8,6 +8,7 @@ import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import { resolveAsset } from '../../engine/assets';
 import { bar, lerp, sm, hash, stepped, clamp } from './kit';
 import { HeroPass } from './hero';
+import { groundDetail } from './ground';
 import { Cameos } from './cameo';
 
 const T0 = bar(8), T1 = bar(9), CS = 1.4, NB = 14;
@@ -22,7 +23,7 @@ const BCOL = [0xe61a26, 0xffa61a, 0x33cce6, 0x8c33d9, 0x26bf4d, 0x1a4df2];
 
 export default class S9Garden extends Scene {
   private s = new THREE.Scene(); private cam = new THREE.PerspectiveCamera(42, 9 / 16, 0.3, 400);
-  private cameos = new Cameos([{ k: 'crayon', t0: 20.6, dur: 1.4, path: 'fly', y: 0.7, s: 0.13, n: 2 }]);
+  private cameos = new Cameos([{ k: 'hose', t0: 20.25, dur: 1.2, path: 'walk', y: -0.7, s: 0.13, dir: -1 }, { k: 'crayon', t0: 20.6, dur: 1.4, path: 'fly', y: 0.7, s: 0.13, n: 2 }]);
   private insts: GLTFInstance[] = [];
   private bf: { o: THREE.Object3D; wl: THREE.Object3D; wr: THREE.Object3D; shaft: THREE.Mesh; pool: THREE.Mesh; ph: number; r: number; h: number; c: number }[] = [];
   private lights: THREE.PointLight[] = [];
@@ -37,7 +38,7 @@ export default class S9Garden extends Scene {
     const load = (id: string) => GLTFManager.instantiate(resolveAsset(id, this.ctx.project ?? 'spill').url, {});
     const [kit, cur] = await Promise.all([load('garden'), load('cursor')]); this.insts = [kit, cur];
     this.s.background = new THREE.Color(0.95, 0.6, 0.45); this.s.fog = new THREE.FogExp2(0xd08070, 0.032);
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), new THREE.MeshStandardMaterial({ color: 0x3a4a2e, roughness: 0.9 })); ground.rotation.x = -Math.PI / 2; this.s.add(ground);
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), groundDetail(new THREE.MeshStandardMaterial({ color: 0x3a4a2e, roughness: 0.9 }), 1.4, 0.55, 0.9)); ground.rotation.x = -Math.PI / 2; this.s.add(ground);
     for (let i = 0; i < 40; i++) { const st = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.95, 0.12, 7), new THREE.MeshStandardMaterial({ color: 0xc9b9a0, roughness: 0.8 }));
       st.position.set(-14 + 1.2 * i + 0.3 * hash(i), 0.06, 0.3 * (hash(i * 2) - 0.5)); st.rotation.y = hash(i * 3); this.s.add(st); }
     const arch = kit.part('arch'), tulip = kit.part('tulip');
