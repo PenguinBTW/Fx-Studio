@@ -84,7 +84,7 @@ export default class S5Ink extends Scene {
     cur.part('scan').scale.set(1, 0.4, 0.35); this.cur = cur.root; this.cur.scale.setScalar(CS);
     const sun = new THREE.DirectionalLight(0xfff0e0, 2.4); sun.position.set(-20, 30, 15); this.curS.add(this.cur, sun, new THREE.HemisphereLight(0xffffff, 0x888888, 1.2));
     // the spat-out cursor: brushed in ink, only its core still glows
-    cur2.root.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; const n = (m.material as THREE.Material).name; m.material = this.val(n === 'Core' ? 0.95 : n === 'Shell' ? 0.12 : 0.05); });
+    cur2.root.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; const n = (m.material as THREE.Material).name; m.material = this.val(n === 'Core' ? 0.95 : n === 'Shell' ? 0.38 : 0.05); });
     this.inkCur = cur2.root; this.inkCur.scale.setScalar(CS); this.s.add(this.inkCur);
     this.qs.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ vertexShader: QUAD_V, fragmentShader: INK_F, uniforms: this.inkU, depthTest: false, depthWrite: false })));
   }
@@ -119,7 +119,7 @@ export default class S5Ink extends Scene {
       const base = new THREE.Vector3(tip.x - 14 * e, 0, tip.z + 5 * e); const hy = si === 0 ? lerp(tip.y, 0.7, k) + 3 * Math.sin(Math.PI * k) : 0.7 + (2.2 - si * 0.45) * Math.sin(Math.PI * k);
       this.inkCur.position.set(base.x, hy, base.z); this.inkCur.rotation.set(0, 0, -e * 12);
       skips.slice(1).forEach((s, i) => { if (e >= s && this.ripples[4 + i].t > 1e8) { this.ripples[4 + i].t = t; this.ripples[4 + i].o.position.set(this.inkCur.position.x, 0.05, this.inkCur.position.z); } }); }
-    if (e >= 0) { this.glowU.uGlowP.value.copy(this.inkCur.position); this.glowU.uGlow.value = 1.5 + 2.5 * Math.exp(-e * 5); this.glowU.uGlowR.value = 1.1; }
+    if (e >= 0) { this.glowU.uGlowP.value.copy(this.inkCur.position); this.glowU.uGlow.value = (((t * 1.06) % 1) < 0.55 ? 3.0 : 1.2) + 3 * Math.exp(-e * 5); this.glowU.uGlowR.value = 1.5; }
     H.slice(1, 4).forEach((h, i) => { if (t >= h && this.ripples[i].t > 1e8) { this.ripples[i].t = h; this.ripples[i].o.position.set(this.padX[i + 1], 0.06, 0.3 * ((i + 1) % 2)); } });
     for (const r of this.ripples) { const a = t - r.t; r.o.visible = a >= 0 && a < 0.9; r.o.scale.setScalar(0.6 + 5 * stepped(Math.max(0, a), 12)); }
     for (const k of this.kois) { const a = clamp((ts - k.t) / 0.55); k.o.visible = a > 0 && a < 1; k.o.position.set(k.x + 3 * a, 3.2 * Math.sin(Math.PI * a), k.z); k.o.rotation.set(0, 0, 2.4 * (0.5 - a)); }

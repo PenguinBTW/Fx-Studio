@@ -73,6 +73,7 @@ put(bar(11), scr * np.minimum(1, t_(1.5) / 0.04) * np.exp(-t_(1.5) / 1.2), 0.5);
 # whip into the phone, landing in the cell
 put(bar(12), whoosh(END - bar(12) - 0.42, 300, 5000), 0.55); put(END - 0.42, thud(70, 0.3), 0.5); put(END - 0.42, crack(0.15), 0.2)
 put(END - 0.6, lp(noise(0.6), 2500) * np.linspace(0, 1, int(0.6 * SR)) ** 3, 0.5)
+put(0.0, lp(noise(0.35), 2500) * np.linspace(1, 0, int(0.35 * SR)) ** 1.5, 0.5)   # the seam swell carries on past frame 0
 sfx = np.stack([L, R])
 
 song = subprocess.run(['ffmpeg', '-v', 'error', '-i', sys.argv[1], '-t', str(END + 0.4), '-f', 'f32le', '-ac', '2', '-ar', str(SR), '-'], capture_output=True, check=True).stdout
@@ -85,7 +86,7 @@ for h in [0.34, 0.94, 1.45, DROP, 12.2, 13.39, bar(11)]:
     k = (tt >= h) * np.exp(-np.maximum(0, tt - h) / 0.25); duck = np.minimum(duck, 1 - 0.35 * k)
 fade = np.clip(np.minimum(tt / 0.02, 0.3 + 0.7 * np.clip((END - tt) / 0.3, 0, 1) ** 1.5), 0, 1) * np.clip((END - tt) / 0.004, 0, 1)
 mix = (m * 0.8 * duck + sfx) * fade
-TL = int(0.35 * SR); tail = mfull[:, N:N + TL]; tail = np.stack([lp(tail[0], 2500), lp(tail[1], 2500)]) * np.linspace(1, 0, tail.shape[1]) ** 2
+TL = int(0.5 * SR); tail = mfull[:, N:N + TL]; tail = np.stack([lp(tail[0], 2500), lp(tail[1], 2500)]) * np.cos(np.linspace(0, np.pi / 2, tail.shape[1])) ** 1.5
 mix[:, :tail.shape[1]] += 0.8 * 0.7 * tail   # the loop's head carries the song's own continuation
 mix /= max(1.0, np.abs(mix).max() / 0.98)
 raw = sys.argv[2] + '.raw.wav'

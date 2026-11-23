@@ -112,7 +112,7 @@ export default class S1Breakout extends Scene {
     phone.part('exterior').visible = false;
     phone.root.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; m.castShadow = m.receiveShadow = true; const p = phys(m);
       if (p.name === 'Board') { p.color.setRGB(0.09, 0.025, 0.12); p.clearcoat = 0.7; p.clearcoatRoughness = 0.2; }
-      if (p.name === 'Chip') { p.clearcoat = 0.3; p.clearcoatRoughness = 0.35; }
+      if (p.name === 'Chip') { p.color.setRGB(0.12, 0.08, 0.26); p.clearcoat = 0.6; p.clearcoatRoughness = 0.25; }
       if (p.name === 'Phosphor') { p.emissive.setRGB(1, 0.72, 0.4); p.emissiveIntensity = 6; m.castShadow = false; }
       if (p.name === 'Scratch') { p.roughness = 0.12; }
       if (p.name === 'Shield') { p.color.setRGB(0.07, 0.045, 0.16); p.roughness = 0.4; p.clearcoat = 0.6; }
@@ -184,7 +184,7 @@ export default class S1Breakout extends Scene {
       const W = 1.25, t = towerTex(gi, h / W);
       const body = new THREE.Mesh(new RoundedBoxGeometry(W, h, W, 4, 0.22), new THREE.MeshPhysicalMaterial({ color: 0x1a1236, roughness: 0.35, clearcoat: 0.8, clearcoatRoughness: 0.15 }));
       body.position.set(x, h / 2 - 0.05, z); body.castShadow = body.receiveShadow = true; this.inS.add(body);
-      const face = new THREE.Mesh(new THREE.PlaneGeometry(W * 0.92, h * 0.98), new THREE.MeshStandardMaterial({ map: t, emissiveMap: t, emissive: 0xffffff, emissiveIntensity: 1.6, roughness: 0.4 }));
+      const face = new THREE.Mesh(new THREE.PlaneGeometry(W * 0.92, h * 0.98), new THREE.MeshStandardMaterial({ map: t, emissiveMap: t, emissive: 0xffffff, emissiveIntensity: 2.2, roughness: 0.4 }));
       face.position.set(x, h / 2 - 0.05, z + W / 2 + 0.005); this.inS.add(face);
     }
     // status-bar sky: the clock, signal and a battery on its last percent
@@ -195,21 +195,21 @@ export default class S1Breakout extends Scene {
       g.strokeStyle = CREAM; g.lineWidth = 12; g.beginPath(); g.roundRect(1660, 46, 230, 92, 22); g.stroke(); g.fillRect(1898, 72, 16, 40);
       g.fillStyle = '#ff2e63'; g.fillRect(1676, 62, 22, 60); g.fillStyle = CYAN; g.font = '700 64px sans-serif'; g.fillText('1%', 1730, 94); });
     const bar = new THREE.Mesh(new THREE.PlaneGeometry(14, 1.3), new THREE.MeshBasicMaterial({ map: sb, transparent: true, toneMapped: false, color: new THREE.Color(1.6, 1.6, 1.6), depthWrite: false }));
-    bar.position.set(0.6, 8.6, -14); this.inS.add(bar);
+    bar.position.set(0.7, 4.05, -6); bar.scale.setScalar(0.32); this.inS.add(bar);
     // notification banners slung between the towers like bridges
     const banner = (title: string, body: string) => tex(1024, 256, (g) => {
       g.fillStyle = 'rgba(243,232,210,0.94)'; g.beginPath(); g.roundRect(8, 8, 1008, 240, 56); g.fill();
       g.fillStyle = VIOLET; g.beginPath(); g.roundRect(44, 56, 144, 144, 34); g.fill(); g.fillStyle = CYAN; g.font = '900 84px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('>_', 116, 132);
       g.textAlign = 'left'; g.fillStyle = INDIGO; g.font = '800 62px sans-serif'; g.fillText(title, 224, 98); g.font = '500 52px sans-serif'; g.globalAlpha = 0.75; g.fillText(body, 224, 172); g.globalAlpha = 1; });
-    const bans: [string, string, number, number, number, number][] = [['cursor.exe', 'is not responding', -0.4, 3.0, -8.9, -0.06], ['1 new message', 'let me out', 1.6, 4.9, -11.2, 0.05], ['Storage full', '0 bytes left inside', -1.2, 6.2, -13.0, -0.03]];
+    const bans: [string, string, number, number, number, number][] = [['cursor.exe', 'is not responding', 0.85, 2.75, -3.6, -0.05], ['1 new message', 'let me out', 1.6, 4.9, -11.2, 0.05], ['Storage full', '0 bytes left inside', -1.2, 6.2, -13.0, -0.03]];
     for (const [a, b, x, y, z, r] of bans) {
       const bt = banner(a, b), side = new THREE.MeshStandardMaterial({ color: 0xe8dcc4, roughness: 0.5 });
       const m = new THREE.Mesh(new RoundedBoxGeometry(3.4, 0.85, 0.12, 3, 0.05), [side, side, side, side, new THREE.MeshStandardMaterial({ map: bt, emissiveMap: bt, emissive: 0xffffff, emissiveIntensity: 0.9, roughness: 0.3 }), side]);
-      m.position.set(x, y, z); m.rotation.z = r; m.castShadow = true; this.inS.add(m);
+      m.position.set(x, y, z); m.rotation.z = r; m.castShadow = true; if (z > -5) m.scale.setScalar(0.6); this.inS.add(m);
     }
     // keyboard terrace: backlit keycaps stepping up behind the chip row
     const KEYS = 'QWERTYUIOPASDFGHJKLZXCVBNM';
-    const kcap = new RoundedBoxGeometry(0.42, 0.2, 0.42, 3, 0.07), kmat = new THREE.MeshPhysicalMaterial({ color: 0x3b2a72, roughness: 0.45, clearcoat: 0.5, emissive: 0x0c1c3a });
+    const kcap = new RoundedBoxGeometry(0.42, 0.2, 0.42, 3, 0.07), kmat = new THREE.MeshPhysicalMaterial({ color: 0x3b2a72, roughness: 0.45, clearcoat: 0.5, emissive: 0x1a2a5a });
     const keys = new THREE.InstancedMesh(kcap, kmat, 72), M = new THREE.Matrix4(); let n = 0;
     for (let r = 0; r < 4; r++) for (let c = 0; c < 18; c++) {
       M.makeTranslation(-3.4 + c * 0.47 + r * 0.16, 0.05 + r * 0.22 - 0.04 * hash(r * 19 + c), -3.2 - r * 0.55); keys.setMatrixAt(n++, M); }
