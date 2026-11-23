@@ -17,6 +17,9 @@
 //   stitch:  bun scripts/render.ts stitch --from-scene sceneA --to-scene sceneB [--window 300ms|0.3s|--window-ms 300|--window-s 0.3]
 //   compare: bun scripts/render.ts compare --active-scene demo --ref-scene loss
 //   --size WxH (all modes): logical canvas (default: project.json "size", else 1920x1080; 1080x1920 = vertical)
+//   --vertical / --shorts / --portrait: force vertical 9:16 aspect ratio (1080x1920, or 720x1280 with --720p)
+//   --horizontal / --landscape: force horizontal 16:9 aspect ratio (1920x1080, or 1280x720 with --720p)
+//   --720p / --1080p / --4k: preset resolutions (automatically picks vertical or horizontal matching orientation)
 //   --scale N (all modes): render at N× the logical layout (--scale 2 = true 3840x2160); stills are then saved
 //            full-res from the pixel buffer, videos are encoded at the physical size.
 // Relative --out paths resolve from the repo root (not app/). Scene errors at boot abort the run unless --allow-scene-errors.
@@ -85,10 +88,26 @@ async function loadProject() {
   const at = (p?: string) => !p ? undefined : path.isAbsolute(p) ? p : !existsSync(path.join(dir, p)) && existsSync(path.join(APP, p)) ? path.join(APP, p) : path.join(dir, p);
   return { projName, dir, manifest, at };
 }
-const SCALE = Math.max(1, Math.round(numOpt('scale', 1, 1, 4)));
+const is720p = flag('720p') || opt('res') === '720p' || opt('resolution') === '720p';
+const is1080p = flag('1080p') || opt('res') === '1080p' || opt('resolution') === '1080p';
+const is4k = flag('4k') || opt('res') === '4k' || opt('resolution') === '4k';
+const forceVertical = flag('vertical') || flag('shorts') || flag('portrait');
+const forceHorizontal = flag('horizontal') || flag('landscape');
+
+const projManifest = (await loadProject()).manifest;
+const defaultSize: [number, number] = projManifest.size ?? [1920, 1080];
+const isVertical = forceVertical ? true : forceHorizontal ? false : (defaultSize[1] > defaultSize[0]);
+
 const SIZE_OPT = opt('size');
-// logical canvas: --size WxH, else project.json "size", else 1920x1080
-const [LW, LH]: [number, number] = (SIZE_OPT && /^\d+x\d+$/.test(SIZE_OPT) ? SIZE_OPT.split('x').map(Number) as [number, number] : null) ?? (await loadProject()).manifest.size ?? [1920, 1080];
+// logical canvas: --size WxH, else preset (--720p / --1080p / --vertical / --horizontal), else project.json "size", else 1920x1080
+const [LW, LH]: [number, number] = (SIZE_OPT && /^\d+x\d+$/.test(SIZE_OPT) ? SIZE_OPT.split('x').map(Number) as [number, number] : null)
+  ?? (is720p ? (isVertical ? [720, 1280] : [1280, 720])
+    : is1080p ? (isVertical ? [1080, 1920] : [1920, 1080])
+    : (forceVertical && defaultSize[0] > defaultSize[1]) ? [1080, 1920]
+    : (forceHorizontal && defaultSize[1] > defaultSize[0]) ? [1920, 1080]
+    : defaultSize);
+
+const SCALE = is4k ? 2 : Math.max(1, Math.round(numOpt('scale', 1, 1, 4)));
 const OW = LW * SCALE, OH = LH * SCALE; // output size
 // --samples N (fixed) or --samples auto [--min-samples 4] [--max-samples 324] [--tol 3] (adaptive, see Engine.render)
 const SAMPLES = opt('samples', '1') === 'auto'

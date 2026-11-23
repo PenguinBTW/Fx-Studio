@@ -1,0 +1,38 @@
+{
+  "project": "memory_singularity",
+  "meta": {
+    "title": "The Memory Singularity: The Physical Limits of Computation",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 26.4
+  },
+  "audio": {
+    "soundtrack": "audio/soundtrack.wav",
+    "bpm": 100.16
+  },
+  "mix": "audio/mix.ts",
+  "entries": [
+    {
+      "scene": "memory_singularity/scene_monolith",
+      "id": "silicon_monolith",
+      "start": 0.0,
+      "end": 12.2
+    },
+    {
+      "scene": "memory_singularity/scene_abyss",
+      "id": "latency_abyss",
+      "start": 11.0,
+      "end": 26.8
+    }
+  ],
+  "transitions": [
+    {
+      "id": "T_SEIZURE",
+      "transition": "thermal_seizure",
+      "from": "silicon_monolith",
+      "to": "latency_abyss",
+      "at": 11.0,
+      "dur": 1.2
+    }
+  ]
+}
