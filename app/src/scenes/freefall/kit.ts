@@ -39,9 +39,9 @@ export function hud(renderer: THREE.WebGLRenderer, comp: Compositor, out: THREE.
   layer ??= new Layer2D();
   const g = layer.ctx; layer.clear(); const z = Z(t), e = Math.floor(z + 1e-6), m = Math.pow(10, z - e);
   const glitch = t > 30.2 && t < 31.4 ? Math.floor(t * 30) % 3 : -1;
-  g.save(); g.globalAlpha = alpha; g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+  g.save(); g.scale(W / 1080, H / 1920); g.globalAlpha = alpha; g.textAlign = 'center'; g.textBaseline = 'alphabetic';
   g.shadowColor = 'rgba(0,0,0,0.75)'; g.shadowBlur = 18;
-  const cx = W * 0.44, y = 360;
+  const cx = 1080 * 0.44, y = 360;
   const bk = g.createRadialGradient(cx, y - 10, 10, cx, y - 10, 300); bk.addColorStop(0, "rgba(0,0,0,0.42)"); bk.addColorStop(1, "rgba(0,0,0,0)");
   g.save(); g.fillStyle = bk; g.translate(cx, y - 10); g.scale(1.3, 0.45); g.translate(-cx, -(y - 10)); g.fillRect(cx - 300, y - 310, 600, 600); g.restore();
   g.font = `82px "${F.archivo(100, 800)}"`; g.fillStyle = '#ffffff';
