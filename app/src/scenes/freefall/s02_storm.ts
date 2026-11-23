@@ -26,11 +26,12 @@ void main() {
     float thr = 0.5 + 0.06 * sin(id); float n = cl(uv, seed); float a = smoothstep(thr - 0.02, thr + 0.12, n);
     a *= smoothstep(0.0, 0.25, ph) * smoothstep(1.0, 0.8, ph) * (1.0 - 0.92 * sea); if (a < 0.003) continue;
     float e = 0.02; vec3 nrm = normalize(vec3(cl(uv + vec2(e, 0.0), seed) - n, cl(uv + vec2(0.0, e), seed) - n, e * 0.35));
-    float depth = 1.0 - ph; vec3 base = mix(vec3(0.16, 0.06, 0.34), vec3(0.03, 0.01, 0.09), depth);
+    float depth = 1.0 - ph; vec3 hue = mix(vec3(0.16, 0.06, 0.34), mix(vec3(0.05, 0.08, 0.36), vec3(0.3, 0.04, 0.26), step(0.5, fract(id * 0.618))), fract(id * 0.37)); vec3 base = mix(hue, hue * 0.12, depth);
     vec3 moon = normalize(vec3(-0.3, 0.8, 0.5)); float md = max(dot(nrm, moon), 0.0); vec3 col = base * (0.35 + 0.9 * md) + vec3(0.9, 0.25, 0.75) * pow(1.0 - a, 3.0) * 0.25 * md;
     vec3 Ld = normalize(vec3(fp - q, 0.25 + depth * 0.4)); float fl = F * exp(-length(q - fp) * (1.2 + depth)) * (0.4 + 1.2 * max(dot(nrm, Ld), 0.0));
     col += vec3(0.45, 0.75, 1.8) * fl * (1.0 - 0.6 * depth) + vec3(0.7, 0.5, 1.6) * F * 0.08 * (1.0 - depth);
     float edge = (1.0 - sea) * smoothstep(0.0, 0.5, a) * (1.0 - smoothstep(0.5, 1.0, a)); col += vec3(1.0, 0.4, 0.9) * edge * 0.2 * (1.0 + 4.0 * fl);
+    float pocket = pow(cl(uv * 0.6, seed + 5.0), 3.0) * (0.6 + 0.4 * sin(uT * 23.0 + id * 4.0)) * step(0.55, fract(sin(id * 12.9) * 43.7)); col += vec3(0.55, 0.35, 1.4) * pocket * 0.9 * (1.0 - depth) * smoothstep(0.3, 0.9, a); col *= mix(0.55, 1.0, smoothstep(thr, thr + 0.25, n));
     C = mix(C, col, a);
     if (i == 3 && F > 0.03) { float d = boltD(q, fp, fk * 9.1, fp.y + 0.6, fp.y - 1.6); float d2 = boltD(q, fp + vec2(0.12, -0.3), fk * 5.3 + 2.0, fp.y - 0.3, fp.y - 0.95);
       C += vec3(0.75, 0.85, 1.9) * F * (exp(-d * 260.0) * 3.0 + exp(-d * 22.0) * 0.35 + exp(-d2 * 320.0) * 1.6 + exp(-d2 * 30.0) * 0.15); } }

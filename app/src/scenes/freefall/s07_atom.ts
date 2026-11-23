@@ -18,7 +18,7 @@ void main() {
   if (orbW > 0.0) { float d = fh / 1e-10 / (2.0 * th); vec3 ro = vec3(0.0, 0.0, d) + vec3(0.07, 0.05, 0.0) * min(d, 1.0); vec3 rd = ff_ray(normalize(-ro + vec3(0.0, 0.0, 0.0)), vec3(0.0, 1.0, 0.0), th, roll);
     float L = min(3.2, d * 2.0 + 1e-4); vec2 sh = ff_sph(ro, rd, L); vec3 acc = vec3(0.0);
     if (sh.y > 0.0) { float t0 = max(sh.x, 0.0); float dt = (sh.y - t0) / 56.0; float j = ff_h2(gl_FragCoord.xy + fract(uT) * 50.0);
-      float Ls = clamp(d, 0.03, 1.0); for (int i = 0; i < 56; i++) { vec3 p = ro + rd * (t0 + (float(i) + j) * dt); acc += orb(p) * dt * (0.45 + 3.0 * pow(ff_n(p * (22.0 / Ls) + 3.0), 14.0)); } }
+      float Ls = clamp(d, 0.03, 1.0); for (int i = 0; i < 56; i++) { vec3 p = ro + rd * (t0 + (float(i) + j) * dt); vec3 cp = FF_R * p * (9.0 / Ls) + 3.0; vec3 ci = floor(cp); vec3 co = vec3(ff_h(ci), ff_h(ci + 7.1), ff_h(ci + 3.3)) * 0.7 + 0.15; float dd = length(fract(cp) - co); float dotv = exp(-dd * dd * 90.0) * step(0.55, ff_h(ci + 1.9)); acc += orb(p) * dt * (0.12 + 9.0 * dotv); } }
     C += acc * 0.5 * orbW; C += vec3(1.0, 0.85, 0.6) * 0.0003 / (dot(q, q) + 0.0004) * orbW * smoothstep(-9.6, -12.0, uZ); }
   if (nucW > 0.0) { float d = fh / 1e-15 / (2.0 * th); vec3 ro = vec3(0.0, 0.0, d + 0.4); vec3 rd = ff_ray(normalize(-ro), vec3(0.0, 1.0, 0.0), th, roll);
     float t = max(0.0, d - 4.0); int hid = -1; float glow = 0.0;

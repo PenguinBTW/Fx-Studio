@@ -24,11 +24,11 @@ void main() {
   // inside the red quark: infinite self-similar glow
   float deep = smoothstep(-15.0, -16.5, uZ); if (deep > 0.0) { float r = length(q), a = atan(q.y, q.x); float lz = -uZ * 2.3;
     float f = 0.0; for (int o = 0; o < 4; o++) { float s = log(r + 1e-4) * 1.4 + lz + float(o) * 0.73; float k = fract(s); f += ff_fbm(vec3(cos(a) * 3.0, sin(a) * 3.0, floor(s) + float(o) * 9.0), 4) * sin(3.14159 * k); }
-    vec3 fc = mix(vec3(1.5, 0.08, 0.15), vec3(1.6, 0.7, 0.1), f * 0.6) * pow(f * 0.5, 2.0) * 0.8 + vec3(1.0, 0.3, 0.2) * 0.01 / (r * r + 0.01);
+    vec3 hc = mix(vec3(1.5, 0.08, 0.15), vec3(0.9, 0.1, 1.3), 0.5 + 0.5 * sin(lz * 0.7 + a * 2.0)); vec3 fc = mix(hc, vec3(1.6, 0.7, 0.1), f * 0.5) * pow(f * 0.5, 4.0) * 0.7 + vec3(1.0, 0.3, 0.2) * 0.004 / (r * r + 0.01);
     C = mix(C, fc, deep); }
   float gl = step(30.2, uT) * step(uT, 31.0) * step(0.6, ff_h2(vec2(floor(uT * 24.0), floor(vUv.y * 40.0))));
   C = gl > 0.5 ? C.gbr * 1.4 + vec3(0.0, 0.2, 0.3) : C;
   C += vec3(1.0, 0.5, 0.5) * ff_speed(clamp(abs(uDZ) * 0.12, 0.0, 0.6), 8.0) * 0.6;
   fragColor = vec4(C, 1.0); }`;
 
-export default shaderScene(FRAG, (t) => ({ toneMap: 'aces', exposure: 1.25, bloom: 1.0, bloomThreshold: 0.5, halation: 0.4, vignette: 0.45, grain: 0.05, ca: 0.3 + 0.06 * Math.abs(dZ(t)) }));
+export default shaderScene(FRAG, (t) => ({ toneMap: 'aces', exposure: 1.0, bloom: 0.9, bloomThreshold: 0.5, halation: 0.4, vignette: 0.45, grain: 0.05, ca: 0.3 + 0.06 * Math.abs(dZ(t)) }));
