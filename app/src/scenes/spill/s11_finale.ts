@@ -84,13 +84,18 @@ export default class S11Finale extends Scene {
       [...(PROPS[id] ?? []), ...(PROPS[id] ?? [])].forEach((nm, j) => { let src: THREE.Object3D; try { src = kit.part(nm); } catch { return; }
         const o = src.clone(); const a = j * 2.4 + pi; const r = j === 0 ? 0 : 2.6 + 0.8 * hash(pi + j);
         o.position.set(x + r * Math.cos(a), 0, z + r * Math.sin(a)); o.position.y = terr(o.position.x, o.position.z) - 0.05; o.rotation.set(0, Math.atan2(-o.position.x, 20 - o.position.z) + 0.4 * (hash(j) - 0.5), 0);
-        const bb = new THREE.Box3().setFromObject(src); const h = Math.max(0.01, bb.max.y - bb.min.y); o.scale.multiplyScalar((nm === 'dino' || nm === 'heron' || nm === 'arch' || nm === 'tree' ? 3.0 : 1.3) / h);
+        const bb = new THREE.Box3().setFromObject(src); const h = Math.max(0.01, bb.max.y - bb.min.y); o.scale.multiplyScalar((nm === 'dino' || nm === 'heron' || nm === 'arch' || nm === 'tree' ? 3.0 : 1.3) * (LOOKERS.has(nm) ? 1.7 : 1) / h);
         o.traverse((q) => { (q as THREE.Mesh).castShadow = true; }); this.s.add(o); if (LOOKERS.has(nm)) this.lookers.push({ o, base: o.rotation.clone(), ph: hash(pi * 7 + j), y: o.position.y }); });
     });
     const wh = K.whale.root; this.whale = wh; wh.scale.setScalar(0.5); wh.position.set(-34, 26, -75); wh.rotation.y = 0.6; this.s.add(wh);
     // the outcrop the cursor stands on
-    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(3.2, 0), new THREE.MeshStandardMaterial({ color: 0x6a5a7a, roughness: 1, flatShading: true }));
-    rock.scale.set(0.8, 1.6, 0.8); rock.position.set(0, 3.2, 6); this.s.add(rock);
+    // the perch: a cairn of dead phones and monitors that fell before it, screens still faintly lit
+    const bez = new THREE.MeshStandardMaterial({ color: 0x1b1824, roughness: 0.4, metalness: 0.5 }), cols = [0x3fd0ff, 0xff5ab0, 0x7cff6a, 0xffc040, 0xb08cff, 0xff7a1a];
+    [[3.6, 1.6, 2.6, 0.8, 0.1], [2.8, 1.4, 2.0, 2.3, -0.25], [2.2, 1.3, 1.6, 3.7, 0.35], [1.7, 1.2, 1.3, 5.0, -0.1], [1.3, 1.1, 1.0, 6.2, 0.2], [1.0, 1.2, 0.8, 7.35, -0.3]].forEach(([w, h, dd, y, r], i) => {
+      const g = new THREE.Group(); const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, dd), bez); b.castShadow = b.receiveShadow = true;
+      const sc = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.86, h * 0.78), new THREE.MeshBasicMaterial({ color: cols[i % cols.length], toneMapped: false }));
+      sc.position.z = dd / 2 + 0.01; (sc.material as THREE.MeshBasicMaterial).color.multiplyScalar(0.55 + 0.3 * hash(i * 3.7)); g.add(b, sc);
+      g.position.set(0.25 * Math.sin(i * 2.1), y, 6 + 0.2 * Math.cos(i * 1.7)); g.rotation.set(0.06 * Math.sin(i * 3.3), r, 0.05 * Math.cos(i * 2.9)); this.s.add(g); });
     this.cur = K.cursor.root; this.cur.scale.setScalar(1.9); this.cur.position.set(0, 8.6, 6); this.s.add(this.cur);
     const patch = new THREE.ShaderMaterial({ vertexShader: PATCH_V, fragmentShader: PATCH_F, uniforms: this.patchU });
     this.cur.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; const n = (m.material as THREE.Material).name;
