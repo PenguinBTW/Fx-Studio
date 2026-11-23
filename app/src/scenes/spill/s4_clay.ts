@@ -60,9 +60,16 @@ export default class S4Clay extends Scene {
         float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
         float vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f); return mix(mix(h2(i),h2(i+vec2(1,0)),f.x), mix(h2(i+vec2(0,1)),h2(i+vec2(1,1)),f.x), f.y); }
         void main(){ float l = clamp(dot(normalize(vN), normalize(vec3(-0.5,0.8,0.35))), 0.0, 1.0);
-          vec2 q = vW.xz; float th = sin(length(fract(q * 0.35) - 0.5) * 60.0) * 0.25 + 0.5; float pat = vn(q * 0.6);
-          vec3 clay = mix(vec3(0.62,0.36,0.2), vec3(0.95,0.62,0.35), pat) * (0.92 + 0.08 * th);
-          clay *= 0.45 + 0.65 * l;
+          vec2 q = vW.xz; float pat = vn(q * 0.6) * 0.6 + vn(q * 2.3) * 0.4;
+          vec2 fc = floor(q * 0.55), fl = fract(q * 0.55) - 0.5; vec2 fo = vec2(h2(fc), h2(fc + 3.1)) - 0.5; vec2 fd = (fl - 0.3 * fo) * vec2(1.0, 1.35);
+          float fr = length(fd), fp = step(0.45, h2(fc + 9.0)) * smoothstep(0.32, 0.2, fr); float ridge = 0.5 + 0.5 * sin(fr * 120.0 + 3.0 * vn(q * 4.0));
+          float smear = vn(vec2(q.x * 0.4, q.y * 3.0)); float tool = smoothstep(0.03, 0.0, abs(fract(q.x * 0.9 + 0.6 * smear) - 0.5) - 0.42) * step(0.6, vn(q * 0.3));
+          vec2 cc = floor(q * 6.0); float crumb = step(0.965, h2(cc)) * smoothstep(0.4, 0.2, length(fract(q * 6.0) - 0.5));
+          vec3 crumbC = mix(vec3(0.35, 0.6, 0.85), vec3(0.95, 0.85, 0.3), h2(cc + 1.7));
+          vec3 clay = mix(vec3(0.58,0.32,0.18), vec3(0.95,0.62,0.35), pat);
+          clay *= 1.0 - 0.18 * fp * ridge - 0.2 * tool; clay = mix(clay, vec3(0.75, 0.45, 0.28) * 0.9, 0.25 * smear * smear);
+          clay = mix(clay, crumbC, crumb);
+          clay *= 0.45 + 0.65 * l * (1.0 - 0.15 * (1.0 - ridge) * fp);
           float bleed = smoothstep(10.0, 26.0, vW.x + 6.0 * (vn(q * 0.15) - 0.5));
           float wash = vn(q * 0.12 + vec2(0.0, 3.0)) * 0.6 + vn(q * 0.5) * 0.4; vec3 ink = mix(vec3(0.92,0.9,0.84), vec3(0.12,0.12,0.15), smoothstep(0.45, 0.75, wash));
           vec3 c = mix(clay, ink, bleed); float edge = smoothstep(0.0, 0.03, abs(bleed - 0.5)); c = mix(vec3(0.05), c, mix(1.0, edge, step(0.02, bleed) * step(bleed, 0.98)));
