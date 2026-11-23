@@ -15,7 +15,7 @@ vec3 bg(vec3 rd) { float y = rd.y * 0.5 + 0.5; vec3 c = mix(vec3(0.02, 0.0, 0.06
   vec2 g = rd.xz / (abs(rd.y) + 0.4) * 9.0; vec2 id = floor(g); float h = ff_h2(id); float d = length(fract(g) - 0.5 - (vec2(ff_h2(id + 3.1), ff_h2(id + 7.7)) - 0.5) * 0.6);
   return c * 0.6 + spec(h) * smoothstep(0.1, 0.0, d) * step(0.9, h) * 0.35; }
 float lat(vec3 p, out float sp) { vec3 c = floor(p + 0.5); vec3 f = p - c; sp = mod(c.x + c.y + c.z, 2.0); float r = sp > 0.5 ? 0.33 : 0.19;
-  return length(f) - r; }
+  vec3 a = abs(f); return min(length(f) - r, 0.67 - max(max(a.x, a.y), a.z)); }
 vec3 crystal(vec3 aim, vec3 dir, float D) {
   vec3 ro = aim + dir * D; vec3 rd = ff_ray(-dir, vec3(0.0, 1.0, 0.0), 0.546, 0.1 * sin(uT * 0.7)); float t = 0.0; bool hit = false;
   for (int i = 0; i < 110; i++) { float h = hop(ro + rd * t); if (h < 0.0004 * (1.0 + t)) { hit = true; break; } t += h * 0.6; if (t > 40.0) break; }
