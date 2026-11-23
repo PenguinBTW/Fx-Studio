@@ -104,7 +104,7 @@ export default class S4Clay extends Scene {
     const be = ts - BUS; this.snail.position.y = be > 0 ? 0.5 * Math.max(0, spring(be, 14, 5)) : 0;
     for (const s of this.stalks) s.scale.setScalar(1 + (be > 0 ? 0.6 * Math.max(0, spring(be + 0.05, 16, 4)) : 0));
     let sq = 1; const he = t - FROG_HIT; if (he > 0 && he < 0.3) sq = 1 - 0.4 * Math.exp(-he * 14);
-    this.cur.position.copy(p); this.cur.scale.set(CS / Math.sqrt(sq), CS * sq, CS / Math.sqrt(sq)); this.cur.rotation.set(0, 0, -(t - T0) * 7);
+    this.cur.position.copy(p); this.cur.scale.set(CS / Math.sqrt(sq), CS * sq, CS / Math.sqrt(sq)); this.cur.rotation.set(0, 0, -0.35 * Math.sin((t - T0) * 7));
     const blink = ((t * 1.06) % 1) < 0.55 ? 1 : 0.12; this.hero.update(t);
     this.glow.position.copy(p); this.glow.intensity = 25 * blink;
     // camera: low tracking dolly at cursor height, slightly ahead; the hit kicks it

@@ -112,7 +112,7 @@ export default class S8Hose extends Scene {
       const hip = W(0, 0.7, s * 0.22), foot = W(0.45 * sw, 0.12 + 0.25 * Math.max(0, Math.cos(step + (s > 0 ? 0 : Math.PI))), s * 0.3);
       this.hoseTo(2 + i, hip, foot, W(0.35, 0, 0).sub(W(0, 0, 0)), 0.1); this.shoes[i].position.copy(foot); this.shoes[i].rotation.y = this.cat.rotation.y + Math.PI; }
     // contact: the cursor bounces off the popped-up hat as the cat passes
-    { const hk = Math.sin(Math.PI * clamp((ts - this.TIP + 0.3) / 0.75, 0, 1)); if (hk > 0) { const hp = this.hat.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.55 * CS + 0.7, 0));
+    { const hk = sm(this.TIP - 0.3, this.TIP + 0.05, ts); if (hk > 0) { const hp = this.hat.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.55 * CS + 0.7, 0));
       this.cur.position.lerp(hp, hk); const land = 1 - sm(0.06, 0.16, Math.abs(ts - this.TIP - 0.1)); this.cur.scale.set(CS * (1 + 0.3 * land), CS * (1 - 0.3 * land), CS); } }
     // camera: low dolly along the street, cat in the foreground
     const hc = sm(0, 1, Math.sin(Math.PI * clamp((ts - this.TIP + 0.45) / 1.05, 0, 1)));

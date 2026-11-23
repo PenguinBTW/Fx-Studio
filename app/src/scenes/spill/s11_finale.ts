@@ -9,6 +9,7 @@ import { resolveAsset } from '../../engine/assets';
 import { SCREAM, WHIP, END, BEAT, lerp, sm, hash, clamp } from './kit';
 import { HeroPass } from './hero';
 import { groundDetail } from './ground';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { Cameos } from './cameo';
 import { screenAtlas, screenMaterial } from './screens';
 import S1Breakout from './s1_breakout';
@@ -51,6 +52,18 @@ function terr(x: number, z: number, col?: THREE.Color) {
     const seam = sm(0.3, 0.6, w2 / w1), dash = ((x + z) * 2.5 % 1 + 1) % 1 < 0.5;
     col.multiplyScalar(fx * (1 - 0.45 * seam)); if (dash) col.lerp(new THREE.Color(0xfff2dc), 0.85 * sm(0.45, 0.6, w2 / w1)); if (m < 0.98) { const bind = new THREE.Color(0x7a2436).multiplyScalar(((Math.atan2(z + 21, x) * 40) % 1 + 1) % 1 < 0.5 ? 1 : 1.5); col.lerp(bind, Math.min(1, (1 - m) * 3)); } }
   return y;
+}
+let lockT: THREE.CanvasTexture | undefined;
+function lockTex() {
+  if (lockT) return lockT;
+  const cv = document.createElement('canvas'); cv.width = 270; cv.height = 560; const g = cv.getContext('2d')!;
+  const gr = g.createLinearGradient(0, 0, 0, 560); gr.addColorStop(0, '#1a1830'); gr.addColorStop(1, '#07070d'); g.fillStyle = gr; g.fillRect(0, 0, 270, 560);
+  g.fillStyle = '#000'; g.beginPath(); g.arc(135, 22, 9, 0, 6.283); g.fill();
+  g.fillStyle = '#8a90a8'; g.textAlign = 'center'; g.font = '600 64px sans-serif'; g.fillText('9:41', 135, 130); g.font = '20px sans-serif'; g.fillText('Monday', 135, 160);
+  g.fillStyle = 'rgba(90,96,112,0.85)'; g.beginPath(); g.roundRect(18, 200, 234, 62, 14); g.fill();
+  g.fillStyle = '#c8ccd8'; g.textAlign = 'left'; g.font = '600 19px sans-serif'; g.fillText('cursor.exe', 34, 226); g.font = '16px sans-serif'; g.fillStyle = '#9aa0b0'; g.fillText('is not responding', 34, 249);
+  g.fillStyle = '#3a3e4a'; g.fillRect(105, 530, 60, 5);
+  lockT = new THREE.CanvasTexture(cv); lockT.colorSpace = THREE.SRGBColorSpace; return lockT;
 }
 const LOOKERS = new Set(['deer', 'heron', 'sheep', 'fox', 'dino', 'peacock', 'salmonA']);
 
@@ -95,10 +108,10 @@ export default class S11Finale extends Scene {
     const cols = [0x3fd0ff, 0xff5ab0, 0x7cff6a, 0xffc040, 0xb08cff, 0xff7a1a];
     // the perch: a dead phone standing on end, black glass cracked from the corner, a greyed-out toast still on screen
     { const top = 8.45, g = new THREE.Group(), H = top - 0.3;
-      const body = new THREE.Mesh(new THREE.BoxGeometry(3.0, H, 0.45), new THREE.MeshStandardMaterial({ color: 0x141418, roughness: 0.35, metalness: 0.6 }));
-      const glass = new THREE.Mesh(new THREE.PlaneGeometry(2.7, H - 0.45), new THREE.MeshStandardMaterial({ color: 0x0b0d16, roughness: 0.08, metalness: 0.3 }));
+      const body = new THREE.Mesh(new RoundedBoxGeometry(3.0, H, 0.45, 4, 0.36), new THREE.MeshStandardMaterial({ color: 0x141418, roughness: 0.35, metalness: 0.6 }));
+      const glass = new THREE.Mesh(new THREE.PlaneGeometry(2.7, H - 0.45), new THREE.MeshStandardMaterial({ color: 0xffffff, map: lockTex(), emissive: 0xffffff, emissiveMap: lockTex(), emissiveIntensity: 0.55, roughness: 0.06, metalness: 0.25 }));
       glass.position.z = 0.26; body.position.y = H / 2; glass.position.y = H / 2;
-      const toast = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 0.55), new THREE.MeshBasicMaterial({ color: 0x4a5260, toneMapped: false })); toast.position.set(0, H * 0.78, 0.27);
+      const toast = new THREE.Object3D();
       const cp: number[] = []; for (let k = 0; k < 9; k++) { const a = -0.3 - 1.2 * hash(k * 3.1), l = 1.2 + 2.8 * hash(k * 5.7); cp.push(1.25, H - 0.4, 0.28, 1.25 + l * Math.cos(Math.PI + a), H - 0.4 + l * Math.sin(Math.PI + a), 0.28); }
       const crack = new THREE.LineSegments(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(cp, 3)), new THREE.LineBasicMaterial({ color: 0x9aa4b8 }));
       body.castShadow = body.receiveShadow = true; g.add(body, glass, toast, crack); g.position.set(0, 0.3, 6); g.rotation.set(-0.04, 0.22, 0.03); this.s.add(g);
@@ -140,7 +153,7 @@ export default class S11Finale extends Scene {
     const rr = this.ctx.renderer, T0 = SCREAM - 4 * BEAT * 1;
     // vista: patchwork stitches itself onto the shell a band per beat
     
-    const blink = ((t * 1.06) % 1) < 0.55 ? 1 : 0.15; this.hero.update(t);
+    const blink = ((t * 1.06) % 1) < 0.55 ? 1 : 0.15; this.hero.update(t, undefined, 0.6 + 0.4 * sm(SCREAM, SCREAM + 0.4, t));
     const up = sm(SCREAM, SCREAM + 0.35, t);
     this.cur.position.set(0, 0, 6); this.cur.scale.setScalar(1.9); this.cur.position.y = 8.6 + 0.12 * Math.abs(Math.sin(t * Math.PI / BEAT)) * (1 - up) + 0.6 * sm(SCREAM, SCREAM + 0.12, t) * (1 - sm(SCREAM + 0.12, SCREAM + 0.5, t));
     this.cur.rotation.set(-0.5 * up, 0.3 * Math.sin(t * 0.8) * (1 - up), 0);
@@ -149,7 +162,7 @@ export default class S11Finale extends Scene {
     const rk = clamp((t - SCREAM) / 1.2, 0, 1); (this.ring.material as THREE.MeshBasicMaterial).opacity = t > SCREAM ? 0.9 * (1 - rk) : 0; this.ring.scale.setScalar(1 + 90 * Math.sqrt(rk));
     // camera: slow crane over the quilt → tilt up to the sky on the scream → whip and fly into the phone
     const vk = sm(T0, SCREAM, t);
-    const p = new THREE.Vector3(lerp(3.5, -1.5, vk), lerp(17.5, 15.5, vk), lerp(17.5, 14.5, vk)).lerp(new THREE.Vector3(1.0, 6.6, 11.5), sm(SCREAM, SCREAM + 0.6, t));
+    const hold = 1 - sm(24.45, 25.15, t), p = new THREE.Vector3(lerp(3.5, -1.5, vk), lerp(17.5, 15.5, vk) + 9 * hold, lerp(17.5, 14.5, vk) + 7 * hold).lerp(new THREE.Vector3(1.0, 6.6, 11.5), sm(SCREAM, SCREAM + 0.6, t));
     const look = new THREE.Vector3(lerp(1, -0.5, vk), lerp(-2, 1, vk), -20).lerp(this.PH, sm(SCREAM + 0.1, SCREAM + 0.8, t));
     const wk = clamp((t - WHIP) / (END - HAND - DRIFT - WHIP), 0, 1), we = 0.3 * (1 - (1 - wk) ** 3) + 0.7 * wk;
     const dir = new THREE.Vector3(0, 10, 10).sub(this.PH).normalize(), end = this.PH.clone().addScaledVector(dir, 0.45 * (0.44 + 3.25 * 16 / 9 / Math.tan(16 * Math.PI / 180)));
@@ -170,7 +183,7 @@ export default class S11Finale extends Scene {
     rr.setRenderTarget(out); rr.setClearColor(0, 1); rr.clear(); rr.render(this.s, this.cam); this.hero.render(rr, out, this.cam); rr.resetState();
     const kick = t > SCREAM ? Math.exp(-(t - SCREAM) * 3) : 0, whip = Math.sin(Math.PI * wk);
     this.cameos.draw(this.ctx.renderer, out, f.t);
-    return { toneMap: 'aces', exposure: 1.05 + 0.6 * kick, bloom: 0.25 + 0.5 * kick, bloomThreshold: 1.0, vignette: 0.35, grain: 0.03,
+    return { toneMap: 'aces', exposure: 1.05 + 0.6 * kick, bloom: 0.14 + 0.5 * kick, bloomThreshold: 1.0, vignette: 0.35, grain: 0.03,
       ca: 0.15 + 1.5 * kick + 2.5 * whip, zoom: 1 + 0.08 * whip, depthDof: t < SCREAM + 0.3 ? { enabled: true, focusDistance: p.distanceTo(this.cur.position), aperture: 5, blades: 7, maxRadius: 16, near: 0.1, far: 600 } : undefined, shake: [20 * kick * Math.sin(t * 90), 20 * kick * Math.cos(t * 77)] };
   }
 

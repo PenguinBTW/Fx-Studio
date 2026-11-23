@@ -62,9 +62,9 @@ export class HeroPass {
     return root;
   }
 
-  update(t: number, on = heroBlink(t)) {
+  update(t: number, on = heroBlink(t), glow = 1) {
     const k = 0.7 + 0.3 * clamp01(on) * (0.97 + 0.03 * Math.sin(t * 90));
-    this.block.uniforms.uK!.value = k; this.halo.opacity = 0.95 * k * k;
+    this.block.uniforms.uK!.value = k; this.halo.opacity = 0.95 * k * k * glow;
   }
 
   /** draw the hero into `out` after the region's own passes. Pass `world` when `out` does not already hold the
