@@ -21,7 +21,7 @@ Technical standards, kinetic choreographies, in-world 3D extruded typography, ve
 ## 1. Upstream & Sibling Dependencies
 
 - **`video-design`**: Enforces zero detached 2D text, diegetic spatial integration, and safe-zone margins.
-- **`viopls-art-direction`**: Mandates bold, structural grotesque/monospace typography and bans thin wispy fonts.
+- **`viopls-art-direction`**: Defaults to heavy weights for legibility in motion; the typeface should fit the world.
 - **`design-around-narration`**: Synchronizes word arrivals to vocal delivery and rhetorical emphasis.
 - **`shorts-retention-design`**: Enforces 1–3 word mobile chunking in vertical 9:16 formats.
 - **`fx-diagnostics`**: Audits contrast legibility (`F04`), word entrance anticipation (`F03`), and font loading gates.

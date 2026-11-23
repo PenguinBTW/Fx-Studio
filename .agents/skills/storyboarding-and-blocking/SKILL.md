@@ -137,5 +137,5 @@ Before approving a storyboard sequence for scene authoring:
 - [ ] **Shot Scale Variety:** Consecutive shots alternate between wide, medium, and close-up focal lengths.
 - [ ] **Vector Consistency:** Movement direction along the 180° axis is preserved across cuts (no directional flips).
 - [ ] **Gaze Anchoring:** The entry point of each cut falls within 15% screen distance of the prior shot's exit point.
-- [ ] **Duration Budget:** Every shot is between 1.5s and 6.0s with continuous camera momentum.
+- [ ] **Duration Budget:** Shots run 1.5-6.0s (shorter for montage, beat cuts or Shorts) with no dead holds.
 - [ ] **Deliverable Exported:** `storyboard.md` is populated with lens specs, camera vectors, focal points, and script cues.
