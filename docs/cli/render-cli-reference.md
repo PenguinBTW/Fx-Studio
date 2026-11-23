@@ -1,6 +1,6 @@
 # Headless Render CLI Reference (`bun scripts/render.ts`)
 
-The master offline rendering utility in **f(x) Studio** is invoked via `bun scripts/render.ts` (or the direct wrapper scripts in the root `scripts/` directory).
+The master offline rendering utility in **f(x) Studio** is invoked via `bun scripts/render.ts` from `app/`. For a guided render, run the interactive wizard at the repo root: `./render` (bash) or `render.bat` / `render.ps1` (Windows). It lists projects and asks for options; any arguments are passed straight to `render.ts video`.
 
 It controls a headless Playwright Chrome session in deterministic export mode (`?export=1`), driving frame evaluation, image analysis, visual diagnostics, and video encoding.
 
@@ -64,7 +64,10 @@ bun scripts/render.ts compare --active-scene act2 --ref-scene benchmark
 | Flag | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `--project <name>` | string | Active pointer (`active.json`) | Target project directory in `app/src/scenes/` (e.g. `--project brand_campaign` or `--project product_reveal`). Overrides `active.json` without modifying disk. |
-| `--scale <n>` | integer ($1 \dots 4$) | `1` | Render scale multiplier. `--scale 1` = $1920 \times 1080$; `--scale 2` = $3840 \times 2160$ (4K UHD). |
+| `--size <WxH>` | string | project.json `size`, else `1920x1080` | Logical canvas, e.g. `1080x1920` for vertical. |
+| `--720p` / `--1080p` / `--4k` | flag | None | Resolution presets that keep the project orientation (`--4k` = 1080p layout at `--scale 2`). Same as `--res 720p`. |
+| `--vertical` (`--shorts`, `--portrait`) / `--horizontal` (`--landscape`) | flag | None | Force 9:16 or 16:9 when the project is the other way round. |
+| `--scale <n>` | integer ($1 \dots 4$) | `1` | Multiplies the logical canvas: `--scale 2` on 1920x1080 = $3840 \times 2160$ (4K UHD). |
 | `--samples <n\|auto>` | integer / `auto` | Mode dependent | Number of sub-frames averaged per output frame over the shutter window. Defaults to `1` for `motion`, `1` or `8` for `video`. `--samples auto` enables adaptive supersampling ($4 \dots 324$ spp). |
 | `--shutter <ratio>` | float ($0.0 \dots 1.0$) | Mode dependent | Shutter angle fraction of frame duration. Defaults to `0` (sharp) for `motion`; `0.5` ($180^\circ$ cinema shutter) for `video` and `stills`. |
 | `--only <ids>` | string | None | Comma-separated scene IDs to isolate. All other entries are skipped. |

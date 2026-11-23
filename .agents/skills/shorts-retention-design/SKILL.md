@@ -78,6 +78,7 @@ Vertical feeds operate under aggressive swipe mechanics. The viewer decides whet
 ### 3.1 Phase 1: The Zero-Second Hook (Frames 0–30 / 0.0s–0.5s) [RULE]
 - **Immediate State Transformation:** Frame 0 must open mid-motion (e.g., camera already in high-velocity forward dolly, light blooming, or an object in dynamic mechanical fracture).
 - **Prohibited:** Fades from black, static establishing shots, title cards hanging in silence, or slow easing starts.
+- **Readable Subject + Premise:** Frame 0 shows one large, bright, instantly recognisable subject. With no narration, put a one-line premise on screen from frame 0 (in the safe zone). Dark, abstract CG openings measured only 16-27% viewed on this channel.
 - **Vocal Alignment:** The opening spoken word must hit within **$\le 100\text{ ms}$** of Frame 0.
 
 ### 3.2 Phase 2: Rapid Re-framing & Micro-Resets [RULE]

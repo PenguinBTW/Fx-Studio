@@ -68,7 +68,7 @@ Every standard in this document and related modules strictly adheres to this cla
 ## 3. Cinematography, Perspective & Transitions
 
 ### 3.1 Continuous Camera Momentum [RULE]
-- Static, locked-off camera shots are strictly forbidden in animation sequences.
+- Avoid dead, locked-off shots. A hold is fine when the subject is moving or as a deliberate beat (an impact frame, a reaction, a punchline).
 - The camera must continuously move and adapt to spoken words and audio energy:
   - **Acceleration:** Accelerate speed/dolly moves during narrative build-ups, key reveals, or high-energy delivery.
   - **Deceleration:** Transition into slow, atmospheric cinematic drifts during reflective narration or musical pauses.
@@ -81,7 +81,7 @@ Every standard in this document and related modules strictly adheres to this cla
   - Vary camera elevation and field-of-view (FOV) across shot changes.
 
 ### 3.3 Seamless Motion & Vector Transitions [RULE]
-- Abrupt, jarring cuts that disrupt visual momentum are prohibited.
+- Avoid unmotivated jarring cuts. Hard cuts on a beat or an impact are fine; otherwise prefer a carried motion:
 - Every scene cut must feel distinct yet seamlessly blended:
   - **Match Moving / Vector Continuity:** Match the exit velocity vector of Scene A with the entry velocity vector of Scene B.
   - **Occlusion / Foreground Wipes:** Use foreground objects passing close to the lens to reveal the next environment.

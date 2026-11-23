@@ -70,9 +70,9 @@ Do not force the viewer's eyes to scan across the screen to locate the subject a
 ## 3. Shot Budgeting & Pacing Rules
 
 ### 3.1 Shot Duration Limits [RULE]
-- **Minimum Shot Duration:** 1.5 seconds. Any cut faster than 1.5s destroys spatial comprehension in a video essay, unless executing a deliberate montage sequence.
+- **Minimum Shot Duration:** 1.5 seconds. Any cut faster than 1.5s destroys spatial comprehension in a video essay, unless executing a deliberate montage, beat-synced cut or Short (see `shorts-retention-design`).
 - **Maximum Static Shot Duration:** 6.0 seconds. If a shot remains in the same framing for $>6.0\text{s}$, it must either execute an internal camera pivot/dolly or cut to an alternate perspective.
-- **Continuous Momentum:** Per `video-design`, static hold-frames are forbidden; the camera must drift, dolly, or orbit smoothly throughout the entire duration.
+- **Continuous Momentum:** Per `video-design`, avoid dead holds; keep the camera or the subject moving unless the hold is a deliberate beat.
 
 ---
 

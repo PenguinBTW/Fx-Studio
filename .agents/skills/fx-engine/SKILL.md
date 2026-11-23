@@ -60,7 +60,7 @@ f(x) Studio projects adhere to global Viopls production rules:
 - **`video-design`**: Universal standards (Zero HUD, diegetic 3D text, continuous camera momentum, minimum stylized 2.5D, safe zones).
 - **`design-around-audio`**: Stem deconstruction, beat-grid alignment, transient hits ($V_{\text{hit}}$), and frequency mapping.
 - **`design-around-narration`**: Script staging, elastic visual buffers, and `narration_guide.md` generation.
-- **`viopls-art-direction`**: Aesthetic cohesion, anti-slop blacklist, 60/30/10 palette rule, and core engine tokens (`--void`, `--bone`, `--ash`, `--signal`).
+- **`viopls-art-direction`**: Aesthetic cohesion, anti-slop blacklist, palette guidance, and default engine tokens (`--void`, `--bone`, `--ash`, `--signal`).
 - **`visual-metaphors-and-abstraction`**: Mandatory pre-production conceptual planning gate (`visual_plan.md`).
 - **`storyboarding-and-blocking`**: Shot-scale hierarchy, 180° spatial axis, and saccadic gaze anchoring (`storyboard.md`).
 - **`sound-design-and-foley`**: Tactile sound effects, spectral budgeting (Vocal Sanctuary Rule), and `sound_design_guide.md`.
