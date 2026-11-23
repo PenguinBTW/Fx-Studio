@@ -45,7 +45,7 @@ export default class S9Garden extends Scene {
       tu.rotation.y = hash(i * 5) * 6; tu.scale.setScalar(0.45 + 0.3 * hash(i * 9)); this.s.add(tu); }
     this.peacock = this.glassify(kit.part('peacock')); this.tail = kit.part('pTail'); this.peacock.position.set(4, 0, -3.2); this.peacock.rotation.y = -0.4; this.peacock.scale.setScalar(1.2); this.s.add(this.peacock);
     const bfly = kit.part('bfly');
-    for (let i = 0; i < NB; i++) { const o = this.glassify(bfly.clone()); o.scale.setScalar(0.32 + 0.2 * hash(i * 3)); this.s.add(o); const c = new THREE.Color(BCOL[i % BCOL.length]);
+    for (let i = 0; i < NB; i++) { const o = this.glassify(bfly.clone()); o.scale.setScalar(0.17 + 0.1 * hash(i * 3)); this.s.add(o); const c = new THREE.Color(BCOL[i % BCOL.length]);
       let wl: THREE.Object3D = o, wr: THREE.Object3D = o; o.traverse((x) => { if (x.name === 'bWingL') wl = x; if (x.name === 'bWingR') wr = x; });
       const shaft = new THREE.Mesh(new THREE.ConeGeometry(0.7, 1, 24, 1, true).translate(0, -0.5, 0), this.add({ uCol: { value: c.clone() }, uA: { value: 0.22 } }, SHAFT_F));
       const pool = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 1.8), this.add({ uCol: { value: c.clone() }, uA: { value: 0.6 } }, POOL_F)); pool.rotation.x = -Math.PI / 2;
@@ -53,8 +53,8 @@ export default class S9Garden extends Scene {
     for (let i = 0; i < 3; i++) { const l = new THREE.PointLight(BCOL[i * 2], 0, 6, 2); this.s.add(l); this.lights.push(l); }
     kit.root.visible = false; this.s.add(kit.root);
     cur.root.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; const sm0 = m.material as THREE.MeshStandardMaterial;
-      const p = new THREE.MeshStandardMaterial({ name: sm0.name, color: sm0.color, roughness: 0.35 });
-      if (sm0.name === 'Shell') { p.color.setRGB(1, 0.36, 0.03); this.shell = p; }
+      const p = new THREE.MeshStandardMaterial({ name: sm0.name, color: sm0.color, roughness: 0.35, fog: false });
+      if (sm0.name === 'Shell') { p.color.setRGB(1, 0.36, 0.03); p.emissive.setRGB(0.5, 0.12, 0); this.shell = p; }
       if (sm0.name === 'Core') { p.emissive.setRGB(1, 0.32, 0); this.cores.push(p); }
       if (sm0.name === 'Grille') p.color.setRGB(0.2, 0.05, 0);
       m.material = p; });
@@ -78,7 +78,7 @@ export default class S9Garden extends Scene {
       (b.pool.material as THREE.ShaderMaterial).uniforms.uA.value = 0.35 + 0.35 * Math.abs(fl);
       if (i < 3) { this.lights[i].position.copy(p); this.lights[i].intensity = 5; }
       const d = p.distanceTo(cp); if (d < nd) { nd = d; near = new THREE.Color(BCOL[b.c]); } });
-    this.shell.emissive.copy(near).multiplyScalar(0.25 / (1 + 0.3 * nd));
+    this.shell.emissive.copy(near).multiplyScalar(0.12 / (1 + 0.3 * nd)).add(new THREE.Color(0.55, 0.13, 0));
     const open = sm(T0 + 0.55, T0 + 1.05, ts); this.tail.scale.set(1, 0.08 + 0.92 * open, 0.08 + 0.92 * open); this.peacock.rotation.y = -0.4 + 0.1 * Math.sin(ts * 3);
     const up = sm(T0 + 0.9, T1, t);
     this.cam.position.set(cp.x - 3.5 - 1.5 * up, 1.6 + 2.2 * up, 7 + 3 * up); this.cam.aspect = out.width / out.height; this.cam.updateProjectionMatrix();
