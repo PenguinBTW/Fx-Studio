@@ -12,7 +12,7 @@ import { FRAG as ORBIT } from './s01_orbit';
 const LCD = /* glsl */ `${FFN}
 uniform sampler2D uImg; uniform float uN, uMelt;
 void main() {
-  vec2 q = ff_uv(); vec2 res = vec2(1080.0, 1920.0); vec2 pc = mix(vec2(540.0, 960.0), vec2(540.17, 960.5), smoothstep(400.0, 4.0, uN)); vec2 pp = pc + q * 0.5 * uN;
+  vec2 q = ff_uv(); vec2 res = uRes; vec2 pc = mix(res * 0.5, res * 0.5 + vec2(0.17, 0.5), smoothstep(400.0, 4.0, uN)); vec2 pp = pc + q * 0.5 * uN;
   vec2 id = floor(pp), f = fract(pp); vec3 img = texture(uImg, (id + 0.5) / res).rgb; vec3 direct = texture(uImg, pp / res).rgb; vec3 lc = (0.55 + 0.9 * vec3(ff_fbm(vec3(f * 14.0, uT * 0.5), 4))) * mix(1.0, 0.3, smoothstep(8.0, 1.0, uN));
   float bx = 0.06, by = 0.07; vec3 m = vec3(0.0);
   for (int c = 0; c < 3; c++) { float x0 = float(c) / 3.0 + 0.03, x1 = float(c + 1) / 3.0 - 0.03; float r = 0.05;
