@@ -6,7 +6,6 @@
   ],
   "audio": "../../../public/audio/agent_cut.mp3",
   "audioOffset": 84.1091,
-  "audioFadeOut": 0.8,
   "trimToTimeline": true,
   "entries": [
     {
@@ -85,6 +84,12 @@
       "scene": "agent_teaser/t14_logo",
       "id": "t14_logo",
       "start": 26.174,
+      "end": 29.5784
+    },
+    {
+      "scene": "agent_teaser/t15_loop",
+      "id": "t15_loop",
+      "start": 28.9783,
       "end": 29.9131
     }
   ],
@@ -184,6 +189,14 @@
       "to": "t14_logo",
       "at": 26.174,
       "dur": 0.8
+    },
+    {
+      "id": "t-12",
+      "transition": "v2_burn",
+      "from": "t14_logo",
+      "to": "t15_loop",
+      "at": 28.9783,
+      "dur": 0.6
     }
   ]
 }
