@@ -27,32 +27,32 @@ export default class S9Garden extends Scene {
   private cur!: THREE.Object3D; private cores: THREE.MeshStandardMaterial[] = []; private shell!: THREE.MeshStandardMaterial;
   private add(m: THREE.ShaderMaterial['uniforms'], f: string) { return new THREE.ShaderMaterial({ vertexShader: SHAFT_V, fragmentShader: f, uniforms: m, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }); }
   private glassify(o: THREE.Object3D) { o.traverse((x) => { const m = x as THREE.Mesh; if (!m.isMesh) return; const n = (m.material as THREE.Material).name;
-    m.material = PANE[n] !== undefined ? new THREE.MeshStandardMaterial({ color: PANE[n], emissive: PANE[n], emissiveIntensity: 1.1, roughness: 0.2, side: THREE.DoubleSide })
+    m.material = PANE[n] !== undefined ? new THREE.MeshStandardMaterial({ color: PANE[n], emissive: PANE[n], emissiveIntensity: 0.8, roughness: 0.2, side: THREE.DoubleSide })
       : new THREE.MeshStandardMaterial({ color: 0x0b0b10, roughness: 0.35, metalness: 0.7, side: THREE.DoubleSide }); }); return o; }
 
   override async init() {
     const load = (id: string) => GLTFManager.instantiate(resolveAsset(id, this.ctx.project ?? 'spill').url, {});
     const [kit, cur] = await Promise.all([load('garden'), load('cursor')]); this.insts = [kit, cur];
-    this.s.background = new THREE.Color(0.32, 0.22, 0.3); this.s.fog = new THREE.FogExp2(0x5a3a40, 0.018);
+    this.s.background = new THREE.Color(0.95, 0.6, 0.45); this.s.fog = new THREE.FogExp2(0xd08070, 0.022);
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), new THREE.MeshStandardMaterial({ color: 0x3a4a2e, roughness: 0.9 })); ground.rotation.x = -Math.PI / 2; this.s.add(ground);
     for (let i = 0; i < 40; i++) { const st = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.95, 0.12, 7), new THREE.MeshStandardMaterial({ color: 0xc9b9a0, roughness: 0.8 }));
       st.position.set(-14 + 1.2 * i + 0.3 * hash(i), 0.06, 0.3 * (hash(i * 2) - 0.5)); st.rotation.y = hash(i * 3); this.s.add(st); }
     const arch = kit.part('arch'), tulip = kit.part('tulip');
-    for (let i = 0; i < 10; i++) { const a = this.glassify(arch.clone()); a.position.set(-20 + 5.2 * i, 0, -9 - 1.5 * (i % 2)); a.scale.setScalar(2.2); this.s.add(a); }
-    for (let i = 0; i < 70; i++) { const tu = this.glassify(tulip.clone()); const side = i % 2 ? 1 : -1; tu.position.set(-16 + 0.5 * i + 0.4 * hash(i), 0, side * (1.6 + 3.5 * hash(i * 1.7)));
-      tu.rotation.y = hash(i * 5) * 6; tu.scale.setScalar(0.8 + 0.6 * hash(i * 9)); this.s.add(tu); }
+    for (let i = 0; i < 10; i++) { const a = this.glassify(arch.clone()); a.position.set(-26 + 8 * i, 0, -18 - 3 * (i % 2)); a.scale.setScalar(2.6); this.s.add(a); }
+    for (let i = 0; i < 34; i++) { const tu = this.glassify(tulip.clone()); const side = i % 2 ? 1 : -1; tu.position.set(-16 + 1.0 * i + 0.4 * hash(i), 0, side < 0 ? -(2.2 + 4 * hash(i * 1.7)) : 2.6 + 1.5 * hash(i * 1.7));
+      tu.rotation.y = hash(i * 5) * 6; tu.scale.setScalar(0.45 + 0.3 * hash(i * 9)); this.s.add(tu); }
     this.peacock = this.glassify(kit.part('peacock')); this.tail = kit.part('pTail'); this.peacock.position.set(4, 0, -3.2); this.peacock.rotation.y = -0.4; this.peacock.scale.setScalar(1.2); this.s.add(this.peacock);
     const bfly = kit.part('bfly');
-    for (let i = 0; i < NB; i++) { const o = this.glassify(bfly.clone()); o.scale.setScalar(0.7 + 0.5 * hash(i * 3)); this.s.add(o); const c = new THREE.Color(BCOL[i % BCOL.length]);
+    for (let i = 0; i < NB; i++) { const o = this.glassify(bfly.clone()); o.scale.setScalar(0.32 + 0.2 * hash(i * 3)); this.s.add(o); const c = new THREE.Color(BCOL[i % BCOL.length]);
       let wl: THREE.Object3D = o, wr: THREE.Object3D = o; o.traverse((x) => { if (x.name === 'bWingL') wl = x; if (x.name === 'bWingR') wr = x; });
-      const shaft = new THREE.Mesh(new THREE.ConeGeometry(1.2, 1, 24, 1, true).translate(0, -0.5, 0), this.add({ uCol: { value: c.clone() }, uA: { value: 0.22 } }, SHAFT_F));
-      const pool = new THREE.Mesh(new THREE.PlaneGeometry(3, 3), this.add({ uCol: { value: c.clone() }, uA: { value: 0.6 } }, POOL_F)); pool.rotation.x = -Math.PI / 2;
-      this.s.add(shaft, pool); this.bf.push({ o, wl, wr, shaft, pool, ph: hash(i * 7) * 6.28, r: 1.6 + 2.2 * hash(i * 11), h: 2.2 + 2.5 * hash(i * 13), c: i % BCOL.length }); }
+      const shaft = new THREE.Mesh(new THREE.ConeGeometry(0.7, 1, 24, 1, true).translate(0, -0.5, 0), this.add({ uCol: { value: c.clone() }, uA: { value: 0.22 } }, SHAFT_F));
+      const pool = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 1.8), this.add({ uCol: { value: c.clone() }, uA: { value: 0.6 } }, POOL_F)); pool.rotation.x = -Math.PI / 2;
+      this.s.add(shaft, pool); this.bf.push({ o, wl, wr, shaft, pool, ph: hash(i * 7) * 6.28, r: 2.2 + 3.2 * hash(i * 11), h: 1.4 + 3.0 * hash(i * 13), c: i % BCOL.length }); }
     for (let i = 0; i < 3; i++) { const l = new THREE.PointLight(BCOL[i * 2], 0, 6, 2); this.s.add(l); this.lights.push(l); }
     kit.root.visible = false; this.s.add(kit.root);
     cur.root.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; const sm0 = m.material as THREE.MeshStandardMaterial;
       const p = new THREE.MeshStandardMaterial({ name: sm0.name, color: sm0.color, roughness: 0.35 });
-      if (sm0.name === 'Shell') { p.color.setRGB(0.9, 0.35, 0.06); this.shell = p; }
+      if (sm0.name === 'Shell') { p.color.setRGB(1, 0.36, 0.03); this.shell = p; }
       if (sm0.name === 'Core') { p.emissive.setRGB(1, 0.32, 0); this.cores.push(p); }
       if (sm0.name === 'Grille') p.color.setRGB(0.2, 0.05, 0);
       m.material = p; });

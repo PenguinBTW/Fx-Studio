@@ -59,6 +59,12 @@
       "id": "garden",
       "start": 20.354,
       "end": 22.094
+    },
+    {
+      "scene": "spill/s10_ps1",
+      "id": "ps1",
+      "start": 22.094,
+      "end": 23.834
     }
   ],
   "audio": "../../../public/audio/feel_good_inc.wav"
