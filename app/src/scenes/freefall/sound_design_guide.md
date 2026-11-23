@@ -12,7 +12,7 @@ bun scripts/sfx/synth.ts --cues src/scenes/freefall/sfx_cues.json --out src/scen
 bun scripts/render.ts audio --project freefall --mp3                 # mixdown -> master/freefall_mix.mp3
 ```
 
-`render.ts video` uses `master/freefall_mix.mp3` (project.json `"audio"`); without it, it falls back to the `"mix"` mixdown.
+`render.ts video` uses `master/freefall_mix.mp3` (project.json `"audio"`). Without the master it falls back to the `"mix"` mixdown, which needs the gitignored music stem: run `bun scripts/freefall_score.ts` first.
 
 ## Score sections (`scripts/freefall_score.ts`)
 
