@@ -2,6 +2,7 @@
 // (comic impact frames), bursts out, and we cut outside on a pulse: the phone hangs in a sky of screens.
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import { resolveAsset } from '../../engine/assets';
@@ -114,13 +115,14 @@ export default class S1Breakout extends Scene {
       if (p.name === 'Chip') { p.clearcoat = 0.3; p.clearcoatRoughness = 0.35; }
       if (p.name === 'Phosphor') { p.emissive.setRGB(1, 0.72, 0.4); p.emissiveIntensity = 6; m.castShadow = false; }
       if (p.name === 'Scratch') { p.roughness = 0.12; }
-      if (p.name === 'Shield') { p.color.setRGB(0.32, 0.32, 0.31); p.roughness = 0.62; }
+      if (p.name === 'Shield') { p.color.setRGB(0.07, 0.045, 0.16); p.roughness = 0.4; p.clearcoat = 0.6; }
       if (p.name === 'Ribbon') { p.sheen = 0.5; } });
     this.inS.add(phone.root);
     const lamp = phone.part('lampled'); lamp.getWorldPosition(this.lampLight.position); this.lampLight.position.y -= 0.25;
     this.lampLight.castShadow = true; this.lampLight.shadow.mapSize.set(1024, 1024); this.lampLight.shadow.bias = -0.002; this.lampLight.shadow.radius = 4;
     const fill = new THREE.DirectionalLight(0x6f86c8, 0.25); fill.position.set(5, 6, 8);
     this.mkFairyLights();
+    this.mkUI();
     this.inS.add(this.lampLight, fill, new THREE.HemisphereLight(0x302a40, 0x0a0806, 0.15));
     const prepCursor = (c: GLTFInstance) => c.root.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; const p = phys(m);
       if (p.name === 'Shell') { p.transmission = 0.25; p.thickness = 0.25; p.ior = 1.49; p.roughness = 0.32; p.attenuationColor.setRGB(1, 0.42, 0.1); p.attenuationDistance = 0.3; p.color.setRGB(1, 0.36, 0.03); p.clearcoat = 1; p.clearcoatRoughness = 0.08; m.castShadow = true; }
@@ -151,6 +153,72 @@ export default class S1Breakout extends Scene {
       fragmentShader: `uniform float uProg; varying vec2 vUv; void main() { float on = 1.0 - smoothstep(uProg - 0.15, uProg, vUv.x); if (on < 0.01) discard;
         float core = exp(-vUv.y * vUv.y * 30.0), halo = exp(-vUv.y * vUv.y * 4.0) * 0.12, tip = exp(-abs(vUv.x - uProg) * 6.0) * 1.5;
         gl_FragColor = vec4(vec3(0.95, 0.98, 1.0) * (core + halo) * (1.0 + tip) * on * 0.7, 1.0); }` });
+  }
+
+  /** the phone's UI turned into architecture: app-icon towers, a status-bar sky, notification bridges, a keyboard terrace.
+   *  4-colour palette (ink indigo, violet, cyan, cream) so the cursor is the only orange thing in the cell */
+  private mkUI() {
+    const INDIGO = '#120c26', VIOLET = '#3b2a72', CYAN = '#38e0d2', CREAM = '#f3e8d2';
+    const tex = (w: number, h: number, draw: (g: CanvasRenderingContext2D) => void) => {
+      const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const g = cv.getContext('2d')!; draw(g);
+      const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; };
+    const glyphs: ((g: CanvasRenderingContext2D) => void)[] = [
+      (g) => { g.beginPath(); g.roundRect(-60, -40, 120, 85, 16); g.stroke(); g.beginPath(); g.arc(0, 2, 26, 0, Math.PI * 2); g.stroke(); g.fillRect(-30, -56, 34, 16); },
+      (g) => { g.beginPath(); g.roundRect(-64, -48, 128, 82, 30); g.stroke(); g.beginPath(); g.moveTo(-30, 30); g.lineTo(-44, 62); g.lineTo(0, 34); g.stroke(); },
+      (g) => { g.beginPath(); g.arc(-28, 40, 20, 0, Math.PI * 2); g.fill(); g.beginPath(); g.arc(36, 26, 20, 0, Math.PI * 2); g.fill(); g.fillRect(-12, -56, 12, 98); g.fillRect(48, -70, 12, 98); g.fillRect(-12, -70, 72, 18); },
+      (g) => { for (let k = 0; k < 8; k++) { g.save(); g.rotate(k * Math.PI / 4); g.fillRect(-11, -64, 22, 26); g.restore(); } g.beginPath(); g.arc(0, 0, 40, 0, Math.PI * 2); g.stroke(); g.beginPath(); g.arc(0, 0, 14, 0, Math.PI * 2); g.stroke(); },
+      (g) => { g.beginPath(); g.arc(0, -16, 42, Math.PI, 0); g.lineTo(0, 66); g.closePath(); g.stroke(); g.beginPath(); g.arc(0, -16, 14, 0, Math.PI * 2); g.fill(); },
+      (g) => { g.beginPath(); g.arc(0, 0, 60, 0, Math.PI * 2); g.stroke(); g.beginPath(); g.moveTo(0, 0); g.lineTo(0, -40); g.moveTo(0, 0); g.lineTo(30, 16); g.stroke(); },
+      (g) => { g.font = '900 120px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('>_', 0, 6); },
+    ];
+    const towerTex = (i: number, hU: number) => tex(256, Math.round(256 * hU), (g) => {
+      const H = 256 * hU; g.fillStyle = INDIGO; g.fillRect(0, 0, 256, H);
+      const gr = g.createLinearGradient(0, 0, 256, 256); gr.addColorStop(0, i % 2 ? CYAN : VIOLET); gr.addColorStop(1, i % 2 ? VIOLET : '#5a46a8');
+      g.fillStyle = gr; g.beginPath(); g.roundRect(20, 20, 216, 216, 54); g.fill();
+      g.save(); g.translate(128, 128); g.strokeStyle = g.fillStyle = CREAM; g.lineWidth = 12; g.lineCap = g.lineJoin = 'round'; glyphs[i % glyphs.length](g); g.restore();
+      if (i % 3 === 0) { g.fillStyle = '#ff2e63'; g.beginPath(); g.arc(222, 34, 26, 0, Math.PI * 2); g.fill(); g.fillStyle = CREAM; g.font = '700 32px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(1 + (i * 7) % 9), 222, 35); }
+      for (let y = 270; y < H - 20; y += 34) for (let x = 26; x < 230; x += 30) { const on = hash(i * 31 + x * 0.7 + y * 1.3); if (on < 0.4) continue; g.fillStyle = on > 0.85 ? CYAN : on > 0.6 ? CREAM : VIOLET; g.globalAlpha = 0.35 + 0.6 * on; g.fillRect(x, y, 16, 18); }
+      g.globalAlpha = 1; });
+    const towers = [[-2.6, -7.5, 2.0, 1], [-1.3, -9.5, 3.4, 2], [0.2, -8.2, 2.6, 3], [1.6, -10.5, 4.2, 0], [2.9, -7.8, 3.0, 4], [-3.6, -11.5, 4.6, 5], [4.2, -11.0, 5.0, 6], [0.9, -12.5, 5.8, 1], [-0.6, -13.5, 6.4, 3]];
+    for (const [x, z, h, gi] of towers) {
+      const W = 1.25, t = towerTex(gi, h / W);
+      const body = new THREE.Mesh(new RoundedBoxGeometry(W, h, W, 4, 0.22), new THREE.MeshPhysicalMaterial({ color: 0x1a1236, roughness: 0.35, clearcoat: 0.8, clearcoatRoughness: 0.15 }));
+      body.position.set(x, h / 2 - 0.05, z); body.castShadow = body.receiveShadow = true; this.inS.add(body);
+      const face = new THREE.Mesh(new THREE.PlaneGeometry(W * 0.92, h * 0.98), new THREE.MeshStandardMaterial({ map: t, emissiveMap: t, emissive: 0xffffff, emissiveIntensity: 1.6, roughness: 0.4 }));
+      face.position.set(x, h / 2 - 0.05, z + W / 2 + 0.005); this.inS.add(face);
+    }
+    // status-bar sky: the clock, signal and a battery on its last percent
+    const sb = tex(2048, 192, (g) => {
+      const gr = g.createLinearGradient(0, 0, 0, 192); gr.addColorStop(0, 'rgba(18,12,38,0.95)'); gr.addColorStop(1, 'rgba(59,42,114,0.0)'); g.fillStyle = gr; g.fillRect(0, 0, 2048, 192);
+      g.fillStyle = CREAM; g.font = '700 110px sans-serif'; g.textBaseline = 'middle'; g.fillText('9:41', 120, 90);
+      for (let k = 0; k < 4; k++) { g.globalAlpha = k < 1 ? 1 : 0.3; g.fillRect(1440 + k * 44, 120 - 26 * (k + 1), 30, 26 * (k + 1)); } g.globalAlpha = 1;
+      g.strokeStyle = CREAM; g.lineWidth = 12; g.beginPath(); g.roundRect(1660, 46, 230, 92, 22); g.stroke(); g.fillRect(1898, 72, 16, 40);
+      g.fillStyle = '#ff2e63'; g.fillRect(1676, 62, 22, 60); g.fillStyle = CYAN; g.font = '700 64px sans-serif'; g.fillText('1%', 1730, 94); });
+    const bar = new THREE.Mesh(new THREE.PlaneGeometry(14, 1.3), new THREE.MeshBasicMaterial({ map: sb, transparent: true, toneMapped: false, color: new THREE.Color(1.6, 1.6, 1.6), depthWrite: false }));
+    bar.position.set(0.6, 8.6, -14); this.inS.add(bar);
+    // notification banners slung between the towers like bridges
+    const banner = (title: string, body: string) => tex(1024, 256, (g) => {
+      g.fillStyle = 'rgba(243,232,210,0.94)'; g.beginPath(); g.roundRect(8, 8, 1008, 240, 56); g.fill();
+      g.fillStyle = VIOLET; g.beginPath(); g.roundRect(44, 56, 144, 144, 34); g.fill(); g.fillStyle = CYAN; g.font = '900 84px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('>_', 116, 132);
+      g.textAlign = 'left'; g.fillStyle = INDIGO; g.font = '800 62px sans-serif'; g.fillText(title, 224, 98); g.font = '500 52px sans-serif'; g.globalAlpha = 0.75; g.fillText(body, 224, 172); g.globalAlpha = 1; });
+    const bans: [string, string, number, number, number, number][] = [['cursor.exe', 'is not responding', -0.4, 3.0, -8.9, -0.06], ['1 new message', 'let me out', 1.6, 4.9, -11.2, 0.05], ['Storage full', '0 bytes left inside', -1.2, 6.2, -13.0, -0.03]];
+    for (const [a, b, x, y, z, r] of bans) {
+      const bt = banner(a, b), side = new THREE.MeshStandardMaterial({ color: 0xe8dcc4, roughness: 0.5 });
+      const m = new THREE.Mesh(new RoundedBoxGeometry(3.4, 0.85, 0.12, 3, 0.05), [side, side, side, side, new THREE.MeshStandardMaterial({ map: bt, emissiveMap: bt, emissive: 0xffffff, emissiveIntensity: 0.9, roughness: 0.3 }), side]);
+      m.position.set(x, y, z); m.rotation.z = r; m.castShadow = true; this.inS.add(m);
+    }
+    // keyboard terrace: backlit keycaps stepping up behind the chip row
+    const KEYS = 'QWERTYUIOPASDFGHJKLZXCVBNM';
+    const kcap = new RoundedBoxGeometry(0.42, 0.2, 0.42, 3, 0.07), kmat = new THREE.MeshPhysicalMaterial({ color: 0x3b2a72, roughness: 0.45, clearcoat: 0.5, emissive: 0x0c1c3a });
+    const keys = new THREE.InstancedMesh(kcap, kmat, 72), M = new THREE.Matrix4(); let n = 0;
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 18; c++) {
+      M.makeTranslation(-3.4 + c * 0.47 + r * 0.16, 0.05 + r * 0.22 - 0.04 * hash(r * 19 + c), -3.2 - r * 0.55); keys.setMatrixAt(n++, M); }
+    keys.castShadow = keys.receiveShadow = true; this.inS.add(keys);
+    for (let r = 0; r < 4; r++) {
+      const leg = tex(2048, 128, (g) => { g.fillStyle = CREAM; g.font = '800 110px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = CYAN; for (let k = 0; k < 18; k++) g.fillText(KEYS[(r * 7 + k) % KEYS.length], (k + 0.5) * 2048 / 18, 66); });
+      const lp = new THREE.Mesh(new THREE.PlaneGeometry(0.47 * 18, 0.42), new THREE.MeshBasicMaterial({ map: leg, transparent: true, toneMapped: false, color: new THREE.Color(2, 2, 2), depthWrite: false }));
+      lp.renderOrder = 1; lp.rotation.x = -Math.PI / 2; lp.position.set(-3.4 + r * 0.16 + 0.47 * 8.5, 0.05 + r * 0.22 + 0.12, -3.2 - r * 0.55); this.inS.add(lp); }
+    const glow = new THREE.PointLight(0x38e0d2, 3, 0, 2); glow.position.set(0.5, 4.5, -10); this.inS.add(glow);
   }
 
   /** strings of tiny SMD status LEDs slung across the cell: warm practicals and bokeh depth */
