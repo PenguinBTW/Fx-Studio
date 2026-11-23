@@ -137,7 +137,7 @@ Tier B flags indicate empirical deviations from baseline productions. They can e
 |---|---|---|---|
 | **`F09`** | Kick Drum Kinetic Response | Increase transient impulse scalar: `ctx.rig.shake += f.a.kick * 0.15;` | *"Deliberate ambient interlude; drum transients subdued."* |
 | **`F11`** | Highlight Bloom Bloat | Raise bloom threshold in post: `return { bloom: 0.10 };` | *"Intentional supernova laser burst at Act 2 climax."* |
-| **`F12`** | Off-Palette Gamut Wash | Pull the off-palette hue back toward the project palette, or waive it if intentional. | *"Monochromatic infrared night-vision sensor styling."* |
+| **`F12`** | Off-Palette Gamut Wash | F12 grades against `--palette` swatches (fixed defaults if omitted). Pass the film's own colours with `--palette`, or waive it. | *"Monochromatic infrared night-vision sensor styling."* |
 | **`F14`** | Adaptive Sampler Stress | Reduce geometry micro-features or simplify high-density line segments. | *"Complex mechanical explosion with 10k flying shards."* |
 | **`F15`** | Edge Shimmer / Chatter | Increase minimum line width to $1.5\text{px}$; apply `fwidth()` shader smoothing. | *"Deliberate CRT television scanline flicker effect."* |
 

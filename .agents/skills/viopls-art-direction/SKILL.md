@@ -9,7 +9,7 @@ Aesthetic governance, coherence rules, anti-cliché blacklists, and typographic 
 ## When to Use
 
 - Establishing the visual direction and scene dressing for a new video or chapter.
-- Auditing scenes for visual cohesion, material believability, and palette discipline.
+- Auditing scenes for visual cohesion, material believability, and colour readability.
 - Screening visual designs against corporate motion graphics clichés and AI aesthetic slop.
 - Integrating clear, bold typography as an organic, physical component of the scene.
 
@@ -20,7 +20,7 @@ Aesthetic governance, coherence rules, anti-cliché blacklists, and typographic 
 Viopls does not enforce a rigid brand color palette or a single fixed visual genre. A video can be industrial sci-fi, warm editorial, technical blueprint, or brutalist architecture.
 
 Instead, the core requirement is **Intra-Video Cohesion**:
-- Once a visual language, material palette, and lighting logic are established for a video, **everything inside that video must belong to the same universe**.
+- Once a visual language, materials, and lighting logic are established for a video, **everything inside that video must belong to the same universe**.
 - No *accidental* style fractures (e.g., one prop in flat vector next to photo-real brushed metal because it was quicker).
 - Deliberate style mixing is fine when it is the concept (e.g. a world built from many animation mediums). Keep shared anchors so it still reads as one film: one key-light direction, consistent scale, a hero whose look never changes, and motivated transitions between styles.
 - Every asset must look like it was created by the same art director using the same camera and physical lighting stage.
@@ -60,18 +60,11 @@ To ensure a scene feels premium and unified rather than a collage of unrelated s
   - A harsh theatrical spotlight or natural window sunbeam.
 - **Prohibited:** Illuminating objects with uniform, flat ambient light that kills shadows, or having shadows on two adjacent objects cast in conflicting directions.
 
-### 3.3 Palette Discipline per Video
-- Each scene (or region/act in a multi-style film) should have a controlled palette. A useful starting point is a **60/30/10** split:
-  - **1 Dominant Base Value (60%):** Ground plane, chassis, room structure, dark negative space.
-  - **1 Secondary Structural Tone (30%):** Midground props, typography halos, secondary mechanical bodies.
-  - **1 High-Contrast Intentional Accent (10%):** Focal highlights, active status indicators, key phrase emphasis.
-- Change palettes at act or region boundaries, not randomly mid-shot. Reserve the strongest accent for the focal subject so it stays the brightest, most saturated thing in frame.
+### 3.3 Colour
+- No fixed palette or colour split is required; choose colours for the world being built.
+- Anti-slop only: no unmotivated colour washes or gradient ramps (see 2.1), and the focal subject must read instantly against its background (value contrast first, then hue).
 
-#### Standard Viopls Engine Token Palette (`tokens.ts`)
-Default for technical essays and title sequences when the project has no palette of its own (other projects define theirs in `visual_plan.md`):
-
-| Token | Hex | Role | Usage |
-|---|---|---|---|
+---|---|---|---|
 | `--void` | `#050506` | Deep Space / Background | Universal scene canvas; never use pure ungrounded `#000000`. |
 | `--bone` | `#E8E4DA` | Primary Structure | All primary lines, solid meshes, kinetic text hero anchors. |
 | `--ash` | `#6B6A66` | Secondary Context | Wireframe room edges, dimension guides, inactive states, 60% opacity labels. |
@@ -118,10 +111,10 @@ Per `video-design`, text must feel physically bound to the scene:
 
 Before approving any visual asset, storyboard, or rendered frame:
 
-- [ ] **Zero Slop:** Free of pastel claymorphism, corporate cartoon characters, disembodied floating icons, and decorative fake HUD clutter.
+- [ ] **Zero Slop:** Free of generic Memphis filler (authored stylization is fine), corporate mascots, disembodied floating icons, and decorative fake HUD clutter.
 - [ ] **Unified Materiality:** All assets in the scene share believable roughness, texture resolution, and physical presence.
 - [ ] **Motivated Lighting:** Light sources are clear, intentional, and cast consistent directional shadows with depth.
-- [ ] **Palette Control:** Each scene/region has a controlled palette and the focal subject owns the strongest accent.
+- [ ] **Colour Readability:** The focal subject reads instantly; no unmotivated colour washes or ramps.
 - [ ] **Legible Typography:** Text stays instantly legible at a glance on a phone.
 - [ ] **Integrated Placement:** Typography feels physically planted inside the 3D/2.5D world rather than stuck to the lens.
 - [ ] **Video-Wide Cohesion:** The scene belongs to the same film as its neighbours (shared world logic, or deliberate style shifts with shared anchors).

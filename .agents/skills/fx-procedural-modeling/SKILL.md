@@ -22,7 +22,7 @@ Technical standards, procedural algorithms, optical physics, and shader pipeline
 ## 1. Upstream & Sibling Dependencies
 
 - **`fx-scenes`**: The primary authoring target where procedural geometry and shaders are registered within `defineScene` or custom `Scene` subclasses.
-- **`viopls-art-direction`**: Default palette tokens (`--void`, `--bone`, `--ash`, `--signal`), motivated single-world lighting, and anti-slop rules.
+- **`viopls-art-direction`**: Motivated single-world lighting and anti-slop rules.
 - **`fx-engine-dev`**: Governs WebGL state restoration (`renderer.resetState()`), static GPU buffer allocation, and shader compilation.
 - **`fx-diagnostics`**: Auditing procedural camera paths (`cam_godview.png`) and edge shimmer (`F15`).
 
@@ -291,7 +291,7 @@ Before approving procedural geometry or custom shaders:
 
 - [ ] **Right Tool:** Geometry that is authored (hero props, characters) comes from Blender assets (`fx-3d-assets`); procedural is used where it is analytical or generative.
 - [ ] **Pure Determinism:** Displacements, ribbons, and particles evaluate from `f.lt` or `f.t` without accumulators.
-- [ ] **Palette:** Follows the project palette (`visual_plan.md`; Viopls tokens by default) and blackbody kelvins for physically lit scenes.
+- [ ] **Colour:** Physically lit scenes use blackbody kelvins; no unmotivated colour washes.
 - [ ] **Edge Anti-Aliasing:** All shader SDFs and barycentric lines use `fwidth()` derivatives for sub-pixel anti-aliasing.
 - [ ] **GPU Scalability:** Massive particle systems deploy `LargeParticles` (instanced GPU curl noise) rather than CPU loops.
 - [ ] **Twist-Free Geometry:** Ribbon paths utilize `RibbonGeometry` with Bishop rotation-minimizing frames.

@@ -21,7 +21,7 @@ Standards, optical physics, camera choreography, motion polish, and architectura
 
 Before authoring scenes, ensure alignment with connected production skills:
 - **`video-design` (Universal Standards):** Zero HUD clutter, diegetic 3D text integration, continuous camera momentum, stylized 2.5D minimum, safe zone compliance.
-- **`viopls-art-direction`:** Palette guidance, anti-slop blacklist, unified materiality, and bold structural typography.
+- **`viopls-art-direction`:** Anti-slop blacklist, unified materiality, and typography.
 - **`design-around-audio` / `sound-design-and-foley`:** Downbeat anchoring, transient hit responses (`hit()`), and tactile micro-sync.
 - **`fx-engine`:** Root architecture, coordinate conventions ($1920 \times 1080$), and engine invariants.
 - **`fx-3d-assets`:** Project Blender/GLTF assets (`assets: [...]`, `ctx.loadAsset`), material libraries, named parts, and deterministic clip/morph animation.
@@ -181,7 +181,7 @@ render(f: Frame, out: THREE.WebGLRenderTarget) {
 ```
 
 ### 3.4 Physically Accurate Spectral Lighting (`spectrum.ts`)
-Never use arbitrary neon hex colors for key lighting. Drive light temperatures from Planckian blackbody radiators ($1000\text{K} - 12000\text{K}$) or CIE 1931 spectral emission lines:
+For physically lit scenes, drive key/rim light colours from blackbody temperatures (1000-12000 K) or CIE 1931 emission lines rather than guessed hex values. Stylized looks (neon, toon, comic) may use authored colours:
 ```typescript
 import { blackbodyToLinearSRGB, OXYGEN_GREEN, NITROGEN_N2_RED, wavelengthToLinearSRGB } from '../../engine/spectrum';
 

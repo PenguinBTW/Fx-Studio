@@ -82,7 +82,7 @@ The telemetry engine downsamples frames via a fast $4 \times 4$ box filter to **
 - **Rec.709 Luma & Contrast:** $Y = 0.2126 R + 0.7152 G + 0.0722 B$.
 - **Motion Energy $E$ & Burst $E_{p95}$:** Frame-to-frame absolute luma difference, with 95th percentile local patch tracking.
 - **2D FFT Optical Flow $(u, v)$:** Phase correlation via Cooley-Tukey FFT isolating bulk camera velocity.
-- **CIE $L^*a^*b^*$ Gamut Conformity ($\Delta E_{76}$):** Color distance against approved project palette tokens.
+- **CIE $L^*a^*b^*$ Gamut Conformity ($\Delta E_{76}$):** Color distance against the `--palette` swatches (fixed defaults if omitted).
 - **Edge Shimmer Index:** Second-order temporal derivative of Sobel edge pixels detecting aliasing or sub-pixel chatter.
 
 ---
