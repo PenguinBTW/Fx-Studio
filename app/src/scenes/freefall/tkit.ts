@@ -49,4 +49,7 @@ vec3 radialA(vec2 p, float s, float k) { vec3 c = vec3(0.0); for (int i = 0; i <
 // of radius R around the focal point, shows its whole frame (reaching 1 once the aperture spans the frame width, so B is never mirrored inside it).
 float diveZ(float e) { return exp(e * 3.4); }
 float diveS(float R) { return min(1.0, R / (0.5 * uAsp)); }
+// Aperture radius: closed at the seam start (no pop), growing at the dive rate to ~1 (past the 9:16 corners).
+float diveR(float z) { return 0.035 * (z - 1.0); }
+float sq(float x) { return x * x; }
 `;
