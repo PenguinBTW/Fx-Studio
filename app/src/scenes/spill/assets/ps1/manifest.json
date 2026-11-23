@@ -1,0 +1,1 @@
+{ "id": "ps1", "version": 1, "source": "build.py", "budgets": { "tris": 8000, "textureMB": 1 } }

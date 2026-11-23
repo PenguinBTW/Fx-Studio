@@ -1,0 +1,1 @@
+{ "id": "clay", "version": 1, "source": "build.py", "budgets": { "tris": 80000, "textureMB": 1 } }
