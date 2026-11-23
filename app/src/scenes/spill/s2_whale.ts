@@ -7,7 +7,7 @@ import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import { resolveAsset } from '../../engine/assets';
 import { DROP, BAR, lerp, sm, hash, spring } from './kit';
 
-const WS = 4, CS = 3;
+const WS = 4, CS = 5;
 const QUAD_V = /* glsl */ `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`;
 const PAINT_F = /* glsl */ `
 uniform sampler2D tScene; uniform vec2 uRes; uniform float uR, uT; varying vec2 vUv;
@@ -17,7 +17,7 @@ float vn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
 void main() {
   vec2 px = 1.0 / uRes; int R = int(uR);
   vec3 m[4]; vec3 s[4]; for (int k = 0; k < 4; k++) { m[k] = vec3(0.0); s[k] = vec3(0.0); }
-  for (int j = -8; j <= 8; j++) for (int i = -8; i <= 8; i++) {
+  for (int j = -12; j <= 12; j++) for (int i = -12; i <= 12; i++) {
     if (abs(i) > R || abs(j) > R) continue;
     vec3 c = texture2D(tScene, vUv + vec2(float(i), float(j)) * px).rgb; c = c / (1.0 + c);
     if (i <= 0 && j <= 0) { m[0] += c; s[0] += c * c; } if (i >= 0 && j <= 0) { m[1] += c; s[1] += c * c; }
@@ -28,14 +28,14 @@ void main() {
   col = col / max(vec3(1e-3), 1.0 - col);
   // impasto: directional stroke height field, lit from the upper-left sun
   float a = 0.6 + 0.8 * vn(vUv * 6.0 + floor(uT * 4.0) * 0.37);
-  vec2 dir = vec2(cos(a), sin(a)); vec2 q = gl_FragCoord.xy / 5.0;
+  vec2 dir = vec2(cos(a), sin(a)); vec2 q = gl_FragCoord.xy * 1920.0 / uRes.y / 7.0;
   float hgt = vn(vec2(dot(q, dir) * 0.45, dot(q, vec2(-dir.y, dir.x)) * 3.2) + floor(uT * 4.0) * 1.7);
   float hx = vn(vec2(dot(q + vec2(1, 0), dir) * 0.45, dot(q + vec2(1, 0), vec2(-dir.y, dir.x)) * 3.2) + floor(uT * 4.0) * 1.7) - hgt;
   float hy = vn(vec2(dot(q + vec2(0, 1), dir) * 0.45, dot(q + vec2(0, 1), vec2(-dir.y, dir.x)) * 3.2) + floor(uT * 4.0) * 1.7) - hgt;
-  float lit = clamp(0.5 + 2.2 * (-hx * 0.7 + hy * 0.7), 0.0, 1.0);
-  float weave = 0.94 + 0.06 * (sin(gl_FragCoord.x * 1.9) * sin(gl_FragCoord.y * 1.9));
+  float lit = mix(0.5, clamp(0.5 + 2.2 * (-hx * 0.7 + hy * 0.7), 0.0, 1.0), 0.25 + 0.75 * clamp(sqrt(best) * 12.0, 0.0, 1.0));
+  float weave = 0.97 + 0.03 * (sin(gl_FragCoord.x * 1.9) * sin(gl_FragCoord.y * 1.9));
   float sj = vn(vec2(dot(q, dir) * 0.12, dot(q, vec2(-dir.y, dir.x)) * 0.9) + 11.0);
-  col *= (0.9 + 0.2 * lit) * weave * (vec3(1.0) + 0.12 * (vec3(sj, 1.0 - sj, sj * 0.5) - 0.5));
+  col *= (0.84 + 0.32 * lit) * weave * (vec3(1.0) + 0.12 * (vec3(sj, 1.0 - sj, sj * 0.5) - 0.5));
   col = mix(vec3(dot(col, vec3(0.3, 0.59, 0.11))), col, 1.25);
   gl_FragColor = vec4(col, 1.0);
 }`;
@@ -56,6 +56,22 @@ void main() { vec3 n = normalize(vN), v = normalize(uCam - vW); float ndl = dot(
   float rim = pow(1.0 - abs(dot(n, v)), 7.0); c += vec3(1.2, 0.55, 0.25) * rim * 0.4 * smoothstep(-0.3, 0.4, ndl + 0.3);
   c += vec3(0.1, 0.05, 0.3) * pow(1.0 - abs(dot(n, v)), 5.0) * (1.0 - l) * 0.4;
   float dg = length(vW - uGlowP); c += vec3(1.0, 0.4, 0.05) * uGlow * max(0.0, dot(n, normalize(uGlowP - vW))) / (1.0 + dg * dg * 0.02);
+  gl_FragColor = vec4(c, 1.0); }`;
+const CLOUD_V = /* glsl */ `varying vec3 vN, vW; varying float vS;
+float h3(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
+void main() { vec3 p = position; float n = h3(floor(p * 3.0 + instanceMatrix[3].xyz * 0.01)); p += normal * (n - 0.5) * 0.12;
+  vec4 w = modelMatrix * instanceMatrix * vec4(p, 1.0); vW = w.xyz; vN = normalize(mat3(modelMatrix * instanceMatrix) * normal); vS = h3(instanceMatrix[3].xyz);
+  gl_Position = projectionMatrix * viewMatrix * w; }`;
+const CLOUD_F = /* glsl */ `uniform vec3 uSun, uCam; varying vec3 vN, vW; varying float vS;
+float h2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float vn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(h2(i), h2(i + vec2(1, 0)), f.x), mix(h2(i + vec2(0, 1)), h2(i + vec2(1, 1)), f.x), f.y); }
+void main() { vec3 n = normalize(vN), v = normalize(uCam - vW); float nd = dot(n, uSun);
+  float br = vn(vW.xz * 0.05 + vW.y * 0.03) * 0.5 + vn(vW.xy * 0.13) * 0.5; float l = nd + (br - 0.5) * 0.6;
+  vec3 c = mix(vec3(0.3, 0.2, 0.55), vec3(0.95, 0.55, 0.6), smoothstep(-0.45, -0.1, l));
+  c = mix(c, vec3(1.25, 0.92, 0.7), smoothstep(0.05, 0.3, l)); c = mix(c, vec3(1.4, 1.3, 1.15), smoothstep(0.55, 0.8, l));
+  c += vec3(1.3, 0.7, 0.4) * pow(1.0 - abs(dot(n, v)), 4.0) * 0.5; c *= 0.92 + 0.16 * vS;
+  float fog = 1.0 - exp(-length(vW - uCam) * 0.0006); c = mix(c, vec3(0.6, 0.62, 1.0), fog * 0.6);
   gl_FragColor = vec4(c, 1.0); }`;
 const SKY_V = /* glsl */ `varying vec3 vD; void main() { vD = position; vec4 p = projectionMatrix * modelViewMatrix * vec4(position, 1.0); gl_Position = p.xyww; }`;
 const SKY_F = /* glsl */ `varying vec3 vD; void main() { vec3 d = normalize(vD); float y = d.y;
@@ -100,7 +116,7 @@ export default class S2Whale extends Scene {
     const sky = new THREE.Mesh(new THREE.SphereGeometry(5000, 32, 16), new THREE.ShaderMaterial({ vertexShader: SKY_V, fragmentShader: SKY_F, side: THREE.BackSide, depthWrite: false }));
     this.main.add(sky);
     // cumulus: toon-lit puff clusters, warm tops, violet bellies
-    const puff = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 3), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, emissive: new THREE.Color(0.1, 0.04, 0.09) }), 700);
+    const puff = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 4), new THREE.ShaderMaterial({ vertexShader: CLOUD_V, fragmentShader: CLOUD_F, uniforms: { uSun: this.wU.uSun, uCam: this.wU.uCam } }), 700);
     const M = new THREE.Matrix4(), q = new THREE.Quaternion(), c = new THREE.Color();
     for (let i = 0, k = 0; i < 70; i++) {
       const cx = lerp(-900, 900, hash(i * 1.3)), cy = lerp(-420, 120, hash(i * 2.7)), cz = lerp(-1400, 200, hash(i * 3.9));
@@ -116,8 +132,8 @@ export default class S2Whale extends Scene {
     const sun = new THREE.DirectionalLight(0xffe0b0, 2.0); sun.position.set(-300, 400, 250);
     this.main.add(sun, new THREE.HemisphereLight(0x7fa8ff, 0x7a3a90, 0.9), this.glow);
     // paint splash from the impact: whale blue, belly cream and a little of the cursor's orange
-    const N = 160; this.splash = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshToonMaterial({ color: 0xffffff, gradientMap: ramp }), N);
-    const pal = [[0.16, 0.2, 0.42], [0.2, 0.3, 0.6], [0.92, 0.78, 0.62], [1, 0.4, 0.05]];
+    const N = 160; this.splash = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 12, 10), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3, emissive: 0x222244 }), N);
+    const pal = [[0.08, 0.25, 0.95], [0.25, 0.5, 1.2], [1.2, 0.95, 0.75], [1.4, 0.5, 0.05]];
     for (let i = 0; i < N; i++) { const a = hash(i * 1.9) * 6.28, up = 0.3 + hash(i * 2.3);
       this.drops.push({ v: new THREE.Vector3(Math.cos(a) * (6 + 16 * hash(i * 3.1)), up * 26, Math.sin(a) * (6 + 16 * hash(i * 4.1))), s: 0.12 + 0.4 * hash(i * 5.3) ** 2 });
       const p = pal[i % 7 === 0 ? 3 : Math.floor(hash(i * 6.7) * 3)]; this.splash.setColorAt(i, c.setRGB(p[0], p[1], p[2])); }
@@ -161,19 +177,21 @@ export default class S2Whale extends Scene {
     this.drops.forEach((dr, i) => { const tt = Math.max(0, d - 0.02 * hash(i));
       const pp = contact.clone().add(dr.v.clone().multiplyScalar(tt)).add(new THREE.Vector3(0, -14 * tt * tt, 0));
       const k = tt <= 0 ? 0 : dr.s * (1 - sm(0.8, 1.6, tt)) * (0.4 + Math.min(1, tt * 12));
-      M.compose(pp, q, new THREE.Vector3(k, k * (1 + 0.8 * Math.min(1, dr.v.y * tt * 0.2)), k)); this.splash.setMatrixAt(i, M); });
+      const vel = dr.v.clone().add(new THREE.Vector3(0, -28 * tt, 0)); const sp = vel.length();
+      q.setFromUnitVectors(new THREE.Vector3(0, 1, 0), vel.normalize());
+      M.compose(pp, q, new THREE.Vector3(k * 0.7, k * (1 + sp * 0.12 * Math.exp(-tt * 2)), k * 0.7)); this.splash.setMatrixAt(i, M); });
     this.splash.instanceMatrix.needsUpdate = true;
     // camera: low over the whale's back for the hit, then follows the ricochet and pulls wide to show the whale
     const kick = Math.max(0, spring(d, 38, 9));
-    const close = contact.clone().add(new THREE.Vector3(46, 2 + kick * 3, 44));
+    const close = this.whale.localToWorld(new THREE.Vector3(33, 4 + kick * 0.8, 13));
     const wide = this.whale.position.clone().add(new THREE.Vector3(60, 40, 330));
     const w = sm(0.35, 1.6, d);
     this.cam.position.copy(close.lerp(wide, w)); this.cam.fov = lerp(40, 46, w);
-    const look = contact.clone().add(new THREE.Vector3(-4, -7, 0)).lerp(p.clone().lerp(this.whale.position.clone().add(new THREE.Vector3(10, 10, 0)), 0.5), w);
+    const look = this.whale.localToWorld(new THREE.Vector3(14, 4.5, 0)).lerp(p.clone().lerp(this.whale.position.clone().add(new THREE.Vector3(10, 10, 0)), 0.5), w);
     this.cam.aspect = out.width / out.height; this.cam.updateProjectionMatrix(); this.cam.lookAt(look);
     if (!this.rt || this.rt.width !== out.width || this.rt.height !== out.height) { this.rt?.dispose(); this.rt = new THREE.WebGLRenderTarget(out.width, out.height, { type: THREE.HalfFloatType }); }
     this.wU.uCam.value.copy(this.cam.position); rr.setRenderTarget(this.rt); rr.setClearColor(0, 1); rr.clear(); rr.render(this.main, this.cam);
-    this.paintU.tScene.value = this.rt.texture; this.paintU.uRes.value.set(out.width, out.height); this.paintU.uR.value = Math.round(8 * out.height / 1920); this.paintU.uT.value = t;
+    this.paintU.tScene.value = this.rt.texture; this.paintU.uRes.value.set(out.width, out.height); this.paintU.uR.value = Math.round(11 * out.height / 1920); this.paintU.uT.value = t;
     const auto = rr.autoClear; rr.autoClear = false;
     rr.setRenderTarget(out); rr.clear(); rr.render(this.qs, this.qc); rr.clearDepth(); rr.render(this.curS, this.cam); rr.autoClear = auto; rr.resetState();
     const hit = Math.exp(-d * 10);
