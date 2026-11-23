@@ -36,7 +36,7 @@ void main(){ vec3 c = texture2D(tCol, vUv).rgb; float L = dot(c, vec3(0.3, 0.59,
 const COLS: Record<string, [number, number, number]> = { HoseBlack: [0.07, 0.07, 0.07], HoseWhite: [0.95, 0.94, 0.9], HoseGrey: [0.55, 0.54, 0.52], HoseTint: [0.85, 0.2, 0.17] };
 export default class S8Hose extends Scene {
   private s = new THREE.Scene(); private cam = new THREE.PerspectiveCamera(42, 9 / 16, 0.3, 300);
-  private cameos = new Cameos([{ k: 'glass', t0: 18.7, dur: 1.6, path: 'fly', y: 0.9, s: 0.13, n: 3, dir: -1 }, { k: 'pixbird', t0: 19.3, dur: 1.0, path: 'fly', y: 0.92, s: 0.08, n: 3 }]);
+  private cameos = new Cameos([{ k: 'sheep', t0: 18.5, dur: 1.3, path: 'walk', y: -0.74, s: 0.13, n: 2 }, { k: 'glass', t0: 18.7, dur: 1.6, path: 'fly', y: 0.9, s: 0.13, n: 3, dir: -1 }, { k: 'pixbird', t0: 19.3, dur: 1.0, path: 'fly', y: 0.92, s: 0.08, n: 3 }]);
   private insts: GLTFInstance[] = [];
   private G = { uGlow: { value: 0 }, uGlowP: { value: new THREE.Vector3() } };
   private bobs: { o: THREE.Object3D; ph: number; k: number }[] = []; private mouths: THREE.Object3D[] = [];

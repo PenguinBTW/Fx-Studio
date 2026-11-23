@@ -26,7 +26,7 @@ function thumbs() {
 export default class S4Clay extends Scene {
   private s = new THREE.Scene();
   private cam = new THREE.PerspectiveCamera(40, 9 / 16, 0.1, 600);
-  private cameos = new Cameos([{ k: 'crayon', t0: 10.2, dur: 1.4, path: 'fly', y: 0.55, s: 0.15, n: 2, dir: -1 }, { k: 'pixbird', t0: 10.6, dur: 1.0, path: 'fly', y: 0.8, s: 0.07, n: 3 }]);
+  private cameos = new Cameos([{ k: 'crane', t0: 9.8, dur: 1.2, path: 'fly', y: 0.68, s: 0.12, n: 3, dir: -1 }, { k: 'crayon', t0: 10.2, dur: 1.4, path: 'fly', y: 0.55, s: 0.15, n: 2, dir: -1 }, { k: 'pixbird', t0: 10.6, dur: 1.0, path: 'fly', y: 0.8, s: 0.07, n: 3 }]);
   private insts: GLTFInstance[] = [];
   private boil: { o: THREE.Object3D; p: THREE.Vector3; s: THREE.Vector3; i: number }[] = [];
   private frog!: THREE.Object3D; private snail!: THREE.Object3D; private stalks: THREE.Object3D[] = [];
