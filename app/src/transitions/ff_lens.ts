@@ -6,5 +6,5 @@ export default ffTransition(`${TG}
 void main() { vec2 p = P(); float e = smoothstep(0.0, 1.0, u); float z = diveZ(e); float R = diveR(z); float r = length(p) / R;
   vec3 A = radialA(p, 1.0 + 0.4 * e, 0.12 * e) * (1.0 - 0.3 * e); vec3 B = vec3(0.0); float s = diveS(R);
   if (r < 1.0) { float k = sqrt(1.0 - r * r); for (int c = 0; c < 3; c++) { float ior = 0.6 + 0.1 * float(c); vec2 q = p * mix(ior * (0.6 + 0.4 * k), 1.0, e * e); B[c] = tapB(q, s)[c]; } }
-  float m = smoothstep(1.0, 0.9, r); float rim = exp(-pow((r - 0.985) * 40.0, 2.0)); vec3 rb = 0.5 + 0.5 * cos(6.2831 * (atan(p.y, p.x) / 6.2831 * 2.0 + vec3(0.0, 0.33, 0.67)));
+  float m = smoothstep(1.0, 0.9, r); float rim = exp(-sq((r - 0.985) * 40.0)); vec3 rb = 0.5 + 0.5 * cos(6.2831 * (atan(p.y, p.x) / 6.2831 * 2.0 + vec3(0.0, 0.33, 0.67)));
   vec3 c = mix(A, B, m) + rb * rim * 0.8 * (1.0 - e); gl_FragColor = vec4(c, 1.0); }`, { dur: 0.8 });

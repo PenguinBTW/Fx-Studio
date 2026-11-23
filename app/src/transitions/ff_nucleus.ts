@@ -6,5 +6,5 @@ export default ffTransition(`${TG}
 void main() { vec2 p = P(); float r = length(p); float e = smoothstep(0.0, 1.0, u); float z = diveZ(e); float R = diveR(z);
   vec3 A = radialA(p, 1.0 + 0.6 * e, 0.3 * e); vec3 E = texture2D(texE, toUv(p / (1.0 + 0.4 * e))).rgb; A = max(A, E * 0.6 * (1.0 - u));
   vec3 B = tapB(p, diveS(R)); float m = max(smoothstep(R, R * 0.8, r), smoothstep(0.85, 1.0, u));
-  float core = exp(-pow((r - R) / (0.01 + 0.06 * R), 2.0)) * (1.0 - e) + exp(-r * r / (0.001 + 0.02 * R)) * sin(3.14159 * u);
+  float core = exp(-sq((r - R) / (0.01 + 0.06 * R))) * (1.0 - e) + exp(-r * r / (0.001 + 0.02 * R)) * sin(3.14159 * u);
   vec3 c = mix(A, B, m) + vec3(1.4, 1.0, 1.2) * core * 0.6; gl_FragColor = vec4(c, 1.0); }`, { dur: 0.8, extra: { texE: (api, t0, t) => api.sampleScene(api.from, t - 0.15) } });
