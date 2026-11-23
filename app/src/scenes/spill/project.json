@@ -16,60 +16,60 @@
       "scene": "spill/s2_whale",
       "id": "whale",
       "start": 6.432,
-      "end": 8.552
+      "end": 8.702
     },
     {
       "scene": "spill/s3_paper",
       "id": "paper",
-      "start": 8.052,
-      "end": 10.293
+      "start": 7.902,
+      "end": 10.443
     },
     {
       "scene": "spill/s4_clay",
       "id": "clay",
-      "start": 9.793,
-      "end": 12.033
+      "start": 9.643,
+      "end": 12.183
     },
     {
       "scene": "spill/s5_ink",
       "id": "ink",
-      "start": 11.533,
-      "end": 15.514
+      "start": 11.383,
+      "end": 15.664
     },
     {
       "scene": "spill/s6_pixel",
       "id": "pixel",
-      "start": 15.014,
-      "end": 17.254
+      "start": 14.864,
+      "end": 17.404
     },
     {
       "scene": "spill/s7_felt",
       "id": "felt",
-      "start": 16.754,
-      "end": 18.994
+      "start": 16.604,
+      "end": 19.144
     },
     {
       "scene": "spill/s8_hose",
       "id": "hose",
-      "start": 18.494,
-      "end": 20.734
+      "start": 18.344,
+      "end": 20.884
     },
     {
       "scene": "spill/s9_garden",
       "id": "garden",
-      "start": 20.234,
-      "end": 22.474
+      "start": 20.084,
+      "end": 22.624
     },
     {
       "scene": "spill/s10_ps1",
       "id": "ps1",
-      "start": 21.974,
-      "end": 24.214
+      "start": 21.824,
+      "end": 24.364
     },
     {
       "scene": "spill/s11_finale",
       "id": "finale",
-      "start": 23.714,
+      "start": 23.564,
       "end": 29.06
     }
   ],
@@ -88,72 +88,72 @@
       "transition": "sp_paper",
       "from": "whale",
       "to": "paper",
-      "at": 8.052,
-      "dur": 0.5
+      "at": 7.902,
+      "dur": 0.8
     },
     {
       "id": "t-3",
       "transition": "sp_clay",
       "from": "paper",
       "to": "clay",
-      "at": 9.793,
-      "dur": 0.5
+      "at": 9.643,
+      "dur": 0.8
     },
     {
       "id": "t-4",
       "transition": "sp_ink",
       "from": "clay",
       "to": "ink",
-      "at": 11.533,
-      "dur": 0.5
+      "at": 11.383,
+      "dur": 0.8
     },
     {
       "id": "t-5",
       "transition": "sp_pixel",
       "from": "ink",
       "to": "pixel",
-      "at": 15.014,
-      "dur": 0.5
+      "at": 14.864,
+      "dur": 0.8
     },
     {
       "id": "t-6",
       "transition": "sp_felt",
       "from": "pixel",
       "to": "felt",
-      "at": 16.754,
-      "dur": 0.5
+      "at": 16.604,
+      "dur": 0.8
     },
     {
       "id": "t-7",
       "transition": "sp_iris",
       "from": "felt",
       "to": "hose",
-      "at": 18.494,
-      "dur": 0.5
+      "at": 18.344,
+      "dur": 0.8
     },
     {
       "id": "t-8",
       "transition": "sp_glass",
       "from": "hose",
       "to": "garden",
-      "at": 20.234,
-      "dur": 0.5
+      "at": 20.084,
+      "dur": 0.8
     },
     {
       "id": "t-9",
       "transition": "sp_ps1",
       "from": "garden",
       "to": "ps1",
-      "at": 21.974,
-      "dur": 0.5
+      "at": 21.824,
+      "dur": 0.8
     },
     {
       "id": "t-10",
       "transition": "sp_quilt",
       "from": "ps1",
       "to": "finale",
-      "at": 23.714,
-      "dur": 0.5
+      "at": 23.564,
+      "dur": 0.8
     }
   ]
 }

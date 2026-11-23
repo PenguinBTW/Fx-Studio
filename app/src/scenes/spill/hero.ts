@@ -49,7 +49,7 @@ export class HeroPass {
     const root = inst.root; root.updateMatrixWorld(true);
     const bb = new THREE.Box3().setFromObject(root), sz = bb.getSize(new THREE.Vector3()), c = bb.getCenter(new THREE.Vector3());
     root.traverse((q) => { if ((q as THREE.Mesh).isMesh) q.visible = false; });
-    const box = new THREE.Mesh(new THREE.BoxGeometry(sz.x, sz.y, sz.z), this.block); box.position.copy(c); box.castShadow = true; box.name = 'heroBlock';
+    const box = new THREE.Mesh(new THREE.BoxGeometry(sz.x, sz.y, sz.z * 0.5), this.block); box.position.copy(c); box.castShadow = true; box.name = 'heroBlock';
     const halo = new THREE.Sprite(this.halo); halo.position.copy(c); halo.scale.set(sz.y * 3.4, sz.y * 3.4, 1); halo.renderOrder = -1;
     root.add(box, halo);
     if (o.inline) return root;

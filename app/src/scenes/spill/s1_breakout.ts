@@ -303,13 +303,13 @@ export default class S1Breakout extends Scene {
     g.font = 'bold 54px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.shadowColor = '#ff6a10'; g.shadowBlur = 10; g.fillStyle = '#ffb060';
     for (let i = 0; i < G.length; i++) g.fillText(G[i], 64 * i + 32, 34);
     const base = new THREE.CanvasTexture(cv); base.colorSpace = THREE.SRGBColorSpace; base.repeat.set(1 / G.length, 1);
-    for (let i = 0; i < 22; i++) { const tx = base.clone(); tx.offset.x = Math.floor(hash(i * 4.7) * G.length) / G.length; tx.needsUpdate = true;
+    for (let i = 0; i < 34; i++) { const tx = base.clone(); tx.offset.x = Math.floor(hash(i * 4.7) * G.length) / G.length; tx.needsUpdate = true;
       const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tx, transparent: true, depthWrite: false, toneMapped: false, color: new THREE.Color(2.2, 1.1, 0.5) }));
       this.glyphs.push(sp); this.exS.add(sp); }
   }
   private poseTrail(t: number) {
     const on = sm(OUTSIDE - 0.4, OUTSIDE, t);
-    this.glyphs.forEach((sp, i) => { const lag = 0.022 * (i + 1), tt = Math.floor((t - lag) * 15) / 15; const p = this.fallP(tt);
+    this.glyphs.forEach((sp, i) => { const lag = 0.035 * (i + 1), tt = Math.floor((t - lag) * 15) / 15; const p = this.fallP(tt);
       p.x += 0.5 * (hash(i * 9.1) - 0.5); p.z += 0.5 * (hash(i * 3.3) - 0.5);
       const k = on * (1 - i / this.glyphs.length); sp.position.copy(p); sp.scale.setScalar(2.1 * (0.5 + 0.5 * k));
       (sp.material as THREE.SpriteMaterial).opacity = k * ((Math.floor(t * 15) + i) % 4 === 0 ? 0.55 : 1); sp.visible = k > 0.02; });
@@ -404,7 +404,7 @@ export default class S1Breakout extends Scene {
     let focus: number;
     if (inside) { this.poseIn(t); focus = this.camIn(t); } else focus = this.poseOut(t);
     this.cam.aspect = out.width / out.height; this.cam.updateProjectionMatrix();
-    const b = this.blink(t); this.hero.update(t, b);
+    const dbl = t > 4.55 && t < 4.85 && ((t - 4.55) * 13.3) % 2 < 1 ? 0 : 1; const b = this.blink(t) * dbl; this.hero.update(t, b);
     this.curLight.intensity = 0.2 + 1.6 * b; this.curLightX.intensity = 5 + 45 * b;
     this.lampLight.intensity = 2.2 * (1 - 0.6 * Math.max(0, ...RAMS.map((h) => Math.exp(-Math.max(0, t - h) * 20) * (t >= h ? 1 : 0))));
     this.screenT.value = t; const imp = impactFrame(t);
@@ -426,7 +426,7 @@ export default class S1Breakout extends Scene {
     rr.resetState();
     const kick = Math.max(0, ...[...RAMS, ...PULSES].map((h) => (t >= h ? Math.exp(-(t - h) * 12) : 0)));
     return { toneMap: imp.k > 0 ? 'legacy' : 'aces', exposure: inside ? 1.0 : 1.0, bloom: inside ? 0.12 : 0.2, bloomThreshold: 1.2, halation: 0.15, vignette: 0.45, grain: 0.04, blackPoint: 0.01,
-      ca: 0.2 + 1.4 * kick, shake: [26 * kick * Math.sin(t * 97), 26 * kick * Math.cos(t * 83)], zoom: 1 + 0.05 * kick,
+      ca: 0.2 + 1.4 * kick, shake: [26 * kick * Math.sin(t * 97) + (t < RAMS[0] ? 5 * Math.sin(t * 131) : 0), 26 * kick * Math.cos(t * 83) + (t < RAMS[0] ? 4 * Math.cos(t * 117) : 0)], zoom: 1 + 0.05 * kick,
       depthDof: imp.k > 0 ? undefined : { enabled: true, focusDistance: focus, aperture: inside ? 9 : 4, blades: 9, maxRadius: 22, near: 0.05, far: 4000 } };
   }
 

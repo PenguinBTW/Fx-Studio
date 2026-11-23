@@ -25,8 +25,8 @@ void main(){ float b = floor((vP.y * 2.2 + vP.x * 1.3 + 0.35 * sin(vP.z * 7.0)) 
   gl_FragColor = vec4(c * (0.7 * l + 0.15) * (1.0 - 0.6 * seam) + vec3(0.4, 0.07, 0.0) * (1.0 - k) * (0.5 + 0.5 * pow(1.0 - abs(vN.z), 2.0)), 1.0); }`;
 
 const PATCHES: [string, number, number, number][] = [ // kit, colour, x, z
-  ['paper', 0xffe9c2, -11, -8], ['ink', 0xf6f2ea, 1, -6], ['pixel', 0x2fd05a, 12, -10], ['felt', 0x8ad040, -13, -21],
-  ['hose', 0xd8d4c8, 0, -19], ['garden', 0xc040d0, 13, -23], ['ps1', 0x40b0c0, -6, -33], ['clay', 0xff8a3a, 8, -35]];
+  ['paper', 0xffd9a0, -10, -6], ['ink', 0xaab8c4, -4, -16], ['pixel', 0x2fd05a, 11, -19], ['felt', 0x8ad040, -13, -25],
+  ['hose', 0xd8d4c8, 3, -28], ['garden', 0xc040d0, 14, -34], ['ps1', 0x40b0c0, -7, -37], ['clay', 0xff8a3a, 9, -7]];
 const PROPS: Record<string, string[]> = { paper: ['tree', 'deer', 'tree'], ink: ['reed', 'heron', 'lotus', 'reed'], pixel: ['cliff', 'fern', 'salmonA'],
   felt: ['sheep', 'pom', 'sheep', 'fox'], hose: ['house', 'flower', 'house'], garden: ['arch', 'tulip', 'peacock'], ps1: ['palm', 'dino', 'pillar'], clay: [] };
 const DETAIL: Record<string, [THREE.BufferGeometry, number, number]> = {
@@ -38,7 +38,7 @@ const DETAIL: Record<string, [THREE.BufferGeometry, number, number]> = {
 const PAL = PATCHES.map((p) => new THREE.Color(p[1]));
 function terr(x: number, z: number, col?: THREE.Color) {
   const ds = PATCHES.map(([, , px, pz]) => Math.hypot(x - px, z - pz)), dmin = Math.min(...ds);
-  const ws = ds.map((d) => Math.exp(-(d - dmin) * 0.9)); let W = 0, h = 0, w1 = 0, w2 = 0, top = 0;
+  const ws = ds.map((d) => Math.exp(-(d - dmin) * 2.2)); let W = 0, h = 0, w1 = 0, w2 = 0, top = 0;
   ws.forEach((w, i) => { W += w; if (w > w1) { w2 = w1; w1 = w; top = i; } else if (w > w2) w2 = w;
     const sh = [0.6 * Math.abs(((x + z) * 0.22) % 1 - 0.5), 0.05 * Math.sin(x * 2 + z), Math.floor((1.3 + 0.9 * Math.sin(x * 0.3) * Math.cos(z * 0.35)) * 2) / 2,
       0.35 * Math.sin(x * 0.8) * Math.sin(z * 0.7) + 0.3, 0.15, 0.25 + 0.1 * Math.sin(x * 1.3), Math.sin(x * 0.25 + z * 0.2) > 0 ? 1.1 : 0.3, 0.35 * (Math.sin(x * 0.5) + Math.cos(z * 0.4)) + 0.5][i];
@@ -47,7 +47,7 @@ function terr(x: number, z: number, col?: THREE.Color) {
   const m = sm(1.05, 0.88, e), y = m * (h + 0.3) + (1 - m) * -1.6;
   if (col) { col.setRGB(0, 0, 0); ws.forEach((w, i) => col.add(PAL[i].clone().multiplyScalar(w / W)));
     const fx = [0.92 + 0.08 * Math.sin(x * 5 + z * 3), 0.85 + 0.15 * Math.sin(x * 3.1 + Math.sin(z * 2.3) * 2), ((Math.floor(x * 1.5) + Math.floor(z * 1.5)) & 1) ? 0.82 : 1,
-      0.85 + 0.3 * hash(Math.floor(x * 6) * 31 + Math.floor(z * 6)), (Math.floor(x * 2) & 1) ? 0.8 : 1, 1, ((Math.floor(x * 0.8) + Math.floor(z * 0.8)) & 1) ? 0.85 : 1, 0.95][top];
+      ((Math.floor(x * 1.2) + Math.floor(z * 1.2)) & 1) ? 0.84 : 1, (Math.floor(x * 2) & 1) ? 0.8 : 1, 1, ((Math.floor(x * 0.8) + Math.floor(z * 0.8)) & 1) ? 0.85 : 1, 0.95][top];
     const seam = sm(0.7, 0.95, w2 / w1) * (((x + z) * 2.5 % 1 + 1) % 1 < 0.5 ? 1 : 0.3);
     col.multiplyScalar(fx * (1 - 0.5 * seam)); if (m < 0.98) col.lerp(new THREE.Color(0xe8d8b0), (1 - m) * 1.2 > 1 ? 1 : (1 - m) * 1.2); }
   return y;
@@ -79,8 +79,8 @@ export default class S11Finale extends Scene {
       const land = new THREE.Mesh(g, groundDetail(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 }), 0.45, 0.3, 0.6)); land.castShadow = land.receiveShadow = true; this.s.add(land); }
     PATCHES.forEach(([id, , x, z], pi) => {
       const kit = K[id]; kit.root.visible = false; this.s.add(kit.root);
-      const [geo, dc, em] = DETAIL[id]; const im = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ color: dc, roughness: 0.8, flatShading: true, emissive: em ? dc : 0x000000, emissiveIntensity: em }), 90);
-      const M = new THREE.Matrix4(); for (let k = 0; k < 90; k++) { const a = hash(pi * 100 + k) * 6.283, r = 6.2 * Math.sqrt(hash(pi * 100 + k + 0.5)), px = x + r * Math.cos(a), pz = z + r * Math.sin(a);
+      const [geo, dc, em] = DETAIL[id]; const im = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ color: dc, roughness: 0.8, flatShading: true, emissive: em ? dc : 0x000000, emissiveIntensity: em }), 50);
+      const M = new THREE.Matrix4(); for (let k = 0; k < 50; k++) { const a = hash(pi * 100 + k) * 6.283, r = 6.2 * Math.sqrt(hash(pi * 100 + k + 0.5)), px = x + r * Math.cos(a), pz = z + r * Math.sin(a);
         M.compose(new THREE.Vector3(px, terr(px, pz) - 0.05, pz), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, a * 3, 0)), new THREE.Vector3().setScalar(0.35 + 0.75 * hash(k * 3 + pi))); im.setMatrixAt(k, M); }
       im.castShadow = im.receiveShadow = true; this.s.add(im);
       Array.from({ length: 5 }, () => PROPS[id] ?? []).flat().forEach((nm, j) => { let src: THREE.Object3D; try { src = kit.part(nm); } catch { return; }
@@ -92,11 +92,11 @@ export default class S11Finale extends Scene {
     const wh = K.whale.root; this.whale = wh; wh.scale.setScalar(0.5); wh.position.set(-34, 26, -75); wh.rotation.y = 0.6; this.s.add(wh);
     // the outcrop the cursor stands on
     // the perch: a cairn of dead phones and monitors that fell before it, screens still faintly lit
-    const bez = new THREE.MeshStandardMaterial({ color: 0x1b1824, roughness: 0.4, metalness: 0.5 }), cols = [0x3fd0ff, 0xff5ab0, 0x7cff6a, 0xffc040, 0xb08cff, 0xff7a1a];
+    const cols = [0x3fd0ff, 0xff5ab0, 0x7cff6a, 0xffc040, 0xb08cff, 0xff7a1a];
     [[3.6, 1.6, 2.6, 0.8, 0.1], [2.8, 1.4, 2.0, 2.3, -0.25], [2.2, 1.3, 1.6, 3.7, 0.35], [1.7, 1.2, 1.3, 5.0, -0.1], [1.3, 1.1, 1.0, 6.2, 0.2], [1.0, 1.2, 0.8, 7.35, -0.3]].forEach(([w, h, dd, y, r], i) => {
-      const g = new THREE.Group(); const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, dd), bez); b.castShadow = b.receiveShadow = true;
-      const sc = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.86, h * 0.78), new THREE.MeshBasicMaterial({ color: cols[i % cols.length], toneMapped: false }));
-      sc.position.z = dd / 2 + 0.01; (sc.material as THREE.MeshBasicMaterial).color.multiplyScalar(1.1 + 0.4 * hash(i * 3.7)); g.add(b, sc);
+      const g = new THREE.Group(); const b = new THREE.Mesh(new THREE.BoxGeometry(w * 0.8, h, dd * 0.8), new THREE.MeshStandardMaterial({ color: PAL[[2, 4, 5, 6, 1, 3][i]], roughness: 0.75 })); b.castShadow = b.receiveShadow = true;
+      const sc = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.66, h * 0.7), new THREE.MeshBasicMaterial({ color: cols[i % cols.length], toneMapped: false }));
+      sc.position.z = dd * 0.4 + 0.01; (sc.material as THREE.MeshBasicMaterial).color.multiplyScalar(1.1 + 0.4 * hash(i * 3.7)); g.add(b, sc);
       g.position.set(0.25 * Math.sin(i * 2.1), y, 6 + 0.2 * Math.cos(i * 1.7)); g.rotation.set(0.06 * Math.sin(i * 3.3), r, 0.05 * Math.cos(i * 2.9)); this.s.add(g); });
     this.hero = new HeroPass(this.ctx.renderer); this.cur = this.hero.dress(K.cursor); this.cur.scale.setScalar(1.9); this.cur.position.set(0, 8.6, 6);
     
@@ -160,7 +160,7 @@ export default class S11Finale extends Scene {
     this.whale.position.set(-34 + 9 * (t - T0), 24 + Math.sin(t * 1.3), -60); this.whale.rotation.set(0, 1.4, 0.1 * Math.sin(t * 1.3));
     const yk = clamp((t - SCREAM) / 0.9, 0, 1); this.yell.visible = t > SCREAM && yk < 1;
     if (this.yell.visible) { const yp = this.PH.clone().lerp(p, 0.15 + 0.55 * Math.sqrt(yk)); this.yell.position.copy(yp).add(new THREE.Vector3(0.6 * Math.sin(t * 70), 0.6 * Math.cos(t * 61), 0).multiplyScalar(1 - yk));
-      const d = yp.distanceTo(p), sz = d * 0.38 * (0.8 + 0.4 * Math.sqrt(yk)); this.yell.scale.set(sz, sz / 2, 1); (this.yell.material as THREE.SpriteMaterial).opacity = 1 - sm(0.75, 1, yk); } this.cam.aspect = out.width / out.height; this.cam.fov = 42 - 10 * Math.max(vk, wk) + 18 * Math.sin(Math.PI * wk); this.cam.updateProjectionMatrix();
+      const d = yp.distanceTo(p), sz = d * 0.38 * (0.8 + 0.4 * Math.sqrt(yk)); this.yell.scale.set(sz, sz / 2, 1); this.yell.position.addScaledVector(new THREE.Vector3(0, 1, 0).applyQuaternion(this.cam.quaternion), sz * 0.55); (this.yell.material as THREE.SpriteMaterial).opacity = 1 - sm(0.75, 1, yk); } this.cam.aspect = out.width / out.height; this.cam.fov = 42 - 10 * Math.max(vk, wk) + 18 * Math.sin(Math.PI * wk); this.cam.updateProjectionMatrix();
     if (t > SCREAM) { this.s1.render({ ...f, t: Math.max(t - END, -HAND - 0.6) }, this.scrRT); }
     rr.setRenderTarget(out); rr.setClearColor(0, 1); rr.clear(); rr.render(this.s, this.cam); this.hero.render(rr, out, this.cam); rr.resetState();
     const kick = t > SCREAM ? Math.exp(-(t - SCREAM) * 3) : 0, whip = Math.sin(Math.PI * wk);
