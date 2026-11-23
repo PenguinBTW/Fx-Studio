@@ -3,7 +3,7 @@
 // skeleton waiting inside at matched scale.
 import { ffTransition, TG } from '../scenes/freefall/tkit';
 export default ffTransition(`${TG}
-void main() { vec2 p = P(); float e = smoothstep(0.0, 1.0, u); float z = diveZ(e); float R = 0.035 * z; vec3 A = tapA(p, 1.0 + 0.4 * e);
+void main() { vec2 p = P(); float e = smoothstep(0.0, 1.0, u); float z = diveZ(e); float R = diveR(z); vec3 A = tapA(p, 1.0 + 0.4 * e);
   float la = dot(A, vec3(0.3, 0.6, 0.1)); A += vec3(0.2, 0.9, 1.3) * smoothstep(0.2, 0.9, la) * 1.4 * sin(3.14159 * min(1.0, u * 1.4));
   float r = length(p) / R, ang = atan(p.y, p.x); float wob = 0.06 * sin(ang * 9.0 + uT * 3.0); float m = max(smoothstep(1.0 + wob, 0.88 + wob, r), smoothstep(0.85, 1.0, u));
   vec3 B = tapB(p, diveS(R)); float rim = exp(-pow((r - 1.0 - wob) * 12.0, 2.0)) * (1.0 - e * e);
