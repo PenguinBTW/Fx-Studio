@@ -9,7 +9,7 @@ import { DROP, BAR, lerp, sm, hash, spring } from './kit';
 import { HeroPass } from './hero';
 import { Cameos } from './cameo';
 
-const WS = 4, CS = 5;
+const WS = 4, CS = 8.5;
 const QUAD_V = /* glsl */ `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`;
 const PAINT_F = /* glsl */ `
 uniform sampler2D tScene; uniform vec2 uRes; uniform float uR, uT; varying vec2 vUv;
@@ -191,11 +191,11 @@ export default class S2Whale extends Scene {
     this.spout.instanceMatrix.needsUpdate = true;
     // camera: low over the whale's back for the hit, then follows the ricochet and pulls wide to show the whale
     const kick = Math.max(0, spring(d, 38, 9));
-    const close = this.whale.localToWorld(new THREE.Vector3(33, 4 + kick * 0.8, 13));
-    close.lerp(p, 0.5);
+    const close = this.whale.localToWorld(new THREE.Vector3(30, 9 + kick * 0.8, 34));
+    close.lerp(p, 0.2);
     const wide = this.whale.position.clone().add(new THREE.Vector3(60, 40, 330));
-    const w = sm(0.35, 1.6, d);
-    this.cam.position.copy(close.lerp(wide, w)); this.cam.fov = lerp(40, 46, w);
+    const w = sm(0.25, 1.3, d);
+    this.cam.position.copy(close.lerp(wide, w)); this.cam.fov = lerp(48, 46, w);
     const look = this.whale.localToWorld(new THREE.Vector3(14, 4.5, 0)).lerp(p.clone().lerp(this.whale.position.clone().add(new THREE.Vector3(10, 10, 0)), 0.5), w);
     this.cam.aspect = out.width / out.height; this.cam.updateProjectionMatrix(); this.cam.lookAt(look);
     if (!this.rt || this.rt.width !== out.width || this.rt.height !== out.height) { this.rt?.dispose(); this.rt = new THREE.WebGLRenderTarget(out.width, out.height, { type: THREE.HalfFloatType }); }
