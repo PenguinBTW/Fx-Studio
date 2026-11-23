@@ -67,6 +67,7 @@ mix = (m * 0.8 * duck + sfx) * fade
 TL = int(0.5 * SR); tail = mfull[:, N:N + TL]; tail = np.stack([lp(tail[0], 2500), lp(tail[1], 2500)]) * np.cos(np.linspace(0, np.pi / 2, tail.shape[1])) ** 1.5
 mix[:, :tail.shape[1]] += 0.8 * 0.7 * tail   # the loop's head carries the song's own continuation
 mix /= max(1.0, np.abs(mix).max() / 0.98)
+import os; os.makedirs(os.path.dirname(os.path.abspath(sys.argv[2])), exist_ok=True)
 raw = sys.argv[2] + '.raw.wav'
 import wave
 with wave.open(raw, 'wb') as w:
