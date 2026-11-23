@@ -200,7 +200,7 @@ export default class S2Whale extends Scene {
     this.cam.aspect = out.width / out.height; this.cam.updateProjectionMatrix(); this.cam.lookAt(look);
     if (!this.rt || this.rt.width !== out.width || this.rt.height !== out.height) { this.rt?.dispose(); this.rt = new THREE.WebGLRenderTarget(out.width, out.height, { type: THREE.HalfFloatType }); }
     this.wU.uCam.value.copy(this.cam.position); rr.setRenderTarget(this.rt); rr.setClearColor(0, 1); rr.clear(); rr.render(this.main, this.cam);
-    this.paintU.tScene.value = this.rt.texture; this.paintU.uRes.value.set(out.width, out.height); this.paintU.uR.value = Math.round(11 * out.height / 1920); this.paintU.uT.value = t;
+    this.paintU.tScene.value = this.rt.texture; this.paintU.uRes.value.set(out.width, out.height); this.paintU.uR.value = Math.min(12, Math.round(11 * out.height / 1920)); this.paintU.uT.value = t;
     const auto = rr.autoClear; rr.autoClear = false;
     rr.setRenderTarget(out); rr.clear(); rr.render(this.qs, this.qc); this.hero.render(rr, out, this.cam, this.main); rr.autoClear = auto; rr.resetState();
     const hit = Math.exp(-d * 10);
