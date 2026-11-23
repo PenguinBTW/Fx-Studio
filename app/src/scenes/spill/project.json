@@ -65,6 +65,12 @@
       "id": "ps1",
       "start": 22.094,
       "end": 23.834
+    },
+    {
+      "scene": "spill/s11_finale",
+      "id": "finale",
+      "start": 23.834,
+      "end": 29.06
     }
   ],
   "audio": "../../../public/audio/feel_good_inc.wav"
