@@ -1,0 +1,427 @@
+{
+  "cues": [
+    {
+      "id": "seam_cloud",
+      "recipe": "whoosh",
+      "seed": 48,
+      "at": 4.0,
+      "params": {
+        "dur": 0.8,
+        "peakAt": 0.5,
+        "cutLo": 200,
+        "cutHi": 3000
+      }
+    },
+    {
+      "id": "thunder_far",
+      "recipe": "thunder",
+      "seed": 85,
+      "at": 4.72,
+      "params": {
+        "dur": 2.6,
+        "crack": 0.15,
+        "cut": 500,
+        "pan": -0.5
+      }
+    },
+    {
+      "id": "thunder_mid",
+      "recipe": "thunder",
+      "seed": 122,
+      "at": 5.72,
+      "params": {
+        "dur": 2.6,
+        "crack": 0.35,
+        "cut": 700,
+        "pan": 0.4
+      }
+    },
+    {
+      "id": "thunder_bolt",
+      "recipe": "thunder",
+      "seed": 159,
+      "at": 7.47,
+      "params": {
+        "dur": 3.4,
+        "crack": 1.0,
+        "cut": 1100,
+        "pan": 0.15
+      }
+    },
+    {
+      "id": "rain_in",
+      "recipe": "rain",
+      "seed": 196,
+      "at": 8.0,
+      "params": {
+        "dur": 1.5,
+        "density": 55
+      }
+    },
+    {
+      "id": "drop_ping",
+      "recipe": "glassPing",
+      "seed": 233,
+      "at": 9.5,
+      "params": {
+        "freq": 2400,
+        "decay": 1.2,
+        "leadIn": 0.6
+      }
+    },
+    {
+      "id": "rain_out",
+      "recipe": "rain",
+      "seed": 270,
+      "at": 10.7,
+      "params": {
+        "dur": 0.6,
+        "density": 40
+      }
+    },
+    {
+      "id": "seam_lens",
+      "recipe": "whoosh",
+      "seed": 307,
+      "at": 11.0,
+      "params": {
+        "dur": 0.8,
+        "peakAt": 0.5,
+        "cutLo": 500,
+        "cutHi": 6000
+      }
+    },
+    {
+      "id": "plankton_pops",
+      "recipe": "pops",
+      "seed": 344,
+      "at": 12.0,
+      "params": {
+        "count": 6,
+        "spacing": 0.36,
+        "root": 587,
+        "panSpread": 0.8
+      }
+    },
+    {
+      "id": "seam_biolum",
+      "recipe": "whoosh",
+      "seed": 381,
+      "at": 15.0,
+      "params": {
+        "dur": 0.8,
+        "peakAt": 0.5,
+        "cutLo": 400,
+        "cutHi": 5000
+      }
+    },
+    {
+      "id": "slam_swell",
+      "recipe": "reverseReverb",
+      "seed": 418,
+      "at": 20.0,
+      "params": {
+        "source": "sub",
+        "lead": 1.4,
+        "tail": 0.8
+      }
+    },
+    {
+      "id": "seam_pore",
+      "recipe": "whoosh",
+      "seed": 455,
+      "at": 20.0,
+      "params": {
+        "dur": 1.2,
+        "peakAt": 0.66,
+        "cutLo": 300,
+        "cutHi": 7000
+      }
+    },
+    {
+      "id": "salt_shimmer",
+      "recipe": "shimmer",
+      "seed": 492,
+      "at": 20.6,
+      "params": {
+        "dur": 2.4,
+        "freq": 3200
+      }
+    },
+    {
+      "id": "seam_ion",
+      "recipe": "whoosh",
+      "seed": 529,
+      "at": 24.0,
+      "params": {
+        "dur": 0.8,
+        "peakAt": 0.5,
+        "cutLo": 300,
+        "cutHi": 5000
+      }
+    },
+    {
+      "id": "atom_sparkle",
+      "recipe": "granularCloud",
+      "seed": 566,
+      "at": 24.2,
+      "params": {
+        "dur": 3.0,
+        "freq": 2200,
+        "density": 30,
+        "grainMs": 30
+      }
+    },
+    {
+      "id": "seam_nucleus",
+      "recipe": "whoosh",
+      "seed": 603,
+      "at": 28.0,
+      "params": {
+        "dur": 0.8,
+        "peakAt": 0.5,
+        "cutLo": 200,
+        "cutHi": 4000
+      }
+    },
+    {
+      "id": "quark_riser",
+      "recipe": "riser",
+      "seed": 640,
+      "at": 30.6,
+      "params": {
+        "dur": 2.6,
+        "fLo": 300,
+        "fHi": 3600
+      }
+    },
+    {
+      "id": "glitch",
+      "recipe": "granularCloud",
+      "seed": 677,
+      "at": 30.2,
+      "params": {
+        "dur": 0.8,
+        "kind": "tick",
+        "freq": 3000,
+        "density": 140,
+        "grainMs": 8
+      }
+    },
+    {
+      "id": "screen_hit",
+      "recipe": "subHit",
+      "seed": 714,
+      "at": 31.0,
+      "params": {}
+    },
+    {
+      "id": "screen_tick",
+      "recipe": "click",
+      "seed": 751,
+      "at": 31.0,
+      "params": {
+        "freq": 4200
+      }
+    },
+    {
+      "id": "lcd_hum",
+      "recipe": "thrum",
+      "seed": 788,
+      "at": 31.2,
+      "params": {
+        "dur": 2.0,
+        "f": 60,
+        "am": 0.5,
+        "amDepth": 0.2
+      }
+    },
+    {
+      "id": "pullback_rise",
+      "recipe": "shepardRise",
+      "seed": 825,
+      "at": 33.0,
+      "params": {
+        "dur": 3.8,
+        "rate": 0.3
+      }
+    },
+    {
+      "id": "seam_orbit",
+      "recipe": "whoosh",
+      "seed": 862,
+      "at": 36.8,
+      "params": {
+        "dur": 1.0,
+        "peakAt": 0.5,
+        "cutLo": 200,
+        "cutHi": 4000
+      }
+    },
+    {
+      "id": "type_00",
+      "recipe": "tick",
+      "seed": 899,
+      "at": 1.4,
+      "params": {
+        "count": 10,
+        "spacing": 0.029411764705882353,
+        "freq": 2800,
+        "spread": 5,
+        "jitter": 0,
+        "decayMs": 5,
+        "panSpread": 0.2
+      }
+    },
+    {
+      "id": "type_01",
+      "recipe": "tick",
+      "seed": 936,
+      "at": 4.4,
+      "params": {
+        "count": 13,
+        "spacing": 0.029411764705882353,
+        "freq": 2800,
+        "spread": 5,
+        "jitter": 0,
+        "decayMs": 5,
+        "panSpread": 0.2
+      }
+    },
+    {
+      "id": "type_02",
+      "recipe": "tick",
+      "seed": 973,
+      "at": 8.7,
+      "params": {
+        "count": 13,
+        "spacing": 0.029411764705882353,
+        "freq": 2800,
+        "spread": 5,
+        "jitter": 0,
+        "decayMs": 5,
+        "panSpread": 0.2
+      }
+    },
+    {
+      "id": "type_03",
+      "recipe": "tick",
+      "seed": 1010,
+      "at": 11.6,
+      "params": {
+        "count": 6,
+        "spacing": 0.029411764705882353,
+        "freq": 2800,
+        "spread": 5,
+        "jitter": 0,
+        "decayMs": 5,
+        "panSpread": 0.2
+      }
+    },
+    {
+      "id": "type_04",
+      "recipe": "tick",
+      "seed": 1047,
+      "at": 15.5,
+      "params": {
+        "count": 15,
+        "spacing": 0.029411764705882353,
+        "freq": 2800,
+        "spread": 5,
+        "jitter": 0,
+        "decayMs": 5,
+        "panSpread": 0.2
+      }
+    },
+    {
+      "id": "type_05",
+      "recipe": "tick",
+      "seed": 1084,
+      "at": 18.1,
+      "params": {
+        "count": 7,
+        "spacing": 0.029411764705882353,
+        "freq": 2800,
+        "spread": 5,
+        "jitter": 0,
+        "decayMs": 5,
+        "panSpread": 0.2
+      }
+    },
+    {
+      "id": "type_06",
+      "recipe": "tick",
+      "seed": 1121,
+      "at": 20.6,
+      "params": {
+        "count": 5,
+        "spacing": 0.029411764705882353,
+        "freq": 2800,
+        "spread": 5,
+        "jitter": 0,
+        "decayMs": 5,
+        "panSpread": 0.2
+      }
+    },
+    {
+      "id": "type_07",
+      "recipe": "tick",
+      "seed": 1158,
+      "at": 24.5,
+      "params": {
+        "count": 9,
+        "spacing": 0.029411764705882353,
+        "freq": 2800,
+        "spread": 5,
+        "jitter": 0,
+        "decayMs": 5,
+        "panSpread": 0.2
+      }
+    },
+    {
+      "id": "type_08",
+      "recipe": "tick",
+      "seed": 1195,
+      "at": 28.5,
+      "params": {
+        "count": 8,
+        "spacing": 0.029411764705882353,
+        "freq": 2800,
+        "spread": 5,
+        "jitter": 0,
+        "decayMs": 5,
+        "panSpread": 0.2
+      }
+    },
+    {
+      "id": "type_09",
+      "recipe": "tick",
+      "seed": 1232,
+      "at": 31.3,
+      "params": {
+        "count": 19,
+        "spacing": 0.029411764705882353,
+        "freq": 2800,
+        "spread": 5,
+        "jitter": 0,
+        "decayMs": 5,
+        "panSpread": 0.2
+      }
+    },
+    {
+      "id": "type_10",
+      "recipe": "tick",
+      "seed": 1269,
+      "at": 37.4,
+      "params": {
+        "count": 11,
+        "spacing": 0.029411764705882353,
+        "freq": 2800,
+        "spread": 5,
+        "jitter": 0,
+        "decayMs": 5,
+        "panSpread": 0.2
+      }
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "rain_out",
+  "eventId": null,
+  "recipe": "rain",
+  "seed": 270,
+  "file": "rain_out.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 0.6,
+  "hitOffsetSec": 0,
+  "peak": 0.31622776601683794,
+  "peakDb": -10,
+  "rms": 0.008702098518283524,
+  "rmsDb": -41.20752008553001,
+  "eventTime": null,
+  "startTime": null
+}

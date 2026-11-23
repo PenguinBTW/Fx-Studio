@@ -1,0 +1,18 @@
+{
+  "id": "pullback_rise",
+  "eventId": null,
+  "recipe": "shepardRise",
+  "seed": 825,
+  "file": "pullback_rise.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 3.8,
+  "hitOffsetSec": 0,
+  "peak": 0.39810717055349726,
+  "peakDb": -7.999999999999999,
+  "rms": 0.2065223612650808,
+  "rmsDb": -13.700658362160015,
+  "eventTime": null,
+  "startTime": null
+}

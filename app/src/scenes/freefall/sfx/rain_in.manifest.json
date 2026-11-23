@@ -1,0 +1,18 @@
+{
+  "id": "rain_in",
+  "eventId": null,
+  "recipe": "rain",
+  "seed": 196,
+  "file": "rain_in.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 1.5,
+  "hitOffsetSec": 0,
+  "peak": 0.31622776601683794,
+  "peakDb": -10,
+  "rms": 0.012964643094548863,
+  "rmsDb": -37.744788689657355,
+  "eventTime": null,
+  "startTime": null
+}

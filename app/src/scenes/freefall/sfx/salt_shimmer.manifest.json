@@ -1,0 +1,18 @@
+{
+  "id": "salt_shimmer",
+  "eventId": null,
+  "recipe": "shimmer",
+  "seed": 492,
+  "file": "salt_shimmer.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 3.8999791666666668,
+  "hitOffsetSec": 0,
+  "peak": 0.31622776601683794,
+  "peakDb": -10,
+  "rms": 0.04195541609908941,
+  "rmsDb": -27.544239347424202,
+  "eventTime": null,
+  "startTime": null
+}

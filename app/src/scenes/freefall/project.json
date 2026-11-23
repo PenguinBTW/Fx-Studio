@@ -4,6 +4,8 @@
     1080,
     1920
   ],
+  "mix": "mix.json",
+  "audio": "master/freefall_mix.mp3",
   "trimToTimeline": true,
   "entries": [
     {

@@ -1,0 +1,18 @@
+{
+  "id": "plankton_pops",
+  "eventId": null,
+  "recipe": "pops",
+  "seed": 344,
+  "file": "plankton_pops.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 2.26,
+  "hitOffsetSec": 0,
+  "peak": 0.251188643150958,
+  "peakDb": -12,
+  "rms": 0.015099617070294077,
+  "rmsDb": -36.420681327470355,
+  "eventTime": null,
+  "startTime": null
+}

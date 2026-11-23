@@ -1,0 +1,18 @@
+{
+  "id": "glitch",
+  "eventId": null,
+  "recipe": "granularCloud",
+  "seed": 677,
+  "file": "glitch.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 0.8,
+  "hitOffsetSec": 0,
+  "peak": 0.3981071705534972,
+  "peakDb": -8.000000000000002,
+  "rms": 0.029510474766491133,
+  "rmsDb": -30.60047606970349,
+  "eventTime": null,
+  "startTime": null
+}

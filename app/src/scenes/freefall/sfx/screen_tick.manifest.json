@@ -1,0 +1,18 @@
+{
+  "id": "screen_tick",
+  "eventId": null,
+  "recipe": "click",
+  "seed": 751,
+  "file": "screen_tick.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 0.06,
+  "hitOffsetSec": 0,
+  "peak": 0.0769355706620717,
+  "peakDb": -22.277456410595384,
+  "rms": 0.006462468548753524,
+  "rmsDb": -43.79203114994774,
+  "eventTime": null,
+  "startTime": null
+}

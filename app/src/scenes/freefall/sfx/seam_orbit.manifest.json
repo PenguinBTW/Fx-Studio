@@ -1,0 +1,18 @@
+{
+  "id": "seam_orbit",
+  "eventId": null,
+  "recipe": "whoosh",
+  "seed": 862,
+  "file": "seam_orbit.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 1,
+  "hitOffsetSec": 0.5,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.08340684404325559,
+  "rmsDb": -21.575966227468847,
+  "eventTime": null,
+  "startTime": null
+}

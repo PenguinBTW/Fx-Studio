@@ -706,6 +706,26 @@ export const recipes: Record<string, Recipe> = {
     },
   },
 
+  thunder: {
+    doc: "Lightning: a bright crack (high-passed noise burst) into a rolling brown-noise rumble with seeded swells. hitOffset = crack.",
+    peakDb: -3,
+    defaults: { dur: 3.2, crack: 0.8, rumble: 1, rolls: 5, cut: 900, pan: 0, wet: 0.25 },
+    render(p, rng) {
+      const n = secs(p.dur);
+      const nzW = new Noise(rng, "white"), nzB = new Noise(rng, "brown");
+      const fh = new SVF(), fl = new SVF(), fl2 = new SVF();
+      const rolls = Array.from({ length: p.rolls }, () => ({ t: 0.08 + rng() * p.dur * 0.6, a: 0.4 + rng() * 0.6, w: 0.15 + rng() * 0.4 }));
+      const m = gen(n, (t) => {
+        const crack = fh.process(nzW.next(), 2500, 0.6, "hp") * Math.exp(-t / 0.035) * p.crack;
+        let env = Math.min(1, t / 0.05) * Math.exp(-t / (p.dur * 0.35));
+        for (const r of rolls) env += r.a * 0.6 * Math.exp(-((t - r.t) ** 2) / (2 * r.w * r.w));
+        const cut = p.cut * (0.35 + 0.65 * Math.exp(-t / 0.6));
+        return crack + fl2.process(fl.process(nzB.next(), cut, 0.7, "lp"), cut * 1.5, 0.7, "lp") * env * p.rumble * 6;
+      });
+      return { audio: withTail(pan(m, p.pan), plate(1.6, 9, 3000, 200), p.wet), hitOffset: 0 };
+    },
+  },
+
   airSwell: {
     doc: "Act 4: barely-there low 'air' swell, very quiet under the piano.",
     peakDb: -22,

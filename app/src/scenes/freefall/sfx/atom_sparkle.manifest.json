@@ -1,0 +1,18 @@
+{
+  "id": "atom_sparkle",
+  "eventId": null,
+  "recipe": "granularCloud",
+  "seed": 566,
+  "file": "atom_sparkle.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 3,
+  "hitOffsetSec": 0,
+  "peak": 0.39810717055349726,
+  "peakDb": -7.999999999999999,
+  "rms": 0.047306077235247594,
+  "rmsDb": -26.501661269727972,
+  "eventTime": null,
+  "startTime": null
+}

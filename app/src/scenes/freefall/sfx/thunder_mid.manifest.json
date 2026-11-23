@@ -1,0 +1,18 @@
+{
+  "id": "thunder_mid",
+  "eventId": null,
+  "recipe": "thunder",
+  "seed": 122,
+  "file": "thunder_mid.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 4.199979166666667,
+  "hitOffsetSec": 0,
+  "peak": 0.7079457843841379,
+  "peakDb": -3,
+  "rms": 0.08685126707482704,
+  "rmsDb": -21.22447682480018,
+  "eventTime": null,
+  "startTime": null
+}

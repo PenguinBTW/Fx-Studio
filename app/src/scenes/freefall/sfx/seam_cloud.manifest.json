@@ -1,0 +1,18 @@
+{
+  "id": "seam_cloud",
+  "eventId": null,
+  "recipe": "whoosh",
+  "seed": 48,
+  "file": "seam_cloud.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 0.8,
+  "hitOffsetSec": 0.4,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.08738000076169031,
+  "rmsDb": -21.171759116814222,
+  "eventTime": null,
+  "startTime": null
+}

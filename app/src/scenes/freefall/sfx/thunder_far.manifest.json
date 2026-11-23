@@ -1,0 +1,18 @@
+{
+  "id": "thunder_far",
+  "eventId": null,
+  "recipe": "thunder",
+  "seed": 85,
+  "file": "thunder_far.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 4.199979166666667,
+  "hitOffsetSec": 0,
+  "peak": 0.7079457843841379,
+  "peakDb": -3,
+  "rms": 0.08323760239417441,
+  "rmsDb": -21.593608757092934,
+  "eventTime": null,
+  "startTime": null
+}

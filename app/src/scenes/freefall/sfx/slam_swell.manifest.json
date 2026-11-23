@@ -1,0 +1,18 @@
+{
+  "id": "slam_swell",
+  "eventId": null,
+  "recipe": "reverseReverb",
+  "seed": 418,
+  "file": "slam_swell.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 2.3199791666666667,
+  "hitOffsetSec": 1.3999791666666668,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.07410655171996211,
+  "rmsDb": -22.602867891683683,
+  "eventTime": null,
+  "startTime": null
+}

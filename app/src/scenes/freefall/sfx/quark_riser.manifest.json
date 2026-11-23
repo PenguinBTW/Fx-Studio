@@ -1,0 +1,18 @@
+{
+  "id": "quark_riser",
+  "eventId": null,
+  "recipe": "riser",
+  "seed": 640,
+  "file": "quark_riser.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 2.6,
+  "hitOffsetSec": 2.6,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.06186254738148594,
+  "rmsDb": -24.17144401095541,
+  "eventTime": null,
+  "startTime": null
+}

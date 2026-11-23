@@ -1,0 +1,18 @@
+{
+  "id": "thunder_bolt",
+  "eventId": null,
+  "recipe": "thunder",
+  "seed": 159,
+  "file": "thunder_bolt.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 4.999979166666667,
+  "hitOffsetSec": 0,
+  "peak": 0.7079457843841378,
+  "peakDb": -3.0000000000000018,
+  "rms": 0.10025136992847428,
+  "rmsDb": -19.978193681225534,
+  "eventTime": null,
+  "startTime": null
+}

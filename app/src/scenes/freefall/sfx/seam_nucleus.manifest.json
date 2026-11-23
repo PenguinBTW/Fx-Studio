@@ -1,0 +1,18 @@
+{
+  "id": "seam_nucleus",
+  "eventId": null,
+  "recipe": "whoosh",
+  "seed": 603,
+  "file": "seam_nucleus.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 0.8,
+  "hitOffsetSec": 0.4,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.08676247425298085,
+  "rmsDb": -21.233361429354574,
+  "eventTime": null,
+  "startTime": null
+}

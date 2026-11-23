@@ -1,0 +1,277 @@
+{
+  "sampleRate": 48000,
+  "buses": {
+    "music": {
+      "gainDb": 0
+    },
+    "sfx": {
+      "gainDb": -2
+    },
+    "sub": {
+      "gainDb": -3
+    }
+  },
+  "stems": [
+    {
+      "id": "music",
+      "file": "stems/music.flac",
+      "bus": "music",
+      "at": 0,
+      "gainDb": -2
+    },
+    {
+      "id": "seam_cloud",
+      "file": "sfx/seam_cloud.wav",
+      "bus": "sfx",
+      "at": 4.0,
+      "gainDb": -9
+    },
+    {
+      "id": "thunder_far",
+      "file": "sfx/thunder_far.wav",
+      "bus": "sfx",
+      "at": 4.72,
+      "gainDb": -16
+    },
+    {
+      "id": "thunder_mid",
+      "file": "sfx/thunder_mid.wav",
+      "bus": "sfx",
+      "at": 5.72,
+      "gainDb": -13
+    },
+    {
+      "id": "thunder_bolt",
+      "file": "sfx/thunder_bolt.wav",
+      "bus": "sfx",
+      "at": 7.47,
+      "gainDb": -5
+    },
+    {
+      "id": "rain_in",
+      "file": "sfx/rain_in.wav",
+      "bus": "sfx",
+      "at": 8.0,
+      "gainDb": -20
+    },
+    {
+      "id": "drop_ping",
+      "file": "sfx/drop_ping.wav",
+      "bus": "sfx",
+      "at": 9.5,
+      "gainDb": -9
+    },
+    {
+      "id": "rain_out",
+      "file": "sfx/rain_out.wav",
+      "bus": "sfx",
+      "at": 10.7,
+      "gainDb": -22
+    },
+    {
+      "id": "seam_lens",
+      "file": "sfx/seam_lens.wav",
+      "bus": "sfx",
+      "at": 11.0,
+      "gainDb": -10
+    },
+    {
+      "id": "plankton_pops",
+      "file": "sfx/plankton_pops.wav",
+      "bus": "sfx",
+      "at": 12.0,
+      "gainDb": -18
+    },
+    {
+      "id": "seam_biolum",
+      "file": "sfx/seam_biolum.wav",
+      "bus": "sfx",
+      "at": 15.0,
+      "gainDb": -10
+    },
+    {
+      "id": "slam_swell",
+      "file": "sfx/slam_swell.wav",
+      "bus": "sub",
+      "at": 20.0,
+      "gainDb": -5
+    },
+    {
+      "id": "seam_pore",
+      "file": "sfx/seam_pore.wav",
+      "bus": "sfx",
+      "at": 20.0,
+      "gainDb": -7
+    },
+    {
+      "id": "salt_shimmer",
+      "file": "sfx/salt_shimmer.wav",
+      "bus": "sfx",
+      "at": 20.6,
+      "gainDb": -16
+    },
+    {
+      "id": "seam_ion",
+      "file": "sfx/seam_ion.wav",
+      "bus": "sfx",
+      "at": 24.0,
+      "gainDb": -10
+    },
+    {
+      "id": "atom_sparkle",
+      "file": "sfx/atom_sparkle.wav",
+      "bus": "sfx",
+      "at": 24.2,
+      "gainDb": -22
+    },
+    {
+      "id": "seam_nucleus",
+      "file": "sfx/seam_nucleus.wav",
+      "bus": "sfx",
+      "at": 28.0,
+      "gainDb": -9
+    },
+    {
+      "id": "quark_riser",
+      "file": "sfx/quark_riser.wav",
+      "bus": "sfx",
+      "at": 30.6,
+      "gainDb": -12
+    },
+    {
+      "id": "glitch",
+      "file": "sfx/glitch.wav",
+      "bus": "sfx",
+      "at": 30.2,
+      "gainDb": -13
+    },
+    {
+      "id": "screen_hit",
+      "file": "sfx/screen_hit.wav",
+      "bus": "sub",
+      "at": 31.0,
+      "gainDb": -2
+    },
+    {
+      "id": "screen_tick",
+      "file": "sfx/screen_tick.wav",
+      "bus": "sfx",
+      "at": 31.0,
+      "gainDb": -8
+    },
+    {
+      "id": "lcd_hum",
+      "file": "sfx/lcd_hum.wav",
+      "bus": "sfx",
+      "at": 31.2,
+      "gainDb": -26
+    },
+    {
+      "id": "pullback_rise",
+      "file": "sfx/pullback_rise.wav",
+      "bus": "sfx",
+      "at": 33.0,
+      "gainDb": -15
+    },
+    {
+      "id": "seam_orbit",
+      "file": "sfx/seam_orbit.wav",
+      "bus": "sfx",
+      "at": 36.8,
+      "gainDb": -10
+    },
+    {
+      "id": "type_00",
+      "file": "sfx/type_00.wav",
+      "bus": "sfx",
+      "at": 1.4,
+      "gainDb": -17
+    },
+    {
+      "id": "type_01",
+      "file": "sfx/type_01.wav",
+      "bus": "sfx",
+      "at": 4.4,
+      "gainDb": -17
+    },
+    {
+      "id": "type_02",
+      "file": "sfx/type_02.wav",
+      "bus": "sfx",
+      "at": 8.7,
+      "gainDb": -17
+    },
+    {
+      "id": "type_03",
+      "file": "sfx/type_03.wav",
+      "bus": "sfx",
+      "at": 11.6,
+      "gainDb": -17
+    },
+    {
+      "id": "type_04",
+      "file": "sfx/type_04.wav",
+      "bus": "sfx",
+      "at": 15.5,
+      "gainDb": -17
+    },
+    {
+      "id": "type_05",
+      "file": "sfx/type_05.wav",
+      "bus": "sfx",
+      "at": 18.1,
+      "gainDb": -17
+    },
+    {
+      "id": "type_06",
+      "file": "sfx/type_06.wav",
+      "bus": "sfx",
+      "at": 20.6,
+      "gainDb": -17
+    },
+    {
+      "id": "type_07",
+      "file": "sfx/type_07.wav",
+      "bus": "sfx",
+      "at": 24.5,
+      "gainDb": -17
+    },
+    {
+      "id": "type_08",
+      "file": "sfx/type_08.wav",
+      "bus": "sfx",
+      "at": 28.5,
+      "gainDb": -17
+    },
+    {
+      "id": "type_09",
+      "file": "sfx/type_09.wav",
+      "bus": "sfx",
+      "at": 31.3,
+      "gainDb": -17
+    },
+    {
+      "id": "type_10",
+      "file": "sfx/type_10.wav",
+      "bus": "sfx",
+      "at": 37.4,
+      "gainDb": -17
+    }
+  ],
+  "duck": {
+    "bus": "music",
+    "cues": [
+      "thunder_bolt",
+      "seam_pore"
+    ],
+    "amountDb": 4,
+    "attack": 0.08,
+    "hold": 0.25,
+    "release": 0.4
+  },
+  "master": {
+    "normalize": true,
+    "lufs": -14.0,
+    "truePeak": -1.5
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "id": "lcd_hum",
+  "eventId": null,
+  "recipe": "thrum",
+  "seed": 788,
+  "file": "lcd_hum.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 2,
+  "hitOffsetSec": 0,
+  "peak": 0.6309573444801932,
+  "peakDb": -4,
+  "rms": 0.1580065768386728,
+  "rmsDb": -16.02649671340542,
+  "eventTime": null,
+  "startTime": null
+}

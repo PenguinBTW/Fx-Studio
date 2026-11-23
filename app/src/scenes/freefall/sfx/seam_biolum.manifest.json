@@ -1,0 +1,18 @@
+{
+  "id": "seam_biolum",
+  "eventId": null,
+  "recipe": "whoosh",
+  "seed": 381,
+  "file": "seam_biolum.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 0.8,
+  "hitOffsetSec": 0.4,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.09132946548111907,
+  "rmsDb": -20.78778168231605,
+  "eventTime": null,
+  "startTime": null
+}

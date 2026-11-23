@@ -1,0 +1,18 @@
+{
+  "id": "screen_hit",
+  "eventId": null,
+  "recipe": "subHit",
+  "seed": 714,
+  "file": "screen_hit.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 2.2,
+  "hitOffsetSec": 0,
+  "peak": 0.8912509381337456,
+  "peakDb": -0.9999999999999997,
+  "rms": 0.157396151983843,
+  "rmsDb": -16.06011778929912,
+  "eventTime": null,
+  "startTime": null
+}

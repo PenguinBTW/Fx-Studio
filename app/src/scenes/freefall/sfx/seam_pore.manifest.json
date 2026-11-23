@@ -1,0 +1,18 @@
+{
+  "id": "seam_pore",
+  "eventId": null,
+  "recipe": "whoosh",
+  "seed": 455,
+  "file": "seam_pore.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 1.2,
+  "hitOffsetSec": 0.792,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.07292909293787557,
+  "rmsDb": -22.74198375959844,
+  "eventTime": null,
+  "startTime": null
+}
