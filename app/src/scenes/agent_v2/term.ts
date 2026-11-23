@@ -4,9 +4,11 @@ import { F, font } from '../../engine/type';
 import { BEAT, B0 } from '../agent_promo/kit';
 
 export interface TLine { lead?: number; text: string; at: number; hold: number; cps?: number; x?: number; y?: number }
-export interface TermStyle { x?: number; y?: number; size?: number; color?: string; cursor?: string; align?: 'left' | 'center'; family?: string; halo?: string; prompt?: string; alpha?: number }
+export interface TermStyle { x?: number; y?: number; size?: number; color?: string; cursor?: string; align?: 'left' | 'center'; family?: string; halo?: string; prompt?: string; alpha?: number; force?: boolean }
 
 const WIPE = 0.24;
+/** Projects that reuse these scenes with their own titles (e.g. the vertical teaser) set `TERM.off`. */
+export const TERM = { off: false };
 const jit = (k: number) => { const s = Math.sin(k * 91.7) * 43758.5; return (s - Math.floor(s)) - 0.5; };
 /** Seconds a line takes to type. */
 export const typeDur = (l: TLine) => l.text.length / (l.cps ?? 18);
@@ -14,6 +16,7 @@ export const typeDur = (l: TLine) => l.text.length / (l.cps ?? 18);
 export const lineEnd = (l: TLine) => l.at + typeDur(l) + l.hold + WIPE;
 
 export function term(g: CanvasRenderingContext2D, lines: TLine[], T: number, st: TermStyle = {}) {
+  if (TERM.off && !st.force) return;
   const l = lines.find((q) => T >= q.at - (q.lead ?? 0.6) && T < lineEnd(q) + 0.05);
   if (!l) return;
   const size = st.size ?? 44, cps = l.cps ?? 18, pr = st.prompt ?? '';
@@ -28,7 +31,7 @@ export function term(g: CanvasRenderingContext2D, lines: TLine[], T: number, st:
   const ease = w0 * w0 * (3 - 2 * w0);
   const text = pr + l.text.slice(0, n), tw = g.measureText(text).width;
   const cut = x0 + tw * ease;
-  g.save(); g.beginPath(); g.rect(cut, 0, 1920, 1080); g.clip();
+  g.save(); g.beginPath(); g.rect(cut, 0, 1e5, 1e5); g.clip();
   if (st.halo) { g.lineWidth = size * 0.32; g.lineJoin = 'round'; g.strokeStyle = st.halo; g.strokeText(text, x0, y); }
   g.fillStyle = st.color ?? '#F2F2F2'; g.fillText(text, x0, y); g.restore();
   // cursor: solid while typing, blinks on the beat while holding, leads the wipe as a stretched selection bar

@@ -77,6 +77,8 @@ export interface ExportVideoOptions {
   audioTrack?: string;
   /** seconds of audio fade-out ending at `to` (for films that end before their soundtrack does) */
   audioFadeOut?: number;
+  /** Seconds into audioTrack that `from` = 0 plays (project.json "audioOffset"); ignored for mixed audio. */
+  audioOffset?: number;
   /** audioTrack is a finished mixdown already windowed to [from,to]: no -ss/-t, explicit pad/trim instead of -shortest. */
   audioMixed?: boolean;
   transparent?: boolean;
@@ -193,8 +195,8 @@ export class ExportPipeline {
 
     // Optional audio track input
     if (opts.audioTrack) {
-      if (opts.from !== undefined && !opts.audioMixed) {
-        args.push('-ss', String(opts.from));
+      if ((opts.from !== undefined || opts.audioOffset) && !opts.audioMixed) {
+        args.push('-ss', String((opts.from ?? 0) + (opts.audioOffset ?? 0)));
       }
       if (opts.from !== undefined && opts.to !== undefined && !opts.audioMixed) {
         args.push('-t', String(opts.to - opts.from));

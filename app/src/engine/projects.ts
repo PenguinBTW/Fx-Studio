@@ -43,6 +43,10 @@ export interface ProjectManifest {
   audioFadeOut?: number;
   /** Film length is the timeline end even when the soundtrack runs longer. */
   trimToTimeline?: boolean;
+  /** Logical canvas size [w, h] (default [1920, 1080]); e.g. [1080, 1920] for vertical 9:16 shorts. */
+  size?: [number, number];
+  /** Seconds into the soundtrack that project time 0 plays (for cut-downs that start mid-song). */
+  audioOffset?: number;
 }
 
 /** Selection priority: explicit (?project= / --project) > pointer file > fallback. */
