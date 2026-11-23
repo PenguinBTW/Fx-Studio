@@ -38,7 +38,7 @@ function tex32(seed: number, kind: 'noise' | 'brick' | 'scale') {
 
 export default class S10Ps1 extends Scene {
   private s = new THREE.Scene(); private cam = new THREE.PerspectiveCamera(50, 9 / 16, 0.3, 300);
-  private cameos = new Cameos([{ k: 'sheep', t0: 22.15, dur: 1.7, path: 'walk', y: -0.72, s: 0.16, n: 3, dir: -1 }, { k: 'pixbird', t0: 22.5, dur: 1.2, path: 'fly', y: 0.78, s: 0.08, n: 5 }]);
+  private cameos = new Cameos([{ k: 'glass', t0: 21.95, dur: 1.3, path: 'fly', y: 0.6, s: 0.11, n: 2, dir: -1 }, { k: 'sheep', t0: 22.15, dur: 1.7, path: 'walk', y: -0.72, s: 0.16, n: 3, dir: -1 }, { k: 'pixbird', t0: 22.5, dur: 1.2, path: 'fly', y: 0.78, s: 0.08, n: 5 }]);
   private insts: GLTFInstance[] = []; private snap = { value: new THREE.Vector2(160, 284) };
   private fogC = { value: new THREE.Color(0.55, 0.3, 0.45) };
   private dino!: THREE.Object3D; private dHead!: THREE.Object3D; private dJaw!: THREE.Object3D; private dTail!: THREE.Object3D;
@@ -81,7 +81,7 @@ export default class S10Ps1 extends Scene {
     // cursor sprints the ruins; skids and double-blinks when the dino roars
     const skid = sm(this.ROAR - 0.1, this.ROAR + 0.1, ts), run = Math.abs(Math.sin((ts - T0) * 15));
     const cx = lerp(-10, 8, k) - 2.5 * skid * (1 - sm(this.ROAR + 0.4, this.ROAR + 0.7, ts));
-    const cp = new THREE.Vector3(cx, 0.8 + 0.5 * run * (1 - skid * 0.8), 0.6); this.cur.position.copy(cp); this.cur.rotation.set(0, 0, -0.2 + 0.45 * skid);
+    const cp = new THREE.Vector3(cx, 0.8 + 0.5 * run * (1 - skid * 0.8), 0.6 + 1.8 * sm(T1 - 0.75, T1 - 0.35, ts)); this.cur.position.copy(cp); this.cur.rotation.set(0, 0, -0.2 + 0.45 * skid);
     const roar = sm(this.ROAR - 0.15, this.ROAR, ts) * (1 - sm(this.ROAR + 0.6, this.ROAR + 0.8, ts));
     const dbl = ts > this.ROAR && ts < this.ROAR + 0.4 ? (Math.floor((ts - this.ROAR) * 10) % 2 ? 0.1 : 1) : ((t * 1.06) % 1) < 0.55 ? 1 : 0.12;
     this.hero.update(t, dbl);
