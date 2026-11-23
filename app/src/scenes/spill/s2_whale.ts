@@ -183,7 +183,7 @@ export default class S2Whale extends Scene {
       q.setFromUnitVectors(new THREE.Vector3(0, 1, 0), vel.normalize());
       M.compose(pp, q, new THREE.Vector3(k * 0.7, k * (1 + sp * 0.12 * Math.exp(-tt * 2)), k * 0.7)); this.splash.setMatrixAt(i, M); });
     this.splash.instanceMatrix.needsUpdate = true;
-    for (let i = 0; i < 90; i++) { const tt = d - 0.22 - 0.9 * hash(i * 2.9), a = hash(i * 7.3) * 6.28, r = 0.8 * hash(i * 4.4);
+    for (let i = 0; i < 90; i++) { const tt = d - 0.08 - 0.9 * hash(i * 2.9), a = hash(i * 7.3) * 6.28, r = 0.8 * hash(i * 4.4);
       const base = this.contactL.clone().add(new THREE.Vector3(3.5, 0.3, 0)), vy = 22 + 10 * hash(i * 3.7);
       const k = tt <= 0 ? 0 : 2.2 * (0.35 + 0.5 * hash(i * 8.1)) * (1 - sm(0.7, 1.3, tt)) * Math.min(1, tt * 10);
       const pp = base.add(new THREE.Vector3(Math.cos(a) * r * (1 + 4 * tt * tt), vy * tt - 16 * tt * tt, Math.sin(a) * r * (1 + 4 * tt * tt)));

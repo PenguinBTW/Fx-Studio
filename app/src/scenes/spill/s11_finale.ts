@@ -69,7 +69,7 @@ const LOOKERS = new Set(['deer', 'heron', 'sheep', 'fox', 'dino', 'peacock', 'sa
 
 export default class S11Finale extends Scene {
   private s = new THREE.Scene(); private cam = new THREE.PerspectiveCamera(42, 9 / 16, 0.1, 600);
-  private cameos = new Cameos([{ k: 'pixbird', t0: 24.0, dur: 2.0, path: 'fly', y: 0.8, s: 0.08, n: 6 }, { k: 'crane', t0: 24.3, dur: 1.8, path: 'fly', y: 0.6, s: 0.12, n: 3, dir: -1 }, { k: 'glass', t0: 24.6, dur: 1.6, path: 'fly', y: 0.45, s: 0.11, n: 2 }, { k: 'crayon', t0: 24.9, dur: 1.5, path: 'fly', y: 0.3, s: 0.12, n: 2, dir: -1 }, { k: 'koi', t0: 24.4, dur: 0.7, path: 'leap', x: -0.5, y: -0.2, s: 0.16 }, { k: 'pixfish', t0: 25.0, dur: 0.6, path: 'leap', x: -0.78, y: 0.05, s: 0.1, n: 2 }, { k: 'bee', t0: 24.2, dur: 1.3, path: 'float', x: 0.72, y: 0.15, s: 0.1 }, { k: 'sheep', t0: 25.60, dur: 1.5, path: 'pop', x: -0.62, y: -0.62, s: 0.13 }, { k: 'hose', t0: 25.66, dur: 1.5, path: 'pop', x: -0.2, y: -0.5, s: 0.14, dir: -1 }, { k: 'pixbird', t0: 25.72, dur: 1.5, path: 'pop', x: 0.25, y: -0.6, s: 0.09 }, { k: 'koi', t0: 25.78, dur: 1.5, path: 'pop', x: 0.62, y: -0.55, s: 0.13, dir: -1 }, { k: 'bee', t0: 25.84, dur: 1.5, path: 'pop', x: -0.45, y: -0.25, s: 0.09 }]);
+  private cameos = new Cameos([{ k: 'pixbird', t0: 24.0, dur: 2.0, path: 'fly', y: 0.8, s: 0.08, n: 6 }, { k: 'crane', t0: 24.3, dur: 1.8, path: 'fly', y: 0.6, s: 0.12, n: 3, dir: -1 }, { k: 'glass', t0: 24.6, dur: 1.6, path: 'fly', y: 0.45, s: 0.11, n: 2 }, { k: 'crayon', t0: 24.9, dur: 1.5, path: 'fly', y: 0.3, s: 0.12, n: 2, dir: -1 }, { k: 'bee', t0: 24.2, dur: 1.3, path: 'float', x: 0.72, y: 0.15, s: 0.1 }, { k: 'sheep', t0: 25.60, dur: 1.5, path: 'pop', x: -0.62, y: -0.62, s: 0.13 }, { k: 'hose', t0: 25.66, dur: 1.5, path: 'pop', x: -0.2, y: -0.5, s: 0.14, dir: -1 }, { k: 'pixbird', t0: 25.72, dur: 1.5, path: 'pop', x: 0.25, y: -0.6, s: 0.09 }, { k: 'koi', t0: 25.78, dur: 1.5, path: 'pop', x: 0.62, y: -0.55, s: 0.13, dir: -1 }, { k: 'bee', t0: 25.84, dur: 1.5, path: 'pop', x: -0.45, y: -0.25, s: 0.09 }]);
   private insts: GLTFInstance[] = []; private s1!: S1Breakout;
   private cur!: THREE.Object3D; private hero!: HeroPass; private core: THREE.MeshStandardMaterial[] = []; private patchU = { uT: { value: 0 }, uK: { value: 0 } };
   private crowd!: THREE.Group; private scrT = { value: 0 }; private lookers: { o: THREE.Object3D; base: THREE.Euler; ph: number; y: number }[] = [];
@@ -92,7 +92,7 @@ export default class S11Finale extends Scene {
       const land = new THREE.Mesh(g, groundDetail(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 }), 0.45, 0.05, 0.15)); land.castShadow = land.receiveShadow = true; this.s.add(land); }
     PATCHES.forEach(([id, , x, z], pi) => {
       const kit = K[id]; kit.root.visible = false; this.s.add(kit.root);
-      const [geo, dc, em] = DETAIL[id]; const im = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ color: dc, roughness: 0.8, flatShading: true, emissive: em ? dc : 0x000000, emissiveIntensity: em }), 50);
+      const [geo, dc, em] = DETAIL[id]; const im = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ color: dc, roughness: 0.8, flatShading: true, emissive: em ? dc : 0x000000, emissiveIntensity: em }), id === 'hose' ? 14 : 50);
       const M = new THREE.Matrix4(); for (let k = 0; k < 50; k++) { const a = hash(pi * 100 + k) * 6.283, r = 6.2 * Math.sqrt(hash(pi * 100 + k + 0.5)), px = x + r * Math.cos(a), pz = z + r * Math.sin(a);
         M.compose(new THREE.Vector3(px, terr(px, pz) - 0.05, pz), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, a * 3, 0)), new THREE.Vector3().setScalar(0.35 + 0.75 * hash(k * 3 + pi))); im.setMatrixAt(k, M); }
       im.castShadow = im.receiveShadow = true; this.s.add(im);
@@ -109,7 +109,7 @@ export default class S11Finale extends Scene {
     // the perch: a dead phone standing on end, black glass cracked from the corner, a greyed-out toast still on screen
     { const top = 8.45, g = new THREE.Group(), H = top - 0.3;
       const body = new THREE.Mesh(new RoundedBoxGeometry(3.0, H, 0.45, 4, 0.36), new THREE.MeshStandardMaterial({ color: 0x141418, roughness: 0.35, metalness: 0.6 }));
-      const glass = new THREE.Mesh(new THREE.PlaneGeometry(2.7, H - 0.45), new THREE.MeshStandardMaterial({ color: 0xffffff, map: lockTex(), emissive: 0xffffff, emissiveMap: lockTex(), emissiveIntensity: 0.55, roughness: 0.06, metalness: 0.25 }));
+      const glass = new THREE.Mesh(new THREE.PlaneGeometry(2.7, H - 0.45), new THREE.MeshStandardMaterial({ color: 0xffffff, map: lockTex(), emissive: 0xffffff, emissiveMap: lockTex(), emissiveIntensity: 0.55, roughness: 0.4, metalness: 0 }));
       glass.position.z = 0.26; body.position.y = H / 2; glass.position.y = H / 2;
       const toast = new THREE.Object3D();
       const cp: number[] = []; for (let k = 0; k < 9; k++) { const a = -0.3 - 1.2 * hash(k * 3.1), l = 1.2 + 2.8 * hash(k * 5.7); cp.push(1.25, H - 0.4, 0.28, 1.25 + l * Math.cos(Math.PI + a), H - 0.4 + l * Math.sin(Math.PI + a), 0.28); }
@@ -170,7 +170,7 @@ export default class S11Finale extends Scene {
     if (t > WHIP) { p.lerp(end, we); look.copy(this.PH); }
     // keep the hero centred over the vista, then it lifts off on the scream and leads the whip into the phone
     const c0 = this.cur.position.clone(), fwd = c0.clone().sub(p).normalize();
-    const vlook = c0.clone().addScaledVector(fwd, 20).add(new THREE.Vector3(0, 4.5, 0)); look.lerp(vlook, 1 - sm(SCREAM, SCREAM + 0.5, t));
+    const vlook = c0.clone().addScaledVector(fwd, 20).add(new THREE.Vector3(0, 4.5, 0)); look.lerp(vlook, 1 - sm(SCREAM, SCREAM + 0.5, t)); look.y -= 5.5 * sm(24.6, 25.1, t) * (1 - sm(SCREAM, SCREAM + 0.5, t));
     const lift = sm(SCREAM + 0.25, SCREAM + 0.9, t);
     if (lift > 0) { const vd = look.clone().sub(p).normalize(), D = Math.min(13, 0.6 * p.distanceTo(this.PH)); this.cur.scale.setScalar(lerp(1.9, 1.35, lift));
       this.cur.position.lerp(p.clone().addScaledVector(vd, D).add(new THREE.Vector3(0, -0.9, 0)), lift); const q0 = this.cur.quaternion.clone(); this.cur.lookAt(p); this.cur.quaternion.copy(q0.slerp(this.cur.quaternion, lift)); }
