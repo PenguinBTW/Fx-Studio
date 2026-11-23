@@ -30,8 +30,8 @@ void main() {
       vec3 rhein = mix(vec3(1.0, 0.75, 0.15), vec3(1.0, 0.1, 0.65), fr); vec3 irid = 0.5 + 0.5 * cos(6.2831 * (film + vec3(0.0, 0.33, 0.67)));
       acc += Tr * (rhein * (0.015 + 0.9 * fr * fr) + irid * 0.12 * fr); Tr *= 0.86; t += 0.02; if (Tr < 0.05) break; continue; } // glass: keep going
     t += max(h * 0.8, 0.002); if (t > d + 3.0) break; }
-  C = C * Tr + acc + vec3(0.9, 0.3, 1.0) * glow * 0.006;
+  C = C * Tr + acc + vec3(0.9, 0.3, 1.0) * glow * 0.002;
   float stall = smoothstep(17.9, 18.15, uT) * (1.0 - smoothstep(19.4, 19.55, uT)); C *= 1.0 - 0.15 * stall;
   fragColor = vec4(C, 1.0); }`;
 
-export default shaderScene(FRAG, (t) => ({ toneMap: 'aces', exposure: 1.05, bloom: 0.7, bloomThreshold: 0.6, halation: 0.3, vignette: 0.5, grain: 0.045, ca: 0.25 + 0.05 * Math.abs(dZ(t)) }));
+export default shaderScene(FRAG, (t) => ({ toneMap: 'aces', exposure: 0.55, bloom: 0.6, bloomThreshold: 0.85, halation: 0.3, vignette: 0.5, grain: 0.045, ca: 0.25 + 0.05 * Math.abs(dZ(t)) }));

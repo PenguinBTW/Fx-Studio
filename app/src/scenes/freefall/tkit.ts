@@ -27,7 +27,7 @@ export function ffTransition(frag: string, o: FFOpts) {
 /** GLSL helpers for the ff_* seams: aspect-correct centred coords, zoomed taps of either participant, noise. */
 export const TG = /* glsl */ `
 vec2 P() { return (vUv - 0.5) * vec2(uAsp, 1.0); }
-vec2 toUv(vec2 p) { return p / vec2(uAsp, 1.0) + 0.5; }
+vec2 toUv(vec2 p) { vec2 v = p / vec2(uAsp, 1.0) + 0.5; return 1.0 - abs(mod(v, 2.0) - 1.0); }
 vec3 tapA(vec2 p, float s) { return texture2D(texA, toUv(p / s)).rgb; }
 vec3 tapB(vec2 p, float s) { return texture2D(texB, toUv(p / s)).rgb; }
 float ffth(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }

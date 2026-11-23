@@ -13,12 +13,12 @@ const LCD = /* glsl */ `${FFN}
 uniform sampler2D uImg; uniform float uN, uMelt;
 void main() {
   vec2 q = ff_uv(); vec2 res = vec2(1080.0, 1920.0); vec2 pc = mix(vec2(540.0, 960.0), vec2(540.17, 960.5), smoothstep(400.0, 4.0, uN)); vec2 pp = pc + q * 0.5 * uN;
-  vec2 id = floor(pp), f = fract(pp); vec3 img = texture(uImg, (id + 0.5) / res).rgb; vec3 direct = texture(uImg, pp / res).rgb; vec3 lc = 0.85 + 0.3 * vec3(ff_fbm(vec3(f * 14.0, uT * 0.5), 4));
+  vec2 id = floor(pp), f = fract(pp); vec3 img = texture(uImg, (id + 0.5) / res).rgb; vec3 direct = texture(uImg, pp / res).rgb; vec3 lc = (0.55 + 0.9 * vec3(ff_fbm(vec3(f * 14.0, uT * 0.5), 4))) * mix(1.0, 0.3, smoothstep(8.0, 1.0, uN));
   float bx = 0.06, by = 0.07; vec3 m = vec3(0.0);
   for (int c = 0; c < 3; c++) { float x0 = float(c) / 3.0 + 0.03, x1 = float(c + 1) / 3.0 - 0.03; float r = 0.05;
     vec2 cc = vec2(clamp(f.x, x0 + r, x1 - r), clamp(f.y, by + r, 1.0 - by - r)); float dd = length(f - cc) - r; float on = smoothstep(0.01, -0.01, dd);
     float lum = (c == 0 ? img.r : c == 1 ? img.g : img.b); vec3 cl = c == 0 ? vec3(1.0, 0.05, 0.05) : c == 1 ? vec3(0.05, 1.0, 0.1) : vec3(0.1, 0.2, 1.0);
-    m += cl * on * (0.04 + lum * 3.2 + (c == 0 ? 0.5 : 0.0) * smoothstep(8.0, 1.0, uN)) * (0.85 + 0.15 * sin(f.y * 40.0)) * lc; }
+    m += cl * on * (0.04 + lum * 3.2 + (c == 0 ? 0.15 : 0.0) * smoothstep(8.0, 1.0, uN)) * (0.85 + 0.15 * sin(f.y * 40.0)) * lc; }
   m += vec3(0.02, 0.02, 0.03) * (1.0 - smoothstep(0.0, 0.1, abs(f.y - 0.5) - 0.4)); // black matrix sheen
   vec3 sheen = vec3(0.5, 0.6, 0.8) * pow(max(0.0, 1.0 - abs(q.x + q.y * 0.6 - 0.3)), 8.0) * 0.08 * (1.0 - uMelt);
   float sub = smoothstep(90.0, 20.0, uN); vec3 avg = mix(direct, img, step(uN, 1500.0) * 0.0 + 0.0); // past ~60 px per frame the stripes average out
@@ -40,7 +40,7 @@ export default class S09Screen extends Scene {
     rr.setRenderTarget(out); rr.setClearColor(0, 1); rr.clear(true, true, true); this.lcd.render(rr, out); rr.resetState();
     if (f.tin >= 1 && f.tout <= 0) hud(rr, this.ctx.comp, out, t);
     const z0 = Z(0); const melt = u.uMelt!.value as number;
-    return { toneMap: 'aces', exposure: 1.25, bloom: 0.85 - 0.0 * melt, bloomThreshold: 0.45, halation: 0.35, vignette: 0.35, grain: 0.04, ca: 0.15 + 0.25 * Math.max(0, 5.6 - z0) + 0.4 * (1 - melt) };
+    return { toneMap: 'aces', exposure: 1.25, bloom: 0.85 - 0.0 * melt, bloomThreshold: 0.45, halation: 0.35, vignette: 0.35, grain: 0.04, ca: Math.min(0.7, 0.15 + 0.05 * Math.max(0, 5.6 - z0) + 0.3 * (1 - melt)) };
   }
   override dispose() { this.orbit.dispose(); this.lcd.dispose(); this.img?.dispose(); }
 }

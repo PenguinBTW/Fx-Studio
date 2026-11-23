@@ -1,11 +1,12 @@
 // FREEFALL shared GLSL: value noise / fbm (3D), camera ray helper. Names are ff_-prefixed to stay clear of GLSL_COMMON.
 export const FFN = /* glsl */ `
 uniform float uT, uZ, uDZ; uniform vec2 uRes;
-float ff_h(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+float ff_h(vec3 p) { vec3 p3 = fract(p * 0.1031); p3 += dot(p3, p3.zyx + 31.32); return fract((p3.x + p3.y) * p3.z); }
 float ff_n(vec3 x) { vec3 i = floor(x), f = fract(x); f = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
   return mix(mix(mix(ff_h(i), ff_h(i + vec3(1, 0, 0)), f.x), mix(ff_h(i + vec3(0, 1, 0)), ff_h(i + vec3(1, 1, 0)), f.x), f.y),
              mix(mix(ff_h(i + vec3(0, 0, 1)), ff_h(i + vec3(1, 0, 1)), f.x), mix(ff_h(i + vec3(0, 1, 1)), ff_h(i + vec3(1, 1, 1)), f.x), f.y), f.z); }
-float ff_fbm(vec3 p, int o) { float a = 0.5, s = 0.0; for (int i = 0; i < 8; i++) { if (i >= o) break; s += a * ff_n(p); p = p * 2.03 + vec3(1.7, 9.2, 3.1); a *= 0.5; } return s; }
+const mat3 FF_R = mat3(0.00, 0.80, 0.60, -0.80, 0.36, -0.48, -0.60, -0.48, 0.64);
+float ff_fbm(vec3 p, int o) { float a = 0.5, s = 0.0; p = FF_R * p; for (int i = 0; i < 8; i++) { if (i >= o) break; s += a * ff_n(p); p = FF_R * p * 2.03 + vec3(1.7, 9.2, 3.1); a *= 0.5; } return s; }
 float ff_h2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 vec2 ff_uv() { return (vUv - 0.5) * vec2(uRes.x / uRes.y, 1.0) * 2.0; }
 vec3 ff_ray(vec3 fw, vec3 upHint, float tanHalf, float roll) { vec2 q = ff_uv(); float c = cos(roll), s = sin(roll); q = mat2(c, -s, s, c) * q;

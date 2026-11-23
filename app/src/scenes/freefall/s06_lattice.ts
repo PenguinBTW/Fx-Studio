@@ -11,7 +11,7 @@ float lat(vec3 p, out float sp) { vec3 c = floor(p + 0.5); vec3 f = p - c; sp = 
 void main() {
   vec2 q = ff_uv(); float fh = pow(10.0, uZ); vec3 C;
   // macro: terraced hopper face seen from above, edges catching light; zoom = q * frame size in um
-  float macro = smoothstep(-7.6, -6.8, uZ);
+  float macro = smoothstep(-8.4, -7.8, uZ);
   vec2 m = q * fh * 0.5 / 1e-6 + vec2(3.0, 5.0); // um
   vec2 mc = m - vec2(3.0, 5.0) - vec2(0.12, -0.08) * fh / 1e-6; float terr = max(abs(mc.x), abs(mc.y)) + 1e-9; float lt = log(terr) / log(1.3); float lev = floor(lt); float fr = fract(lt);
   float edge = smoothstep(0.06, 0.0, fr) + smoothstep(0.94, 1.0, fr) * 0.5; vec3 face = mix(vec3(0.2, 0.05, 0.5), vec3(0.0, 0.5, 0.6), fract(lev * 0.37)) * (0.25 + 0.1 * sin(lev));

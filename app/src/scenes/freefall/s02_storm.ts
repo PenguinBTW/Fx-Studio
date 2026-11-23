@@ -29,7 +29,7 @@ void main() {
     float depth = 1.0 - ph; vec3 base = mix(vec3(0.16, 0.06, 0.34), vec3(0.03, 0.01, 0.09), depth);
     vec3 moon = normalize(vec3(-0.3, 0.8, 0.5)); float md = max(dot(nrm, moon), 0.0); vec3 col = base * (0.35 + 0.9 * md) + vec3(0.9, 0.25, 0.75) * pow(1.0 - a, 3.0) * 0.25 * md;
     vec3 Ld = normalize(vec3(fp - q, 0.25 + depth * 0.4)); float fl = F * exp(-length(q - fp) * (1.2 + depth)) * (0.4 + 1.2 * max(dot(nrm, Ld), 0.0));
-    col += vec3(0.45, 0.75, 1.8) * fl * (1.6 - depth) + vec3(0.7, 0.5, 1.6) * F * 0.08 * (1.0 - depth);
+    col += vec3(0.45, 0.75, 1.8) * fl * (1.0 - 0.6 * depth) + vec3(0.7, 0.5, 1.6) * F * 0.08 * (1.0 - depth);
     float edge = (1.0 - sea) * smoothstep(0.0, 0.5, a) * (1.0 - smoothstep(0.5, 1.0, a)); col += vec3(1.0, 0.4, 0.9) * edge * 0.2 * (1.0 + 4.0 * fl);
     C = mix(C, col, a);
     if (i == 3 && F > 0.03) { float d = boltD(q, fp, fk * 9.1, fp.y + 0.6, fp.y - 1.6); float d2 = boltD(q, fp + vec2(0.12, -0.3), fk * 5.3 + 2.0, fp.y - 0.3, fp.y - 0.95);
@@ -37,4 +37,4 @@ void main() {
   C += vec3(0.55, 0.6, 1.0) * ff_speed(0.12 + 0.5 * sea, 2.0) * (0.25 + F);
   fragColor = vec4(C, 1.0); }`;
 
-export default shaderScene(FRAG, (t) => ({ toneMap: 'aces', exposure: 1.35, bloom: 0.9, bloomThreshold: 0.55, halation: 0.35, vignette: 0.4, grain: 0.05, ca: 0.2 + 0.05 * Math.abs(dZ(t)) }));
+export default shaderScene(FRAG, (t) => ({ toneMap: 'aces', exposure: 1.0, bloom: 0.9, bloomThreshold: 0.55, halation: 0.35, vignette: 0.4, grain: 0.05, ca: 0.2 + 0.05 * Math.abs(dZ(t)) }));
