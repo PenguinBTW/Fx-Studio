@@ -7,7 +7,7 @@ import type { Compositor } from '../../engine/gl';
 
 export const BAR = 2, BEAT = 0.5, END = 38;
 // [t, Z] keys; the fall stalls at the midpoint (18-19.5) then slams
-const KEYS: [number, number][] = [[0, 6.9], [4, 5.0], [8, 2.6], [11, -2.2], [15, -3.4], [18, -4.05], [19.5, -4.12], [20, -4.9], [24, -9.2], [28, -14], [31, -18], [33, -3.6], [END, 6.9]];
+const KEYS: [number, number][] = [[0, 6.9], [4, 5.0], [8, 2.6], [9.3, -1.3], [11, -2.3], [15, -3.4], [18, -4.05], [19.5, -4.12], [20, -4.9], [24, -9.2], [28, -14], [31, -18], [33, -3.6], [END, 6.9]];
 const M = (() => { // Fritsch-Carlson monotone tangents
   const n = KEYS.length, d: number[] = [], m: number[] = [];
   for (let i = 0; i < n - 1; i++) d.push((KEYS[i + 1]![1] - KEYS[i]![1]) / (KEYS[i + 1]![0] - KEYS[i]![0]));
@@ -25,7 +25,7 @@ export const dZ = (t: number) => (Z(t + 0.01) - Z(t - 0.01)) / 0.02;
 
 const LABELS: [number, string][] = [[0, 'low orbit'], [4, 'thunderhead'], [8, 'raindrop'], [11, 'plankton'], [15, 'diatom'], [20, 'salt crystal'], [24, 'sodium atom'], [28, 'quark'], [31, 'your screen'], [33.6, '']];
 const TEXT: { at: number; end: number; s: string }[] = [
-  { at: 0, end: 1.35, s: 'no footage.' }, { at: 1.4, end: 3.3, s: 'just code.' }, { at: 31.3, end: 33.4, s: "that's your screen." }];
+  { at: 0, end: 1.35, s: 'no footage.' }, { at: 1.4, end: 3.3, s: 'just code.' }, { at: 18.1, end: 19.45, s: 'closer.' }, { at: 31.3, end: 33.4, s: "that's your screen." }];
 
 let layer: Layer2D | null = null;
 const SUP = '\u2070\u00b9\u00b2\u00b3\u2074\u2075\u2076\u2077\u2078\u2079';
@@ -39,6 +39,8 @@ export function hud(renderer: THREE.WebGLRenderer, comp: Compositor, out: THREE.
   g.save(); g.globalAlpha = alpha; g.textAlign = 'center'; g.textBaseline = 'alphabetic';
   g.shadowColor = 'rgba(0,0,0,0.75)'; g.shadowBlur = 18;
   const cx = W * 0.44, y = 360;
+  const bk = g.createRadialGradient(cx, y - 10, 10, cx, y - 10, 300); bk.addColorStop(0, "rgba(0,0,0,0.42)"); bk.addColorStop(1, "rgba(0,0,0,0)");
+  g.save(); g.fillStyle = bk; g.translate(cx, y - 10); g.scale(1.3, 0.45); g.translate(-cx, -(y - 10)); g.fillRect(cx - 300, y - 310, 600, 600); g.restore();
   g.font = `82px "${F.archivo(100, 800)}"`; g.fillStyle = '#ffffff';
   const s = glitch >= 0 ? ['10\u207b\u00b9\u2078 m', '\u2588\u2588\u207b\u2074 m', '10\u207b\u2074 m'][glitch]! : `${m.toFixed(1)} \u00d7 10${sup(e)} m`;
   g.fillText(s, cx, y);
