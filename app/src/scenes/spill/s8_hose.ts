@@ -7,6 +7,7 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import { resolveAsset } from '../../engine/assets';
 import { bar, BEAT, lerp, sm, hash, stepped, clamp } from './kit';
+import { Cameos } from './cameo';
 
 const T0 = bar(7), T1 = bar(8), CS = 1.4;
 const QUAD_V = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`;
@@ -34,6 +35,7 @@ void main(){ vec3 c = texture2D(tCol, vUv).rgb; float L = dot(c, vec3(0.3, 0.59,
 const COLS: Record<string, [number, number, number]> = { HoseBlack: [0.07, 0.07, 0.07], HoseWhite: [0.95, 0.94, 0.9], HoseGrey: [0.55, 0.54, 0.52], HoseTint: [0.85, 0.2, 0.17] };
 export default class S8Hose extends Scene {
   private s = new THREE.Scene(); private cam = new THREE.PerspectiveCamera(42, 9 / 16, 0.3, 300);
+  private cameos = new Cameos([{ k: 'glass', t0: 18.7, dur: 1.6, path: 'fly', y: 0.55, s: 0.13, n: 3, dir: -1 }, { k: 'pixbird', t0: 19.3, dur: 1.0, path: 'fly', y: 0.8, s: 0.08, n: 3 }]);
   private insts: GLTFInstance[] = [];
   private G = { uGlow: { value: 0 }, uGlowP: { value: new THREE.Vector3() } };
   private bobs: { o: THREE.Object3D; ph: number; k: number }[] = []; private mouths: THREE.Object3D[] = [];
@@ -109,6 +111,7 @@ export default class S8Hose extends Scene {
     const fr = Math.floor(t * 12); this.filmU.tCol.value = this.rt.texture; this.filmU.uT.value = t; this.filmU.uF.value = 0.93 + 0.07 * hash(fr); this.filmU.uRes.value.set(out.width, out.height);
     rr.setRenderTarget(out); rr.clear(); rr.render(this.qs, this.qc); rr.resetState();
     const gw = 3 * (hash(fr * 1.3) - 0.5);
+    this.cameos.draw(this.ctx.renderer, out, f.t);
     return { toneMap: 'legacy', exposure: 1.0, bloom: 0.15, bloomThreshold: 1.0, vignette: 0.0, grain: 0.0, ca: 0.0, shake: [gw, 2 * gw] };
   }
 

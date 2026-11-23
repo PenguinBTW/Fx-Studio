@@ -7,6 +7,7 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import { resolveAsset } from '../../engine/assets';
 import { bar, GULP, lerp, sm, hash, spring, stepped, clamp } from './kit';
+import { Cameos } from './cameo';
 
 const T0 = bar(3), SPIT = bar(4), T1 = bar(5), CS = 1.4;
 const QUAD_V = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`;
@@ -43,6 +44,7 @@ const VAL: Record<string, [number, number]> = { Ink: [0.1, 0], InkWash: [0.5, 0]
 export default class S5Ink extends Scene {
   private s = new THREE.Scene(); private curS = new THREE.Scene();
   private cam = new THREE.PerspectiveCamera(40, 9 / 16, 0.5, 400);
+  private cameos = new Cameos([{ k: 'pixfish', t0: 11.7, dur: 0.5, path: 'leap', x: 0.5, y: -0.2, s: 0.12, n: 2, dir: -1 }, { k: 'pixfish', t0: 13.6, dur: 0.6, path: 'leap', x: -0.4, y: -0.1, s: 0.12, n: 2 }, { k: 'crane', t0: 13.8, dur: 1.3, path: 'fly', y: 0.6, s: 0.12, n: 3 }]);
   private insts: GLTFInstance[] = [];
   private glowU = { uGlowP: { value: new THREE.Vector3() }, uGlow: { value: 0 }, uGlowR: { value: 1.2 } };
   private heron!: THREE.Object3D; private neck!: THREE.Object3D; private head!: THREE.Object3D; private top!: THREE.Object3D; private bot!: THREE.Object3D;
@@ -132,6 +134,7 @@ export default class S5Ink extends Scene {
     if (this.cur.visible) { rr.clearDepth(); rr.render(this.curS, this.cam); }
     rr.autoClear = auto; rr.resetState();
     const hit = Math.max(t >= GULP[0] ? Math.exp(-(t - GULP[0]) * 10) : 0, t >= SPIT ? Math.exp(-(t - SPIT) * 10) : 0);
+    this.cameos.draw(this.ctx.renderer, out, f.t);
     return { toneMap: 'legacy', exposure: 1.0, bloom: 0.1, bloomThreshold: 1.1, vignette: 0.25, grain: 0.03, ca: 0.1 + hit, shake: [18 * hit * Math.sin(t * 91), 18 * hit * Math.cos(t * 77)] };
   }
 

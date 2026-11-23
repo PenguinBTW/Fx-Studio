@@ -7,6 +7,7 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import { resolveAsset } from '../../engine/assets';
 import { bar, lerp, sm, hash, stepped, clamp } from './kit';
+import { Cameos } from './cameo';
 
 const T0 = bar(9), T1 = bar(10), CS = 1.4, DIV = 3.5;
 const QUAD_V = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`;
@@ -36,6 +37,7 @@ function tex32(seed: number, kind: 'noise' | 'brick' | 'scale') {
 
 export default class S10Ps1 extends Scene {
   private s = new THREE.Scene(); private cam = new THREE.PerspectiveCamera(50, 9 / 16, 0.3, 300);
+  private cameos = new Cameos([{ k: 'sheep', t0: 22.15, dur: 1.7, path: 'walk', y: -0.72, s: 0.16, n: 3, dir: -1 }, { k: 'pixbird', t0: 22.5, dur: 1.2, path: 'fly', y: 0.78, s: 0.08, n: 5 }]);
   private insts: GLTFInstance[] = []; private snap = { value: new THREE.Vector2(160, 284) };
   private fogC = { value: new THREE.Color(0.55, 0.3, 0.45) };
   private dino!: THREE.Object3D; private dHead!: THREE.Object3D; private dJaw!: THREE.Object3D; private dTail!: THREE.Object3D;
@@ -99,6 +101,7 @@ export default class S10Ps1 extends Scene {
     const auto = rr.autoClear; rr.autoClear = false;
     rr.setRenderTarget(this.lo); rr.clear(); rr.render(this.sky, this.qc); rr.clearDepth(); rr.render(this.s, this.cam);
     this.upU.tLo.value = this.lo.texture; rr.setRenderTarget(out); rr.clear(); rr.render(this.qs, this.qc); rr.autoClear = auto; rr.resetState();
+    this.cameos.draw(this.ctx.renderer, out, f.t);
     return { toneMap: 'legacy', exposure: 1.0, bloom: 0.3, bloomThreshold: 0.9, vignette: 0.25, grain: 0.02, ca: 0.1 + 0.6 * shake, shake: [14 * shake * Math.sin(t * 80), 10 * shake * Math.cos(t * 70)] };
   }
 

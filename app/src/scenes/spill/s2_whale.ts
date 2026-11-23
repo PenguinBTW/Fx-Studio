@@ -6,6 +6,7 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import { resolveAsset } from '../../engine/assets';
 import { DROP, BAR, lerp, sm, hash, spring } from './kit';
+import { Cameos } from './cameo';
 
 const WS = 4, CS = 5;
 const QUAD_V = /* glsl */ `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`;
@@ -84,6 +85,7 @@ export default class S2Whale extends Scene {
   private main = new THREE.Scene();
   private curS = new THREE.Scene();
   private cam = new THREE.PerspectiveCamera(40, 9 / 16, 0.5, 6000);
+  private cameos = new Cameos([{ k: 'pixbird', t0: 6.6, dur: 1.6, path: 'fly', y: 0.7, s: 0.09, n: 5 }, { k: 'crane', t0: 7.0, dur: 1.2, path: 'fly', y: 0.45, s: 0.14, n: 3, dir: -1 }]);
   private insts: GLTFInstance[] = [];
   private whale!: THREE.Object3D;
   private flukes!: THREE.Object3D;
@@ -195,6 +197,7 @@ export default class S2Whale extends Scene {
     const auto = rr.autoClear; rr.autoClear = false;
     rr.setRenderTarget(out); rr.clear(); rr.render(this.qs, this.qc); rr.clearDepth(); rr.render(this.curS, this.cam); rr.autoClear = auto; rr.resetState();
     const hit = Math.exp(-d * 10);
+    this.cameos.draw(this.ctx.renderer, out, f.t);
     return { toneMap: 'aces', exposure: 0.82, bloom: 0.15, bloomThreshold: 1.2, vignette: 0.35, grain: 0.03, ca: 0.2 + 1.2 * hit,
       shake: [30 * hit * Math.sin(t * 97), 30 * hit * Math.cos(t * 83)], zoom: 1 + 0.06 * hit };
   }

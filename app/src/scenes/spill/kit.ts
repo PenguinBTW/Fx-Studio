@@ -23,7 +23,7 @@ export function impactFrame(t: number): { k: number; i: number } {
   const hits = [...RAMS, ...PULSES];
   for (let i = hits.length - 1; i >= 0; i--) {
     const d = t - hits[i];
-    if (d >= 0 && d < 2 / 30) return { k: i < 3 ? 1 : 1 - (i - 2) / (PULSES.length + 1), i };
+    if (d >= 0 && d < (i === 2 ? 3 : 2) / 30) return { k: i < 6 ? 1 : 0.7, i };
   }
   return { k: 0, i: -1 };
 }

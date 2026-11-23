@@ -7,6 +7,7 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import { resolveAsset } from '../../engine/assets';
 import { SCREAM, WHIP, END, BEAT, lerp, sm, hash, clamp } from './kit';
+import { Cameos } from './cameo';
 import S1Breakout from './s1_breakout';
 
 const HAND = 0.42;
@@ -34,6 +35,7 @@ const LOOKERS = new Set(['deer', 'heron', 'sheep', 'fox', 'dino', 'peacock', 'sa
 
 export default class S11Finale extends Scene {
   private s = new THREE.Scene(); private cam = new THREE.PerspectiveCamera(42, 9 / 16, 0.1, 600);
+  private cameos = new Cameos([{ k: 'pixbird', t0: 24.0, dur: 2.0, path: 'fly', y: 0.8, s: 0.08, n: 6 }, { k: 'crane', t0: 24.3, dur: 1.8, path: 'fly', y: 0.6, s: 0.12, n: 3, dir: -1 }, { k: 'glass', t0: 24.6, dur: 1.6, path: 'fly', y: 0.45, s: 0.11, n: 2 }, { k: 'crayon', t0: 24.9, dur: 1.5, path: 'fly', y: 0.3, s: 0.12, n: 2, dir: -1 }, { k: 'koi', t0: 24.4, dur: 0.7, path: 'leap', x: -0.5, y: -0.2, s: 0.16 }, { k: 'pixfish', t0: 25.0, dur: 0.6, path: 'leap', x: 0.5, y: -0.25, s: 0.1, n: 2 }, { k: 'bee', t0: 24.2, dur: 2.4, path: 'float', x: 0.72, y: 0.15, s: 0.1 }]);
   private insts: GLTFInstance[] = []; private s1!: S1Breakout;
   private cur!: THREE.Object3D; private core: THREE.MeshStandardMaterial[] = []; private patchU = { uT: { value: 0 }, uK: { value: 0 } };
   private lookers: { o: THREE.Object3D; base: THREE.Euler; ph: number }[] = [];
@@ -121,6 +123,7 @@ export default class S11Finale extends Scene {
     if (t > SCREAM) { this.s1.render({ ...f, t: Math.max(t - END, -HAND - 0.6) }, this.scrRT); }
     rr.setRenderTarget(out); rr.setClearColor(0, 1); rr.clear(); rr.render(this.s, this.cam); rr.resetState();
     const kick = t > SCREAM ? Math.exp(-(t - SCREAM) * 3) : 0, whip = Math.sin(Math.PI * wk);
+    this.cameos.draw(this.ctx.renderer, out, f.t);
     return { toneMap: 'aces', exposure: 1.05 + 0.6 * kick, bloom: 0.25 + 0.5 * kick, bloomThreshold: 1.0, vignette: 0.35, grain: 0.03,
       ca: 0.15 + 1.5 * kick + 2.5 * whip, zoom: 1 + 0.08 * whip, depthDof: t < SCREAM + 0.3 ? { enabled: true, focusDistance: p.distanceTo(this.cur.position), aperture: 5, blades: 7, maxRadius: 16, near: 0.1, far: 600 } : undefined, shake: [20 * kick * Math.sin(t * 90), 20 * kick * Math.cos(t * 77)] };
   }

@@ -7,6 +7,7 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import { resolveAsset } from '../../engine/assets';
 import { bar, lerp, sm, hash, stepped, clamp } from './kit';
+import { Cameos } from './cameo';
 
 const T0 = bar(6), T1 = bar(7), CS = 1.4, NS = 34;
 const FELT_V = /* glsl */ `attribute float wool; uniform float uShell, uLen; varying vec3 vN, vW, vP, vC; varying float vWool;
@@ -61,6 +62,7 @@ const colAttr = (g: THREE.BufferGeometry, rgb: number[], wool: number) => { cons
   g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3).map((_, i) => rgb[i % 3]), 3)); g.setAttribute('wool', new THREE.BufferAttribute(new Float32Array(n).fill(wool), 1)); return g; };
 export default class S7Felt extends Scene {
   private s = new THREE.Scene(); private cam = new THREE.PerspectiveCamera(40, 9 / 16, 0.3, 500);
+  private cameos = new Cameos([{ k: 'crayon', t0: 17.0, dur: 1.5, path: 'fly', y: 0.6, s: 0.13, n: 3 }, { k: 'pixbird', t0: 17.6, dur: 1.0, path: 'fly', y: 0.8, s: 0.08, n: 4, dir: -1 }, { k: 'koi', t0: 17.9, dur: 0.6, path: 'leap', x: 0.5, y: -0.3, s: 0.16 }]);
   private insts: GLTFInstance[] = [];
   private U = { uCreep: { value: 0 }, uGlow: { value: 0 }, uGlowP: { value: new THREE.Vector3() } };
   private sheep!: Fur; private fox!: Fur; private pom!: Fur; private sd: { x: number; z: number; ph: number; s: number }[] = [];
@@ -124,6 +126,7 @@ export default class S7Felt extends Scene {
     this.cam.position.set(cp.x - 2 - 6 * w, 2.4 + 5 * w, 10.5 + 10 * w); this.cam.aspect = out.width / out.height; this.cam.fov = 40 + 8 * w; this.cam.updateProjectionMatrix();
     const ly = t < LAND ? lerp(cp.y, back.y, 0.75) : cp.y; this.cam.lookAt(cp.x + 1.5 + 4 * w, ly - 0.6 - 1.5 * w, cp.z - 2 * w);
     rr.setRenderTarget(out); rr.render(this.s, this.cam);
+    this.cameos.draw(this.ctx.renderer, out, f.t);
     return { toneMap: 'aces', exposure: 1.05, bloom: 0.25, bloomThreshold: 1.0, vignette: 0.3, grain: 0.04, ca: 0.1 + land, shake: [10 * land, 6 * land] };
   }
 

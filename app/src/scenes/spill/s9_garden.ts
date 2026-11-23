@@ -7,6 +7,7 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import { resolveAsset } from '../../engine/assets';
 import { bar, lerp, sm, hash, stepped, clamp } from './kit';
+import { Cameos } from './cameo';
 
 const T0 = bar(8), T1 = bar(9), CS = 1.4, NB = 14;
 const SHAFT_V = /* glsl */ `varying vec2 vUv; varying vec3 vW, vN; void main(){ vUv = uv; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vN = normalize(mat3(modelMatrix) * normal); gl_Position = projectionMatrix * viewMatrix * w; }`;
@@ -20,6 +21,7 @@ const BCOL = [0xe61a26, 0xffa61a, 0x33cce6, 0x8c33d9, 0x26bf4d, 0x1a4df2];
 
 export default class S9Garden extends Scene {
   private s = new THREE.Scene(); private cam = new THREE.PerspectiveCamera(42, 9 / 16, 0.3, 400);
+  private cameos = new Cameos([{ k: 'hose', t0: 20.4, dur: 1.7, path: 'float', x: -0.72, y: -0.72, s: 0.2 }, { k: 'crayon', t0: 20.6, dur: 1.4, path: 'fly', y: 0.7, s: 0.13, n: 2 }]);
   private insts: GLTFInstance[] = [];
   private bf: { o: THREE.Object3D; wl: THREE.Object3D; wr: THREE.Object3D; shaft: THREE.Mesh; pool: THREE.Mesh; ph: number; r: number; h: number; c: number }[] = [];
   private lights: THREE.PointLight[] = [];
@@ -82,6 +84,7 @@ export default class S9Garden extends Scene {
     this.cam.position.set(cp.x - 3.5 - 1.5 * up, 1.6 + 2.2 * up, 7 + 3 * up); this.cam.aspect = out.width / out.height; this.cam.updateProjectionMatrix();
     this.cam.lookAt(cp.x + 1.5, 2.2 + 0.8 * up, -1.2);
     rr.setRenderTarget(out); rr.render(this.s, this.cam);
+    this.cameos.draw(this.ctx.renderer, out, f.t);
     return { toneMap: 'aces', exposure: 1.1, bloom: 0.6, bloomThreshold: 0.85, vignette: 0.35, grain: 0.03, ca: 0.15 };
   }
 

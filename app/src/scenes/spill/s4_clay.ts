@@ -6,6 +6,7 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import { resolveAsset } from '../../engine/assets';
 import { bar, lerp, sm, hash, spring, stepped, clamp } from './kit';
+import { Cameos } from './cameo';
 
 const T0 = bar(2), T1 = bar(3), CS = 1.4;
 const FROG_HIT = T0 + 0.33, BUS = T0 + 0.87;
@@ -24,6 +25,7 @@ function thumbs() {
 export default class S4Clay extends Scene {
   private s = new THREE.Scene();
   private cam = new THREE.PerspectiveCamera(40, 9 / 16, 0.1, 600);
+  private cameos = new Cameos([{ k: 'hose', t0: 9.95, dur: 1.7, path: 'float', x: 0.75, y: -0.72, s: 0.22 }, { k: 'hose', t0: 10.1, dur: 1.5, path: 'float', x: -0.78, y: -0.74, s: 0.18 }, { k: 'crayon', t0: 10.2, dur: 1.4, path: 'fly', y: 0.55, s: 0.15, n: 2, dir: -1 }, { k: 'pixbird', t0: 10.6, dur: 1.0, path: 'fly', y: 0.8, s: 0.07, n: 3 }]);
   private insts: GLTFInstance[] = [];
   private boil: { o: THREE.Object3D; p: THREE.Vector3; s: THREE.Vector3; i: number }[] = [];
   private frog!: THREE.Object3D; private snail!: THREE.Object3D; private stalks: THREE.Object3D[] = [];
@@ -107,6 +109,7 @@ export default class S4Clay extends Scene {
     this.cam.position.set(p.x - 3 + 2 * k, 2.4 + 0.6 * kick, 9.5 - 1.5 * k); this.cam.fov = 44 - 6 * kick;
     this.cam.aspect = out.width / out.height; this.cam.updateProjectionMatrix(); this.cam.lookAt(p.x + 2, 1.4, -1.5);
     rr.setRenderTarget(out); rr.setClearColor(0xf0b080, 1); rr.clear(); rr.render(this.s, this.cam);
+    this.cameos.draw(this.ctx.renderer, out, f.t);
     return { toneMap: 'aces', exposure: 0.95, bloom: 0.12, bloomThreshold: 1.3, vignette: 0.3, grain: 0.04, ca: 0.2 + kick,
       shake: [16 * kick * Math.sin(t * 91), 16 * kick * Math.cos(t * 77)] };
   }

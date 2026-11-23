@@ -12,9 +12,17 @@ const CUT = PULSES[2];
 const GLASS_Z = 0.6, HIT_Z = GLASS_Z - 0.115;
 const INK = ['#e8202a', '#ffd21a', '#16b8e8', '#ffffff', '#e8202a', '#ffd21a', '#16b8e8', '#e8202a'];
 
+const WORDS = ['THUNK', 'THUNK!!', 'KRAK!', 'SKRSSH', 'FWOOM!', 'WHAM', 'zip', 'zip'];
+function wordTex(w: string) {
+  const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 256; const g = cv.getContext('2d')!;
+  g.translate(512, 132); g.transform(1, 0, -0.18, 1, 0, 0); g.font = '900 190px Archivo, Impact, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+  g.fillStyle = '#0a0a0a'; g.fillText(w, 14, 14); g.lineWidth = 34; g.strokeStyle = '#0a0a0a'; g.strokeText(w, 0, 0);
+  const gr = g.createLinearGradient(0, -90, 0, 90); gr.addColorStop(0, '#fff4a0'); gr.addColorStop(1, '#ff8a1a'); g.fillStyle = gr; g.fillText(w, 0, 0);
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
 const QUAD_V = /* glsl */ `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`;
 const COMIC_F = /* glsl */ `
-uniform sampler2D tScene; uniform vec2 uRes, uC; uniform float uImp, uT; uniform vec3 uInk; varying vec2 vUv;
+uniform sampler2D tScene, tWord; uniform vec2 uRes, uC, uWP; uniform float uImp, uT, uWR; uniform vec3 uInk; varying vec2 vUv;
 float lum(vec2 uv) { vec3 c = texture2D(tScene, uv).rgb; c = c / (1.0 + c); return dot(c, vec3(0.299, 0.587, 0.114)); }
 float h1(float n) { return fract(sin(n * 91.345) * 47453.21); }
 void main() {
@@ -32,9 +40,14 @@ void main() {
   vec3 c = uInk;
   c = mix(c, ink, dots * 0.85);
   c = mix(c, vec3(1.0), smoothstep(0.62, 0.7, l));
+  vec3 cc = col / (1.0 + col); float hot = step(0.22, cc.r - cc.b) * step(0.45, cc.r);
+  c = mix(c, vec3(1.0, 0.5, 0.06), hot);
   c = mix(c, ink, max(edge, step(l, 0.12)));
   c = mix(c, vec3(1.0) - c * 0.0 , lines * (1.0 - smoothstep(0.42, 0.55, l)) * 0.0);
   c = mix(c, (uInk.r > 0.9 && uInk.g > 0.9 && uInk.b > 0.9) ? ink : vec3(1.0), lines);
+  vec2 q = (vUv - uWP) * vec2(uRes.x / uRes.y, 1.0); q = mat2(cos(uWR), sin(uWR), -sin(uWR), cos(uWR)) * q;
+  vec2 wu = q / vec2(0.5, 0.125) + 0.5;
+  if (wu.x > 0.0 && wu.x < 1.0 && wu.y > 0.0 && wu.y < 1.0) { vec4 w = texture2D(tWord, wu); c = mix(c, w.rgb, w.a); }
   gl_FragColor = vec4(mix(col, c, uImp), 1.0);
 }`;
 const SKY_F = /* glsl */ `varying vec3 vD; uniform float uT;
@@ -59,6 +72,8 @@ type Shard = { o: THREE.Object3D; rest: THREE.Vector3; rq: THREE.Quaternion; d: 
 export default class S1Breakout extends Scene {
   private inS = new THREE.Scene();
   private exS = new THREE.Scene();
+  private intRT = new THREE.WebGLRenderTarget(360, 780, { type: THREE.HalfFloatType });
+  private intCam = new THREE.PerspectiveCamera(44, 360 / 780, 0.05, 200);
   private cam = new THREE.PerspectiveCamera(30, 9 / 16, 0.05, 4000);
   private insts: GLTFInstance[] = [];
   private cur!: THREE.Object3D;
@@ -70,7 +85,8 @@ export default class S1Breakout extends Scene {
   private shards: Shard[] = [];
   private shardMat!: THREE.MeshPhysicalMaterial;
   private crackU = { uProg: { value: 0 }, uT: { value: 0 } };
-  private comicU = { tScene: { value: null as THREE.Texture | null }, uRes: { value: new THREE.Vector2(1080, 1920) }, uC: { value: new THREE.Vector2(0.5, 0.5) }, uImp: { value: 0 }, uT: { value: 0 }, uInk: { value: new THREE.Color() } };
+  private comicU = { tScene: { value: null as THREE.Texture | null }, uRes: { value: new THREE.Vector2(1080, 1920) }, uC: { value: new THREE.Vector2(0.5, 0.5) }, uImp: { value: 0 }, uT: { value: 0 }, uInk: { value: new THREE.Color() }, tWord: { value: null as THREE.Texture | null }, uWP: { value: new THREE.Vector2(0.5, 0.75) }, uWR: { value: 0 } };
+  private words = WORDS.map(wordTex);
   private quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ vertexShader: QUAD_V, fragmentShader: COMIC_F, uniforms: this.comicU, depthTest: false, depthWrite: false }));
   private qs = new THREE.Scene();
   private qc = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
@@ -157,8 +173,9 @@ export default class S1Breakout extends Scene {
     const sky = new THREE.Mesh(new THREE.SphereGeometry(3000, 32, 16), new THREE.ShaderMaterial({ vertexShader: SKY_V, fragmentShader: SKY_F, uniforms: { uT: { value: 0 } }, side: THREE.BackSide, depthWrite: false }));
     this.exS.add(sky); this.exS.fog = new THREE.Fog(0x8a4a78, 160, 1100);
     phone.part('interior').visible = false;
+    let scrM: THREE.Mesh | null = null;
     phone.root.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; const p = phys(m); m.castShadow = m.receiveShadow = true;
-      if (p.name === 'Screen') { p.clearcoat = 1; p.clearcoatRoughness = 0.02; p.color.setRGB(0.004, 0.004, 0.006); p.roughness = 0.04; }
+      if (p.name === 'Screen') { scrM = m; p.clearcoat = 1; p.clearcoatRoughness = 0.02; p.color.setRGB(0.004, 0.004, 0.006); p.roughness = 0.04; }
       if (p.name === 'Alu') { p.clearcoat = 0.4; } });
     glass.root.scale.set(0.575, 1.24, 1); glass.root.position.set(0, -0.62, 0.43);
     glass.root.traverse((o) => { const m = o as THREE.Mesh;
@@ -166,9 +183,15 @@ export default class S1Breakout extends Scene {
       if (m.isMesh) m.visible = false;
       if (typeof o.userData.dist === 'number' && o.userData.dist < 1.3) o.visible = false; });
     const hs = new THREE.Shape(); for (let k = 0; k < 15; k++) { const a = k / 15 * Math.PI * 2, rr = 0.55 + 0.6 * hash(k * 4.3); k ? hs.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : hs.moveTo(rr, 0); }
-    const hole = new THREE.Mesh(new THREE.ShapeGeometry(hs), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 0.42, 0.06) }));
+    this.exS.add(phone.root, glass.root); this.exS.updateMatrixWorld(true);
+    const bb = new THREE.Box3().setFromObject(scrM ?? phone.root), sz = bb.getSize(new THREE.Vector3()), ctr = bb.getCenter(new THREE.Vector3());
+    const uvOf = (g: THREE.BufferGeometry, ox: number, oy: number, sx: number, sy: number) => { const P = g.attributes.position, U = g.attributes.uv;
+      for (let i = 0; i < P.count; i++) U.setXY(i, (P.getX(i) * sx + ox - bb.min.x) / sz.x, (P.getY(i) * sy + oy - bb.min.y) / sz.y); return g; };
+    const win = new THREE.Mesh(uvOf(new THREE.PlaneGeometry(sz.x * 0.97, sz.y * 0.98), ctr.x, ctr.y, 1, 1), new THREE.MeshBasicMaterial({ map: this.intRT.texture, color: new THREE.Color(0.5, 0.44, 0.52), toneMapped: false }));
+    win.position.set(ctr.x, ctr.y, 0.437);
+    const hole = new THREE.Mesh(uvOf(new THREE.ShapeGeometry(hs), 0, 0, 0.8, 1.0), new THREE.MeshBasicMaterial({ map: this.intRT.texture, color: new THREE.Color(3.2, 2.6, 2.2), toneMapped: false }));
     hole.position.set(0, 0, 0.44); hole.scale.set(0.8, 1.0, 1);
-    this.exS.add(phone.root, glass.root, hole);
+    this.exS.add(win, hole);
     const sun = new THREE.DirectionalLight(0xffc89a, 2.4); sun.position.set(-60, 40, 50);
     this.exS.add(sun, new THREE.HemisphereLight(0x6a6ad0, 0x4a2020, 0.6));
     // hanging screens: phones, monitors, CRTs, cinema screens at every depth, each on a cable from above
@@ -201,6 +224,7 @@ export default class S1Breakout extends Scene {
 
   /** blink is its face: steady on while charging, surprise double-blink after the break, terminal 1.06 Hz while falling */
   private blink(t: number) {
+    if (t < BREAK) return (t > 0.5 && t < 0.68) || (t > 1.08 && t < 1.24) ? 0.05 : 1;
     if (t < BREAK + 0.25) return 1;
     const d = t - (BREAK + 0.25);
     if (d < 0.36) return Math.floor(d / 0.09) % 2 ? 1 : 0.12;
@@ -233,8 +257,9 @@ export default class S1Breakout extends Scene {
     const hit = RAMS.reduce((a, h) => a + Math.max(0, spring(t - h, 40, 9)) * (h === BREAK ? 0.08 : 0.04), 0);
     const push = sm(0, BREAK, t), d = Math.max(0, t - BREAK);
     this.cam.fov = 38 - 6 * push + 10 * sm(0, 0.6, d);
-    this.cam.position.set(0.9 - 0.4 * push + hit, 1.0 + 0.1 * push, 4.6 - 1.0 * push + 2.2 * d - hit * 4);
-    this.cam.lookAt(0.0, 0.9 + 0.6 * d, -2.0);
+    const cy = this.cur.position.y;
+    this.cam.position.set(0.9 - 0.4 * push + hit + 0.6 * d, 1.0 + 0.1 * push + 0.85 * cy, 4.6 - 1.0 * push + 7.4 * d - hit * 4);
+    this.cam.lookAt(0.0, 0.9 * (1 - sm(0, 0.3, d)) + cy, lerp(-2.0, this.cur.position.z, sm(0, 0.25, d)));
     return this.cam.position.z - this.cur.position.z;
   }
 
@@ -262,6 +287,10 @@ export default class S1Breakout extends Scene {
     this.curLight.intensity = 0.2 + 1.6 * b; this.curLightX.intensity = 5 + 45 * b;
     this.lampLight.intensity = 2.2 * (1 - 0.6 * Math.max(0, ...RAMS.map((h) => Math.exp(-Math.max(0, t - h) * 20) * (t >= h ? 1 : 0))));
     this.screenT.value = t; const imp = impactFrame(t);
+    if (!inside) {
+      this.intCam.position.set(0.5, 1.05, 3.4); this.intCam.lookAt(0, 0.9, -2); this.cur.visible = false; for (const sh of this.shards) sh.o.visible = false;
+      rr.setRenderTarget(this.intRT); rr.setClearColor(0, 1); rr.clear(); rr.render(this.inS, this.intCam); this.cur.visible = true;
+    }
     const sc = inside ? this.inS : this.exS;
     if (imp.k > 0) {
       if (!this.rt || this.rt.width !== out.width || this.rt.height !== out.height) { this.rt?.dispose(); this.rt = new THREE.WebGLRenderTarget(out.width, out.height, { type: THREE.HalfFloatType }); }
@@ -269,6 +298,8 @@ export default class S1Breakout extends Scene {
       const cp = (inside ? this.cur : this.curX).getWorldPosition(new THREE.Vector3()).project(this.cam);
       Object.assign(this.comicU.uC.value, { x: cp.x * 0.5 + 0.5, y: cp.y * 0.5 + 0.5 }); this.comicU.uRes.value.set(out.width, out.height);
       this.comicU.tScene.value = this.rt.texture; this.comicU.uImp.value = imp.k; this.comicU.uT.value = t; this.comicU.uInk.value.set(INK[imp.i]);
+      this.comicU.tWord.value = this.words[imp.i]; this.comicU.uWR.value = (hash(imp.i * 7.3) - 0.5) * 0.5;
+      this.comicU.uWP.value.set(clamp(this.comicU.uC.value.x + (imp.i % 2 ? -0.08 : 0.08), 0.42, 0.58), clamp(this.comicU.uC.value.y + 0.24, 0.62, 0.8));
       rr.setRenderTarget(out); rr.clear(); rr.render(this.qs, this.qc);
     } else { rr.setRenderTarget(out); rr.setClearColor(0, 1); rr.clear(); rr.render(sc, this.cam); }
     rr.resetState();
@@ -278,6 +309,6 @@ export default class S1Breakout extends Scene {
       depthDof: imp.k > 0 ? undefined : { enabled: true, focusDistance: focus, aperture: inside ? 9 : 4, blades: 9, maxRadius: 22, near: 0.05, far: 4000 } };
   }
 
-  override dispose() { for (const i of this.insts) i.dispose(); this.rt?.dispose(); }
+  override dispose() { for (const i of this.insts) i.dispose(); this.rt?.dispose(); this.intRT.dispose(); }
 }
 void DROP; void clamp;

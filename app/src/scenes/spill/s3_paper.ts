@@ -7,6 +7,7 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import { resolveAsset } from '../../engine/assets';
 import { bar, lerp, sm, hash, spring, stepped, clamp } from './kit';
+import { Cameos } from './cameo';
 
 const T0 = bar(1), T1 = bar(2), CS = 1.6;
 const HITS = [T0 + 0.36, T0 + 0.8, T0 + 1.18];
@@ -23,6 +24,7 @@ function fibre() {
 export default class S3Paper extends Scene {
   private s = new THREE.Scene();
   private cam = new THREE.PerspectiveCamera(42, 9 / 16, 0.1, 800);
+  private cameos = new Cameos([{ k: 'pixbird', t0: 8.3, dur: 1.5, path: 'fly', y: 0.75, s: 0.08, n: 4, dir: -1 }, { k: 'glass', t0: 8.9, dur: 1.0, path: 'fly', y: 0.3, s: 0.12, n: 2 }, { k: 'bee', t0: 8.4, dur: 1.4, path: 'float', x: -0.7, y: -0.55, s: 0.12 }]);
   private insts: GLTFInstance[] = [];
   private fans: { o: THREE.Object3D; hit: number; base: THREE.Euler }[] = [];
   private cranes: { o: THREE.Object3D; wl: THREE.Object3D; wr: THREE.Object3D; v: THREE.Vector3; p: THREE.Vector3; ph: number }[] = [];
@@ -107,6 +109,7 @@ export default class S3Paper extends Scene {
     this.cam.aspect = out.width / out.height; this.cam.updateProjectionMatrix(); this.cam.lookAt(look);
     let hit = 0; for (const h of HITS) hit = Math.max(hit, t >= h ? Math.exp(-(t - h) * 12) : 0);
     rr.setRenderTarget(out); rr.setClearColor(0xf5dcb4, 1); rr.clear(); rr.render(this.s, this.cam);
+    this.cameos.draw(this.ctx.renderer, out, f.t);
     return { toneMap: 'aces', exposure: 0.95, bloom: 0.12, bloomThreshold: 1.3, vignette: 0.3, grain: 0.04, ca: 0.2 + hit,
       shake: [14 * hit * Math.sin(t * 91), 14 * hit * Math.cos(t * 77)] };
   }

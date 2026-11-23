@@ -6,6 +6,7 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import { resolveAsset } from '../../engine/assets';
 import { bar, lerp, sm, hash, stepped, clamp } from './kit';
+import { Cameos } from './cameo';
 
 const T0 = bar(5), T1 = bar(6), CS = 1.4, DIV = 6;
 const QUAD_V = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`;
@@ -22,6 +23,7 @@ const FALL_F = /* glsl */ `uniform float uT; varying vec2 vUv; void main(){ floa
 
 export default class S6Pixel extends Scene {
   private s = new THREE.Scene(); private cam = new THREE.PerspectiveCamera(46, 9 / 16, 0.3, 500);
+  private cameos = new Cameos([{ k: 'koi', t0: 15.3, dur: 0.7, path: 'leap', x: -0.5, y: 0.1, s: 0.2, n: 2 }, { k: 'bee', t0: 15.2, dur: 1.6, path: 'float', x: 0.7, y: 0.45, s: 0.12 }, { k: 'hose', t0: 15.9, dur: 0.9, path: 'float', x: -0.75, y: -0.75, s: 0.2 }]);
   private insts: GLTFInstance[] = [];
   private fish: { a: THREE.Object3D; b: THREE.Object3D; t: number; x: number; z: number; h: number }[] = [];
   private hero!: { a: THREE.Object3D; b: THREE.Object3D };
@@ -92,6 +94,7 @@ export default class S6Pixel extends Scene {
     this.pixU.tLo.value = this.lo.texture; this.pixU.uLo.value.set(lw, lh);
     rr.setRenderTarget(out); rr.clear(); rr.render(this.qs, this.qc); rr.resetState();
     const hit = t >= this.RIDE ? Math.exp(-(t - this.RIDE) * 10) : 0;
+    this.cameos.draw(this.ctx.renderer, out, f.t);
     return { toneMap: 'legacy', exposure: 1.0, bloom: 0.2, bloomThreshold: 1.0, vignette: 0.2, grain: 0.0, ca: 0.1 + hit, shake: [12 * hit, 0] };
   }
 
