@@ -28,9 +28,9 @@ void main(){
   vec3 paper = vec3(0.95, 0.92, 0.84) * (0.96 + 0.04 * vn(gl_FragCoord.xy * 0.6));
   float tone = clamp(v + gran - 0.08, 0.0, 1.0); vec3 col = mix(vec3(0.07, 0.07, 0.09), paper, tone);
   col = mix(col, vec3(0.78, 0.12, 0.1) * (0.8 + 0.2 * v), c0.g);
-  col = mix(col, vec3(1.0, 0.42, 0.05) * (0.45 + 0.75 * v), clamp(1.0 - c0.a, 0.0, 1.0));
+  col = mix(col, vec3(1.0, 0.36, 0.03) * (0.75 + 0.35 * v), clamp(1.0 - c0.a, 0.0, 1.0));
   float ink = smoothstep(0.25, 0.6, e) * (0.75 + 0.25 * vn(vUv * 120.0)); col = mix(col, vec3(0.05, 0.05, 0.07), ink);
-  col += c0.b * vec3(1.6, 0.55, 0.08) * (1.0 - 0.75 * clamp(1.0 - c0.a, 0.0, 1.0));
+  col += c0.b * vec3(1.6, 0.55, 0.08) * (1.0 - 0.9 * clamp(1.0 - c0.a, 0.0, 1.0));
   gl_FragColor = vec4(col, 1.0);
 }`;
 // main-pass material: r = ink value, g = seal-red mask, b = orange glow (emitted through paper)
@@ -45,7 +45,7 @@ const VAL: Record<string, [number, number]> = { Ink: [0.1, 0], InkWash: [0.5, 0]
 export default class S5Ink extends Scene {
   private s = new THREE.Scene(); private curS = new THREE.Scene();
   private cam = new THREE.PerspectiveCamera(40, 9 / 16, 0.5, 400);
-  private cameos = new Cameos([{ k: 'pixfish', t0: 11.7, dur: 0.5, path: 'leap', x: 0.5, y: -0.2, s: 0.12, n: 2, dir: -1 }, { k: 'pixfish', t0: 13.6, dur: 0.6, path: 'leap', x: -0.4, y: -0.1, s: 0.12, n: 2 }, { k: 'crane', t0: 13.8, dur: 1.3, path: 'fly', y: 0.6, s: 0.12, n: 3 }]);
+  private cameos = new Cameos([{ k: 'pixfish', t0: 11.7, dur: 0.5, path: 'leap', x: 0.5, y: -0.2, s: 0.12, n: 2, dir: -1 }, { k: 'glass', t0: 13.6, dur: 1.2, path: 'fly', y: 0.35, s: 0.1, n: 2 }, { k: 'crane', t0: 13.8, dur: 1.3, path: 'fly', y: 0.6, s: 0.12, n: 3 }]);
   private insts: GLTFInstance[] = [];
   private glowU = { uGlowP: { value: new THREE.Vector3() }, uGlow: { value: 0 }, uGlowR: { value: 1.2 } };
   private heron!: THREE.Object3D; private neck!: THREE.Object3D; private head!: THREE.Object3D; private top!: THREE.Object3D; private bot!: THREE.Object3D;
@@ -73,6 +73,9 @@ export default class S5Ink extends Scene {
     for (let i = 0; i < 30; i++) { const p = pad.clone(); p.position.set(-30 + 60 * hash(i * 1.3), 0.02, -30 + 26 * hash(i * 2.7)); p.scale.setScalar(0.6 + hash(i) * 0.9); p.rotation.y = hash(i * 4) * 6; this.s.add(p);
       if (i % 3 === 0) { const l = lotus.clone(); l.position.copy(p.position); this.s.add(l); } }
     for (let i = 0; i < 90; i++) { const r = reed.clone(); const cl = Math.floor(i / 10); r.position.set(-26 + 9 * cl + 2.5 * hash(i), 0, -12 - 10 * hash(cl * 3.1) + 2 * hash(i * 2)); r.rotation.set(0, hash(i * 5) * 6, 0.15 * (hash(i * 7) - 0.5)); r.scale.setScalar(0.8 + 0.7 * hash(i * 9)); this.s.add(r); }
+    // foreground reeds and stones so the marsh has a near plane, drawn darker than the far banks
+    for (let i = 0; i < 26; i++) { const r = reed.clone(); r.position.set(-14 + 46 * hash(i * 6.1), 0, 2.5 + 2.5 * hash(i * 8.3)); r.rotation.set(0, hash(i * 2.9) * 6, 0.25 * (hash(i * 3.3) - 0.5)); r.scale.setScalar(0.6 + 0.4 * hash(i * 4.4)); this.s.add(r); }
+    for (let i = 0; i < 10; i++) { const st = new THREE.Mesh(new THREE.DodecahedronGeometry(0.6 + 0.5 * hash(i * 9.7), 0), this.val(0.12 + 0.1 * hash(i))); st.scale.y = 0.45; st.position.set(-10 + 40 * hash(i * 5.5), 0.05, 3.5 + 4 * hash(i * 1.9)); this.s.add(st); }
     for (let i = 0; i < 4; i++) { const k = koi.clone(); this.s.add(k); this.kois.push({ o: k, t: T0 + 0.3 + i * 0.6, x: -8 + 5 * i, z: -3 - 2 * hash(i) }); }
     for (let i = 0; i < 8; i++) { const r = new THREE.Mesh(new THREE.TorusGeometry(1, 0.03, 4, 48), this.val(0.25)); r.rotation.x = -Math.PI / 2; this.s.add(r); this.ripples.push({ o: r, t: 1e9 }); }
     kit.root.visible = false; this.s.add(kit.root);

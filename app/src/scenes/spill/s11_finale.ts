@@ -15,9 +15,9 @@ const HAND = 0.42, DRIFT = 0;
 // patchwork shell: region palettes in bands across the cursor's own object space, stepped edges like sewn seams
 const PATCH_V = /* glsl */ `varying vec3 vP; varying vec3 vN; void main(){ vP = position; vN = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 const PATCH_F = /* glsl */ `uniform float uT, uK; varying vec3 vP; varying vec3 vN;
-vec3 pal(float i){ i = mod(i, 7.0); return i < 1.0 ? vec3(0.95, 0.42, 0.08) : i < 2.0 ? vec3(0.93, 0.89, 0.8) : i < 3.0 ? vec3(0.85, 0.55, 0.35) :
-  i < 4.0 ? vec3(0.08, 0.08, 0.1) : i < 5.0 ? vec3(0.2, 0.75, 0.35) : i < 6.0 ? vec3(0.95, 0.6, 0.75) : vec3(0.3, 0.45, 0.95); }
-void main(){ float b = floor((vP.y * 2.2 + vP.x * 1.3 + 0.35 * sin(vP.z * 7.0)) * 1.0); float k = step(fract(b * 0.37), uK * 0.55);
+vec3 pal(float i){ i = mod(i, 7.0); return i < 1.0 ? vec3(0.95, 0.42, 0.08) : i < 2.0 ? vec3(1.0, 0.78, 0.25) : i < 3.0 ? vec3(0.85, 0.55, 0.35) :
+  i < 4.0 ? vec3(0.1, 0.55, 0.62) : i < 5.0 ? vec3(0.2, 0.75, 0.35) : i < 6.0 ? vec3(0.95, 0.6, 0.75) : vec3(0.3, 0.45, 0.95); }
+void main(){ float b = floor((vP.y * 2.2 + vP.x * 1.3 + 0.35 * sin(vP.z * 7.0)) * 1.0); float k = step(fract(b * 0.37), uK * 0.38);
   vec3 c = mix(vec3(1.0, 0.3, 0.03), pal(b), k); float l = 0.45 + 0.55 * max(0.0, dot(vN, normalize(vec3(-0.5, 0.7, 0.5))));
   float seam = smoothstep(0.04, 0.0, abs(fract(vP.y * 2.2 + vP.x * 1.3 + 0.35 * sin(vP.z * 7.0)) - 0.5) - 0.46) * k;
   gl_FragColor = vec4(c * (0.7 * l + 0.15) * (1.0 - 0.6 * seam) + vec3(0.4, 0.07, 0.0) * (1.0 - k) * (0.5 + 0.5 * pow(1.0 - abs(vN.z), 2.0)), 1.0); }`;
@@ -94,7 +94,7 @@ export default class S11Finale extends Scene {
     [[3.6, 1.6, 2.6, 0.8, 0.1], [2.8, 1.4, 2.0, 2.3, -0.25], [2.2, 1.3, 1.6, 3.7, 0.35], [1.7, 1.2, 1.3, 5.0, -0.1], [1.3, 1.1, 1.0, 6.2, 0.2], [1.0, 1.2, 0.8, 7.35, -0.3]].forEach(([w, h, dd, y, r], i) => {
       const g = new THREE.Group(); const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, dd), bez); b.castShadow = b.receiveShadow = true;
       const sc = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.86, h * 0.78), new THREE.MeshBasicMaterial({ color: cols[i % cols.length], toneMapped: false }));
-      sc.position.z = dd / 2 + 0.01; (sc.material as THREE.MeshBasicMaterial).color.multiplyScalar(0.55 + 0.3 * hash(i * 3.7)); g.add(b, sc);
+      sc.position.z = dd / 2 + 0.01; (sc.material as THREE.MeshBasicMaterial).color.multiplyScalar(1.1 + 0.4 * hash(i * 3.7)); g.add(b, sc);
       g.position.set(0.25 * Math.sin(i * 2.1), y, 6 + 0.2 * Math.cos(i * 1.7)); g.rotation.set(0.06 * Math.sin(i * 3.3), r, 0.05 * Math.cos(i * 2.9)); this.s.add(g); });
     this.cur = K.cursor.root; this.cur.scale.setScalar(1.9); this.cur.position.set(0, 8.6, 6); this.s.add(this.cur);
     const patch = new THREE.ShaderMaterial({ vertexShader: PATCH_V, fragmentShader: PATCH_F, uniforms: this.patchU });

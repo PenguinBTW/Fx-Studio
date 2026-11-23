@@ -44,7 +44,7 @@ export default class S8Hose extends Scene {
   private cur!: THREE.Object3D; private coreM!: THREE.MeshLambertMaterial;
   private rt: THREE.WebGLRenderTarget | null = null; private filmU = { tCol: { value: null as THREE.Texture | null }, uT: { value: 0 }, uF: { value: 1 }, uRes: { value: new THREE.Vector2() } };
   private qs = new THREE.Scene(); private qc = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-  private TIP = T0 + 0.75;
+  private TIP = T0 + 2 * BEAT;
   private toon(c: [number, number, number], out = 0) { return new THREE.ShaderMaterial({ vertexShader: TOON_V, fragmentShader: TOON_F, side: out ? THREE.BackSide : THREE.FrontSide,
     uniforms: { uCol: { value: new THREE.Vector3(...c) }, uOut: { value: out }, ...this.G } }); }
   private ink(o: THREE.Object3D, w = 0.035) { const ms: THREE.Mesh[] = []; o.traverse((x) => { if ((x as THREE.Mesh).isMesh) ms.push(x as THREE.Mesh); });
@@ -57,8 +57,15 @@ export default class S8Hose extends Scene {
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), this.toon([0.62, 0.6, 0.58])); ground.rotation.x = -Math.PI / 2; this.s.add(ground);
     const road = new THREE.Mesh(new THREE.PlaneGeometry(300, 6), this.toon([0.4, 0.4, 0.4])); road.rotation.x = -Math.PI / 2; road.position.y = 0.01; this.s.add(road);
     for (let i = 0; i < 30; i++) { const d = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.25), this.toon([0.95, 0.94, 0.9])); d.rotation.x = -Math.PI / 2; d.position.set(-30 + 3.2 * i, 0.02, 0); this.s.add(d); }
+    // lamp posts across the street and inked kerbs; posts bob on the beat
+    for (let i = 0; i < 9; i++) { const g = new THREE.Group(); const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.14, 5.2, 10), this.toon([0.1, 0.1, 0.1])); pole.position.y = 2.6;
+      const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.45, 16, 10), this.toon([0.97, 0.96, 0.9])); lamp.position.y = 5.4; const arm = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.06, 6, 16, Math.PI), this.toon([0.1, 0.1, 0.1])); arm.position.set(0.5, 5.2, 0);
+      g.add(pole, lamp, arm); const fg = this.ink(g, 0.05); fg.position.set(-20 + 7.5 * i, 0, -4.2); fg.rotation.y = Math.PI; this.s.add(fg); this.bobs.push({ o: fg, ph: i * 1.3, k: 0.14 });
+    }
+    for (const z of [-3.05, 3.05]) { const kerb = new THREE.Mesh(new THREE.BoxGeometry(300, 0.18, 0.22), this.toon([0.12, 0.12, 0.12])); kerb.position.set(0, 0.09, z); this.s.add(kerb); }
+    for (let i = 0; i < 120; i++) { const sl = new THREE.Mesh(new THREE.PlaneGeometry(0.06, 2.2), this.toon([0.2, 0.2, 0.2])); sl.rotation.x = -Math.PI / 2; sl.position.set(-30 + 1.1 * i, 0.015, (i % 2 ? 1 : -1) * 4.4); this.s.add(sl); }
     const house = kit.part('house'), flower = kit.part('flower');
-    for (const side of [-1, 1]) for (let i = 0; i < 9; i++) { const h = this.ink(house.clone(), 0.06); h.position.set(-16 + 5 * i + side * 1.2, 0, side * 7.5); h.rotation.y = side < 0 ? -Math.PI / 2 : Math.PI / 2;
+    for (const side of [-1, 1]) for (let i = 0; i < 9; i++) { const h = this.ink(house.clone(), 0.06); h.position.set(-16 + 5 * i + side * 1.2, 0, side > 0 ? 12 : -7.5); h.rotation.y = side < 0 ? -Math.PI / 2 : Math.PI / 2;
       h.scale.setScalar(1.1 + 0.3 * hash(i + side * 9)); this.s.add(h); this.bobs.push({ o: h, ph: (i % 2) * Math.PI, k: 0.1 }); }
     for (let i = 0; i < 26; i++) { const side = -1; const fl = this.ink(flower.clone(), 0.025); fl.position.set(-16 + 1.7 * i, 0, side * (3.4 + 1.6 * hash(i))); fl.rotation.y = side < 0 ? -Math.PI / 2 : Math.PI / 2;
       fl.scale.setScalar(0.8 + 0.4 * hash(i * 3)); this.s.add(fl); this.bobs.push({ o: fl, ph: i * 0.8, k: 0.16 }); fl.traverse((x) => { if (x.name.startsWith('fMouth')) this.mouths.push(x); }); }
@@ -93,9 +100,9 @@ export default class S8Hose extends Scene {
     const dbl = t > this.TIP + 0.1 && t < this.TIP + 0.5 ? (Math.floor((t - this.TIP - 0.1) * 10) % 2 === 0 ? 1 : 0.1) : ((t * 1.06) % 1) < 0.55 ? 1 : 0.12;
     this.coreM.emissive.setRGB(1.6 * dbl, 0.4 * dbl, 0.02 * dbl); this.G.uGlow.value = 1.2 * dbl; this.G.uGlowP.value.copy(cp);
     // the cat: boneless stroll toward the cursor, head follows it, tips its hat as it passes
-    const catX = 1.5 - 1.6 * (ts - T0), step = beat; this.cat.position.set(catX, 0.15 * Math.abs(Math.sin(step)), 1.5); this.cat.rotation.set(0, Math.PI - 0.5, 0.06 * Math.sin(step));
+    const catX = cx + 4.6 - 0.6 * (ts - T0), step = beat; this.cat.position.set(catX, 0.15 * Math.abs(Math.sin(step)), -1.6); this.cat.rotation.set(0, -2.6, 0.06 * Math.sin(step));
     const bk = Math.exp(-(((ph % 1) + 1) % 1) * 7); this.cat.scale.set(1.35 * (1 + 0.1 * bk), 1.35 * (1 - 0.14 * bk + 0.06 * Math.sin(step * 2)), 1.35 * (1 + 0.1 * bk));
-    this.catHead.rotation.y = clamp(Math.atan2(cp.z - 1.5, -(cp.x - catX)) * 0.6, -0.9, 0.9); this.catHead.rotation.z = 0.12 * Math.sin(step);
+    this.catHead.rotation.y = clamp(Math.atan2(cp.z + 1.6, -(cp.x - catX)) * 0.6, -0.9, 0.9); this.catHead.rotation.z = 0.12 * Math.sin(step);
     const tip = sm(this.TIP - 0.15, this.TIP + 0.05, ts) * (1 - sm(this.TIP + 0.55, this.TIP + 0.75, ts));
     this.hat.position.y = 3.2 * 0 + 0.55 * tip; this.hat.rotation.z = -0.5 * tip;
     this.cat.updateMatrixWorld(true); const W = (x: number, y: number, z: number) => this.cat.localToWorld(new THREE.Vector3(x, y, z));
@@ -105,7 +112,7 @@ export default class S8Hose extends Scene {
       const hip = W(0, 0.7, s * 0.22), foot = W(0.45 * sw, 0.12 + 0.25 * Math.max(0, Math.cos(step + (s > 0 ? 0 : Math.PI))), s * 0.3);
       this.hoseTo(2 + i, hip, foot, W(0.35, 0, 0).sub(W(0, 0, 0)), 0.1); this.shoes[i].position.copy(foot); this.shoes[i].rotation.y = this.cat.rotation.y + Math.PI; }
     // camera: low dolly along the street, cat in the foreground
-    this.cam.position.set(cx - 5.5, 2.5, 5.6); this.cam.aspect = out.width / out.height; this.cam.updateProjectionMatrix(); this.cam.lookAt(cx + 2, 2.0, 0.3);
+    this.cam.position.set(cx - 7.5, 2.8, 5.8); this.cam.aspect = out.width / out.height; this.cam.updateProjectionMatrix(); this.cam.lookAt(cx + 2, 1.3, 0.3);
     if (!this.rt || this.rt.width !== out.width || this.rt.height !== out.height) { this.rt?.dispose(); this.rt = new THREE.WebGLRenderTarget(out.width, out.height, { type: THREE.HalfFloatType }); }
     rr.setRenderTarget(this.rt); rr.clear(); rr.render(this.s, this.cam);
     const fr = Math.floor(t * 12); this.filmU.tCol.value = this.rt.texture; this.filmU.uT.value = t; this.filmU.uF.value = 0.93 + 0.07 * hash(fr); this.filmU.uRes.value.set(out.width, out.height);

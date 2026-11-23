@@ -118,7 +118,7 @@ export class Cameos {
       const h = R(i * 3.7 + c.t0), flock = c.path === 'fly' || c.path === 'walk', lt = t - c.t0 - (flock ? i * 0.07 : i * 0.18), u = lt / c.dur;
       m.visible = u > 0 && u < 1; sh.visible = false; if (!m.visible) continue; any = true;
       const sp = SPEC[c.k], fr = Math.floor((lt + h) * sp.fps) % sp.fr, d = c.dir ?? 1, sc = 3.0 * c.s * (0.75 + 0.5 * h);
-      tex.offset.x = fr / sp.fr; let x = 0, y = c.y, rot = 0;
+      tex.offset.x = fr / sp.fr; let x = 0, y = c.y, rot = 0, sx = 1, sy = 1;
       if (flock) {
         const row = Math.floor((i + 1) / 2), side = i % 2 ? 1 : -1;
         x = d * (-1.3 + 2.6 * u) * asp - d * row * 0.09; if (c.path === 'fly') y += side * row * 0.05 + 0.02 * Math.sin(lt * 5 + i);
@@ -127,10 +127,13 @@ export class Cameos {
         rot = Math.atan2(H * 4 * (1 - 2 * u) / c.dur, d * 0.7 * asp / c.dur) * d;
       } else if (c.path === 'pop') {
         const k = Math.min(1, lt / 0.22); x = (c.x ?? 0) * asp; y = -1.4 + (c.y + 1.4) * (1 - (1 - k) ** 3) + 0.05 * Math.sin(lt * 22) * Math.exp(-lt * 5); rot = 0.3 * d * k;
+        // the scream: everyone snaps to look straight up, stretched tall, then settles
+        const sn = lt > 0.3 ? Math.exp(-(lt - 0.3) * 6) * Math.cos((lt - 0.3) * 18) : 0, up = lt > 0.3 ? 1 : 0;
+        sy = 1 + 0.35 * Math.max(0, sn) + 0.12 * up; sx = 1 - 0.2 * Math.max(0, sn); rot = d * (0.3 * k - 0.45 * up + 0.2 * sn); y += 0.06 * up;
       } else { x = ((c.x ?? 0) + (i ? (h - 0.5) * 0.3 : 0)) * asp; y += 0.015 * Math.sin(lt * 3 + i); }
       // react to the cursor (screen centre): shy away from it and catch its orange light
       const near = Math.exp(-((x / asp) ** 2 + (y + 0.05) ** 2) * 7); y += (y >= -0.05 ? 1 : -1) * 0.06 * near;
-      m.position.set(x, y, 0); m.rotation.z = rot; m.scale.set(sc * d, sc, 1);
+      m.position.set(x, y, 0); m.rotation.z = rot; m.scale.set(sc * d * sx, sc * sy, 1);
       const mm = m.material as THREE.MeshBasicMaterial; mm.opacity = Math.min(1, u * 12, (1 - u) * 12); mm.color.setRGB(1, 1 - 0.3 * near, 1 - 0.6 * near);
       if (c.path === 'walk' || c.path === 'float') { sh.visible = true; const fl = c.path === 'float' ? 0.16 : 0.44 * sc; sh.position.set(x, y - fl, 0); sh.scale.set(sc * 0.9, sc * 0.22, 1); (sh.material as THREE.MeshBasicMaterial).opacity = mm.opacity * (c.path === 'float' ? 0.25 : 0.45); }
     }
