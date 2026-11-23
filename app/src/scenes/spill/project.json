@@ -35,6 +35,12 @@
       "id": "ink",
       "start": 11.653,
       "end": 15.134
+    },
+    {
+      "scene": "spill/s6_pixel",
+      "id": "pixel",
+      "start": 15.134,
+      "end": 16.874
     }
   ],
   "audio": "../../../public/audio/feel_good_inc.wav"
