@@ -110,6 +110,7 @@ export default class S5Ink extends Scene {
     this.heron.updateMatrixWorld(true);
     const headP = this.head.getWorldPosition(new THREE.Vector3()), neckP = this.neck.getWorldPosition(new THREE.Vector3());
     const tip = this.top.localToWorld(new THREE.Vector3(2.4, 0, 0));
+    if (t >= GULP[0] - 0.08 && t < CAP) this.cur.position.lerp(tip, sm(GULP[0] - 0.08, CAP, t)); // caught in the beak, not hidden on the pad
     // the glow inside: swallowed down the paper throat, then sits blinking in the neck
     const sw = sm(CAP, GULP[1], t); const gp = headP.clone().lerp(neckP.clone().add(new THREE.Vector3(0, 1.2, 0)), sw);
     this.glowU.uGlowP.value.copy(t < SPIT ? gp : tip); this.glowU.uGlow.value = t >= CAP && t < SPIT + 0.1 ? (t > GULP[1] ? 0.35 + 1.6 * ob + 1.2 * hic : (0.4 + 0.6 * blink) * 1.2) : 0; this.glowU.uGlowR.value = 1.6;
