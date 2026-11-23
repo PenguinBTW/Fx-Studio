@@ -7,7 +7,7 @@ import type { Compositor } from '../../engine/gl';
 
 export const BAR = 2, BEAT = 0.5, END = 38;
 // [t, Z] keys; the fall stalls at the midpoint (18-19.5) then slams
-const KEYS: [number, number][] = [[0, 6.9], [4, 5.0], [8, 2.6], [9.3, -1.3], [11, -2.3], [15, -3.4], [18, -4.05], [19.5, -4.12], [20, -4.9], [24, -9.0], [25.3, -9.6], [26.8, -11.0], [28, -14], [29.6, -15.3], [31, -18], [31.8, -5.2], [33, -3.6], [35.5, -0.9], [36.8, 6.55], [END, 6.9]];
+const KEYS: [number, number][] = [[0, 6.9], [4, 5.0], [8, 2.6], [9.3, -1.3], [11, -2.3], [15, -3.4], [18, -4.05], [19.5, -4.12], [20, -4.9], [24, -9.0], [26.4, -9.5], [27.2, -11.0], [28, -14], [29.6, -15.3], [31, -18], [31.8, -5.2], [33, -3.6], [35.5, -0.9], [36.8, 6.55], [END, 6.9]];
 const M = (() => { // Fritsch-Carlson monotone tangents
   const n = KEYS.length, d: number[] = [], m: number[] = [];
   for (let i = 0; i < n - 1; i++) d.push((KEYS[i + 1]![1] - KEYS[i]![1]) / (KEYS[i + 1]![0] - KEYS[i]![0]));

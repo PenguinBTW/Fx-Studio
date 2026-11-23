@@ -30,7 +30,7 @@ vec3 aurora(vec3 ro, vec3 rd, float tEnd, out float aAcc) {
   return acc; }
 void main() {
   float fov = 0.9, th = tan(fov * 0.5); float h = pow(10.0, uZ) / (2.0 * th) * 1e-6;
-  float tilt = mix(0.62, 0.35, smoothstep(7.2, 5.0, uZ)); vec3 tgt = vec3(0.0, 0.0, 0.3 * smoothstep(7.2, 5.0, uZ));
+  float tilt = mix(1.02, 0.4, smoothstep(7.0, 5.2, uZ)); vec3 tgt = vec3(0.0, 0.0, 0.3 * smoothstep(7.2, 5.0, uZ));
   vec3 ro = vec3(0.0, R, 0.0) + vec3(0.0, 1.0, -0.0) * h + vec3(0.0, 0.0, -h * tan(tilt)); vec3 fw = normalize(vec3(0.0, R, 0.0) + tgt - ro);
   vec3 rd = ff_ray(fw, vec3(0.0, 0.0, 1.0), th, 0.15 * uT + 0.2); ro.y -= 0.0;
   vec3 C = vec3(0.0); vec2 e = ff_sph(ro, rd, R); float tE = e.x > 0.0 ? e.x : 1e5; float px = h * 2.0 * th / uRes.y;
