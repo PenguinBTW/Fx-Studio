@@ -21,7 +21,7 @@ const BCOL = [0xe61a26, 0xffa61a, 0x33cce6, 0x8c33d9, 0x26bf4d, 0x1a4df2];
 
 export default class S9Garden extends Scene {
   private s = new THREE.Scene(); private cam = new THREE.PerspectiveCamera(42, 9 / 16, 0.3, 400);
-  private cameos = new Cameos([{ k: 'hose', t0: 20.4, dur: 1.7, path: 'float', x: -0.72, y: -0.72, s: 0.2 }, { k: 'crayon', t0: 20.6, dur: 1.4, path: 'fly', y: 0.7, s: 0.13, n: 2 }]);
+  private cameos = new Cameos([{ k: 'crayon', t0: 20.6, dur: 1.4, path: 'fly', y: 0.7, s: 0.13, n: 2 }]);
   private insts: GLTFInstance[] = [];
   private bf: { o: THREE.Object3D; wl: THREE.Object3D; wr: THREE.Object3D; shaft: THREE.Mesh; pool: THREE.Mesh; ph: number; r: number; h: number; c: number }[] = [];
   private lights: THREE.PointLight[] = [];

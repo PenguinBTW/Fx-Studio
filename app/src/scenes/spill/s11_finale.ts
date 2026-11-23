@@ -10,7 +10,7 @@ import { SCREAM, WHIP, END, BEAT, lerp, sm, hash, clamp } from './kit';
 import { Cameos } from './cameo';
 import S1Breakout from './s1_breakout';
 
-const HAND = 0.42, DRIFT = 0.55;
+const HAND = 0.42, DRIFT = 0;
 // patchwork shell: region palettes in bands across the cursor's own object space, stepped edges like sewn seams
 const PATCH_V = /* glsl */ `varying vec3 vP; varying vec3 vN; void main(){ vP = position; vN = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 const PATCH_F = /* glsl */ `uniform float uT, uK; varying vec3 vP; varying vec3 vN;
@@ -19,7 +19,7 @@ vec3 pal(float i){ i = mod(i, 7.0); return i < 1.0 ? vec3(0.95, 0.42, 0.08) : i 
 void main(){ float b = floor((vP.y * 2.2 + vP.x * 1.3 + 0.35 * sin(vP.z * 7.0)) * 1.0); float k = step(fract(b * 0.37) , uK);
   vec3 c = mix(vec3(0.95, 0.42, 0.08), pal(b), k); float l = 0.45 + 0.55 * max(0.0, dot(vN, normalize(vec3(-0.5, 0.7, 0.5))));
   float seam = smoothstep(0.04, 0.0, abs(fract(vP.y * 2.2 + vP.x * 1.3 + 0.35 * sin(vP.z * 7.0)) - 0.5) - 0.46) * k;
-  gl_FragColor = vec4(c * l * (1.0 - 0.6 * seam), 1.0); }`;
+  gl_FragColor = vec4(c * (l + 0.35) * (1.0 - 0.6 * seam), 1.0); }`;
 
 const PATCHES: [string, number, number, number][] = [ // kit, colour, x, z
   ['paper', 0xffe9c2, -11, -8], ['ink', 0xf6f2ea, 1, -6], ['pixel', 0x2fd05a, 12, -10], ['felt', 0x8ad040, -13, -21],
@@ -35,7 +35,7 @@ const LOOKERS = new Set(['deer', 'heron', 'sheep', 'fox', 'dino', 'peacock', 'sa
 
 export default class S11Finale extends Scene {
   private s = new THREE.Scene(); private cam = new THREE.PerspectiveCamera(42, 9 / 16, 0.1, 600);
-  private cameos = new Cameos([{ k: 'pixbird', t0: 24.0, dur: 2.0, path: 'fly', y: 0.8, s: 0.08, n: 6 }, { k: 'crane', t0: 24.3, dur: 1.8, path: 'fly', y: 0.6, s: 0.12, n: 3, dir: -1 }, { k: 'glass', t0: 24.6, dur: 1.6, path: 'fly', y: 0.45, s: 0.11, n: 2 }, { k: 'crayon', t0: 24.9, dur: 1.5, path: 'fly', y: 0.3, s: 0.12, n: 2, dir: -1 }, { k: 'koi', t0: 24.4, dur: 0.7, path: 'leap', x: -0.5, y: -0.2, s: 0.16 }, { k: 'pixfish', t0: 25.0, dur: 0.6, path: 'leap', x: 0.5, y: -0.25, s: 0.1, n: 2 }, { k: 'bee', t0: 24.2, dur: 2.4, path: 'float', x: 0.72, y: 0.15, s: 0.1 }]);
+  private cameos = new Cameos([{ k: 'pixbird', t0: 24.0, dur: 2.0, path: 'fly', y: 0.8, s: 0.08, n: 6 }, { k: 'crane', t0: 24.3, dur: 1.8, path: 'fly', y: 0.6, s: 0.12, n: 3, dir: -1 }, { k: 'glass', t0: 24.6, dur: 1.6, path: 'fly', y: 0.45, s: 0.11, n: 2 }, { k: 'crayon', t0: 24.9, dur: 1.5, path: 'fly', y: 0.3, s: 0.12, n: 2, dir: -1 }, { k: 'koi', t0: 24.4, dur: 0.7, path: 'leap', x: -0.5, y: -0.2, s: 0.16 }, { k: 'pixfish', t0: 25.0, dur: 0.6, path: 'leap', x: 0.5, y: -0.25, s: 0.1, n: 2 }, { k: 'bee', t0: 24.2, dur: 1.3, path: 'float', x: 0.72, y: 0.15, s: 0.1 }, { k: 'sheep', t0: 25.60, dur: 1.5, path: 'pop', x: -0.62, y: -0.62, s: 0.13 }, { k: 'hose', t0: 25.66, dur: 1.5, path: 'pop', x: -0.2, y: -0.5, s: 0.14, dir: -1 }, { k: 'pixbird', t0: 25.72, dur: 1.5, path: 'pop', x: 0.25, y: -0.6, s: 0.09 }, { k: 'koi', t0: 25.78, dur: 1.5, path: 'pop', x: 0.62, y: -0.55, s: 0.13, dir: -1 }, { k: 'bee', t0: 25.84, dur: 1.5, path: 'pop', x: -0.45, y: -0.25, s: 0.09 }]);
   private insts: GLTFInstance[] = []; private s1!: S1Breakout;
   private cur!: THREE.Object3D; private core: THREE.MeshStandardMaterial[] = []; private patchU = { uT: { value: 0 }, uK: { value: 0 } };
   private lookers: { o: THREE.Object3D; base: THREE.Euler; ph: number }[] = [];
@@ -86,7 +86,7 @@ export default class S11Finale extends Scene {
       this.screens.setMatrixAt(i, M); this.screens.setColorAt(i, C.setHSL(hash(i * 9), 0.85, 0.45 + 0.2 * hash(i * 11)).multiplyScalar(1.6)); }
     this.s.add(this.screens);
     this.phone = K.phone.root; K.phone.part('interior').visible = false; this.phone.scale.setScalar(0.45);
-    const scr = new THREE.Mesh(new THREE.PlaneGeometry(6.5, 14.3), new THREE.MeshBasicMaterial({ map: this.scrRT.texture, toneMapped: false })); scr.position.z = 0.44; this.phone.add(scr); this.phone.position.copy(this.PH); this.phone.lookAt(0, 10, 10); this.s.add(this.phone);
+    const scr = new THREE.Mesh(new THREE.PlaneGeometry(6.5, 6.5 * 16 / 9), new THREE.MeshBasicMaterial({ map: this.scrRT.texture, toneMapped: false })); scr.position.z = 0.44; this.phone.add(scr); this.phone.position.copy(this.PH); this.phone.lookAt(0, 10, 10); this.s.add(this.phone);
     this.ring = new THREE.Mesh(new THREE.RingGeometry(0.7, 1, 64), new THREE.MeshBasicMaterial({ color: 0xffd0a0, blending: THREE.AdditiveBlending, transparent: true, opacity: 0, toneMapped: false, side: THREE.DoubleSide, depthWrite: false }));
     this.ring.position.copy(this.PH); this.ring.lookAt(0, 10, 10); this.s.add(this.ring);
     const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 512; const g = cv.getContext('2d')!; g.translate(512, 256); g.rotate(-0.12);
@@ -112,8 +112,8 @@ export default class S11Finale extends Scene {
     const vk = sm(T0, SCREAM, t);
     const p = new THREE.Vector3(lerp(3.5, -1.5, vk), lerp(17.5, 15.5, vk), lerp(17.5, 14.5, vk)).lerp(new THREE.Vector3(1.0, 6.6, 11.5), sm(SCREAM, SCREAM + 0.6, t));
     const look = new THREE.Vector3(lerp(1, -0.5, vk), lerp(-2, 1, vk), -20).lerp(this.PH, sm(SCREAM + 0.1, SCREAM + 0.8, t));
-    const wk = clamp((t - WHIP) / (END - HAND - DRIFT - WHIP), 0, 1), we = 1 - (1 - wk) ** 3;
-    const dir = new THREE.Vector3(0, 10, 10).sub(this.PH).normalize(), end = this.PH.clone().addScaledVector(dir, 9.0);
+    const wk = clamp((t - WHIP) / (END - HAND - DRIFT - WHIP), 0, 1), we = 0.5 * (1 - (1 - wk) ** 3) + 0.5 * wk;
+    const dir = new THREE.Vector3(0, 10, 10).sub(this.PH).normalize(), end = this.PH.clone().addScaledVector(dir, 0.45 * (0.44 + 3.25 * 16 / 9 / Math.tan(16 * Math.PI / 180)));
     p.lerp(this.PH, 0.12 * sm(SCREAM + 0.6, WHIP, t));
     if (t > WHIP) { p.lerp(end, we); look.copy(this.PH); }
     this.cam.position.copy(p); this.cam.lookAt(look);

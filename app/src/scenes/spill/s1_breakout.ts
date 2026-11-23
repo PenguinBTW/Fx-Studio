@@ -259,8 +259,8 @@ export default class S1Breakout extends Scene {
     const push = sm(0, BREAK, t), d = Math.max(0, t - BREAK);
     this.cam.fov = 38 - 6 * push + 10 * sm(0, 0.6, d);
     const cy = this.cur.position.y;
-    const dr = 0.08 * t; // constant drift so the loop's held tail flows into frame 0
-    this.cam.position.set(0.9 - 0.4 * push + hit + 0.6 * d - dr, 1.0 + 0.1 * push + 0.85 * cy, 4.6 - 1.0 * push + 7.4 * d - hit * 4);
+    const dr = 0.3 * t; // constant drift so the loop's held tail flows into frame 0
+    this.cam.position.set(0.9 - 0.4 * push + hit + 0.6 * d - dr, 1.0 + 0.1 * push + 0.85 * cy, 4.6 - 1.0 * push + 7.4 * d - hit * 4 - dr);
     this.cam.lookAt(0.0, 0.9 * (1 - sm(0, 0.3, d)) + cy, lerp(-2.0, this.cur.position.z, sm(0, 0.25, d)));
     return this.cam.position.z - this.cur.position.z;
   }

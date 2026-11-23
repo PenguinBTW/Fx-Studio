@@ -3,7 +3,7 @@ import { hash, TAU } from './kit';
 
 /** Foreign-style visitors: hand-drawn sprite flocks/leapers composited over any region, each in its own medium and frame rate. */
 export type Kind = 'pixbird' | 'pixfish' | 'koi' | 'hose' | 'crayon' | 'crane' | 'glass' | 'bee' | 'sheep';
-export type Cameo = { k: Kind; t0: number; dur: number; path: 'fly' | 'leap' | 'float' | 'walk'; y: number; s: number; n?: number; dir?: 1 | -1; x?: number };
+export type Cameo = { k: Kind; t0: number; dur: number; path: 'fly' | 'leap' | 'float' | 'walk' | 'pop'; y: number; s: number; n?: number; dir?: 1 | -1; x?: number };
 type G = CanvasRenderingContext2D;
 type Spec = { fr: number; fps: number; W: number; draw: (g: G, f: number, W: number) => void };
 
@@ -108,7 +108,7 @@ export class Cameos {
     for (const { c, m, tex, i } of this.list) {
       const h = R(i * 3.7 + c.t0), flock = c.path === 'fly' || c.path === 'walk', lt = t - c.t0 - (flock ? i * 0.07 : i * 0.18), u = lt / c.dur;
       m.visible = u > 0 && u < 1; if (!m.visible) continue; any = true;
-      const sp = SPEC[c.k], fr = Math.floor((lt + h) * sp.fps) % sp.fr, d = c.dir ?? 1, sc = 1.7 * c.s * (0.75 + 0.5 * h);
+      const sp = SPEC[c.k], fr = Math.floor((lt + h) * sp.fps) % sp.fr, d = c.dir ?? 1, sc = 3.0 * c.s * (0.75 + 0.5 * h);
       tex.offset.x = fr / sp.fr; let x = 0, y = c.y, rot = 0;
       if (flock) {
         const row = Math.floor((i + 1) / 2), side = i % 2 ? 1 : -1;
@@ -116,6 +116,8 @@ export class Cameos {
       } else if (c.path === 'leap') {
         const x0 = (c.x ?? 0) + (h - 0.5) * 0.5, H = c.y + 1.15; x = (x0 + d * (u - 0.5) * 0.7) * asp; y = -1.15 + H * 4 * u * (1 - u);
         rot = Math.atan2(H * 4 * (1 - 2 * u) / c.dur, d * 0.7 * asp / c.dur) * d;
+      } else if (c.path === 'pop') {
+        const k = Math.min(1, lt / 0.22); x = (c.x ?? 0) * asp; y = -1.4 + (c.y + 1.4) * (1 - (1 - k) ** 3) + 0.05 * Math.sin(lt * 22) * Math.exp(-lt * 5); rot = 0.3 * d * k;
       } else { x = ((c.x ?? 0) + (i ? (h - 0.5) * 0.3 : 0)) * asp; y += 0.015 * Math.sin(lt * 3 + i); }
       m.position.set(x, y, 0); m.rotation.z = rot; m.scale.set(sc * d, sc, 1);
       (m.material as THREE.MeshBasicMaterial).opacity = Math.min(1, u * 12, (1 - u) * 12);

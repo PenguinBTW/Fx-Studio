@@ -23,7 +23,7 @@ const FALL_F = /* glsl */ `uniform float uT; varying vec2 vUv; void main(){ floa
 
 export default class S6Pixel extends Scene {
   private s = new THREE.Scene(); private cam = new THREE.PerspectiveCamera(46, 9 / 16, 0.3, 500);
-  private cameos = new Cameos([{ k: 'koi', t0: 15.3, dur: 0.7, path: 'leap', x: -0.5, y: 0.1, s: 0.2, n: 2 }, { k: 'bee', t0: 15.2, dur: 1.6, path: 'float', x: 0.7, y: 0.45, s: 0.12 }, { k: 'hose', t0: 15.9, dur: 0.9, path: 'float', x: -0.75, y: -0.75, s: 0.2 }]);
+  private cameos = new Cameos([{ k: 'koi', t0: 15.3, dur: 0.7, path: 'leap', x: -0.5, y: 0.1, s: 0.2, n: 2 }, { k: 'bee', t0: 15.2, dur: 1.6, path: 'float', x: 0.7, y: 0.45, s: 0.12 }]);
   private insts: GLTFInstance[] = [];
   private fish: { a: THREE.Object3D; b: THREE.Object3D; t: number; x: number; z: number; h: number }[] = [];
   private hero!: { a: THREE.Object3D; b: THREE.Object3D };

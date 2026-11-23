@@ -75,16 +75,18 @@ put(bar(12), whoosh(END - bar(12) - 0.42, 300, 5000), 0.55); put(END - 0.42, thu
 put(END - 0.6, lp(noise(0.6), 2500) * np.linspace(0, 1, int(0.6 * SR)) ** 3, 0.5)
 sfx = np.stack([L, R])
 
-song = subprocess.run(['ffmpeg', '-v', 'error', '-i', sys.argv[1], '-t', str(END), '-f', 'f32le', '-ac', '2', '-ar', str(SR), '-'], capture_output=True, check=True).stdout
-m = np.frombuffer(song, np.float32).reshape(-1, 2).T.astype(np.float64); m = np.pad(m, ((0, 0), (0, max(0, N - m.shape[1]))))[:, :N]
+song = subprocess.run(['ffmpeg', '-v', 'error', '-i', sys.argv[1], '-t', str(END + 0.4), '-f', 'f32le', '-ac', '2', '-ar', str(SR), '-'], capture_output=True, check=True).stdout
+m = np.frombuffer(song, np.float32).reshape(-1, 2).T.astype(np.float64); mfull = m; m = np.pad(m, ((0, 0), (0, max(0, N - m.shape[1]))))[:, :N]
 tt = np.arange(N) / SR
 muf = np.clip(np.minimum((tt - 12.15) / 0.08, (13.42 - tt) / 0.06), 0, 1)       # inside the heron
 ml = np.stack([lp(m[0], 500), lp(m[1], 500)]); m = m * (1 - muf) + ml * muf * 0.8
 duck = np.ones(N)
 for h in [0.34, 0.94, 1.45, DROP, 12.2, 13.39, bar(11)]:
     k = (tt >= h) * np.exp(-np.maximum(0, tt - h) / 0.25); duck = np.minimum(duck, 1 - 0.35 * k)
-fade = np.clip(np.minimum(tt / 0.02, 0.35 + 0.65 * np.clip((END - tt) / 0.15, 0, 1)), 0, 1) * np.clip((END - tt) / 0.004, 0, 1)
+fade = np.clip(np.minimum(tt / 0.02, 0.3 + 0.7 * np.clip((END - tt) / 0.3, 0, 1) ** 1.5), 0, 1) * np.clip((END - tt) / 0.004, 0, 1)
 mix = (m * 0.8 * duck + sfx) * fade
+TL = int(0.35 * SR); tail = mfull[:, N:N + TL]; tail = np.stack([lp(tail[0], 2500), lp(tail[1], 2500)]) * np.linspace(1, 0, tail.shape[1]) ** 2
+mix[:, :tail.shape[1]] += 0.8 * 0.7 * tail   # the loop's head carries the song's own continuation
 mix /= max(1.0, np.abs(mix).max() / 0.98)
 raw = sys.argv[2] + '.raw.wav'
 import wave
