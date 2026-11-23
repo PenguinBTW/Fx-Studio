@@ -27,10 +27,10 @@ void main() {
   float t = max(0.0, d - 2.2); float glow = 0.0; vec3 acc = vec3(0.0); float Tr = 1.0;
   for (int i = 0; i < 96; i++) { vec3 p = ro + rd * t; float h = map(p); glow += 0.004 / (0.02 + h * h * 400.0);
     if (h < 0.0015) { vec3 n = nrm(p); float fr = pow(1.0 - abs(dot(rd, n)), 2.5); float film = dot(p, p) * 3.0 + n.y;
-      vec3 rhein = mix(vec3(1.0, 0.75, 0.15), vec3(1.0, 0.1, 0.65), fr); vec3 irid = 0.5 + 0.5 * cos(6.2831 * (film + vec3(0.0, 0.33, 0.67)));
+      vec3 rhein = mix(vec3(1.0, 0.7, 0.2), vec3(0.15, 0.85, 1.0), fr); vec3 irid = 0.5 + 0.5 * cos(6.2831 * (film + vec3(0.0, 0.33, 0.67)));
       acc += Tr * (rhein * (0.015 + 0.9 * fr * fr) + irid * 0.12 * fr); Tr *= 0.86; t += 0.02; if (Tr < 0.05) break; continue; } // glass: keep going
     t += max(h * 0.8, 0.002); if (t > d + 3.0) break; }
-  C = C * Tr + acc + vec3(0.9, 0.3, 1.0) * glow * 0.002;
+  C = C * Tr + acc + vec3(0.2, 0.7, 1.0) * glow * 0.002;
   float stall = smoothstep(17.9, 18.15, uT) * (1.0 - smoothstep(19.4, 19.55, uT)); C *= 1.0 - 0.15 * stall;
   fragColor = vec4(C, 1.0); }`;
 

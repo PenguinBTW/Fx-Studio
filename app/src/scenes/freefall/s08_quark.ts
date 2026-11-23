@@ -17,10 +17,10 @@ void main() {
       float tube = 1e5; for (int i = 0; i < 3; i++) tube = min(tube, segD(p, J, qp(i)));
       float tw = ff_n(p * 9.0 + vec3(0.0, 0.0, uT * 6.0)); float g = exp(-tube * tube / (0.004 + 0.004 * tw)) * (0.6 + 0.8 * tw);
       vec3 gl = 0.5 + 0.5 * cos(6.2831 * (tube * 4.0 - uT * 2.0 + vec3(0.0, 0.33, 0.67)));
-      C += gl * g * dt * 0.5 * (1.0 - 0.85 * smoothstep(-16.0, -17.0, uZ));
+      C += gl * g * dt * 0.9 * (1.0 - 0.95 * smoothstep(-15.6, -16.4, uZ));
       float sea = pow(ff_n(p * 14.0 + uT * 3.0), 24.0) * 0.6; C += vec3(0.6, 0.9, 1.0) * sea * dt; }
     for (int i = 0; i < 3; i++) { vec3 w = qp(i) - ro; float tc = max(dot(w, rd), 1e-4); float dd = length(w - rd * tc); vec3 col = i == 0 ? vec3(1.6, 0.12, 0.1) : i == 1 ? vec3(0.15, 1.5, 0.2) : vec3(0.15, 0.3, 1.8);
-      C += col * 0.00035 / (dd * dd / (tc * tc) + 0.0015) * (i == 0 ? 1.0 : smoothstep(-16.4, -15.2, uZ)); } }
+      C += col * 0.0006 / (dd * dd / (tc * tc) + 0.0015) * (i == 0 ? 1.0 : smoothstep(-16.4, -15.2, uZ)); } }
   // inside the red quark: infinite self-similar glow
   float deep = smoothstep(-16.2, -17.2, uZ); if (deep > 0.0) { float r = length(q), a = atan(q.y, q.x); float lz = -uZ * 2.3;
     float f = 0.0; for (int o = 0; o < 4; o++) { float s = log(r + 1e-4) * 1.4 + lz + float(o) * 0.73; float k = fract(s); f += ff_fbm(vec3(cos(a) * 3.0, sin(a) * 3.0, floor(s) + float(o) * 9.0), 4) * sin(3.14159 * k); }
