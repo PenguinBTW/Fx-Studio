@@ -92,6 +92,7 @@ export default class S1Breakout extends Scene {
   private words = WORDS.map(wordTex);
   private quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ vertexShader: QUAD_V, fragmentShader: COMIC_F, uniforms: this.comicU, depthTest: false, depthWrite: false }));
   private qs = new THREE.Scene();
+  private bump = new THREE.Group(); private bumpScr!: THREE.MeshBasicMaterial;
   private qc = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   private rt: THREE.WebGLRenderTarget | null = null;
   private screens!: THREE.InstancedMesh;
@@ -331,6 +332,11 @@ export default class S1Breakout extends Scene {
     const pal = [[0.2, 1.6, 0.5], [1.7, 0.4, 1.2], [0.3, 0.9, 1.9], [1.9, 1.5, 0.3], [1.6, 1.6, 1.7]], c = new THREE.Color();
     for (let i = 0; i < P; i++) { const q = pal[Math.floor(hash(i * 4.7) * 5)]; this.leakPx.setColorAt(i, c.setRGB(q[0], q[1], q[2])); }
     this.exS.add(body, glow, this.leakPx);
+    { // the screen it glances off mid-fall: a hanging monitor that swings away and drops to static
+      const fr = new THREE.Mesh(new THREE.BoxGeometry(6, 3.8, 0.5), new THREE.MeshStandardMaterial({ color: 0x1a1a22, roughness: 0.5 }));
+      this.bumpScr = new THREE.MeshBasicMaterial({ color: 0x3fd0ff, toneMapped: false }); const sc = new THREE.Mesh(new THREE.PlaneGeometry(5.4, 3.2), this.bumpScr); sc.position.z = 0.26;
+      const wire = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 40, 4), new THREE.MeshBasicMaterial({ color: 0x222222 })); wire.position.y = 21.9;
+      fr.position.y = 0; this.bump.add(fr, sc, wire); this.bump.position.copy(this.fallP(4.06)).add(new THREE.Vector3(-3.7, -0.4, 0.6)); this.exS.add(this.bump); }
   }
 
   private poseLeak(t: number) {
@@ -391,6 +397,8 @@ export default class S1Breakout extends Scene {
     c.position.copy(p); c.scale.set(3.4 * (1 + 0.3 * jolt), 3.4 * (1 - 0.35 * jolt), 3.4 * (1 + 0.3 * jolt));
     c.rotation.set(-0.55 * Math.sin(d * 2.4) - 3.1 * flip, 0.5 * Math.sin(d * 1.7), 2.2 * d + 0.6 * Math.sin(d * 3) + 1.6 * flip);
     this.poseLeak(t); this.poseTrail(t);
+    { const be = t - 4.06, sw = be > 0 ? Math.exp(-be * 2.2) * Math.sin(be * 7) : 0; this.bump.rotation.set(0.25 * sw, 0, -0.45 * sw - (be > 0 ? 0.12 : 0));
+      this.bumpScr.color.setHex(be > 0 && be < 0.5 && Math.floor(be * 30) % 2 ? 0xd8d8d8 : be > 0 ? 0x6a7a88 : 0x3fd0ff); }
     const wide = sm(0, 0.9, d), dive = sm(OUTSIDE + 0.2, OUTSIDE + 1.4, t);
     const cam = new THREE.Vector3(lerp(3, 14, wide), lerp(1.5, 4, wide), lerp(18, 58, wide));
     const follow = new THREE.Vector3(p.x + 3, p.y + 6, p.z + 9);
