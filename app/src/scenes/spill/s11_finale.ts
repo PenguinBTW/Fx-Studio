@@ -48,21 +48,24 @@ export default class S11Finale extends Scene {
     this.s.add(new THREE.Mesh(new THREE.SphereGeometry(400, 32, 16), new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, vertexShader: `varying vec3 vD; void main(){ vD = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
       fragmentShader: `varying vec3 vD; void main(){ float y = vD.y; vec3 c = mix(vec3(1.0, 0.6, 0.4), vec3(0.42, 0.22, 0.6), smoothstep(0.0, 0.45, y)); c = mix(c, vec3(0.1, 0.06, 0.25), smoothstep(0.45, 0.95, y)); gl_FragColor = vec4(c, 1.0); }` })));
     this.s.background = new THREE.Color(0.98, 0.72, 0.5); this.s.fog = new THREE.Fog(0xff9a70, 60, 220);
-    this.s.add(new THREE.HemisphereLight(0xbfd8ff, 0x6a4a30, 1.3)); const sun = new THREE.DirectionalLight(0xffd8a0, 4.2); sun.position.set(-30, 40, 20); this.s.add(sun);
-    this.s.add(new THREE.Mesh(new THREE.CircleGeometry(80, 48).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x3a6a8a, roughness: 1 })));
+    this.s.add(new THREE.HemisphereLight(0xbfd8ff, 0x6a4a30, 1.3)); const sun = new THREE.DirectionalLight(0xffd8a0, 4.2); sun.position.set(-40, 30, 10); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 150 }); sun.shadow.bias = -0.0005; this.s.add(sun);
+    this.s.add(new THREE.Mesh(new THREE.CircleGeometry(80, 48).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x2a5a80, roughness: 0.3, metalness: 0.1 })));
     PATCHES.forEach(([id, col, x, z], pi) => {
-      const g = new THREE.Mesh(new THREE.CylinderGeometry(5.2 + hash(pi), 5.6 + hash(pi), 0.5, 7 + pi), new THREE.MeshStandardMaterial({ color: col, roughness: 0.9, flatShading: true }));
-      g.position.set(x, 0.25, z); g.rotation.y = hash(pi * 3) * 3; this.s.add(g);
+      const sh = new THREE.Shape(); for (let k = 0; k <= 48; k++) { const a = k / 48 * 6.283, r = 5.4 + 0.9 * Math.sin(a * 3 + pi) + 0.5 * Math.sin(a * 5 + pi * 2.3) + 0.25 * Math.sin(a * 11 + pi);
+        if (k === 0) sh.moveTo(r * Math.cos(a), r * Math.sin(a)); else sh.lineTo(r * Math.cos(a), r * Math.sin(a)); }
+      const g = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: 0.6 + 0.6 * hash(pi), bevelEnabled: true, bevelThickness: 0.25, bevelSize: 0.35, bevelSegments: 3, curveSegments: 1 }).rotateX(-Math.PI / 2),
+        new THREE.MeshStandardMaterial({ color: col, roughness: 0.85 }));
+      g.position.set(x, -0.2, z); g.castShadow = g.receiveShadow = true; this.s.add(g);
       const kit = K[id]; kit.root.visible = false; this.s.add(kit.root);
       const [geo, dc, em] = DETAIL[id]; const im = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ color: dc, roughness: 0.8, flatShading: true, emissive: em ? dc : 0x000000, emissiveIntensity: em }), 70);
       const M = new THREE.Matrix4(); for (let k = 0; k < 70; k++) { const a = hash(pi * 100 + k) * 6.283, r = 4.6 * Math.sqrt(hash(pi * 100 + k + 0.5));
-        M.compose(new THREE.Vector3(x + r * Math.cos(a), 0.5, z + r * Math.sin(a)), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, a * 3, 0)), new THREE.Vector3().setScalar(0.6 + 0.8 * hash(k * 3 + pi))); im.setMatrixAt(k, M); }
-      this.s.add(im);
+        M.compose(new THREE.Vector3(x + r * Math.cos(a), 0.65 + 0.6 * hash(pi), z + r * Math.sin(a)), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, a * 3, 0)), new THREE.Vector3().setScalar(0.6 + 0.8 * hash(k * 3 + pi))); im.setMatrixAt(k, M); }
+      im.castShadow = im.receiveShadow = true; this.s.add(im);
       [...(PROPS[id] ?? []), ...(PROPS[id] ?? [])].forEach((nm, j) => { let src: THREE.Object3D; try { src = kit.part(nm); } catch { return; }
         const o = src.clone(); const a = j * 2.4 + pi; const r = j === 0 ? 0 : 2.6 + 0.8 * hash(pi + j);
-        o.position.set(x + r * Math.cos(a), 0.5, z + r * Math.sin(a)); o.rotation.set(0, Math.atan2(-o.position.x, 20 - o.position.z) + 0.4 * (hash(j) - 0.5), 0);
+        o.position.set(x + r * Math.cos(a), 0.65 + 0.6 * hash(pi), z + r * Math.sin(a)); o.rotation.set(0, Math.atan2(-o.position.x, 20 - o.position.z) + 0.4 * (hash(j) - 0.5), 0);
         const bb = new THREE.Box3().setFromObject(src); const h = Math.max(0.01, bb.max.y - bb.min.y); o.scale.multiplyScalar((nm === 'dino' || nm === 'heron' || nm === 'arch' || nm === 'tree' ? 3.0 : 1.3) / h);
-        this.s.add(o); if (LOOKERS.has(nm)) this.lookers.push({ o, base: o.rotation.clone(), ph: hash(pi * 7 + j) }); });
+        o.traverse((q) => { (q as THREE.Mesh).castShadow = true; }); this.s.add(o); if (LOOKERS.has(nm)) this.lookers.push({ o, base: o.rotation.clone(), ph: hash(pi * 7 + j) }); });
     });
     const wh = K.whale.root; this.whale = wh; wh.scale.setScalar(0.5); wh.position.set(-34, 26, -75); wh.rotation.y = 0.6; this.s.add(wh);
     // the outcrop the cursor stands on
