@@ -35,15 +35,13 @@ for i, h in enumerate([0.34, 0.94, 1.45]):
     put(h, thud(48 + 6 * i, 0.6), 0.9); put(h, crack(0.25 + 0.15 * i), 0.35 + 0.2 * i, (-1) ** i * 0.3)
 put(1.45, hp(noise(1.6), 3500) * env(1.6, 0.002, 1.6), 0.35, 0.2)
 for k in range(24): put(1.5 + 0.06 * k + 0.05 * rng.random(), chime(2500 + 3000 * rng.random(), 0.3), 0.05, rng.uniform(-0.9, 0.9))
-put(3.0, whoosh(3.4, 200, 1800), 0.12)  # the fall
 # 6.43 whale slam + splash + moan
 put(DROP, thud(38, 1.2), 1.0); put(DROP, lp(noise(0.9), 1500) * env(0.9, 0.003, 0.9), 0.5)
 put(DROP + 0.25, lp(sweep(140, 90, 2.2, lambda p: np.sin(p) + 0.3 * np.sin(2 * p)), 800) * np.sin(np.pi * t_(2.2) / 2.2), 0.25)
 # ink: plops on the pads, gulp, hiccup spit
-for k, h in enumerate([11.75, 11.95, 12.1]): put(h, sweep(900, 300, 0.12) * env(0.12), 0.35, -0.3 + 0.3 * k)
+for k, h in enumerate([11.75, 11.95, 12.1]): put(h, sweep(900, 300, 0.12) * env(0.12), 0.12, -0.3 + 0.3 * k)
 put(12.2, lp(sweep(220, 50, 0.6), 600) * env(0.6, 0.01, 0.7), 0.9); put(12.25, lp(noise(0.5), 300) * env(0.5), 0.4)
-put(13.39, sweep(200, 900, 0.12) * env(0.12), 0.7); put(13.39, lp(noise(0.1), 3000) * env(0.1), 0.5)
-for k in range(3): put(13.6 + 0.3 * k, sweep(1200, 500, 0.08) * env(0.08), 0.1, 0.3 * k)
+put(13.39, sweep(200, 900, 0.12) * env(0.12), 0.3); put(13.39, lp(noise(0.1), 3000) * env(0.1), 0.2)
 # the scream from above: two formant-filtered saws gliding down, with a thud
 scr = saw(2 * np.pi * np.cumsum(np.linspace(780, 520, int(1.5 * SR)) * (1 + 0.02 * np.sin(2 * np.pi * 7 * t_(1.5)))) / SR)
 scr = bp(scr, 700, 1300) * 1.2 + bp(scr, 2200, 3200) * 0.8 + bp(noise(1.5), 2000, 5000) * 0.3

@@ -21,7 +21,15 @@ export const heroBlink = (t: number) => ((((t - DROP) / (2 * BEAT)) % 1) + 1) % 
 
 export class HeroPass {
   readonly scene = new THREE.Scene();
-  private block = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.0, 0.34, 0.02), toneMapped: false });
+  // hot HDR core grading out to the terminal orange, with a thin darker bevel rim: reads as a lit block under any
+  // region's tone map (ACES or legacy shoulder) instead of a matte or brown slab
+  private block = new THREE.ShaderMaterial({ uniforms: { uK: { value: 1 } }, toneMapped: false,
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: `uniform float uK; varying vec2 vUv;
+      void main(){ vec2 e = min(vUv, 1.0 - vUv); float d = min(e.x, e.y), r = length(vUv - 0.5) * 1.41;
+        vec3 core = mix(vec3(2.1, 0.62, 0.07), vec3(1.15, 0.24, 0.01), smoothstep(0.0, 0.9, r));
+        vec3 c = mix(vec3(0.45, 0.09, 0.0), core, smoothstep(0.025, 0.06, d));
+        gl_FragColor = vec4(c * uK, 1.0); }` });
   private halo = new THREE.SpriteMaterial({ map: haloTex(), color: new THREE.Color(1, 0.36, 0.05), transparent: true, opacity: 0.8,
     blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
 
@@ -42,7 +50,7 @@ export class HeroPass {
     const bb = new THREE.Box3().setFromObject(root), sz = bb.getSize(new THREE.Vector3()), c = bb.getCenter(new THREE.Vector3());
     root.traverse((q) => { if ((q as THREE.Mesh).isMesh) q.visible = false; });
     const box = new THREE.Mesh(new THREE.BoxGeometry(sz.x, sz.y, sz.z), this.block); box.position.copy(c); box.castShadow = true; box.name = 'heroBlock';
-    const halo = new THREE.Sprite(this.halo); halo.position.copy(c); halo.scale.set(sz.y * 2.6, sz.y * 2.6, 1); halo.renderOrder = -1;
+    const halo = new THREE.Sprite(this.halo); halo.position.copy(c); halo.scale.set(sz.y * 3.4, sz.y * 3.4, 1); halo.renderOrder = -1;
     root.add(box, halo);
     if (o.inline) return root;
     this.scene.add(root);
@@ -55,8 +63,8 @@ export class HeroPass {
   }
 
   update(t: number, on = heroBlink(t)) {
-    const k = 0.3 + 0.7 * clamp01(on) * (0.97 + 0.03 * Math.sin(t * 90));
-    this.block.color.setRGB(k, 0.34 * k, 0.02 * k); this.halo.opacity = 0.8 * k * k;
+    const k = 0.7 + 0.3 * clamp01(on) * (0.97 + 0.03 * Math.sin(t * 90));
+    this.block.uniforms.uK!.value = k; this.halo.opacity = 0.95 * k * k;
   }
 
   /** draw the hero into `out` after the region's own passes. Pass `world` when `out` does not already hold the

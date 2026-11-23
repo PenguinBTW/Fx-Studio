@@ -76,11 +76,11 @@ export default class S11Finale extends Scene {
     { const g = new THREE.PlaneGeometry(56, 52, 224, 208).rotateX(-Math.PI / 2).translate(0, 0, -21), P = g.attributes.position, C = new Float32Array(P.count * 3), c = new THREE.Color();
       for (let k = 0; k < P.count; k++) { P.setY(k, terr(P.getX(k), P.getZ(k), c)); c.toArray(C, k * 3); }
       g.setAttribute('color', new THREE.BufferAttribute(C, 3)); g.computeVertexNormals();
-      const land = new THREE.Mesh(g, groundDetail(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 }), 1.0, 0.5, 0.9)); land.castShadow = land.receiveShadow = true; this.s.add(land); }
+      const land = new THREE.Mesh(g, groundDetail(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 }), 0.45, 0.3, 0.6)); land.castShadow = land.receiveShadow = true; this.s.add(land); }
     PATCHES.forEach(([id, , x, z], pi) => {
       const kit = K[id]; kit.root.visible = false; this.s.add(kit.root);
-      const [geo, dc, em] = DETAIL[id]; const im = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ color: dc, roughness: 0.8, flatShading: true, emissive: em ? dc : 0x000000, emissiveIntensity: em }), 240);
-      const M = new THREE.Matrix4(); for (let k = 0; k < 240; k++) { const a = hash(pi * 100 + k) * 6.283, r = 6.2 * Math.sqrt(hash(pi * 100 + k + 0.5)), px = x + r * Math.cos(a), pz = z + r * Math.sin(a);
+      const [geo, dc, em] = DETAIL[id]; const im = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ color: dc, roughness: 0.8, flatShading: true, emissive: em ? dc : 0x000000, emissiveIntensity: em }), 90);
+      const M = new THREE.Matrix4(); for (let k = 0; k < 90; k++) { const a = hash(pi * 100 + k) * 6.283, r = 6.2 * Math.sqrt(hash(pi * 100 + k + 0.5)), px = x + r * Math.cos(a), pz = z + r * Math.sin(a);
         M.compose(new THREE.Vector3(px, terr(px, pz) - 0.05, pz), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, a * 3, 0)), new THREE.Vector3().setScalar(0.35 + 0.75 * hash(k * 3 + pi))); im.setMatrixAt(k, M); }
       im.castShadow = im.receiveShadow = true; this.s.add(im);
       Array.from({ length: 5 }, () => PROPS[id] ?? []).flat().forEach((nm, j) => { let src: THREE.Object3D; try { src = kit.part(nm); } catch { return; }
@@ -137,7 +137,7 @@ export default class S11Finale extends Scene {
     
     const blink = ((t * 1.06) % 1) < 0.55 ? 1 : 0.15; this.hero.update(t);
     const up = sm(SCREAM, SCREAM + 0.35, t);
-    this.cur.position.y = 8.6 + 0.12 * Math.abs(Math.sin(t * Math.PI / BEAT)) * (1 - up) + 0.6 * sm(SCREAM, SCREAM + 0.12, t) * (1 - sm(SCREAM + 0.12, SCREAM + 0.5, t));
+    this.cur.position.set(0, 0, 6); this.cur.scale.setScalar(1.9); this.cur.position.y = 8.6 + 0.12 * Math.abs(Math.sin(t * Math.PI / BEAT)) * (1 - up) + 0.6 * sm(SCREAM, SCREAM + 0.12, t) * (1 - sm(SCREAM + 0.12, SCREAM + 0.5, t));
     this.cur.rotation.set(-0.5 * up, 0.3 * Math.sin(t * 0.8) * (1 - up), 0);
     for (const L of this.lookers) { const u = sm(SCREAM + 0.05 + 0.25 * L.ph, SCREAM + 0.3 + 0.25 * L.ph, t);
       L.o.rotation.set(L.base.x - 0.7 * u, L.base.y, L.base.z); L.o.position.y = L.y + 0.3 * u * Math.max(0, Math.sin((t - SCREAM) * 18)) * (1 - sm(SCREAM + 0.6, SCREAM + 0.9, t)); }
@@ -150,6 +150,12 @@ export default class S11Finale extends Scene {
     const dir = new THREE.Vector3(0, 10, 10).sub(this.PH).normalize(), end = this.PH.clone().addScaledVector(dir, 0.45 * (0.44 + 3.25 * 16 / 9 / Math.tan(16 * Math.PI / 180)));
     p.lerp(this.PH, 0.12 * sm(SCREAM + 0.6, WHIP, t));
     if (t > WHIP) { p.lerp(end, we); look.copy(this.PH); }
+    // keep the hero centred over the vista, then it lifts off on the scream and leads the whip into the phone
+    const c0 = this.cur.position.clone(), fwd = c0.clone().sub(p).normalize();
+    const vlook = c0.clone().addScaledVector(fwd, 20).add(new THREE.Vector3(0, 4.5, 0)); look.lerp(vlook, 1 - sm(SCREAM, SCREAM + 0.5, t));
+    const lift = sm(SCREAM + 0.25, SCREAM + 0.9, t);
+    if (lift > 0) { const vd = look.clone().sub(p).normalize(), D = Math.min(13, 0.6 * p.distanceTo(this.PH)); this.cur.scale.setScalar(lerp(1.9, 0.8, lift));
+      this.cur.position.lerp(p.clone().addScaledVector(vd, D).add(new THREE.Vector3(0, -0.9, 0)), lift); const q0 = this.cur.quaternion.clone(); this.cur.lookAt(p); this.cur.quaternion.copy(q0.slerp(this.cur.quaternion, lift)); }
     this.cam.position.copy(p); this.cam.lookAt(look); this.crowd.visible = t > SCREAM + 0.4; this.scrT.value = t;
     this.whale.position.set(-34 + 9 * (t - T0), 24 + Math.sin(t * 1.3), -60); this.whale.rotation.set(0, 1.4, 0.1 * Math.sin(t * 1.3));
     const yk = clamp((t - SCREAM) / 0.9, 0, 1); this.yell.visible = t > SCREAM && yk < 1;
