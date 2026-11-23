@@ -103,7 +103,7 @@ const wet = reverb(send, makeIR({ seconds: 3, rt60: 2.2, hiHz: 7000, loHz: 500, 
 const out = mkStereo(N);
 for (const ch of ['l', 'r'] as const) for (let i = 0; i < N; i++) out[ch][i] = dry[ch][i]! + low[ch][i]! + pad[ch][i]! + bass[ch][i]! + wet[ch][i]! * 0.5;
 
-// 30.6-31.0: buffer stutter (1/16 -> 1/32 -> 1/64 repeats) with a bitcrushed end, then a dead stop on "that's your screen."
+// 30.6-31.0: buffer stutter (32nd -> 64th -> 128th-note repeats at 120 bpm) with a bitcrushed end, then a dead stop on "that's your screen."
 {
   const i0 = Math.round(30.6 * SR), i1 = Math.round(31.0 * SR);
   for (const ch of ['l', 'r'] as const) for (let i = i0; i < i1; i++) {

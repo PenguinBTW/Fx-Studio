@@ -25,7 +25,7 @@ bun scripts/render.ts audio --project freefall --mp3                 # mixdown -
 | 18.1–20 | "closer." midpoint stop | everything cuts but a thin pad; reverse swell into the slam |
 | 20–29 | salt, atom | full drive: 16th hats, off-beat octave bass, brighter plucks |
 | 29–30.6 | quark | accelerating snare roll, filter at 4.2 kHz |
-| 30.6–31 | RGB glitch | buffer stutter 1/16 → 1/32 → 1/64, bitcrushed |
+| 30.6–31 | RGB glitch | buffer stutter of 1/32 → 1/64 → 1/128 notes, bitcrushed |
 | 31–33 | "that's your screen." | dead stop, then a quiet pad |
 | 33–38 | pull-back to orbit | swell back into the opening bells |
 
