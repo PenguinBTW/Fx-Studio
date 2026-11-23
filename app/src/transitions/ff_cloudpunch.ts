@@ -1,0 +1,10 @@
+// ff_cloudpunch: orbit -> storm. On the shared dive camera we punch through a gap in the cloud deck: the orbit keeps
+// its own descent while a billowed, fbm-edged gap with shadowed rims grows from the dive point at the zoom rate,
+// the storm's cloud deck lying beneath it at native scale, a faint lightning flash lighting the deck from within.
+import { ffTransition, TG } from '../scenes/freefall/tkit';
+export default ffTransition(`${TG}
+void main() { vec2 p = P(); float e = smoothstep(0.0, 1.0, u); float z = diveZ(e); float R = diveR(z); vec3 A = radialA(p, 1.0 + 0.5 * e, 0.15 * e);
+  float n = fftf(p * 3.0 / (0.2 + R) + uT * 0.2); float d = length(p) / R + 0.6 * (n - 0.5);
+  float m = max(smoothstep(1.05, 0.8, d), smoothstep(0.85, 1.0, u)); vec3 B = tapB(p, 1.0); float rim = exp(-sq((d - 0.95) * 5.0)) * (1.0 - e);
+  float fl = exp(-sq((u - 0.55) * 8.0)); vec3 c = mix(A, B, m) * (1.0 - 0.55 * rim) + vec3(0.7, 0.75, 1.3) * fl * 0.06 * m;
+  gl_FragColor = vec4(c, 1.0); }`, { dur: 0.8 });
