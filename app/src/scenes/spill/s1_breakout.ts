@@ -79,6 +79,7 @@ export default class S1Breakout extends Scene {
   private insts: GLTFInstance[] = [];
   private cur!: THREE.Object3D;
   private curX!: THREE.Object3D;
+  private glyphs: THREE.Sprite[] = [];
   private cores: THREE.MeshPhysicalMaterial[] = [];
   private curLight = new THREE.PointLight(0xff7a1e, 3, 0, 2);
   private curLightX = new THREE.PointLight(0xff7a1e, 40, 0, 2);
@@ -288,7 +289,7 @@ export default class S1Breakout extends Scene {
     const pc = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 600, 5), body); pc.position.set(0, 7.6 + 300, 0);
     this.glows.geometry.setAttribute('aTile', new THREE.InstancedBufferAttribute(tiles, 1)); this.glows.geometry.setAttribute('aTint', new THREE.InstancedBufferAttribute(tints, 3));
     this.exS.add(this.screens, this.glows, cables, pc);
-    this.mkLeak();
+    this.mkLeak(); this.mkTrail();
   }
 
   /** blink is its face: steady on while charging, surprise double-blink after the break, terminal 1.06 Hz while falling */
@@ -299,6 +300,23 @@ export default class S1Breakout extends Scene {
 
   /** Screen Sky depth: near screens whipping past the lens, and one CRT leaking its pixels into the fall */
   private leakPx!: THREE.InstancedMesh; private leakA = new THREE.Vector3(); private leakB = new THREE.Vector3();
+  // typed-glyph trail: the cursor leaves a line of terminal characters behind it as it falls
+  private mkTrail() {
+    const G = '>_$#{}01;~*&', cv = document.createElement('canvas'); cv.width = 64 * G.length; cv.height = 64; const g = cv.getContext('2d')!;
+    g.font = 'bold 54px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.shadowColor = '#ff6a10'; g.shadowBlur = 10; g.fillStyle = '#ffb060';
+    for (let i = 0; i < G.length; i++) g.fillText(G[i], 64 * i + 32, 34);
+    const base = new THREE.CanvasTexture(cv); base.colorSpace = THREE.SRGBColorSpace; base.repeat.set(1 / G.length, 1);
+    for (let i = 0; i < 22; i++) { const tx = base.clone(); tx.offset.x = Math.floor(hash(i * 4.7) * G.length) / G.length; tx.needsUpdate = true;
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tx, transparent: true, depthWrite: false, toneMapped: false, color: new THREE.Color(2.2, 1.1, 0.5) }));
+      this.glyphs.push(sp); this.exS.add(sp); }
+  }
+  private poseTrail(t: number) {
+    const on = sm(OUTSIDE - 0.4, OUTSIDE, t);
+    this.glyphs.forEach((sp, i) => { const lag = 0.022 * (i + 1), tt = Math.floor((t - lag) * 15) / 15; const p = this.fallP(tt);
+      p.x += 0.5 * (hash(i * 9.1) - 0.5); p.z += 0.5 * (hash(i * 3.3) - 0.5);
+      const k = on * (1 - i / this.glyphs.length); sp.position.copy(p); sp.scale.setScalar(2.1 * (0.5 + 0.5 * k));
+      (sp.material as THREE.SpriteMaterial).opacity = k * ((Math.floor(t * 15) + i) % 4 === 0 ? 0.55 : 1); sp.visible = k > 0.02; });
+  }
   private mkLeak() {
     const atlas = screenAtlas(), N = 26, dm = new THREE.Object3D(), tiles = new Float32Array(N + 1), tints = new Float32Array((N + 1) * 3).fill(1);
     const body = new THREE.InstancedMesh(new THREE.BoxGeometry(1.08, 1.08, 0.14).translate(0, 0, -0.08), new THREE.MeshStandardMaterial({ color: 0x15141a, roughness: 0.45, metalness: 0.6 }), N + 1);
@@ -375,7 +393,7 @@ export default class S1Breakout extends Scene {
     const jolt = t > 4.06 ? Math.max(0, spring(t - 4.06, 30, 6)) : 0, flip = sm(4.72, 4.95, t);
     c.position.copy(p); c.scale.set(3.4 * (1 + 0.3 * jolt), 3.4 * (1 - 0.35 * jolt), 3.4 * (1 + 0.3 * jolt));
     c.rotation.set(-5.5 * d - 3.1 * flip, 1.3 * d, 2.2 * d + 0.6 * Math.sin(d * 3) + 1.6 * flip);
-    this.poseLeak(t);
+    this.poseLeak(t); this.poseTrail(t);
     const wide = sm(0, 0.9, d), dive = sm(OUTSIDE + 0.2, OUTSIDE + 1.4, t);
     const cam = new THREE.Vector3(lerp(3, 14, wide), lerp(1.5, 4, wide), lerp(18, 58, wide));
     const follow = new THREE.Vector3(p.x + 3, p.y + 6, p.z + 9);
