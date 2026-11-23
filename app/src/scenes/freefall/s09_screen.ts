@@ -38,7 +38,7 @@ export default class S09Screen extends Scene {
     const u = this.lcd.u; u.uT!.value = t; u.uImg!.value = this.img.texture; (u.uRes!.value as THREE.Vector2).set(out.width, out.height);
     u.uN!.value = Math.min(1920, Math.pow(10, Z(t)) / 6e-5); u.uMelt!.value = Math.min(1, Math.max(0, (t - 35.2) / 1.6)) ** 2;
     rr.setRenderTarget(out); rr.setClearColor(0, 1); rr.clear(true, true, true); this.lcd.render(rr, out); rr.resetState();
-    if (f.tin >= 1 && f.tout <= 0) hud(rr, this.ctx.comp, out, t);
+    if (!inSeam(t)) hud(rr, this.ctx.comp, out, t);
     const z0 = Z(0); const melt = u.uMelt!.value as number;
     return { toneMap: 'aces', exposure: 1.25, bloom: 0.85 - 0.0 * melt, bloomThreshold: 0.45, halation: 0.35, vignette: 0.35, grain: 0.04, ca: Math.min(0.7, 0.15 + 0.05 * Math.max(0, 5.6 - z0) + 0.3 * (1 - melt)) };
   }

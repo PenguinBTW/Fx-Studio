@@ -22,6 +22,9 @@ export function Z(t: number): number {
 }
 /** dZ/dt (orders of magnitude per second), for speed lines and motion blur */
 export const dZ = (t: number) => (Z(t + 0.01) - Z(t - 0.01)) / 0.02;
+/** ff_* seam windows (project.json); the transition draws the HUD there, scenes everywhere else. */
+export const SEAMS = [3.6, 7.6, 10.6, 14.6, 19.6, 23.6, 27.6, 30.6], SEAM_DUR = 0.8;
+export const inSeam = (t: number) => SEAMS.some((a) => t >= a && t < a + SEAM_DUR);
 
 const LABELS: [number, string][] = [[0, 'low orbit'], [4, 'thunderhead'], [8, 'raindrop'], [11, 'plankton'], [15, 'diatom'], [20, 'salt crystal'], [24, 'sodium atom'], [28, 'quark'], [31, 'your screen'], [33.4, ''], [35.5, 'low orbit']];
 const TEXT: { at: number; end: number; s: string }[] = [
@@ -71,7 +74,7 @@ export function shaderScene(frag: string, post: (t: number) => Record<string, un
     render(f: { t: number; tin: number; tout: number }, out: THREE.WebGLRenderTarget) {
       const rr = this.ctx.renderer, u = this.pass.u; u.uT!.value = f.t; u.uZ!.value = Z(f.t); u.uDZ!.value = dZ(f.t); (u.uRes!.value as THREE.Vector2).set(out.width, out.height);
       rr.setRenderTarget(out); rr.setClearColor(0, 1); rr.clear(true, true, true); this.pass.render(rr, out); rr.resetState();
-      if (f.tin >= 1 && f.tout <= 0) hud(rr, this.ctx.comp, out, f.t);
+      if (!inSeam(f.t)) hud(rr, this.ctx.comp, out, f.t);
       return post(f.t);
     }
     dispose() { this.pass.dispose(); this.pass.mesh.geometry.dispose(); }
