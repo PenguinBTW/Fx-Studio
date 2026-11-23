@@ -256,4 +256,7 @@ Before finalizing any transition seam, verify:
 - [ ] **Target Cleared:** The `out` buffer is cleanly cleared before drawing the transition quad.
 - [ ] **Manifest Window:** `project.json` declares matching `from`, `to`, `at`, and `duration` with overlapping scene intervals.
 - [ ] **Resource Disposal:** Geometries, materials, and internal render targets are disposed in `dispose()`.
+- [ ] **Full Coverage:** At the last frame of the window the incoming scene covers the whole frame at the project aspect (size radial/edge masks for 9:16, not just 16:9). Check a still at `at + duration - 1/fps`.
+- [ ] **No Snap Inside the Window:** The incoming scene's camera and hero are already at their first pose at `at`; nothing jumps once its own clock starts.
+- [ ] **Defined Shader Maths:** No `pow(x, y)` with possibly negative `x` and no `smoothstep(a, b, x)` with `a >= b`. Both are undefined in GLSL and render differently across GPUs.
 - [ ] **Visual Audit:** Inspected `onion_seam.png` and `strip_seam.png` via `stitch.ts` with zero horizon tilt jumps.

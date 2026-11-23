@@ -262,6 +262,8 @@ To maximize the perceived physical impact of a structural drop, downbeat, or mas
 
 ## 4. Headless CLI Workflows & Verification
 
+Licensed songs are never committed: every `audio/` folder is gitignored (`**/audio/`). Commit the mix script, not the song or the rendered mix, and point `project.json` `audio` at the rendered mix (not the raw song) so renders include the SFX.
+
 ### Running Offline Song Analysis
 ```bash
 python scripts/analyze_song.py --audio song/track.mp3 \

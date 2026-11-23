@@ -159,6 +159,9 @@ bun scripts/render.ts stills --project <name> --t 1.5,8.0,14.2 --out .fx/capture
 # Generate a 24-frame contact sheet grid across a scene or timeline
 bun scripts/render.ts sheet --project <name> --from 0 --to 30 --n 24 --cols 6 --out out/sheet.png
 
+# Seam sheet: 4 frames around every scene start (add --times for transition-window ends)
+bun scripts/render.ts sheet --project <name> --cuts --out out/seams.png
+
 # Run 60 fps kinematic telemetry pass
 bun scripts/render.ts motion --project <name> --from 0 --to 30 --out out/telemetry/
 
