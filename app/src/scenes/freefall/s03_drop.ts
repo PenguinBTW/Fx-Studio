@@ -6,7 +6,8 @@ import { FFN, FF_SPEED } from './glsl';
 
 const FRAG = /* glsl */ `${FFN}${FF_SPEED}
 const float RD = 2.0;
-float tw(float t) { float a = smoothstep(9.3, 9.7, t), b = smoothstep(10.3, 10.7, t); return t - (min(t, 10.5) - 9.5) * 0.9 * a * (1.0 - b) - 0.9 * b; }
+float Ism(float x, float e0, float e1) { float h = e1 - e0, u = clamp((x - e0) / h, 0.0, 1.0); return h * (u * u * u - 0.5 * u * u * u * u) + max(x - e1, 0.0); }
+float tw(float t) { return t - 0.9 * (Ism(t, 9.3, 9.7) - Ism(t, 10.3, 10.7)); }
 vec3 bg(vec3 d, float alt) {
   vec3 moon = normalize(vec3(-0.45, 0.3, -0.85));
   float fl = pow(max(0.0, sin(uT * 5.1) * sin(uT * 1.3 + 2.0)), 12.0);
