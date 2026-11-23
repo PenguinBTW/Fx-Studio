@@ -10,68 +10,150 @@
       "scene": "spill/s1_breakout",
       "id": "breakout",
       "start": 0,
-      "end": 6.432
+      "end": 6.732
     },
     {
       "scene": "spill/s2_whale",
       "id": "whale",
       "start": 6.432,
-      "end": 8.172
+      "end": 8.552
     },
     {
       "scene": "spill/s3_paper",
       "id": "paper",
-      "start": 8.172,
-      "end": 9.913
+      "start": 8.052,
+      "end": 10.293
     },
     {
       "scene": "spill/s4_clay",
       "id": "clay",
-      "start": 9.913,
-      "end": 11.653
+      "start": 9.793,
+      "end": 12.033
     },
     {
       "scene": "spill/s5_ink",
       "id": "ink",
-      "start": 11.653,
-      "end": 15.134
+      "start": 11.533,
+      "end": 15.514
     },
     {
       "scene": "spill/s6_pixel",
       "id": "pixel",
-      "start": 15.134,
-      "end": 16.874
+      "start": 15.014,
+      "end": 17.254
     },
     {
       "scene": "spill/s7_felt",
       "id": "felt",
-      "start": 16.874,
-      "end": 18.614
+      "start": 16.754,
+      "end": 18.994
     },
     {
       "scene": "spill/s8_hose",
       "id": "hose",
-      "start": 18.614,
-      "end": 20.354
+      "start": 18.494,
+      "end": 20.734
     },
     {
       "scene": "spill/s9_garden",
       "id": "garden",
-      "start": 20.354,
-      "end": 22.094
+      "start": 20.234,
+      "end": 22.474
     },
     {
       "scene": "spill/s10_ps1",
       "id": "ps1",
-      "start": 22.094,
-      "end": 23.834
+      "start": 21.974,
+      "end": 24.214
     },
     {
       "scene": "spill/s11_finale",
       "id": "finale",
-      "start": 23.834,
+      "start": 23.714,
       "end": 29.06
     }
   ],
-  "audio": "../../../public/audio/spill_mix.wav"
+  "audio": "../../../public/audio/spill_mix.wav",
+  "transitions": [
+    {
+      "id": "t-1",
+      "transition": "sp_paint",
+      "from": "breakout",
+      "to": "whale",
+      "at": 6.432,
+      "dur": 0.3
+    },
+    {
+      "id": "t-2",
+      "transition": "sp_paper",
+      "from": "whale",
+      "to": "paper",
+      "at": 8.052,
+      "dur": 0.5
+    },
+    {
+      "id": "t-3",
+      "transition": "sp_clay",
+      "from": "paper",
+      "to": "clay",
+      "at": 9.793,
+      "dur": 0.5
+    },
+    {
+      "id": "t-4",
+      "transition": "sp_ink",
+      "from": "clay",
+      "to": "ink",
+      "at": 11.533,
+      "dur": 0.5
+    },
+    {
+      "id": "t-5",
+      "transition": "sp_pixel",
+      "from": "ink",
+      "to": "pixel",
+      "at": 15.014,
+      "dur": 0.5
+    },
+    {
+      "id": "t-6",
+      "transition": "sp_felt",
+      "from": "pixel",
+      "to": "felt",
+      "at": 16.754,
+      "dur": 0.5
+    },
+    {
+      "id": "t-7",
+      "transition": "sp_iris",
+      "from": "felt",
+      "to": "hose",
+      "at": 18.494,
+      "dur": 0.5
+    },
+    {
+      "id": "t-8",
+      "transition": "sp_glass",
+      "from": "hose",
+      "to": "garden",
+      "at": 20.234,
+      "dur": 0.5
+    },
+    {
+      "id": "t-9",
+      "transition": "sp_ps1",
+      "from": "garden",
+      "to": "ps1",
+      "at": 21.974,
+      "dur": 0.5
+    },
+    {
+      "id": "t-10",
+      "transition": "sp_quilt",
+      "from": "ps1",
+      "to": "finale",
+      "at": 23.714,
+      "dur": 0.5
+    }
+  ]
 }
