@@ -81,7 +81,7 @@ export default class S10Ps1 extends Scene {
     // cursor sprints the ruins; skids and double-blinks when the dino roars
     const skid = sm(this.ROAR - 0.1, this.ROAR + 0.1, ts), run = Math.abs(Math.sin((ts - T0) * 15));
     const cx = lerp(-10, 8, k) - 2.5 * skid * (1 - sm(this.ROAR + 0.4, this.ROAR + 0.7, ts));
-    const cp = new THREE.Vector3(cx, 0.8 + 0.5 * run * (1 - skid * 0.8), 0.6); this.cur.position.copy(cp); this.cur.rotation.set(0, 0, -0.2 + 0.45 * skid);
+    const cp = new THREE.Vector3(cx, 0.8 + 0.5 * run * (1 - skid * 0.8), 0.6 + 1.8 * sm(T1 - 0.75, T1 - 0.35, ts)); this.cur.position.copy(cp); this.cur.rotation.set(0, 0, -0.2 + 0.45 * skid);
     const roar = sm(this.ROAR - 0.15, this.ROAR, ts) * (1 - sm(this.ROAR + 0.6, this.ROAR + 0.8, ts));
     const dbl = ts > this.ROAR && ts < this.ROAR + 0.4 ? (Math.floor((ts - this.ROAR) * 10) % 2 ? 0.1 : 1) : ((t * 1.06) % 1) < 0.55 ? 1 : 0.12;
     this.hero.update(t, dbl);

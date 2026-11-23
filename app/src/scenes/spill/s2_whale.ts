@@ -192,7 +192,7 @@ export default class S2Whale extends Scene {
     // camera: low over the whale's back for the hit, then follows the ricochet and pulls wide to show the whale
     const kick = Math.max(0, spring(d, 38, 9));
     const close = this.whale.localToWorld(new THREE.Vector3(30, 9 + kick * 0.8, 34));
-    close.lerp(p, 0.2);
+    close.lerp(p, 0.42);
     const wide = this.whale.position.clone().add(new THREE.Vector3(60, 40, 330));
     const w = sm(0.25, 1.3, d);
     this.cam.position.copy(close.lerp(wide, w)); this.cam.fov = lerp(48, 46, w);

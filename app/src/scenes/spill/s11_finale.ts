@@ -32,13 +32,13 @@ const PROPS: Record<string, string[]> = { paper: ['tree', 'deer', 'tree'], ink: 
 const DETAIL: Record<string, [THREE.BufferGeometry, number, number]> = {
   paper: [new THREE.ConeGeometry(0.35, 0.8, 4).translate(0, 0.4, 0), 0xfff4dc, 0], ink: [new THREE.CylinderGeometry(0.03, 0.05, 1.6, 4).translate(0, 0.8, 0), 0x15151a, 0],
   pixel: [new THREE.BoxGeometry(0.5, 0.5, 0.5).translate(0, 0.25, 0), 0x6ae04a, 0], felt: [new THREE.IcosahedronGeometry(0.35, 1).translate(0, 0.25, 0), 0xffb0d0, 0],
-  hose: [new THREE.CylinderGeometry(0.2, 0.28, 0.6, 8).translate(0, 0.3, 0), 0xf0f0ea, 0], garden: [new THREE.OctahedronGeometry(0.4).scale(0.5, 1, 0.12).translate(0, 0.5, 0), 0x40e0ff, 0.9],
+  hose: [new THREE.CylinderGeometry(0.2, 0.28, 0.6, 8).translate(0, 0.3, 0), 0x8a8a84, 0], garden: [new THREE.OctahedronGeometry(0.4).scale(0.5, 1, 0.12).translate(0, 0.5, 0), 0x40e0ff, 0.9],
   ps1: [new THREE.BoxGeometry(0.6, 0.35, 0.6).translate(0, 0.17, 0), 0x9a948a, 0], clay: [new THREE.SphereGeometry(0.35, 10, 6).scale(1, 0.6, 1).translate(0, 0.2, 0), 0xff5a8a, 0] };
 // one patchwork continent: every region at once, soft bands where styles blend, stitched seams between them
 const PAL = PATCHES.map((p) => new THREE.Color(p[1]));
 function terr(x: number, z: number, col?: THREE.Color) {
   const ds = PATCHES.map(([, , px, pz]) => Math.hypot(x - px, z - pz)), dmin = Math.min(...ds);
-  const ws = ds.map((d) => Math.exp(-(d - dmin) * 2.2)); let W = 0, h = 0, w1 = 0, w2 = 0, top = 0;
+  const ws = ds.map((d) => Math.exp(-(d - dmin) * 6.0)); let W = 0, h = 0, w1 = 0, w2 = 0, top = 0;
   ws.forEach((w, i) => { W += w; if (w > w1) { w2 = w1; w1 = w; top = i; } else if (w > w2) w2 = w;
     const sh = [0.6 * Math.abs(((x + z) * 0.22) % 1 - 0.5), 0.05 * Math.sin(x * 2 + z), Math.floor((1.3 + 0.9 * Math.sin(x * 0.3) * Math.cos(z * 0.35)) * 2) / 2,
       0.35 * Math.sin(x * 0.8) * Math.sin(z * 0.7) + 0.3, 0.15, 0.25 + 0.1 * Math.sin(x * 1.3), Math.sin(x * 0.25 + z * 0.2) > 0 ? 1.1 : 0.3, 0.35 * (Math.sin(x * 0.5) + Math.cos(z * 0.4)) + 0.5][i];
@@ -48,8 +48,8 @@ function terr(x: number, z: number, col?: THREE.Color) {
   if (col) { col.setRGB(0, 0, 0); ws.forEach((w, i) => col.add(PAL[i].clone().multiplyScalar(w / W)));
     const fx = [0.92 + 0.08 * Math.sin(x * 5 + z * 3), 0.85 + 0.15 * Math.sin(x * 3.1 + Math.sin(z * 2.3) * 2), ((Math.floor(x * 1.5) + Math.floor(z * 1.5)) & 1) ? 0.82 : 1,
       ((Math.floor(x * 1.2) + Math.floor(z * 1.2)) & 1) ? 0.84 : 1, (Math.floor(x * 2) & 1) ? 0.8 : 1, 1, ((Math.floor(x * 0.8) + Math.floor(z * 0.8)) & 1) ? 0.85 : 1, 0.95][top];
-    const seam = sm(0.7, 0.95, w2 / w1) * (((x + z) * 2.5 % 1 + 1) % 1 < 0.5 ? 1 : 0.3);
-    col.multiplyScalar(fx * (1 - 0.5 * seam)); if (m < 0.98) col.lerp(new THREE.Color(0xe8d8b0), (1 - m) * 1.2 > 1 ? 1 : (1 - m) * 1.2); }
+    const seam = sm(0.55, 0.75, w2 / w1) * (((x + z) * 2.5 % 1 + 1) % 1 < 0.5 ? 1 : 0.3);
+    col.multiplyScalar(fx * (1 - 0.5 * seam)); if (m < 0.98) { const bind = new THREE.Color(0x7a2436).multiplyScalar(((Math.atan2(z + 21, x) * 40) % 1 + 1) % 1 < 0.5 ? 1 : 1.5); col.lerp(bind, Math.min(1, (1 - m) * 3)); } }
   return y;
 }
 const LOOKERS = new Set(['deer', 'heron', 'sheep', 'fox', 'dino', 'peacock', 'salmonA']);
@@ -76,7 +76,7 @@ export default class S11Finale extends Scene {
     { const g = new THREE.PlaneGeometry(56, 52, 224, 208).rotateX(-Math.PI / 2).translate(0, 0, -21), P = g.attributes.position, C = new Float32Array(P.count * 3), c = new THREE.Color();
       for (let k = 0; k < P.count; k++) { P.setY(k, terr(P.getX(k), P.getZ(k), c)); c.toArray(C, k * 3); }
       g.setAttribute('color', new THREE.BufferAttribute(C, 3)); g.computeVertexNormals();
-      const land = new THREE.Mesh(g, groundDetail(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 }), 0.45, 0.3, 0.6)); land.castShadow = land.receiveShadow = true; this.s.add(land); }
+      const land = new THREE.Mesh(g, groundDetail(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 }), 0.45, 0.12, 0.4)); land.castShadow = land.receiveShadow = true; this.s.add(land); }
     PATCHES.forEach(([id, , x, z], pi) => {
       const kit = K[id]; kit.root.visible = false; this.s.add(kit.root);
       const [geo, dc, em] = DETAIL[id]; const im = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ color: dc, roughness: 0.8, flatShading: true, emissive: em ? dc : 0x000000, emissiveIntensity: em }), 50);
@@ -93,7 +93,7 @@ export default class S11Finale extends Scene {
     // the outcrop the cursor stands on
     // the perch: a cairn of dead phones and monitors that fell before it, screens still faintly lit
     const cols = [0x3fd0ff, 0xff5ab0, 0x7cff6a, 0xffc040, 0xb08cff, 0xff7a1a];
-    [[3.6, 1.6, 2.6, 0.8, 0.1], [2.8, 1.4, 2.0, 2.3, -0.25], [2.2, 1.3, 1.6, 3.7, 0.35], [1.7, 1.2, 1.3, 5.0, -0.1], [1.3, 1.1, 1.0, 6.2, 0.2], [1.0, 1.2, 0.8, 7.35, -0.3]].forEach(([w, h, dd, y, r], i) => {
+    [[1.5, 8.5, 0.45, 4.25, 0.12]].forEach(([w, h, dd, y, r], i) => {
       const g = new THREE.Group(); const b = new THREE.Mesh(new THREE.BoxGeometry(w * 0.8, h, dd * 0.8), new THREE.MeshStandardMaterial({ color: PAL[[2, 4, 5, 6, 1, 3][i]], roughness: 0.75 })); b.castShadow = b.receiveShadow = true;
       const sc = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.66, h * 0.7), new THREE.MeshBasicMaterial({ color: cols[i % cols.length], toneMapped: false }));
       sc.position.z = dd * 0.4 + 0.01; (sc.material as THREE.MeshBasicMaterial).color.multiplyScalar(1.1 + 0.4 * hash(i * 3.7)); g.add(b, sc);
@@ -154,7 +154,7 @@ export default class S11Finale extends Scene {
     const c0 = this.cur.position.clone(), fwd = c0.clone().sub(p).normalize();
     const vlook = c0.clone().addScaledVector(fwd, 20).add(new THREE.Vector3(0, 4.5, 0)); look.lerp(vlook, 1 - sm(SCREAM, SCREAM + 0.5, t));
     const lift = sm(SCREAM + 0.25, SCREAM + 0.9, t);
-    if (lift > 0) { const vd = look.clone().sub(p).normalize(), D = Math.min(13, 0.6 * p.distanceTo(this.PH)); this.cur.scale.setScalar(lerp(1.9, 0.8, lift));
+    if (lift > 0) { const vd = look.clone().sub(p).normalize(), D = Math.min(13, 0.6 * p.distanceTo(this.PH)); this.cur.scale.setScalar(lerp(1.9, 1.35, lift));
       this.cur.position.lerp(p.clone().addScaledVector(vd, D).add(new THREE.Vector3(0, -0.9, 0)), lift); const q0 = this.cur.quaternion.clone(); this.cur.lookAt(p); this.cur.quaternion.copy(q0.slerp(this.cur.quaternion, lift)); }
     this.cam.position.copy(p); this.cam.lookAt(look); this.crowd.visible = t > SCREAM + 0.4; this.scrT.value = t;
     this.whale.position.set(-34 + 9 * (t - T0), 24 + Math.sin(t * 1.3), -60); this.whale.rotation.set(0, 1.4, 0.1 * Math.sin(t * 1.3));
