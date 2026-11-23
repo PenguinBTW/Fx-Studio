@@ -100,7 +100,7 @@ export default class S8Hose extends Scene {
     const dbl = t > this.TIP + 0.1 && t < this.TIP + 0.5 ? (Math.floor((t - this.TIP - 0.1) * 10) % 2 === 0 ? 1 : 0.1) : ((t * 1.06) % 1) < 0.55 ? 1 : 0.12;
     this.hero.update(t, dbl); this.G.uGlow.value = 1.2 * dbl; this.G.uGlowP.value.copy(cp);
     // the cat: boneless stroll toward the cursor, head follows it, tips its hat as it passes
-    const catX = cx + 4.6 - 0.6 * (ts - T0), step = beat; this.cat.position.set(catX, 0.15 * Math.abs(Math.sin(step)), -1.6); this.cat.rotation.set(0, -2.6, 0.06 * Math.sin(step));
+    const catX = cx + 4.6 - 1.2 * (ts - T0), step = beat; this.cat.position.set(catX, 0.15 * Math.abs(Math.sin(step)), -1.6); this.cat.rotation.set(0, -2.6, 0.06 * Math.sin(step));
     const bk = Math.exp(-(((ph % 1) + 1) % 1) * 7); this.cat.scale.set(1.35 * (1 + 0.1 * bk), 1.35 * (1 - 0.14 * bk + 0.06 * Math.sin(step * 2)), 1.35 * (1 + 0.1 * bk));
     this.catHead.rotation.y = clamp(Math.atan2(cp.z + 1.6, -(cp.x - catX)) * 0.6, -0.9, 0.9); this.catHead.rotation.z = 0.12 * Math.sin(step);
     const tip = sm(this.TIP - 0.15, this.TIP + 0.05, ts) * (1 - sm(this.TIP + 0.55, this.TIP + 0.75, ts));
@@ -111,8 +111,12 @@ export default class S8Hose extends Scene {
       this.hoseTo(i, sh, hand, new THREE.Vector3(0, 0.3, 0).add(W(0, 0, s * 0.35).sub(W(0, 0, 0))), 0.09); this.gloves[i].position.copy(hand); this.gloves[i].rotation.set(0, this.cat.rotation.y + Math.PI, s * 0.6);
       const hip = W(0, 0.7, s * 0.22), foot = W(0.45 * sw, 0.12 + 0.25 * Math.max(0, Math.cos(step + (s > 0 ? 0 : Math.PI))), s * 0.3);
       this.hoseTo(2 + i, hip, foot, W(0.35, 0, 0).sub(W(0, 0, 0)), 0.1); this.shoes[i].position.copy(foot); this.shoes[i].rotation.y = this.cat.rotation.y + Math.PI; }
+    // contact: the cursor bounces off the popped-up hat as the cat passes
+    { const hk = Math.sin(Math.PI * clamp((ts - this.TIP + 0.3) / 0.75, 0, 1)); if (hk > 0) { const hp = this.hat.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.55 * CS + 0.7, 0));
+      this.cur.position.lerp(hp, hk); const land = Math.exp(-Math.abs(ts - this.TIP - 0.08) * 14); this.cur.scale.set(CS * (1 + 0.3 * land), CS * (1 - 0.3 * land), CS); } }
     // camera: low dolly along the street, cat in the foreground
-    this.cam.position.set(cx - 7.5, 2.8, 5.8); this.cam.aspect = out.width / out.height; this.cam.updateProjectionMatrix(); this.cam.lookAt(cx + 2, 1.3, 0.3);
+    const hc = sm(0, 1, Math.sin(Math.PI * clamp((ts - this.TIP + 0.45) / 1.05, 0, 1)));
+    this.cam.position.set(cx - 7.5, 2.8 + 1.8 * hc, 5.8 + 2.4 * hc); this.cam.aspect = out.width / out.height; this.cam.updateProjectionMatrix(); this.cam.lookAt(cx + 2 + 1.2 * hc, 1.3 + 2.6 * hc, 0.3);
     if (!this.rt || this.rt.width !== out.width || this.rt.height !== out.height) { this.rt?.dispose(); this.rt = new THREE.WebGLRenderTarget(out.width, out.height, { type: THREE.HalfFloatType }); }
     rr.setRenderTarget(this.rt); rr.clear(); rr.render(this.s, this.cam);
     const fr = Math.floor(t * 12); this.filmU.tCol.value = this.rt.texture; this.filmU.uT.value = t; this.filmU.uF.value = 0.93 + 0.07 * hash(fr); this.filmU.uRes.value.set(out.width, out.height);
