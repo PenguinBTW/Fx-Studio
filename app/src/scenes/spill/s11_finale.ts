@@ -41,8 +41,8 @@ function terr(x: number, z: number, col?: THREE.Color) {
   ws.forEach((w, i) => { W += w; if (w > w1) { w2 = w1; w1 = w; top = i; } else if (w > w2) w2 = w;
     const sh = [0.6 * Math.abs(((x + z) * 0.22) % 1 - 0.5), 0.05 * Math.sin(x * 2 + z), Math.floor((1.3 + 0.9 * Math.sin(x * 0.3) * Math.cos(z * 0.35)) * 2) / 2,
       0.35 * Math.sin(x * 0.8) * Math.sin(z * 0.7) + 0.3, 0.15, 0.25 + 0.1 * Math.sin(x * 1.3), Math.sin(x * 0.25 + z * 0.2) > 0 ? 1.1 : 0.3, 0.35 * (Math.sin(x * 0.5) + Math.cos(z * 0.4)) + 0.5][i];
-    h += w * (0.4 + 0.5 * hash(i) + sh); });
-  h /= W; const e = (x / 22) ** 2 + ((z + 21) / 19) ** 2 + 0.07 * Math.sin(Math.atan2(z + 21, x) * 7) + 0.04 * Math.sin(Math.atan2(z + 21, x) * 13);
+    h += w * (0.5 + 1.3 * hash(i) + 2.4 * sh); });
+  h /= W; h += 7 * sm(-24, -40, z) * (0.55 + 0.45 * Math.sin(x * 0.35 + 1.3)) + 2.2 * sm(14, 22, Math.abs(x)); const e = (x / 22) ** 2 + ((z + 21) / 19) ** 2 + 0.07 * Math.sin(Math.atan2(z + 21, x) * 7) + 0.04 * Math.sin(Math.atan2(z + 21, x) * 13);
   const m = sm(1.05, 0.88, e), y = m * (h + 0.3) + (1 - m) * -1.6;
   if (col) { col.setRGB(0, 0, 0); ws.forEach((w, i) => col.add(PAL[i].clone().multiplyScalar(w / W)));
     const fx = [0.92 + 0.08 * Math.sin(x * 5 + z * 3), 0.85 + 0.15 * Math.sin(x * 3.1 + Math.sin(z * 2.3) * 2), ((Math.floor(x * 1.5) + Math.floor(z * 1.5)) & 1) ? 0.82 : 1,
@@ -82,10 +82,10 @@ export default class S11Finale extends Scene {
       const M = new THREE.Matrix4(); for (let k = 0; k < 70; k++) { const a = hash(pi * 100 + k) * 6.283, r = 4.6 * Math.sqrt(hash(pi * 100 + k + 0.5)), px = x + r * Math.cos(a), pz = z + r * Math.sin(a);
         M.compose(new THREE.Vector3(px, terr(px, pz) - 0.05, pz), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, a * 3, 0)), new THREE.Vector3().setScalar(0.6 + 0.8 * hash(k * 3 + pi))); im.setMatrixAt(k, M); }
       im.castShadow = im.receiveShadow = true; this.s.add(im);
-      [...(PROPS[id] ?? []), ...(PROPS[id] ?? [])].forEach((nm, j) => { let src: THREE.Object3D; try { src = kit.part(nm); } catch { return; }
-        const o = src.clone(); const a = j * 2.4 + pi; const r = j === 0 ? 0 : 2.6 + 0.8 * hash(pi + j);
+      Array.from({ length: 5 }, () => PROPS[id] ?? []).flat().forEach((nm, j) => { let src: THREE.Object3D; try { src = kit.part(nm); } catch { return; }
+        const o = src.clone(); const a = j * 2.4 + pi; const r = j === 0 ? 0 : 1.8 + 3.2 * Math.sqrt(hash(pi + j * 1.7));
         o.position.set(x + r * Math.cos(a), 0, z + r * Math.sin(a)); o.position.y = terr(o.position.x, o.position.z) - 0.05; o.rotation.set(0, Math.atan2(-o.position.x, 20 - o.position.z) + 0.4 * (hash(j) - 0.5), 0);
-        const bb = new THREE.Box3().setFromObject(src); const h = Math.max(0.01, bb.max.y - bb.min.y); o.scale.multiplyScalar((nm === 'dino' || nm === 'heron' || nm === 'arch' || nm === 'tree' ? 3.0 : 1.3) * (LOOKERS.has(nm) ? 1.7 : 1) / h);
+        const bb = new THREE.Box3().setFromObject(src); const h = Math.max(0.01, bb.max.y - bb.min.y); o.scale.multiplyScalar((nm === 'dino' || nm === 'heron' || nm === 'arch' || nm === 'tree' ? 3.0 : 1.3) * (LOOKERS.has(nm) ? 1.7 : 1) * (j < 4 ? 1 : 0.7) / h);
         o.traverse((q) => { (q as THREE.Mesh).castShadow = true; }); this.s.add(o); if (LOOKERS.has(nm)) this.lookers.push({ o, base: o.rotation.clone(), ph: hash(pi * 7 + j), y: o.position.y }); });
     });
     const wh = K.whale.root; this.whale = wh; wh.scale.setScalar(0.5); wh.position.set(-34, 26, -75); wh.rotation.y = 0.6; this.s.add(wh);
