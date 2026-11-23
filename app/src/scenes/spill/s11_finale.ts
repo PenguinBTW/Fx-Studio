@@ -16,10 +16,10 @@ const PATCH_V = /* glsl */ `varying vec3 vP; varying vec3 vN; void main(){ vP = 
 const PATCH_F = /* glsl */ `uniform float uT, uK; varying vec3 vP; varying vec3 vN;
 vec3 pal(float i){ i = mod(i, 7.0); return i < 1.0 ? vec3(0.95, 0.42, 0.08) : i < 2.0 ? vec3(0.93, 0.89, 0.8) : i < 3.0 ? vec3(0.85, 0.55, 0.35) :
   i < 4.0 ? vec3(0.08, 0.08, 0.1) : i < 5.0 ? vec3(0.2, 0.75, 0.35) : i < 6.0 ? vec3(0.95, 0.6, 0.75) : vec3(0.3, 0.45, 0.95); }
-void main(){ float b = floor((vP.y * 2.2 + vP.x * 1.3 + 0.35 * sin(vP.z * 7.0)) * 1.0); float k = step(fract(b * 0.37) , uK);
-  vec3 c = mix(vec3(0.95, 0.42, 0.08), pal(b), k); float l = 0.45 + 0.55 * max(0.0, dot(vN, normalize(vec3(-0.5, 0.7, 0.5))));
+void main(){ float b = floor((vP.y * 2.2 + vP.x * 1.3 + 0.35 * sin(vP.z * 7.0)) * 1.0); float k = step(fract(b * 0.37), uK * 0.55);
+  vec3 c = mix(vec3(1.0, 0.3, 0.03), pal(b), k); float l = 0.45 + 0.55 * max(0.0, dot(vN, normalize(vec3(-0.5, 0.7, 0.5))));
   float seam = smoothstep(0.04, 0.0, abs(fract(vP.y * 2.2 + vP.x * 1.3 + 0.35 * sin(vP.z * 7.0)) - 0.5) - 0.46) * k;
-  gl_FragColor = vec4(c * (l + 0.35) * (1.0 - 0.6 * seam), 1.0); }`;
+  gl_FragColor = vec4(c * (0.7 * l + 0.15) * (1.0 - 0.6 * seam) + vec3(0.4, 0.07, 0.0) * (1.0 - k) * (0.5 + 0.5 * pow(1.0 - abs(vN.z), 2.0)), 1.0); }`;
 
 const PATCHES: [string, number, number, number][] = [ // kit, colour, x, z
   ['paper', 0xffe9c2, -11, -8], ['ink', 0xf6f2ea, 1, -6], ['pixel', 0x2fd05a, 12, -10], ['felt', 0x8ad040, -13, -21],
@@ -53,7 +53,7 @@ export default class S11Finale extends Scene {
     this.s.add(new THREE.HemisphereLight(0xbfd8ff, 0x6a4a30, 1.3)); const sun = new THREE.DirectionalLight(0xffd8a0, 4.2); sun.position.set(-40, 30, 10); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 150 }); sun.shadow.bias = -0.0005; this.s.add(sun);
     this.s.add(new THREE.Mesh(new THREE.CircleGeometry(80, 48).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x2a5a80, roughness: 0.3, metalness: 0.1 })));
     PATCHES.forEach(([id, col, x, z], pi) => {
-      const sh = new THREE.Shape(); for (let k = 0; k <= 48; k++) { const a = k / 48 * 6.283, r = 5.4 + 0.9 * Math.sin(a * 3 + pi) + 0.5 * Math.sin(a * 5 + pi * 2.3) + 0.25 * Math.sin(a * 11 + pi);
+      const sh = new THREE.Shape(); for (let k = 0; k <= 48; k++) { const a = k / 48 * 6.283, r = 7.4 + 0.9 * Math.sin(a * 3 + pi) + 0.5 * Math.sin(a * 5 + pi * 2.3) + 0.25 * Math.sin(a * 11 + pi);
         if (k === 0) sh.moveTo(r * Math.cos(a), r * Math.sin(a)); else sh.lineTo(r * Math.cos(a), r * Math.sin(a)); }
       const g = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: 0.6 + 0.6 * hash(pi), bevelEnabled: true, bevelThickness: 0.25, bevelSize: 0.35, bevelSegments: 3, curveSegments: 1 }).rotateX(-Math.PI / 2),
         new THREE.MeshStandardMaterial({ color: col, roughness: 0.85 }));
@@ -73,7 +73,7 @@ export default class S11Finale extends Scene {
     // the outcrop the cursor stands on
     const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(3.2, 0), new THREE.MeshStandardMaterial({ color: 0x6a5a7a, roughness: 1, flatShading: true }));
     rock.scale.set(0.8, 1.6, 0.8); rock.position.set(0, 3.2, 6); this.s.add(rock);
-    this.cur = K.cursor.root; this.cur.scale.setScalar(1.5); this.cur.position.set(0, 8.6, 6); this.s.add(this.cur);
+    this.cur = K.cursor.root; this.cur.scale.setScalar(1.9); this.cur.position.set(0, 8.6, 6); this.s.add(this.cur);
     const patch = new THREE.ShaderMaterial({ vertexShader: PATCH_V, fragmentShader: PATCH_F, uniforms: this.patchU });
     this.cur.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; const n = (m.material as THREE.Material).name;
       if (n === 'Core') { const c = new THREE.MeshStandardMaterial({ color: 0xff7a1a, emissive: 0xff6a10, emissiveIntensity: 2 }); m.material = c; this.core.push(c); }

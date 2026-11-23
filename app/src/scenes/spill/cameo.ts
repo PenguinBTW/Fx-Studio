@@ -92,7 +92,14 @@ function atlas(k: Kind) {
   atlases.set(k, t); return t;
 }
 
-type Inst = { c: Cameo; m: THREE.Mesh; tex: THREE.Texture; i: number };
+type Inst = { sh: THREE.Mesh; c: Cameo; m: THREE.Mesh; tex: THREE.Texture; i: number };
+let shT: THREE.CanvasTexture | null = null;
+function shadowTex() {
+  if (shT) return shT; const cv = document.createElement('canvas'); cv.width = cv.height = 64; const g = cv.getContext('2d')!;
+  const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  return (shT = new THREE.CanvasTexture(cv));
+}
+
 export class Cameos {
   private s = new THREE.Scene(); private cam = new THREE.OrthographicCamera(-1, 1, 1, -1, -10, 10); private list: Inst[] = [];
   constructor(cfg: Cameo[]) {
@@ -100,14 +107,16 @@ export class Cameos {
     for (const c of cfg) for (let i = 0; i < (c.n ?? 1); i++) {
       const tex = atlas(c.k).clone(); tex.repeat.set(1 / SPEC[c.k].fr, 1); tex.needsUpdate = true;
       const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false }));
-      m.renderOrder = i; this.s.add(m); this.list.push({ c, m, tex, i });
+      const sh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: shadowTex(), transparent: true, depthTest: false, depthWrite: false, color: 0x0a0614 }));
+      sh.renderOrder = -1; sh.visible = false; this.s.add(sh);
+      m.renderOrder = i; this.s.add(m); this.list.push({ c, m, tex, i, sh });
     }
   }
   draw(rr: THREE.WebGLRenderer, out: THREE.WebGLRenderTarget, t: number) {
     const asp = out.width / out.height; let any = false;
-    for (const { c, m, tex, i } of this.list) {
+    for (const { c, m, tex, i, sh } of this.list) {
       const h = R(i * 3.7 + c.t0), flock = c.path === 'fly' || c.path === 'walk', lt = t - c.t0 - (flock ? i * 0.07 : i * 0.18), u = lt / c.dur;
-      m.visible = u > 0 && u < 1; if (!m.visible) continue; any = true;
+      m.visible = u > 0 && u < 1; sh.visible = false; if (!m.visible) continue; any = true;
       const sp = SPEC[c.k], fr = Math.floor((lt + h) * sp.fps) % sp.fr, d = c.dir ?? 1, sc = 3.0 * c.s * (0.75 + 0.5 * h);
       tex.offset.x = fr / sp.fr; let x = 0, y = c.y, rot = 0;
       if (flock) {
@@ -119,8 +128,11 @@ export class Cameos {
       } else if (c.path === 'pop') {
         const k = Math.min(1, lt / 0.22); x = (c.x ?? 0) * asp; y = -1.4 + (c.y + 1.4) * (1 - (1 - k) ** 3) + 0.05 * Math.sin(lt * 22) * Math.exp(-lt * 5); rot = 0.3 * d * k;
       } else { x = ((c.x ?? 0) + (i ? (h - 0.5) * 0.3 : 0)) * asp; y += 0.015 * Math.sin(lt * 3 + i); }
+      // react to the cursor (screen centre): shy away from it and catch its orange light
+      const near = Math.exp(-((x / asp) ** 2 + (y + 0.05) ** 2) * 7); y += (y >= -0.05 ? 1 : -1) * 0.06 * near;
       m.position.set(x, y, 0); m.rotation.z = rot; m.scale.set(sc * d, sc, 1);
-      (m.material as THREE.MeshBasicMaterial).opacity = Math.min(1, u * 12, (1 - u) * 12);
+      const mm = m.material as THREE.MeshBasicMaterial; mm.opacity = Math.min(1, u * 12, (1 - u) * 12); mm.color.setRGB(1, 1 - 0.3 * near, 1 - 0.6 * near);
+      if (c.path === 'walk' || c.path === 'float') { sh.visible = true; const fl = c.path === 'float' ? 0.16 : 0.44 * sc; sh.position.set(x, y - fl, 0); sh.scale.set(sc * 0.9, sc * 0.22, 1); (sh.material as THREE.MeshBasicMaterial).opacity = mm.opacity * (c.path === 'float' ? 0.25 : 0.45); }
     }
     if (!any) return;
     this.cam.left = -asp; this.cam.right = asp; this.cam.updateProjectionMatrix();
