@@ -16,7 +16,8 @@
 //   godview: bun scripts/render.ts godview --scene demo [--corridor]
 //   stitch:  bun scripts/render.ts stitch --from-scene sceneA --to-scene sceneB [--window 300ms|0.3s|--window-ms 300|--window-s 0.3]
 //   compare: bun scripts/render.ts compare --active-scene demo --ref-scene loss
-//   --scale N (all modes): render at N× the 1920x1080 layout (--scale 2 = true 3840x2160); stills are then saved
+//   --size WxH (all modes): logical canvas (default: project.json "size", else 1920x1080; 1080x1920 = vertical)
+//   --scale N (all modes): render at N× the logical layout (--scale 2 = true 3840x2160); stills are then saved
 //            full-res from the pixel buffer, videos are encoded at the physical size.
 // Relative --out paths resolve from the repo root (not app/). Scene errors at boot abort the run unless --allow-scene-errors.
 // Uses the Vite dev server at --url (default http://localhost:5173); starts a private one if unreachable.
@@ -85,7 +86,10 @@ async function loadProject() {
   return { projName, dir, manifest, at };
 }
 const SCALE = Math.max(1, Math.round(numOpt('scale', 1, 1, 4)));
-const OW = 1920 * SCALE, OH = 1080 * SCALE; // output size
+const SIZE_OPT = opt('size');
+// logical canvas: --size WxH, else project.json "size", else 1920x1080
+const [LW, LH]: [number, number] = (SIZE_OPT && /^\d+x\d+$/.test(SIZE_OPT) ? SIZE_OPT.split('x').map(Number) as [number, number] : null) ?? (await loadProject()).manifest.size ?? [1920, 1080];
+const OW = LW * SCALE, OH = LH * SCALE; // output size
 // --samples N (fixed) or --samples auto [--min-samples 4] [--max-samples 324] [--tol 3] (adaptive, see Engine.render)
 const SAMPLES = opt('samples', '1') === 'auto'
   ? { min: numOpt('min-samples', 4, 1, 324), max: numOpt('max-samples', 324, 1, 972), tol: numOpt('tol', 3, 0.1, 50) }
@@ -154,7 +158,7 @@ async function openPage(url: string) {
       throw new Error(`[browser] No Chromium/Chrome found (playwright-core ships no browsers). Install system Chrome or run: bunx playwright install chromium. Underlying: ${e?.message ?? e}`);
     }
   }
-  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
+  const page = await browser.newPage({ viewport: { width: LW, height: LH }, deviceScaleFactor: 1 });
   const logs: string[] = [];
   page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') logs.push(`[${m.type()}] ${m.text()}`); });
   page.on('pageerror', (e) => logs.push(`[pageerror] ${e.message}`));
@@ -185,7 +189,7 @@ async function openPage(url: string) {
   }
   const project = opt('project');
   try {
-    await page.goto(`${url}/?export=1${only ? `&only=${only}` : ''}${project ? `&project=${project}` : ''}${SCALE !== 1 ? `&scale=${SCALE}` : ''}`);
+    await page.goto(`${url}/?export=1${only ? `&only=${only}` : ''}${project ? `&project=${project}` : ''}${SCALE !== 1 ? `&scale=${SCALE}` : ''}${LW !== 1920 || LH !== 1080 ? `&size=${LW}x${LH}` : ''}`);
     await page.waitForFunction(() => (window as any).__motion?.ready || (window as any).__pdoom?.ready || (window as any).__motion?.error || (window as any).__pdoom?.error, null, { timeout: 120000 });
     const bridgeVer = await page.evaluate(() => (window as any).__motion?.version || (window as any).__pdoom?.version);
     const err = await page.evaluate(() => (window as any).__motion?.error || (window as any).__pdoom?.error);
@@ -232,7 +236,7 @@ async function stills(page: Page, times: number[], outDir: string) {
         const pngBuf = await framePromise;
         await Bun.write(f, pngBuf);
       } else {
-        await page.screenshot({ path: f, clip: { x: 0, y: 0, width: 1920, height: 1080 }, timeout: 120000 });
+        await page.screenshot({ path: f, clip: { x: 0, y: 0, width: LW, height: LH }, timeout: 120000 });
       }
       files.push(f);
     }
@@ -246,13 +250,13 @@ async function sheet(page: Page, times: number[], cols: number, out: string) {
   const shutter = numOpt('shutter', 0.5, 0, 1);
   const dataUrl: string = await page.evaluate(async ({ times, cols, samples, shutter }: any) => {
     const P = (window as any).__motion || (window as any).__pdoom;
-    const cw = 480, ch = 270, pad = 4, lab = 18;
+    const src = document.getElementById('c') as HTMLCanvasElement;
+    const cw = 480, ch = Math.round((cw * src.height) / src.width), pad = 4, lab = 18;
     const rows = Math.ceil(times.length / cols);
     const cv = document.createElement('canvas');
     cv.width = cols * (cw + pad) + pad; cv.height = rows * (ch + lab + pad) + pad;
     const c = cv.getContext('2d')!;
     c.fillStyle = '#222'; c.fillRect(0, 0, cv.width, cv.height);
-    const src = document.getElementById('c') as HTMLCanvasElement;
     for (let i = 0; i < times.length; i++) {
       const t = times[i];
       await P.still(t, samples, shutter);
@@ -271,7 +275,7 @@ async function audioOnly(page: Page, from: number, to: number, outOpt: string | 
   const evMod = await import('../src/engine/events');
   const { dir, manifest, at } = await loadProject();
   // Only a full-length export may replace the project soundtrack; excerpts go to out/audio.wav.
-  const out = outOpt ? resolveOut(outOpt) : (fullRange && at(manifest.audio)) || path.join(ROOT, 'out/audio.wav');
+  let out = outOpt ? resolveOut(outOpt) : (fullRange && at(manifest.audio)) || path.join(ROOT, 'out/audio.wav');
   const outDir = path.dirname(path.resolve(out));
   if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
   const toMp3 = out.endsWith('.mp3');
@@ -325,15 +329,22 @@ async function audioOnly(page: Page, from: number, to: number, outOpt: string | 
   } else {
     const explicitAudio = opt('audio');
     const defaultAudio = path.join(APP, 'public/audio/audio.mp3');
-    const audioTrack = explicitAudio ? resolveOut(explicitAudio) : (existsSync(defaultAudio) ? defaultAudio : '');
+    const master = at(manifest.audio);
+    const audioTrack = explicitAudio ? resolveOut(explicitAudio) : master && existsSync(master) ? master : (existsSync(defaultAudio) ? defaultAudio : '');
     if (!audioTrack || !existsSync(audioTrack)) {
       throw new Error(`[audio] No mix manifest found (pass --mix path/to/mix.json) and no audio track at ${defaultAudio}`);
     }
     console.log(`[audio] Extracting audio range (${from.toFixed(2)}s to ${to.toFixed(2)}s) from ${audioTrack}...`);
-    const p = Bun.spawn(['ffmpeg', '-y', '-v', 'error', '-i', audioTrack, '-ss', String(from), '-to', String(to), out]);
+    const same = (a: string, b: string) => path.resolve(a) === path.resolve(b);
+    // the default full-length target is the soundtrack itself: extract next to the other excerpts instead
+    const dst = !outOpt && same(out, audioTrack) ? path.join(ROOT, 'out/audio.wav') : out;
+    if (same(audioTrack, dst)) throw new Error(`[audio] refusing to overwrite the source soundtrack ${dst}; pass a different --out`);
+    if (dst !== out) { mkdirSync(path.dirname(dst), { recursive: true }); out = dst; }
+    const off = master && same(audioTrack, master) ? (manifest.audioOffset ?? 0) : 0;
+    const p = Bun.spawn(['ffmpeg', '-y', '-v', 'error', '-i', audioTrack, '-ss', String(from + off), '-to', String(to + off), dst]);
     const exitCode = await p.exited;
     if (exitCode !== 0) throw new Error(`[audio] FFmpeg export failed with code ${exitCode}`);
-    console.log(`\n[audio] Success! Exported audio track to: ${out}`);
+    console.log(`\n[audio] Success! Exported audio track to: ${dst}`);
   }
 
   if (flag('mp3') && !out.endsWith('.mp3')) {
@@ -356,12 +367,15 @@ async function video(page: Page, from: number, to: number, fps: number, out: str
   let audio = explicitAudio ? resolveOut(explicitAudio) : (existsSync(defaultAudio) ? defaultAudio : '');
   let mixPath = opt('mix');
   let audioFadeOut: number | undefined;
+  let audioOffset: number | undefined;
   if (!explicitAudio && !mixPath && !flag('noaudio')) {
     const { manifest, at } = await loadProject();
     const master = at(manifest.audio);
-    if (master && existsSync(master)) { audio = master; audioFadeOut = manifest.audioFadeOut; console.log(`[render] audio: ${master} (project.json "audio")`); }
+    if (master && existsSync(master)) { audio = master; audioFadeOut = manifest.audioFadeOut; audioOffset = manifest.audioOffset; console.log(`[render] audio: ${master} (project.json "audio")`); }
     else if (manifest.mix) { mixPath = at(manifest.mix); console.log(`[render] audio: mixdown of ${mixPath} (project.json "mix")`); }
   }
+  // --audio naming the project soundtrack keeps its offset
+  if (explicitAudio && !mixPath) { const { manifest, at } = await loadProject(); const m = at(manifest.audio); if (m && path.resolve(m) === path.resolve(audio)) audioOffset = manifest.audioOffset; }
   let hasAudio = !flag('noaudio') && existsSync(audio);
   let mixedAudio = false;
   const eventsOut = opt('events-out');
@@ -408,6 +422,7 @@ async function video(page: Page, from: number, to: number, fps: number, out: str
     to,
     audioTrack: hasAudio ? audio : undefined,
     audioFadeOut,
+    audioOffset,
     audioMixed: mixedAudio || undefined,
     transparent: flag('transparent') || format === 'webm-alpha' || format === 'prores-4444',
     gpu: gpuEncode,

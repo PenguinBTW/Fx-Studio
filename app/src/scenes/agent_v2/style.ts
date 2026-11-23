@@ -2,7 +2,7 @@
 // Modes: 0 none, 1 comic (CMYK halftone + misregistration + ink), 2 pixel (dithered palette), 3 ascii, 4 blueprint,
 // 5 thermal, 6 paint (Kuwahara), 7 x-ray, 8 stained glass, 9 woodblock.
 import * as THREE from 'three';
-import { FSPass } from '../../engine/gl';
+import { FSPass, W, H } from '../../engine/gl';
 
 export const STYLE = { none: 0, comic: 1, pixel: 2, ascii: 3, blueprint: 4, thermal: 5, paint: 6, xray: 7, glass: 8, woodblock: 9 } as const;
 
@@ -88,7 +88,7 @@ void main() {
 
 export class StylePass {
   private pass = new FSPass(FRAG, {
-    tSrc: { value: null }, tDepth: { value: null }, uMode: { value: 0 }, uRes: { value: new THREE.Vector2(1920, 1080) },
+    tSrc: { value: null }, tDepth: { value: null }, uMode: { value: 0 }, uRes: { value: new THREE.Vector2(W, H) },
     uTime: { value: 0 }, uNear: { value: 0.1 }, uFar: { value: 100 },
   });
   private rt: THREE.WebGLRenderTarget | null = null;
