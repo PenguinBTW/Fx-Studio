@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { FSPass, makeRT, W, H } from '../../engine/gl';
 import type { Frame, PostOverrides, SceneCtx } from '../../engine/scene';
 import { Scene } from '../../engine/scene';
-import { hud, Z, END } from './kit';
+import { hud, inSeam, Z, END } from './kit';
 import { FFN } from './glsl';
 import { FRAG as ORBIT } from './s01_orbit';
 
