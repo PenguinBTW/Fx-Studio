@@ -1,0 +1,9 @@
+{
+  "project": "freefall",
+  "size": [1080, 1920],
+  "trimToTimeline": true,
+  "entries": [
+    { "scene": "freefall/s01_orbit", "id": "orbit", "start": 0, "end": 4.6 }
+  ],
+  "transitions": []
+}
