@@ -233,7 +233,8 @@ export default class S1Breakout extends Scene {
 
   private poseIn(t: number) {
     const c = this.cur; let z: number, y = 0, sq = 1, lean = 0, rx = 0;
-    if (t < RAMS[0]) { const u = t / RAMS[0]; z = lerp(-1.4, HIT_Z, u * (0.55 + 0.45 * u)); sq = 1 + 0.22 * u; lean = -0.18; }
+    if (t < 0) { z = -1.4 + 0.9 * t; sq = 1 + 0.05 * Math.sin(t * 9); lean = -0.18 * sm(-0.4, 0, t); }
+    else if (t < RAMS[0]) { const u = t / RAMS[0]; z = lerp(-1.4, HIT_Z, u * (0.55 + 0.45 * u)); sq = 1 + 0.22 * u; lean = -0.18; }
     else if (t < BREAK) {
       const k = t < RAMS[1] ? 0 : 1, d = t - RAMS[k], u = d / (RAMS[k + 1] - RAMS[k]), back = [1.25, 1.9][k];
       z = HIT_Z - back * 4 * u * (1 - u); sq = 1 - 0.55 * Math.exp(-d * 15) + 0.28 * sm(0.55, 0.95, u); lean = -0.2 * sm(0.4, 0.9, u) + 0.25 * Math.exp(-d * 10);
@@ -258,7 +259,8 @@ export default class S1Breakout extends Scene {
     const push = sm(0, BREAK, t), d = Math.max(0, t - BREAK);
     this.cam.fov = 38 - 6 * push + 10 * sm(0, 0.6, d);
     const cy = this.cur.position.y;
-    this.cam.position.set(0.9 - 0.4 * push + hit + 0.6 * d, 1.0 + 0.1 * push + 0.85 * cy, 4.6 - 1.0 * push + 7.4 * d - hit * 4);
+    const dr = 0.08 * t; // constant drift so the loop's held tail flows into frame 0
+    this.cam.position.set(0.9 - 0.4 * push + hit + 0.6 * d - dr, 1.0 + 0.1 * push + 0.85 * cy, 4.6 - 1.0 * push + 7.4 * d - hit * 4);
     this.cam.lookAt(0.0, 0.9 * (1 - sm(0, 0.3, d)) + cy, lerp(-2.0, this.cur.position.z, sm(0, 0.25, d)));
     return this.cam.position.z - this.cur.position.z;
   }

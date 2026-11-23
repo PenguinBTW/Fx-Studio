@@ -10,7 +10,7 @@ import { SCREAM, WHIP, END, BEAT, lerp, sm, hash, clamp } from './kit';
 import { Cameos } from './cameo';
 import S1Breakout from './s1_breakout';
 
-const HAND = 0.42;
+const HAND = 0.42, DRIFT = 0.55;
 // patchwork shell: region palettes in bands across the cursor's own object space, stepped edges like sewn seams
 const PATCH_V = /* glsl */ `varying vec3 vP; varying vec3 vN; void main(){ vP = position; vN = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 const PATCH_F = /* glsl */ `uniform float uT, uK; varying vec3 vP; varying vec3 vN;
@@ -112,12 +112,13 @@ export default class S11Finale extends Scene {
     const vk = sm(T0, SCREAM, t);
     const p = new THREE.Vector3(lerp(3.5, -1.5, vk), lerp(17.5, 15.5, vk), lerp(17.5, 14.5, vk)).lerp(new THREE.Vector3(1.0, 6.6, 11.5), sm(SCREAM, SCREAM + 0.6, t));
     const look = new THREE.Vector3(lerp(1, -0.5, vk), lerp(-2, 1, vk), -20).lerp(this.PH, sm(SCREAM + 0.1, SCREAM + 0.8, t));
-    const wk = clamp((t - WHIP) / (END - HAND - WHIP), 0, 1), we = 1 - (1 - wk) ** 3;
+    const wk = clamp((t - WHIP) / (END - HAND - DRIFT - WHIP), 0, 1), we = 1 - (1 - wk) ** 3;
     const dir = new THREE.Vector3(0, 10, 10).sub(this.PH).normalize(), end = this.PH.clone().addScaledVector(dir, 9.0);
+    p.lerp(this.PH, 0.12 * sm(SCREAM + 0.6, WHIP, t));
     if (t > WHIP) { p.lerp(end, we); look.copy(this.PH); }
     this.cam.position.copy(p); this.cam.lookAt(look);
     this.whale.position.set(-34 + 9 * (t - T0), 24 + Math.sin(t * 1.3), -60); this.whale.rotation.set(0, 1.4, 0.1 * Math.sin(t * 1.3));
-    const yk = clamp((t - SCREAM) / 1.5, 0, 1); this.yell.visible = t > SCREAM && yk < 1;
+    const yk = clamp((t - SCREAM) / 0.9, 0, 1); this.yell.visible = t > SCREAM && yk < 1;
     if (this.yell.visible) { const yp = this.PH.clone().lerp(p, 0.15 + 0.55 * Math.sqrt(yk)); this.yell.position.copy(yp).add(new THREE.Vector3(0.6 * Math.sin(t * 70), 0.6 * Math.cos(t * 61), 0).multiplyScalar(1 - yk));
       const d = yp.distanceTo(p), sz = d * 0.38 * (0.8 + 0.4 * Math.sqrt(yk)); this.yell.scale.set(sz, sz / 2, 1); (this.yell.material as THREE.SpriteMaterial).opacity = 1 - sm(0.75, 1, yk); } this.cam.aspect = out.width / out.height; this.cam.fov = 42 - 10 * Math.max(vk, wk) + 18 * Math.sin(Math.PI * wk); this.cam.updateProjectionMatrix();
     if (t > SCREAM) { this.s1.render({ ...f, t: Math.max(t - END, -HAND - 0.6) }, this.scrRT); }

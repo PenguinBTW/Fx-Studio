@@ -171,7 +171,7 @@ export default class S2Whale extends Scene {
     const sq = d < T0 ? 0.38 + 0.4 * (d / T0) : 1 + 0.35 * Math.exp(-dd * 7) * Math.cos(dd * 18);
     this.cur.position.copy(p); this.cur.scale.set(CS / Math.sqrt(sq), CS * sq, CS / Math.sqrt(sq));
     this.cur.rotation.set(0.3 * Math.exp(-dd * 3), 0, -3.4 * dd - 0.2);
-    const blink = d < 0.5 ? 1 : ((t * 1.06) % 1) < 0.55 ? 1 : 0.12;
+    const blink = (d > 0.16 && d < 0.23) || (d > 0.31 && d < 0.38) ? 0.08 : d < 0.6 ? 1 : ((t * 1.06) % 1) < 0.55 ? 1 : 0.12;
     for (const m of this.cores) m.emissiveIntensity = 0.1 + 1.6 * blink;
     this.wU.uGlowP.value.copy(p); this.wU.uGlow.value = 6 * blink * (1 + 3 * Math.exp(-d * 6));
     this.glow.position.copy(p); this.glow.intensity = 40 * blink * (1 + 3 * Math.exp(-d * 6));
@@ -186,6 +186,7 @@ export default class S2Whale extends Scene {
     // camera: low over the whale's back for the hit, then follows the ricochet and pulls wide to show the whale
     const kick = Math.max(0, spring(d, 38, 9));
     const close = this.whale.localToWorld(new THREE.Vector3(33, 4 + kick * 0.8, 13));
+    close.lerp(p, 0.5);
     const wide = this.whale.position.clone().add(new THREE.Vector3(60, 40, 330));
     const w = sm(0.35, 1.6, d);
     this.cam.position.copy(close.lerp(wide, w)); this.cam.fov = lerp(40, 46, w);

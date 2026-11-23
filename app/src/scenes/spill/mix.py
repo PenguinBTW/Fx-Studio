@@ -72,6 +72,7 @@ scr = bp(scr, 700, 1300) * 1.2 + bp(scr, 2200, 3200) * 0.8 + bp(noise(1.5), 2000
 put(bar(11), scr * np.minimum(1, t_(1.5) / 0.04) * np.exp(-t_(1.5) / 1.2), 0.5); put(bar(11), thud(60, 0.5), 0.6)
 # whip into the phone, landing in the cell
 put(bar(12), whoosh(END - bar(12) - 0.42, 300, 5000), 0.55); put(END - 0.42, thud(70, 0.3), 0.5); put(END - 0.42, crack(0.15), 0.2)
+put(END - 0.6, lp(noise(0.6), 2500) * np.linspace(0, 1, int(0.6 * SR)) ** 3, 0.5)
 sfx = np.stack([L, R])
 
 song = subprocess.run(['ffmpeg', '-v', 'error', '-i', sys.argv[1], '-t', str(END), '-f', 'f32le', '-ac', '2', '-ar', str(SR), '-'], capture_output=True, check=True).stdout
@@ -82,7 +83,7 @@ ml = np.stack([lp(m[0], 500), lp(m[1], 500)]); m = m * (1 - muf) + ml * muf * 0.
 duck = np.ones(N)
 for h in [0.34, 0.94, 1.45, DROP, 12.2, 13.39, bar(11)]:
     k = (tt >= h) * np.exp(-np.maximum(0, tt - h) / 0.25); duck = np.minimum(duck, 1 - 0.35 * k)
-fade = np.clip(np.minimum(tt / 0.02, (END - tt) / 0.03), 0, 1)
+fade = np.clip(np.minimum(tt / 0.02, 0.35 + 0.65 * np.clip((END - tt) / 0.15, 0, 1)), 0, 1) * np.clip((END - tt) / 0.004, 0, 1)
 mix = (m * 0.8 * duck + sfx) * fade
 mix /= max(1.0, np.abs(mix).max() / 0.98)
 raw = sys.argv[2] + '.raw.wav'

@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import { resolveAsset } from '../../engine/assets';
-import { bar, GULP, lerp, sm, hash, spring, stepped, clamp } from './kit';
+import { bar, BEAT, DROP, GULP, lerp, sm, hash, spring, stepped, clamp } from './kit';
 import { Cameos } from './cameo';
 
 const T0 = bar(3), SPIT = bar(4), T1 = bar(5), CS = 1.4;
@@ -103,12 +103,15 @@ export default class S5Ink extends Scene {
     this.neck.rotation.z = -1.25 * st * (1 - back) - 0.7 * sp; this.head.rotation.z = 0.6 * st * (1 - back) + 0.25 * back * (1 - sm(12.9, 13.1, t)) + 0.15 * sm(12.95, 13.05, ts);
     const open = Math.max(sm(GULP[0] - 0.12, GULP[0] - 0.03, ts) * (1 - sm(GULP[0] + 0.03, GULP[0] + 0.08, ts)), t >= SPIT ? Math.exp(-(t - SPIT) * 6) : 0);
     this.top.rotation.z = 0.45 * open; this.bot.rotation.z = -0.4 * open;
+    const ph = (((t - DROP) / BEAT) % 1 + 1) % 1, ob = Math.exp(-((ph - 0.5) ** 2) * 60), inK = sm(GULP[1], GULP[1] + 0.1, t) * (1 - sm(SPIT - 0.02, SPIT + 0.02, t));
+    const hic = sm(SPIT - 0.16, SPIT - 0.02, t) * (1 - sm(SPIT, SPIT + 0.12, t));
+    this.neck.scale.set(1 + 0.18 * ob * inK + 0.4 * hic, 1 - 0.1 * hic, 1 + 0.18 * ob * inK + 0.4 * hic);
     this.heron.updateMatrixWorld(true);
     const headP = this.head.getWorldPosition(new THREE.Vector3()), neckP = this.neck.getWorldPosition(new THREE.Vector3());
     const tip = this.top.localToWorld(new THREE.Vector3(2.4, 0, 0));
     // the glow inside: swallowed down the paper throat, then sits blinking in the neck
     const sw = sm(CAP, GULP[1], t); const gp = headP.clone().lerp(neckP.clone().add(new THREE.Vector3(0, 1.2, 0)), sw);
-    this.glowU.uGlowP.value.copy(t < SPIT ? gp : tip); this.glowU.uGlow.value = t >= CAP && t < SPIT + 0.1 ? (0.4 + 0.6 * blink) * 1.2 : 0; this.glowU.uGlowR.value = 1.6;
+    this.glowU.uGlowP.value.copy(t < SPIT ? gp : tip); this.glowU.uGlow.value = t >= CAP && t < SPIT + 0.1 ? (t > GULP[1] ? 0.35 + 1.6 * ob + 1.2 * hic : (0.4 + 0.6 * blink) * 1.2) : 0; this.glowU.uGlowR.value = 1.6;
     // spat out, inked: skips across the water toward camera-left
     const e = t - SPIT; this.inkCur.visible = e >= 0;
     if (e >= 0) { const skips = [0, 0.32, 0.56, 0.74, 0.88]; let si = 0; while (si < skips.length - 1 && e >= skips[si + 1]) si++;

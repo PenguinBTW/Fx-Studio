@@ -35,13 +35,13 @@ export default class S9Garden extends Scene {
   override async init() {
     const load = (id: string) => GLTFManager.instantiate(resolveAsset(id, this.ctx.project ?? 'spill').url, {});
     const [kit, cur] = await Promise.all([load('garden'), load('cursor')]); this.insts = [kit, cur];
-    this.s.background = new THREE.Color(0.95, 0.6, 0.45); this.s.fog = new THREE.FogExp2(0xd08070, 0.022);
+    this.s.background = new THREE.Color(0.95, 0.6, 0.45); this.s.fog = new THREE.FogExp2(0xd08070, 0.032);
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), new THREE.MeshStandardMaterial({ color: 0x3a4a2e, roughness: 0.9 })); ground.rotation.x = -Math.PI / 2; this.s.add(ground);
     for (let i = 0; i < 40; i++) { const st = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.95, 0.12, 7), new THREE.MeshStandardMaterial({ color: 0xc9b9a0, roughness: 0.8 }));
       st.position.set(-14 + 1.2 * i + 0.3 * hash(i), 0.06, 0.3 * (hash(i * 2) - 0.5)); st.rotation.y = hash(i * 3); this.s.add(st); }
     const arch = kit.part('arch'), tulip = kit.part('tulip');
-    for (let i = 0; i < 10; i++) { const a = this.glassify(arch.clone()); a.position.set(-26 + 8 * i, 0, -18 - 3 * (i % 2)); a.scale.setScalar(2.6); this.s.add(a); }
-    for (let i = 0; i < 34; i++) { const tu = this.glassify(tulip.clone()); const side = i % 2 ? 1 : -1; tu.position.set(-16 + 1.0 * i + 0.4 * hash(i), 0, side < 0 ? -(2.2 + 4 * hash(i * 1.7)) : 2.6 + 1.5 * hash(i * 1.7));
+    for (let i = 0; i < 5; i++) { const a = this.glassify(arch.clone()); a.position.set(-28 + 15 * i, 0, -30); a.scale.setScalar(3.4); this.s.add(a); }
+    for (let i = 0; i < 34; i += 2) { const tu = this.glassify(tulip.clone()); const side = i % 2 ? 1 : -1; tu.position.set(-16 + 1.0 * i + 0.4 * hash(i), 0, side < 0 ? -(2.2 + 4 * hash(i * 1.7)) : 2.6 + 1.5 * hash(i * 1.7));
       tu.rotation.y = hash(i * 5) * 6; tu.scale.setScalar(0.45 + 0.3 * hash(i * 9)); this.s.add(tu); }
     this.peacock = this.glassify(kit.part('peacock')); this.tail = kit.part('pTail'); this.peacock.position.set(4, 0, -3.2); this.peacock.rotation.y = -0.4; this.peacock.scale.setScalar(1.2); this.s.add(this.peacock);
     const bfly = kit.part('bfly');
