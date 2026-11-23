@@ -389,7 +389,7 @@ export default class S1Breakout extends Scene {
     const d = t - CUT, c = this.curX, p = this.fallP(t);
     const jolt = t > 4.06 ? Math.max(0, spring(t - 4.06, 30, 6)) : 0, flip = sm(4.72, 4.95, t);
     c.position.copy(p); c.scale.set(3.4 * (1 + 0.3 * jolt), 3.4 * (1 - 0.35 * jolt), 3.4 * (1 + 0.3 * jolt));
-    c.rotation.set(-5.5 * d - 3.1 * flip, 1.3 * d, 2.2 * d + 0.6 * Math.sin(d * 3) + 1.6 * flip);
+    c.rotation.set(-0.55 * Math.sin(d * 2.4) - 3.1 * flip, 0.5 * Math.sin(d * 1.7), 2.2 * d + 0.6 * Math.sin(d * 3) + 1.6 * flip);
     this.poseLeak(t); this.poseTrail(t);
     const wide = sm(0, 0.9, d), dive = sm(OUTSIDE + 0.2, OUTSIDE + 1.4, t);
     const cam = new THREE.Vector3(lerp(3, 14, wide), lerp(1.5, 4, wide), lerp(18, 58, wide));
