@@ -44,6 +44,12 @@ void main() { vec3 d = normalize(vD); float y = d.y;
   vec2 q = d.xz / max(0.08, abs(d.y) + 0.12) * 0.6; float n = 0.0, a = 0.5; for (int i = 0; i < 5; i++) { n += a * (sin(q.x * 1.7 + sin(q.y * 1.3)) * 0.5 + 0.5) * (sin(q.y * 2.1 + sin(q.x * 0.9)) * 0.5 + 0.5); q = q * 2.03 + 1.7; a *= 0.5; }
   float band = smoothstep(0.32, 0.6, n) * (1.0 - smoothstep(0.0, 0.5, abs(y + 0.05)));
   c = mix(c, vec3(1.5, 0.75, 0.55), band * 0.55);
+  // below the horizon: a painted cloud sea, lit peach tops over deep violet troughs (SPILL is under it)
+  if (y < 0.02) { vec2 w = d.xz / max(0.03, -y + 0.02) * 2.2 + vec2(0.0, uT * 0.05); float m = 0.0, k = 0.5;
+    for (int i = 0; i < 5; i++) { m += k * (sin(w.x * 1.3 + 1.7 * sin(w.y * 0.8)) * 0.5 + 0.5) * (sin(w.y * 1.6 + 1.3 * sin(w.x * 1.1)) * 0.5 + 0.5); w = mat2(0.8, -0.6, 0.6, 0.8) * w * 2.1 + 3.1; k *= 0.5; }
+    vec3 trough = vec3(0.16, 0.07, 0.3), top = vec3(1.5, 0.72, 0.5);
+    vec3 sea = mix(trough, top, smoothstep(0.3, 0.5, m)); sea += vec3(0.5, 0.2, 0.1) * smoothstep(0.5, 0.56, m); float hz = smoothstep(-0.25, 0.02, y);
+    c = mix(sea, c, hz * 0.85); }
   float s = max(0.0, dot(d, normalize(vec3(-0.6, 0.18, -0.75)))); c += vec3(1.6, 0.9, 0.5) * pow(s, 24.0) + vec3(0.5, 0.25, 0.15) * pow(s, 4.0);
   gl_FragColor = vec4(c, 1.0); }`;
 const SKY_V = /* glsl */ `varying vec3 vD; void main() { vD = position; vec4 p = projectionMatrix * modelViewMatrix * vec4(position, 1.0); gl_Position = p.xyww; }`;
@@ -149,7 +155,7 @@ export default class S1Breakout extends Scene {
   /** the outside: our phone hanging in a dusk sky full of other screens */
   private mkOutside(phone: GLTFInstance, glass: GLTFInstance, phys: (m: THREE.Mesh) => THREE.MeshPhysicalMaterial) {
     const sky = new THREE.Mesh(new THREE.SphereGeometry(3000, 32, 16), new THREE.ShaderMaterial({ vertexShader: SKY_V, fragmentShader: SKY_F, uniforms: { uT: { value: 0 } }, side: THREE.BackSide, depthWrite: false }));
-    this.exS.add(sky); this.exS.fog = new THREE.Fog(0xb65a6a, 120, 950);
+    this.exS.add(sky); this.exS.fog = new THREE.Fog(0x8a4a78, 160, 1100);
     phone.part('interior').visible = false;
     phone.root.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; const p = phys(m); m.castShadow = m.receiveShadow = true;
       if (p.name === 'Screen') { p.clearcoat = 1; p.clearcoatRoughness = 0.02; p.color.setRGB(0.004, 0.004, 0.006); p.roughness = 0.04; }
