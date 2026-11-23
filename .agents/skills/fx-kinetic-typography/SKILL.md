@@ -9,10 +9,10 @@ Technical standards, kinetic choreographies, in-world 3D extruded typography, ve
 ## When to Use
 
 - Authoring kinetic typography sequences, title cards, or word-by-word speech subtitle tracks.
-- Implementing diegetic in-world 3D PBR extruded typography that participates in scene lighting, shadows, and thin-lens DoF ([`text_lighting.ts`](file:///c:/Users/brosf/Documents/A%20vio%20projects/VioPls/Agentic%20motion%20design%20toolset/app/src/engine/text_lighting.ts)).
+- Implementing diegetic in-world 3D PBR extruded typography that participates in scene lighting, shadows, and thin-lens DoF ([`text_lighting.ts`](../../../app/src/engine/text_lighting.ts)).
 - Deflecting particle streams and volumetrics around physical 3D glyphs (`deflectPointFromGlyph`).
 - Animating words with physical mass (scale slams, weight/width pressure, tracking overshoots).
-- Implementing technical annotations, engineering blueprints, or schematic labels via single-stroke vector plotter fonts ([`stroke.ts`](file:///c:/Users/brosf/Documents/A%20vio%20projects/VioPls/Agentic%20motion%20design%20toolset/app/src/engine/stroke.ts)).
+- Implementing technical annotations, engineering blueprints, or schematic labels via single-stroke vector plotter fonts ([`stroke.ts`](../../../app/src/engine/stroke.ts)).
 - Creating smooth, deterministic numeric rolling counters and telemetry metric readouts.
 - Enforcing contrast knockout understroke halos to prevent text collisions (Rule `F04`) and safe boundary violations (Rule `F05`).
 
@@ -21,7 +21,7 @@ Technical standards, kinetic choreographies, in-world 3D extruded typography, ve
 ## 1. Upstream & Sibling Dependencies
 
 - **`video-design`**: Enforces zero detached 2D text, diegetic spatial integration, and safe-zone margins.
-- **`viopls-art-direction`**: Mandates bold, structural grotesque/monospace typography and bans thin wispy fonts.
+- **`viopls-art-direction`**: Defaults to heavy weights for legibility in motion; the typeface should fit the world.
 - **`design-around-narration`**: Synchronizes word arrivals to vocal delivery and rhetorical emphasis.
 - **`shorts-retention-design`**: Enforces 1–3 word mobile chunking in vertical 9:16 formats.
 - **`fx-diagnostics`**: Audits contrast legibility (`F04`), word entrance anticipation (`F03`), and font loading gates.
@@ -46,13 +46,13 @@ High-Impact Editorial HUD    Diegetic Physical 3D Mesh     Vector Plotter Bluepr
 
 ### Modality A: High-Impact Canvas2D with Knockout Halos
 Used for bold manifesto titles, central narrative keywords, and speech captions rendered to `ctx.layer2d`:
-- Built via standard HTML5 Canvas2D text rendering in [`text.ts`](file:///c:/Users/brosf/Documents/A%20vio%20projects/VioPls/Agentic%20motion%20design%20toolset/app/src/engine/text.ts).
+- Built via standard HTML5 Canvas2D text rendering in [`text.ts`](../../../app/src/engine/text.ts).
 - Automatically gates on `await document.fonts.ready` to eliminate Flash-Of-Unstyled-Text (FOUT).
 - Automatically publishes bounding boxes to `window.__motion.textProbes` for telemetry validation.
 
 ### Modality B: In-World 3D PBR Extruded Typography (`text_lighting.ts`)
 Used for spatial, diegetic text integrated physically into the 3D scene (monolithic typography, architectural signage, mechanical labels):
-- Built via [`text_lighting.ts`](file:///c:/Users/brosf/Documents/A%20vio%20projects/VioPls/Agentic%20motion%20design%20toolset/app/src/engine/text_lighting.ts) and [`text3d.ts`](file:///c:/Users/brosf/Documents/A%20vio%20projects/VioPls/Agentic%20motion%20design%20toolset/app/src/engine/text3d.ts).
+- Built via [`text_lighting.ts`](../../../app/src/engine/text_lighting.ts) and [`text3d.ts`](../../../app/src/engine/text3d.ts).
 - **Physical Depth Participation:** Configured with `depthWrite: true`, casts/receives real Three.js shadows, and undergoes optical thin-lens bokeh blur via `dof.ts`.
 - **Active Volumetric Deflection:** Generates per-glyph world-space bounding obstacles that actively repel particle streams via `deflectPointFromGlyph`.
 

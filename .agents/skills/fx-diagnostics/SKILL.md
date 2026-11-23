@@ -82,7 +82,7 @@ The telemetry engine downsamples frames via a fast $4 \times 4$ box filter to **
 - **Rec.709 Luma & Contrast:** $Y = 0.2126 R + 0.7152 G + 0.0722 B$.
 - **Motion Energy $E$ & Burst $E_{p95}$:** Frame-to-frame absolute luma difference, with 95th percentile local patch tracking.
 - **2D FFT Optical Flow $(u, v)$:** Phase correlation via Cooley-Tukey FFT isolating bulk camera velocity.
-- **CIE $L^*a^*b^*$ Gamut Conformity ($\Delta E_{76}$):** Color distance against approved project palette tokens.
+- **CIE $L^*a^*b^*$ Gamut Conformity ($\Delta E_{76}$):** Color distance against the `--palette` swatches (fixed defaults if omitted).
 - **Edge Shimmer Index:** Second-order temporal derivative of Sobel edge pixels detecting aliasing or sub-pixel chatter.
 
 ---
@@ -158,6 +158,10 @@ bun scripts/render.ts stills --project <name> --t 1.5,8.0,14.2 --out .fx/capture
 
 # Generate a 24-frame contact sheet grid across a scene or timeline
 bun scripts/render.ts sheet --project <name> --from 0 --to 30 --n 24 --cols 6 --out out/sheet.png
+
+# Seam sheet: 4 frames around every scene start. --cuts replaces --times, so render
+# transition-window ends in a separate sheet: --times <end1>,<end2>,...
+bun scripts/render.ts sheet --project <name> --cuts --out out/seams.png
 
 # Run 60 fps kinematic telemetry pass
 bun scripts/render.ts motion --project <name> --from 0 --to 30 --out out/telemetry/

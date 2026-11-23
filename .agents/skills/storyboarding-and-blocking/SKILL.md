@@ -70,9 +70,9 @@ Do not force the viewer's eyes to scan across the screen to locate the subject a
 ## 3. Shot Budgeting & Pacing Rules
 
 ### 3.1 Shot Duration Limits [RULE]
-- **Minimum Shot Duration:** 1.5 seconds. Any cut faster than 1.5s destroys spatial comprehension in a video essay, unless executing a deliberate montage sequence.
+- **Minimum Shot Duration:** 1.5 seconds. Any cut faster than 1.5s destroys spatial comprehension in a video essay, unless executing a deliberate montage, beat-synced cut or Short (see `shorts-retention-design`).
 - **Maximum Static Shot Duration:** 6.0 seconds. If a shot remains in the same framing for $>6.0\text{s}$, it must either execute an internal camera pivot/dolly or cut to an alternate perspective.
-- **Continuous Momentum:** Per `video-design`, static hold-frames are forbidden; the camera must drift, dolly, or orbit smoothly throughout the entire duration.
+- **Continuous Momentum:** Per `video-design`, avoid dead holds; keep the camera or the subject moving unless the hold is a deliberate beat.
 
 ---
 
@@ -137,5 +137,5 @@ Before approving a storyboard sequence for scene authoring:
 - [ ] **Shot Scale Variety:** Consecutive shots alternate between wide, medium, and close-up focal lengths.
 - [ ] **Vector Consistency:** Movement direction along the 180° axis is preserved across cuts (no directional flips).
 - [ ] **Gaze Anchoring:** The entry point of each cut falls within 15% screen distance of the prior shot's exit point.
-- [ ] **Duration Budget:** Every shot is between 1.5s and 6.0s with continuous camera momentum.
+- [ ] **Duration Budget:** Shots run 1.5-6.0s (shorter for montage, beat cuts or Shorts) with no dead holds.
 - [ ] **Deliverable Exported:** `storyboard.md` is populated with lens specs, camera vectors, focal points, and script cues.

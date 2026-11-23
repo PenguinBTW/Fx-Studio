@@ -68,7 +68,7 @@ Every standard in this document and related modules strictly adheres to this cla
 ## 3. Cinematography, Perspective & Transitions
 
 ### 3.1 Continuous Camera Momentum [RULE]
-- Static, locked-off camera shots are strictly forbidden in animation sequences.
+- Avoid dead, locked-off shots. A hold is fine when the subject is moving or as a deliberate beat (an impact frame, a reaction, a punchline).
 - The camera must continuously move and adapt to spoken words and audio energy:
   - **Acceleration:** Accelerate speed/dolly moves during narrative build-ups, key reveals, or high-energy delivery.
   - **Deceleration:** Transition into slow, atmospheric cinematic drifts during reflective narration or musical pauses.
@@ -81,8 +81,7 @@ Every standard in this document and related modules strictly adheres to this cla
   - Vary camera elevation and field-of-view (FOV) across shot changes.
 
 ### 3.3 Seamless Motion & Vector Transitions [RULE]
-- Abrupt, jarring cuts that disrupt visual momentum are prohibited.
-- Every scene cut must feel distinct yet seamlessly blended:
+- Avoid unmotivated jarring cuts. Hard cuts on a beat or an impact are fine; other cuts should carry momentum:
   - **Match Moving / Vector Continuity:** Match the exit velocity vector of Scene A with the entry velocity vector of Scene B.
   - **Occlusion / Foreground Wipes:** Use foreground objects passing close to the lens to reveal the next environment.
   - **Whip Pans & Zooms:** Hide cut points inside controlled motion blur transitions.
@@ -164,9 +163,9 @@ Before finalizing any storyboard, visual layout, camera track, or prompt, confir
 
 - [ ] **No UI/HUD Clutter:** Frame is clear of debug text, render stats, or accidental overlays.
 - [ ] **World-Space Text:** All text is modeled/placed in 3D/2.5D with light, shadow, and depth integration.
-- [ ] **Continuous Camera:** Camera is constantly in dynamic, eased motion matching narrative energy.
+- [ ] **No Dead Frames:** Camera or subject is in eased motion matching the energy; holds are deliberate beats.
 - [ ] **Perspective Variety:** Shot angles and focal lengths contrast distinctly with adjacent shots.
-- [ ] **Motion Continuity:** Cut points preserve vector momentum, match motion, or use clean wipe occlusions.
+- [ ] **Motion Continuity:** Cuts preserve momentum, match motion, use wipe occlusions, or land deliberately on a beat/impact.
 - [ ] **Dimensionality:** Visuals satisfy stylized 2.5D minimum (multi-plane parallax, volumetric lighting).
 - [ ] **Aspect Ratio Safe:** Staging conforms to 16:9 title margins or 9:16 Shorts UI occlusion zones.
 - [ ] **Pacing Sync:** Beats snap to audio transients; quiet moments allow atmospheric camera breathing.

@@ -262,6 +262,8 @@ To maximize the perceived physical impact of a structural drop, downbeat, or mas
 
 ## 4. Headless CLI Workflows & Verification
 
+Licensed songs are never committed: every `audio/` folder is gitignored (`**/audio/`). Commit the mix script (kept outside any `audio/` folder, e.g. `scenes/<project>/mix.ts`), not the song or the rendered mix, and point `project.json` `audio` at the rendered mix (not the raw song) so renders include the SFX.
+
 ### Running Offline Song Analysis
 ```bash
 python scripts/analyze_song.py --audio song/track.mp3 \
@@ -272,7 +274,7 @@ python scripts/analyze_song.py --audio song/track.mp3 \
 ### Running Dedicated Audio Mixdown
 ```bash
 bun run app/scripts/mixdown.ts \
-  --mix app/src/scenes/<project>/audio/mix.ts \
+  --mix app/src/scenes/<project>/mix.ts \
   --analysis app/src/scenes/<project>/audio/analysis/audio.json \
   --events out/events.jsonl \
   --to 20.0 \
@@ -283,7 +285,7 @@ bun run app/scripts/mixdown.ts \
 ```bash
 bun run app/scripts/render.ts video \
   --project <project> \
-  --mix app/src/scenes/<project>/audio/mix.ts \
+  --mix app/src/scenes/<project>/mix.ts \
   --from 0 \
   --to 20 \
   --fps 60 \
