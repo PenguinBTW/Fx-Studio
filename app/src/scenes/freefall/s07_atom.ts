@@ -12,7 +12,7 @@ const float ISO = 0.12;
 float lobes(vec3 p, out int k, out float sg) { float r = length(p), e = exp(-1.5 * r) * 2.2; vec3 ps = p * e; vec3 d = ps * ps;
   k = d.x > d.y ? (d.x > d.z ? 0 : 2) : (d.y > d.z ? 1 : 2); sg = sign(k == 0 ? p.x : k == 1 ? p.y : p.z); return max(max(d.x, d.y), d.z) - ISO; }
 vec3 lobeCol(int k, float sg) { return k == 0 ? (sg > 0.0 ? vec3(1.0, 0.12, 0.75) : vec3(0.08, 0.85, 1.0)) : k == 1 ? (sg > 0.0 ? vec3(1.0, 0.62, 0.08) : vec3(0.45, 0.15, 1.0)) : (sg > 0.0 ? vec3(0.35, 1.0, 0.2) : vec3(1.0, 0.2, 0.12)); }
-vec3 lobeN(vec3 p) { int k; float sg; vec2 e = vec2(0.003, 0.0); return normalize(vec3(lobes(p + e.xyy, k, sg) - lobes(p - e.xyy, k, sg), lobes(p + e.yxy, k, sg) - lobes(p - e.yxy, k, sg), lobes(p + e.yyx, k, sg) - lobes(p - e.yyx, k, sg))); }
+vec3 lobeN(vec3 p) { int k; float sg; vec2 e = vec2(0.003, 0.0); return -normalize(vec3(lobes(p + e.xyy, k, sg) - lobes(p - e.xyy, k, sg), lobes(p + e.yxy, k, sg) - lobes(p - e.yxy, k, sg), lobes(p + e.yyx, k, sg) - lobes(p - e.yyx, k, sg))); }
 vec3 nucleon(int i) { float fi = float(i); float y = 1.0 - 2.0 * (fi + 0.5) / 23.0; float rr = sqrt(1.0 - y * y); float ph = fi * 2.39996; float rad = 2.3 * pow((fi + 1.0) / 23.0, 0.333);
   return vec3(cos(ph) * rr, y, sin(ph) * rr) * rad + 0.18 * vec3(sin(uT * 9.0 + fi), cos(uT * 11.0 + fi * 1.7), sin(uT * 7.0 + fi * 2.3)); }
 void main() {
