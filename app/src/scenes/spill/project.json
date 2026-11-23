@@ -17,6 +17,18 @@
       "id": "whale",
       "start": 6.432,
       "end": 8.172
+    },
+    {
+      "scene": "spill/s3_paper",
+      "id": "paper",
+      "start": 8.172,
+      "end": 9.913
+    },
+    {
+      "scene": "spill/s4_clay",
+      "id": "clay",
+      "start": 9.913,
+      "end": 11.653
     }
   ],
   "audio": "../../../public/audio/feel_good_inc.wav"
