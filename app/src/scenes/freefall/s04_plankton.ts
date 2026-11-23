@@ -25,10 +25,10 @@ void main() {
   for (int i = 0; i < N; i++) { float k = float(N - 1 - i); float ph = fract((k + w) / float(N)); float id = floor((k + w) / float(N)) * float(N) + k;
     float sc = exp(ph * SPAN); vec2 p = q / sc * 3.0 + vec2(ff_h2(vec2(id, 1.0)), ff_h2(vec2(id, 4.0))) * 20.0;
     vec2 cid = floor(p), f = fract(p) - 0.5; float h = ff_h2(cid + id * 7.31); if (h < 0.68) continue; h = (h - 0.68) / 0.32;
-    vec2 o = (vec2(ff_h2(cid + 11.0 + id), ff_h2(cid + 17.0 + id)) - 0.5) * 0.4; float r = 0.12 + 0.22 * ff_h2(cid + 5.0 + id);
+    vec2 o = (vec2(ff_h2(cid + 11.0 + id), ff_h2(cid + 17.0 + id)) - 0.5) * 0.2; float r = 0.1 + 0.16 * ff_h2(cid + 5.0 + id);
     float blur = abs(ph - 0.62) * 0.55; float fade = smoothstep(0.0, 0.2, ph) * smoothstep(1.0, 0.86, ph);
     float flash = smoothstep(0.5, 0.62, ph) * exp(-max(0.0, ph - 0.62) * 9.0) * step(0.55, fract(h * 13.0));
-    C += cell(f - o, r, blur, h, flash, ph) * fade * (0.5 + ph); }
+    C += cell(f - o, r, blur, h, flash, ph) * fade * (0.5 + ph) * smoothstep(0.5, 0.38, max(abs(f.x), abs(f.y))); }
   // marine snow motes
   vec2 sp = q * 22.0 + vec2(0.0, uT * 3.0); vec2 sid = floor(sp); float mote = step(0.93, ff_h2(sid)) * smoothstep(0.12, 0.0, length(fract(sp) - 0.5)); C += vec3(0.5, 0.8, 0.9) * mote * 0.4;
   C += vec3(0.2, 0.8, 1.0) * ff_speed(clamp(abs(uDZ) * 0.15, 0.0, 0.4), 4.0) * 0.5;
