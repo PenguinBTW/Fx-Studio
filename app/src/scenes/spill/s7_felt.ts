@@ -7,6 +7,7 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import { resolveAsset } from '../../engine/assets';
 import { bar, lerp, sm, hash, stepped, clamp } from './kit';
+import { HeroPass } from './hero';
 import { Cameos } from './cameo';
 
 const T0 = bar(6), T1 = bar(7), CS = 1.4, NS = 34;
@@ -67,7 +68,7 @@ export default class S7Felt extends Scene {
   private U = { uCreep: { value: 0 }, uGlow: { value: 0 }, uGlowP: { value: new THREE.Vector3() } };
   private sheep!: Fur; private fox!: Fur; private pom!: Fur; private sd: { x: number; z: number; ph: number; s: number }[] = [];
   private poms: THREE.Vector3[] = [];
-  private cur!: THREE.Object3D; private coreM!: THREE.MeshLambertMaterial; private glowL = new THREE.PointLight(0xff7a1a, 0, 8, 2);
+  private cur!: THREE.Object3D; private hero!: HeroPass; private coreM!: THREE.MeshLambertMaterial; private glowL = new THREE.PointLight(0xff7a1a, 0, 8, 2);
   private mats(len: number, n = 6) { return Array.from({ length: n }, (_, i) => new THREE.ShaderMaterial({ vertexShader: FELT_V, fragmentShader: FELT_F, vertexColors: true,
     uniforms: { ...this.U, uShell: { value: n > 1 ? i / (n - 1) : 0 }, uLen: { value: len } } })); }
   private herd(t: number, i: number) { const d = this.sd[i]; return new THREE.Vector3(d.x + 8.5 * (t - T0), 0.55 * Math.abs(Math.sin(t * 13 + d.ph)), d.z); }
@@ -97,9 +98,8 @@ export default class S7Felt extends Scene {
     yg.flush();
     kit.root.visible = false; this.s.add(kit.root);
     this.coreM = new THREE.MeshLambertMaterial({ color: 0x000000, emissive: new THREE.Color(1.6, 0.5, 0.05) });
-    cur.root.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; const n = (m.material as THREE.Material).name;
-      m.material = n === 'Core' ? this.coreM : new THREE.MeshLambertMaterial({ color: n === 'Shell' ? 0x16141c : 0x050505, flatShading: true, transparent: n === 'Shell', opacity: 0.45, depthWrite: n !== 'Shell' }); });
-    this.cur = cur.root; this.cur.scale.setScalar(CS); this.s.add(this.cur, this.glowL);
+    (this.hero ??= new HeroPass(this.ctx.renderer)).dress(cur, { world: this.s });
+    this.cur = cur.root; this.cur.scale.setScalar(CS); this.s.add(this.glowL);
   }
 
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
@@ -120,12 +120,12 @@ export default class S7Felt extends Scene {
       cp = new THREE.Vector3(lerp(h0.x - 4, h0.x, k), lerp(8, h0.y, k * k), lerp(-1, 0, k)); } else cp = back;
     const land = t >= LAND ? Math.exp(-(t - LAND) * 9) : 0;
     this.cur.position.copy(cp); this.cur.rotation.set(0, 0, t < LAND ? -(t - T0) * 10 : -0.25 + 0.12 * Math.sin(ts * 13)); this.cur.scale.set(CS * (1 + 0.4 * land), CS * (1 - 0.35 * land), CS);
-    const blink = ((t * 1.06) % 1) < 0.55 ? 1 : 0.12; this.coreM.emissive.setRGB(1.6 * blink, 0.5 * blink, 0.05 * blink);
+    const blink = ((t * 1.06) % 1) < 0.55 ? 1 : 0.12; this.hero.update(t);
     this.U.uGlow.value = 1.4 * blink; this.U.uGlowP.value.copy(cp); this.glowL.position.copy(cp); this.glowL.intensity = 6 * blink;
     const w = sm(T0 + 0.9, T1, t);
     this.cam.position.set(cp.x - 2 - 6 * w, 2.4 + 5 * w, 10.5 + 10 * w); this.cam.aspect = out.width / out.height; this.cam.fov = 40 + 8 * w; this.cam.updateProjectionMatrix();
     const ly = t < LAND ? lerp(cp.y, back.y, 0.75) : cp.y; this.cam.lookAt(cp.x + 1.5 + 4 * w, ly - 0.6 - 1.5 * w, cp.z - 2 * w);
-    rr.setRenderTarget(out); rr.render(this.s, this.cam);
+    rr.setRenderTarget(out); rr.render(this.s, this.cam); this.hero.render(rr, out, this.cam);
     this.cameos.draw(this.ctx.renderer, out, f.t);
     return { toneMap: 'aces', exposure: 1.05, bloom: 0.25, bloomThreshold: 1.0, vignette: 0.3, grain: 0.04, ca: 0.1 + land, shake: [10 * land, 6 * land] };
   }

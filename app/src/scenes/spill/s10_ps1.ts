@@ -7,6 +7,7 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import { resolveAsset } from '../../engine/assets';
 import { bar, lerp, sm, hash, stepped, clamp } from './kit';
+import { HeroPass } from './hero';
 import { Cameos } from './cameo';
 
 const T0 = bar(9), T1 = bar(10), CS = 1.4, DIV = 3.5;
@@ -41,7 +42,7 @@ export default class S10Ps1 extends Scene {
   private insts: GLTFInstance[] = []; private snap = { value: new THREE.Vector2(160, 284) };
   private fogC = { value: new THREE.Color(0.55, 0.3, 0.45) };
   private dino!: THREE.Object3D; private dHead!: THREE.Object3D; private dJaw!: THREE.Object3D; private dTail!: THREE.Object3D;
-  private cur!: THREE.Object3D; private coreU = { value: 0 };
+  private cur!: THREE.Object3D; private hero!: HeroPass; private coreU = { value: 0 };
   private birds: THREE.LineSegments[] = [];
   private lo: THREE.WebGLRenderTarget | null = null; private upU = { tLo: { value: null as THREE.Texture | null } };
   private qs = new THREE.Scene(); private qc = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1); private sky = new THREE.Scene();
@@ -70,9 +71,8 @@ export default class S10Ps1 extends Scene {
       for (let k = 0; k < 3; k++) { const l = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: new THREE.Color(0.3, 1, 0.45).multiplyScalar(1 - 0.3 * k), transparent: true, opacity: 1 - 0.3 * k }));
         l.userData = { i, k }; this.s.add(l); this.birds.push(l); } }
     kit.root.visible = false; this.s.add(kit.root);
-    cur.root.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; const n = (m.material as THREE.Material).name;
-      m.material = n === 'Core' ? this.ps(0xff7a1a, tn, this.coreU) : this.ps(n === 'Shell' ? 0xd95a10 : 0x3a1505, tn); });
-    this.cur = cur.root; this.cur.scale.setScalar(CS); this.s.add(this.cur);
+    (this.hero ??= new HeroPass(this.ctx.renderer)).dress(cur, { world: this.s });
+    this.cur = cur.root; this.cur.scale.setScalar(CS);
     this.qs.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ vertexShader: QUAD_V, fragmentShader: UP_F, uniforms: this.upU, depthTest: false, depthWrite: false })));
   }
 
@@ -84,7 +84,7 @@ export default class S10Ps1 extends Scene {
     const cp = new THREE.Vector3(cx, 0.8 + 0.5 * run * (1 - skid * 0.8), 0.6); this.cur.position.copy(cp); this.cur.rotation.set(0, 0, -0.2 + 0.45 * skid);
     const roar = sm(this.ROAR - 0.15, this.ROAR, ts) * (1 - sm(this.ROAR + 0.6, this.ROAR + 0.8, ts));
     const dbl = ts > this.ROAR && ts < this.ROAR + 0.4 ? (Math.floor((ts - this.ROAR) * 10) % 2 ? 0.1 : 1) : ((t * 1.06) % 1) < 0.55 ? 1 : 0.12;
-    this.coreU.value = 1.6 * dbl;
+    this.hero.update(t, dbl);
     // dino: stiff idle, rears and roars; vertex jitter on its keys
     const jit = 0.04 * (hash(Math.floor(t * 15) * 3.3) - 0.5);
     this.dino.rotation.set(0, 2.5 - 0.3 * roar + jit, 0); this.dino.position.y = 0.5 * roar;
@@ -100,7 +100,7 @@ export default class S10Ps1 extends Scene {
     if (!this.lo || this.lo.width !== lw || this.lo.height !== lh) { this.lo?.dispose(); this.lo = new THREE.WebGLRenderTarget(lw, lh, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter }); }
     const auto = rr.autoClear; rr.autoClear = false;
     rr.setRenderTarget(this.lo); rr.clear(); rr.render(this.sky, this.qc); rr.clearDepth(); rr.render(this.s, this.cam);
-    this.upU.tLo.value = this.lo.texture; rr.setRenderTarget(out); rr.clear(); rr.render(this.qs, this.qc); rr.autoClear = auto; rr.resetState();
+    this.upU.tLo.value = this.lo.texture; rr.setRenderTarget(out); rr.clear(); rr.render(this.qs, this.qc); this.hero.render(rr, out, this.cam, this.s); rr.autoClear = auto; rr.resetState();
     this.cameos.draw(this.ctx.renderer, out, f.t);
     return { toneMap: 'legacy', exposure: 1.0, bloom: 0.3, bloomThreshold: 0.9, vignette: 0.25, grain: 0.02, ca: 0.1 + 0.6 * shake, shake: [14 * shake * Math.sin(t * 80), 10 * shake * Math.cos(t * 70)] };
   }

@@ -7,6 +7,7 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import { resolveAsset } from '../../engine/assets';
 import { SCREAM, WHIP, END, BEAT, lerp, sm, hash, clamp } from './kit';
+import { HeroPass } from './hero';
 import { Cameos } from './cameo';
 import { screenAtlas, screenMaterial } from './screens';
 import S1Breakout from './s1_breakout';
@@ -56,7 +57,7 @@ export default class S11Finale extends Scene {
   private s = new THREE.Scene(); private cam = new THREE.PerspectiveCamera(42, 9 / 16, 0.1, 600);
   private cameos = new Cameos([{ k: 'pixbird', t0: 24.0, dur: 2.0, path: 'fly', y: 0.8, s: 0.08, n: 6 }, { k: 'crane', t0: 24.3, dur: 1.8, path: 'fly', y: 0.6, s: 0.12, n: 3, dir: -1 }, { k: 'glass', t0: 24.6, dur: 1.6, path: 'fly', y: 0.45, s: 0.11, n: 2 }, { k: 'crayon', t0: 24.9, dur: 1.5, path: 'fly', y: 0.3, s: 0.12, n: 2, dir: -1 }, { k: 'koi', t0: 24.4, dur: 0.7, path: 'leap', x: -0.5, y: -0.2, s: 0.16 }, { k: 'pixfish', t0: 25.0, dur: 0.6, path: 'leap', x: 0.5, y: -0.25, s: 0.1, n: 2 }, { k: 'bee', t0: 24.2, dur: 1.3, path: 'float', x: 0.72, y: 0.15, s: 0.1 }, { k: 'sheep', t0: 25.60, dur: 1.5, path: 'pop', x: -0.62, y: -0.62, s: 0.13 }, { k: 'hose', t0: 25.66, dur: 1.5, path: 'pop', x: -0.2, y: -0.5, s: 0.14, dir: -1 }, { k: 'pixbird', t0: 25.72, dur: 1.5, path: 'pop', x: 0.25, y: -0.6, s: 0.09 }, { k: 'koi', t0: 25.78, dur: 1.5, path: 'pop', x: 0.62, y: -0.55, s: 0.13, dir: -1 }, { k: 'bee', t0: 25.84, dur: 1.5, path: 'pop', x: -0.45, y: -0.25, s: 0.09 }]);
   private insts: GLTFInstance[] = []; private s1!: S1Breakout;
-  private cur!: THREE.Object3D; private core: THREE.MeshStandardMaterial[] = []; private patchU = { uT: { value: 0 }, uK: { value: 0 } };
+  private cur!: THREE.Object3D; private hero!: HeroPass; private core: THREE.MeshStandardMaterial[] = []; private patchU = { uT: { value: 0 }, uK: { value: 0 } };
   private crowd!: THREE.Group; private scrT = { value: 0 }; private lookers: { o: THREE.Object3D; base: THREE.Euler; ph: number; y: number }[] = [];
   private phone!: THREE.Object3D; private yell!: THREE.Sprite; private whale!: THREE.Object3D; private screens!: THREE.InstancedMesh; private ring!: THREE.Mesh;
   private PH = new THREE.Vector3(2, 40, -58); private scrRT = new THREE.WebGLRenderTarget(540, 960);
@@ -96,11 +97,9 @@ export default class S11Finale extends Scene {
       const sc = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.86, h * 0.78), new THREE.MeshBasicMaterial({ color: cols[i % cols.length], toneMapped: false }));
       sc.position.z = dd / 2 + 0.01; (sc.material as THREE.MeshBasicMaterial).color.multiplyScalar(1.1 + 0.4 * hash(i * 3.7)); g.add(b, sc);
       g.position.set(0.25 * Math.sin(i * 2.1), y, 6 + 0.2 * Math.cos(i * 1.7)); g.rotation.set(0.06 * Math.sin(i * 3.3), r, 0.05 * Math.cos(i * 2.9)); this.s.add(g); });
-    this.cur = K.cursor.root; this.cur.scale.setScalar(1.9); this.cur.position.set(0, 8.6, 6); this.s.add(this.cur);
-    const patch = new THREE.ShaderMaterial({ vertexShader: PATCH_V, fragmentShader: PATCH_F, uniforms: this.patchU });
-    this.cur.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; const n = (m.material as THREE.Material).name;
-      if (n === 'Core') { const c = new THREE.MeshStandardMaterial({ color: 0xff7a1a, emissive: 0xff6a10, emissiveIntensity: 2 }); m.material = c; this.core.push(c); }
-      else if (n === 'Shell') m.material = patch; });
+    this.hero = new HeroPass(this.ctx.renderer); this.cur = this.hero.dress(K.cursor); this.cur.scale.setScalar(1.9); this.cur.position.set(0, 8.6, 6);
+    
+    
     // the screen sky: hanging lit rectangles, one of them the phone we go back into
     const sg = new THREE.PlaneGeometry(1, 1.6); this.screens = new THREE.InstancedMesh(sg, new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false, side: THREE.DoubleSide, fog: false }), 420);
     const M = new THREE.Matrix4(), C = new THREE.Color();
@@ -134,8 +133,8 @@ export default class S11Finale extends Scene {
     if (t >= END - HAND) return this.s1.render({ ...f, t: t - END }, out);
     const rr = this.ctx.renderer, T0 = SCREAM - 4 * BEAT * 1;
     // vista: patchwork stitches itself onto the shell a band per beat
-    this.patchU.uK.value = clamp(Math.floor((t - T0 + 0.05) / BEAT) / 4, 0, 1); this.patchU.uT.value = t;
-    const blink = ((t * 1.06) % 1) < 0.55 ? 1 : 0.15; for (const c of this.core) c.emissiveIntensity = 0.4 + 2.2 * blink;
+    
+    const blink = ((t * 1.06) % 1) < 0.55 ? 1 : 0.15; this.hero.update(t);
     const up = sm(SCREAM, SCREAM + 0.35, t);
     this.cur.position.y = 8.6 + 0.12 * Math.abs(Math.sin(t * Math.PI / BEAT)) * (1 - up) + 0.6 * sm(SCREAM, SCREAM + 0.12, t) * (1 - sm(SCREAM + 0.12, SCREAM + 0.5, t));
     this.cur.rotation.set(-0.5 * up, 0.3 * Math.sin(t * 0.8) * (1 - up), 0);
@@ -156,7 +155,7 @@ export default class S11Finale extends Scene {
     if (this.yell.visible) { const yp = this.PH.clone().lerp(p, 0.15 + 0.55 * Math.sqrt(yk)); this.yell.position.copy(yp).add(new THREE.Vector3(0.6 * Math.sin(t * 70), 0.6 * Math.cos(t * 61), 0).multiplyScalar(1 - yk));
       const d = yp.distanceTo(p), sz = d * 0.38 * (0.8 + 0.4 * Math.sqrt(yk)); this.yell.scale.set(sz, sz / 2, 1); (this.yell.material as THREE.SpriteMaterial).opacity = 1 - sm(0.75, 1, yk); } this.cam.aspect = out.width / out.height; this.cam.fov = 42 - 10 * Math.max(vk, wk) + 18 * Math.sin(Math.PI * wk); this.cam.updateProjectionMatrix();
     if (t > SCREAM) { this.s1.render({ ...f, t: Math.max(t - END, -HAND - 0.6) }, this.scrRT); }
-    rr.setRenderTarget(out); rr.setClearColor(0, 1); rr.clear(); rr.render(this.s, this.cam); rr.resetState();
+    rr.setRenderTarget(out); rr.setClearColor(0, 1); rr.clear(); rr.render(this.s, this.cam); this.hero.render(rr, out, this.cam); rr.resetState();
     const kick = t > SCREAM ? Math.exp(-(t - SCREAM) * 3) : 0, whip = Math.sin(Math.PI * wk);
     this.cameos.draw(this.ctx.renderer, out, f.t);
     return { toneMap: 'aces', exposure: 1.05 + 0.6 * kick, bloom: 0.25 + 0.5 * kick, bloomThreshold: 1.0, vignette: 0.35, grain: 0.03,

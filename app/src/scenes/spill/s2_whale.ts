@@ -6,6 +6,7 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import { resolveAsset } from '../../engine/assets';
 import { DROP, BAR, lerp, sm, hash, spring } from './kit';
+import { HeroPass } from './hero';
 import { Cameos } from './cameo';
 
 const WS = 4, CS = 5;
@@ -89,7 +90,7 @@ export default class S2Whale extends Scene {
   private insts: GLTFInstance[] = [];
   private whale!: THREE.Object3D;
   private flukes!: THREE.Object3D;
-  private cur!: THREE.Object3D;
+  private cur!: THREE.Object3D; private hero!: HeroPass;
   private cores: THREE.MeshStandardMaterial[] = [];
   private glow = new THREE.PointLight(0xff7a1e, 0, 0, 2);
   private contactL = new THREE.Vector3();
@@ -144,15 +145,10 @@ export default class S2Whale extends Scene {
     this.spout = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }), 90);
     for (let i = 0; i < 90; i++) this.spout.setColorAt(i, c.setRGB(...([[1.6, 1.6, 1.6], [0.8, 1.35, 1.7], [1.2, 1.5, 1.7]][i % 3] as [number, number, number])));
     this.spout.frustumCulled = false; this.whale.add(this.spout);
-    cur.root.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; const s = m.material as THREE.MeshStandardMaterial;
-      const p = new THREE.MeshPhysicalMaterial({ name: s.name, color: s.color, roughness: s.roughness });
-      if (s.name === 'Shell') { p.color.setRGB(1, 0.36, 0.03); p.roughness = 0.32; p.clearcoat = 1; p.clearcoatRoughness = 0.08; }
-      if (s.name === 'Core') { p.emissive.setRGB(1, 0.32, 0); p.emissiveIntensity = 2; this.cores.push(p); }
-      if (s.name === 'Grille') { p.color.setRGB(0.25, 0.05, 0); }
-      m.material = p; });
+    (this.hero ??= new HeroPass(this.ctx.renderer)).dress(cur, { world: this.main });
     cur.part('scan').scale.set(1, 0.4, 0.35);
     this.cur = cur.root; this.cur.scale.setScalar(CS);
-    const csun = sun.clone(); this.curS.add(this.cur, csun, new THREE.HemisphereLight(0x8fb0ff, 0x6a3a80, 1.1));
+    const csun = sun.clone(); 
     this.qs.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ vertexShader: QUAD_V, fragmentShader: PAINT_F, uniforms: this.paintU, depthTest: false, depthWrite: false })));
   }
 
@@ -176,7 +172,7 @@ export default class S2Whale extends Scene {
     this.cur.position.copy(p); this.cur.scale.set(CS / Math.sqrt(sq), CS * sq, CS / Math.sqrt(sq));
     this.cur.rotation.set(0.3 * Math.exp(-dd * 3), 0, -3.4 * dd - 0.2);
     const blink = (d > 0.16 && d < 0.23) || (d > 0.31 && d < 0.38) ? 0.08 : d < 0.6 ? 1 : ((t * 1.06) % 1) < 0.55 ? 1 : 0.12;
-    for (const m of this.cores) m.emissiveIntensity = 0.1 + 1.6 * blink;
+    this.hero.update(t);
     this.wU.uGlowP.value.copy(p); this.wU.uGlow.value = 6 * blink * (1 + 3 * Math.exp(-d * 6));
     this.glow.position.copy(p); this.glow.intensity = 40 * blink * (1 + 3 * Math.exp(-d * 6));
     const M = new THREE.Matrix4(), q = new THREE.Quaternion();
@@ -206,7 +202,7 @@ export default class S2Whale extends Scene {
     this.wU.uCam.value.copy(this.cam.position); rr.setRenderTarget(this.rt); rr.setClearColor(0, 1); rr.clear(); rr.render(this.main, this.cam);
     this.paintU.tScene.value = this.rt.texture; this.paintU.uRes.value.set(out.width, out.height); this.paintU.uR.value = Math.round(11 * out.height / 1920); this.paintU.uT.value = t;
     const auto = rr.autoClear; rr.autoClear = false;
-    rr.setRenderTarget(out); rr.clear(); rr.render(this.qs, this.qc); rr.clearDepth(); rr.render(this.curS, this.cam); rr.autoClear = auto; rr.resetState();
+    rr.setRenderTarget(out); rr.clear(); rr.render(this.qs, this.qc); this.hero.render(rr, out, this.cam, this.main); rr.autoClear = auto; rr.resetState();
     const hit = Math.exp(-d * 10);
     this.cameos.draw(this.ctx.renderer, out, f.t);
     return { toneMap: 'aces', exposure: 0.82, bloom: 0.15, bloomThreshold: 1.2, vignette: 0.35, grain: 0.03, ca: 0.2 + 1.2 * hit,

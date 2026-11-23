@@ -7,6 +7,7 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import { resolveAsset } from '../../engine/assets';
 import { bar, BEAT, DROP, GULP, lerp, sm, hash, spring, stepped, clamp } from './kit';
+import { HeroPass } from './hero';
 import { Cameos } from './cameo';
 
 const T0 = bar(3), SPIT = bar(4), T1 = bar(5), CS = 1.4;
@@ -49,7 +50,7 @@ export default class S5Ink extends Scene {
   private insts: GLTFInstance[] = [];
   private glowU = { uGlowP: { value: new THREE.Vector3() }, uGlow: { value: 0 }, uGlowR: { value: 1.2 } };
   private heron!: THREE.Object3D; private neck!: THREE.Object3D; private head!: THREE.Object3D; private top!: THREE.Object3D; private bot!: THREE.Object3D;
-  private cur!: THREE.Object3D; private inkCur!: THREE.Object3D; private cores: THREE.MeshStandardMaterial[] = [];
+  private cur!: THREE.Object3D; private hero!: HeroPass; private inkCur!: THREE.Object3D; private cores: THREE.MeshStandardMaterial[] = [];
   private kois: { o: THREE.Object3D; t: number; x: number; z: number }[] = [];
   private ripples: { o: THREE.Mesh; t: number }[] = [];
   private rt: THREE.WebGLRenderTarget | null = null;
@@ -79,17 +80,12 @@ export default class S5Ink extends Scene {
     for (let i = 0; i < 4; i++) { const k = koi.clone(); this.s.add(k); this.kois.push({ o: k, t: T0 + 0.3 + i * 0.6, x: -8 + 5 * i, z: -3 - 2 * hash(i) }); }
     for (let i = 0; i < 8; i++) { const r = new THREE.Mesh(new THREE.TorusGeometry(1, 0.03, 4, 48), this.val(0.25)); r.rotation.x = -Math.PI / 2; this.s.add(r); this.ripples.push({ o: r, t: 1e9 }); }
     kit.root.visible = false; this.s.add(kit.root);
-    cur.root.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; const s = m.material as THREE.MeshStandardMaterial;
-      const p = new THREE.MeshPhysicalMaterial({ name: s.name, color: s.color, roughness: s.roughness });
-      if (s.name === 'Shell') { p.color.setRGB(1, 0.36, 0.03); p.roughness = 0.32; p.clearcoat = 1; }
-      if (s.name === 'Core') { p.emissive.setRGB(1, 0.32, 0); p.emissiveIntensity = 2; this.cores.push(p); }
-      if (s.name === 'Grille') p.color.setRGB(0.25, 0.05, 0);
-      m.material = p; });
+    (this.hero ??= new HeroPass(this.ctx.renderer)).dress(cur, { world: this.s });
     cur.part('scan').scale.set(1, 0.4, 0.35); this.cur = cur.root; this.cur.scale.setScalar(CS);
-    const sun = new THREE.DirectionalLight(0xfff0e0, 2.4); sun.position.set(-20, 30, 15); this.curS.add(this.cur, sun, new THREE.HemisphereLight(0xffffff, 0x888888, 1.2));
+    const sun = new THREE.DirectionalLight(0xfff0e0, 2.4); sun.position.set(-20, 30, 15); 
     // the spat-out cursor: brushed in ink, only its core still glows
-    cur2.root.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; const n = (m.material as THREE.Material).name; m.material = this.val(n === 'Core' ? 0.95 : n === 'Shell' ? 0.6 : 0.05, 0, n === 'Shell' ? 1 : 0); });
-    this.inkCur = cur2.root; this.inkCur.scale.setScalar(CS); this.s.add(this.inkCur);
+    (this.hero ??= new HeroPass(this.ctx.renderer)).dress(cur2, { world: this.s });
+    this.inkCur = cur2.root; this.inkCur.scale.setScalar(CS);
     this.qs.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ vertexShader: QUAD_V, fragmentShader: INK_F, uniforms: this.inkU, depthTest: false, depthWrite: false })));
   }
 
@@ -101,7 +97,7 @@ export default class S5Ink extends Scene {
     for (let i = 0; i < 3; i++) if (t >= H[i] && t < H[i + 1]) { const k = (t - H[i]) / (H[i + 1] - H[i]);
       cp = new THREE.Vector3(lerp(this.padX[i], this.padX[i + 1], k), 0.7 + 2.4 * Math.sin(Math.PI * k), 0.3 * ((i + k) % 2)); }
     this.cur.position.copy(cp); this.cur.rotation.z = -(t - T0) * 5; this.cur.visible = t < CAP;
-    const blink = ((t * 1.06) % 1) < 0.55 ? 1 : 0.12; for (const m of this.cores) m.emissiveIntensity = 0.1 + 1.6 * blink;
+    const blink = ((t * 1.06) % 1) < 0.55 ? 1 : 0.12; this.hero.update(t);
     // heron: strike (smear held on 12s), gulp-swallow, puzzled stillness, hiccup-spit
     const st = sm(GULP[0] - 0.1, GULP[0] + 0.02, ts), back = sm(GULP[0] + 0.15, GULP[0] + 0.5, t), sp = t >= SPIT ? Math.max(0, spring(t - SPIT, 14, 5)) : 0;
     this.neck.rotation.z = -1.25 * st * (1 - back) - 0.7 * sp; this.head.rotation.z = 0.6 * st * (1 - back) + 0.25 * back * (1 - sm(12.9, 13.1, t)) + 0.15 * sm(12.95, 13.05, ts);
@@ -140,7 +136,7 @@ export default class S5Ink extends Scene {
     rr.setRenderTarget(this.rt); rr.setClearColor(new THREE.Color(0.96, 0, 0), 1); rr.clear(); rr.render(this.s, this.cam);
     Object.assign(this.inkU, {}); this.inkU.tCol.value = this.rt.texture; this.inkU.tDep.value = this.rt.depthTexture; this.inkU.uRes.value.set(out.width, out.height); this.inkU.uB.value = Math.floor(t * (t > GULP[1] && t < SPIT ? 12 : 8)) * 1.37;
     const auto = rr.autoClear; rr.autoClear = false; rr.setRenderTarget(out); rr.clear(); rr.render(this.qs, this.qc);
-    if (this.cur.visible) { rr.clearDepth(); rr.render(this.curS, this.cam); }
+    this.hero.render(rr, out, this.cam, this.s);
     rr.autoClear = auto; rr.resetState();
     const hit = Math.max(t >= GULP[0] ? Math.exp(-(t - GULP[0]) * 10) : 0, t >= SPIT ? Math.exp(-(t - SPIT) * 10) : 0);
     this.cameos.draw(this.ctx.renderer, out, f.t);

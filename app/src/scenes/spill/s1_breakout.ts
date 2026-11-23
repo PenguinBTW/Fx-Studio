@@ -8,6 +8,7 @@ import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import { resolveAsset } from '../../engine/assets';
 import { screenAtlas, screenMaterial } from './screens';
 import { RAMS, PULSES, BREAK, DROP, OUTSIDE, clamp, lerp, sm, hash, spring, impactFrame } from './kit';
+import { HeroPass } from './hero';
 
 const CUT = PULSES[2];
 const GLASS_Z = 0.6, HIT_Z = GLASS_Z - 0.115;
@@ -77,7 +78,7 @@ export default class S1Breakout extends Scene {
   private intCam = new THREE.PerspectiveCamera(44, 360 / 780, 0.05, 200);
   private cam = new THREE.PerspectiveCamera(30, 9 / 16, 0.05, 4000);
   private insts: GLTFInstance[] = [];
-  private cur!: THREE.Object3D;
+  private cur!: THREE.Object3D; private hero!: HeroPass;
   private curX!: THREE.Object3D;
   private glyphs: THREE.Sprite[] = [];
   private cores: THREE.MeshPhysicalMaterial[] = [];
@@ -125,11 +126,7 @@ export default class S1Breakout extends Scene {
     this.mkFairyLights();
     this.mkUI();
     this.inS.add(this.lampLight, fill, new THREE.HemisphereLight(0x302a40, 0x0a0806, 0.15));
-    const prepCursor = (c: GLTFInstance) => c.root.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; const p = phys(m);
-      if (p.name === 'Shell') { p.transmission = 0.25; p.thickness = 0.25; p.ior = 1.49; p.roughness = 0.32; p.attenuationColor.setRGB(1, 0.42, 0.1); p.attenuationDistance = 0.3; p.color.setRGB(1, 0.36, 0.03); p.clearcoat = 1; p.clearcoatRoughness = 0.08; m.castShadow = true; }
-      if (p.name === 'Core') { p.emissive.setRGB(1, 0.32, 0.0); p.emissiveIntensity = 2; this.cores.push(p); }
-      if (p.name === 'Grille') { p.emissive.setRGB(0.0, 0.0, 0.0); p.color.setRGB(0.25, 0.05, 0.0); } });
-    prepCursor(cur); prepCursor(curX); cur.part('scan').scale.set(1, 0.4, 0.35); curX.part('scan').scale.set(1, 0.4, 0.35);
+    this.hero = new HeroPass(r); this.hero.dress(cur, { inline: true }); this.hero.dress(curX, { inline: true }); cur.part('scan').scale.set(1, 0.4, 0.35); curX.part('scan').scale.set(1, 0.4, 0.35);
     this.cur = cur.root; this.curLight.position.set(0, 0.5, 0.3); this.cur.add(this.curLight); this.inS.add(this.cur);
     this.curX = curX.root; this.curLightX.position.set(0, 0.5, 0.4); this.curX.add(this.curLightX); this.exS.add(this.curX);
     // the cover glass we are behind: transparent pane + crack ribbons + shards
@@ -407,7 +404,7 @@ export default class S1Breakout extends Scene {
     let focus: number;
     if (inside) { this.poseIn(t); focus = this.camIn(t); } else focus = this.poseOut(t);
     this.cam.aspect = out.width / out.height; this.cam.updateProjectionMatrix();
-    const b = this.blink(t); for (const m of this.cores) m.emissiveIntensity = 0.1 + 1.3 * b;
+    const b = this.blink(t); this.hero.update(t, b);
     this.curLight.intensity = 0.2 + 1.6 * b; this.curLightX.intensity = 5 + 45 * b;
     this.lampLight.intensity = 2.2 * (1 - 0.6 * Math.max(0, ...RAMS.map((h) => Math.exp(-Math.max(0, t - h) * 20) * (t >= h ? 1 : 0))));
     this.screenT.value = t; const imp = impactFrame(t);

@@ -30,48 +30,26 @@ def chime(f, d=1.2): t = t_(d); return (np.sin(2 * np.pi * f * t) + 0.5 * np.sin
 def blip(f, d=0.09): return sq(2 * np.pi * f * t_(d)) * env(d, 0.001, d) * 0.5
 
 # 0-3 s: breakout. charge hum, three comic rams, glass blow-out
-put(0.0, lp(saw(2 * np.pi * 55 * t_(1.45)), 400) * np.linspace(0.2, 1, int(1.45 * SR)), 0.18)
+put(0.0, lp(saw(2 * np.pi * 55 * t_(1.45)), 400) * np.linspace(0.2, 1, int(1.45 * SR)), 0.08)
 for i, h in enumerate([0.34, 0.94, 1.45]):
     put(h, thud(48 + 6 * i, 0.6), 0.9); put(h, crack(0.25 + 0.15 * i), 0.35 + 0.2 * i, (-1) ** i * 0.3)
 put(1.45, hp(noise(1.6), 3500) * env(1.6, 0.002, 1.6), 0.35, 0.2)
 for k in range(24): put(1.5 + 0.06 * k + 0.05 * rng.random(), chime(2500 + 3000 * rng.random(), 0.3), 0.05, rng.uniform(-0.9, 0.9))
-for i, h in enumerate([1.73, 2.02, 2.29, 2.61, 2.88]): put(h - 0.1, whoosh(0.3, 600, 2500), 0.25, (-1) ** i * 0.5)
-put(3.0, whoosh(3.4, 200, 1800), 0.35)  # the fall
+put(3.0, whoosh(3.4, 200, 1800), 0.12)  # the fall
 # 6.43 whale slam + splash + moan
 put(DROP, thud(38, 1.2), 1.0); put(DROP, lp(noise(0.9), 1500) * env(0.9, 0.003, 0.9), 0.5)
 put(DROP + 0.25, lp(sweep(140, 90, 2.2, lambda p: np.sin(p) + 0.3 * np.sin(2 * p)), 800) * np.sin(np.pi * t_(2.2) / 2.2), 0.25)
-# paper canopy: flaps and crane flock
-for k in range(10): put(bar(1) + 0.1 * k + 0.05 * rng.random(), bp(noise(0.12), 1500, 6000) * env(0.12, 0.002, 0.1), 0.25, rng.uniform(-0.8, 0.8))
-# clay: squelch, frog boing, snail honk
-put(bar(2), lp(sweep(400, 120, 0.25), 900) * env(0.25), 0.6); put(bar(2) + 0.3, sweep(180, 520, 0.35, lambda p: np.sin(p)) * env(0.35, 0.003, 0.35), 0.35, -0.3)
-put(bar(2) + 0.8, lp(saw(2 * np.pi * 233 * t_(0.4)) + saw(2 * np.pi * 293 * t_(0.4)), 2200) * env(0.4, 0.01, 0.8), 0.18, 0.4)
 # ink: plops on the pads, gulp, hiccup spit
 for k, h in enumerate([11.75, 11.95, 12.1]): put(h, sweep(900, 300, 0.12) * env(0.12), 0.35, -0.3 + 0.3 * k)
 put(12.2, lp(sweep(220, 50, 0.6), 600) * env(0.6, 0.01, 0.7), 0.9); put(12.25, lp(noise(0.5), 300) * env(0.5), 0.4)
 put(13.39, sweep(200, 900, 0.12) * env(0.12), 0.7); put(13.39, lp(noise(0.1), 3000) * env(0.1), 0.5)
-for k in range(3): put(13.6 + 0.3 * k, sweep(1200, 500, 0.08) * env(0.08), 0.25, 0.3 * k)
-# pixel falls: 8-bit jump + coins
-put(bar(5), sq(2 * np.pi * np.cumsum(np.linspace(200, 900, int(0.25 * SR))) / SR) * env(0.25) * 0.5, 0.35)
-for k in range(6): put(bar(5) + 0.35 + 0.22 * k, np.concatenate([blip(988, 0.06), blip(1319, 0.18)]), 0.25, rng.uniform(-0.6, 0.6))
-# felt: soft hoof thuds and a squeaky baa
-for k in range(14): put(bar(6) + 0.11 * k, lp(noise(0.08), 400) * env(0.08), 0.45, rng.uniform(-0.7, 0.7))
-put(bar(6) + 0.5, bp(saw(2 * np.pi * (380 + 30 * np.sin(2 * np.pi * 9 * t_(0.45))).cumsum() / SR), 600, 2500) * env(0.45, 0.02, 0.6), 0.2, 0.3)
-# rubber hose: slide whistle, hat tip ding, bounce boings
-put(bar(7), sweep(500, 1500, 0.5) * env(0.5, 0.02, 0.8), 0.18); put(bar(7) + 0.75, chime(1760, 0.6), 0.2, 0.4)
-for k in range(4): put(bar(7) + k * BEAT, sweep(150, 300, 0.15) * env(0.15), 0.25)
-# stained glass: chimes on beats
-for k, f in enumerate([1047, 1319, 1568, 2093]): put(bar(8) + k * BEAT, chime(f, 1.4), 0.12, (-1) ** k * 0.5)
-# PS1: crunchy low-poly roar (bit-crushed)
-roar = lp(saw(2 * np.pi * np.cumsum(70 + 25 * np.sin(2 * np.pi * 6 * t_(1.0))) / SR) + 0.6 * noise(1.0), 1200) * env(1.0, 0.04, 1.4)
-put(bar(9) + 0.45, np.round(roar * 8) / 8, 0.45)
-# vista shimmer swell
-put(bar(10), (chime(784, 2.5) + chime(1175, 2.5) * 0.7) * np.sin(np.pi * t_(2.5) / 5) ** 0.5, 0.15)
+for k in range(3): put(13.6 + 0.3 * k, sweep(1200, 500, 0.08) * env(0.08), 0.1, 0.3 * k)
 # the scream from above: two formant-filtered saws gliding down, with a thud
 scr = saw(2 * np.pi * np.cumsum(np.linspace(780, 520, int(1.5 * SR)) * (1 + 0.02 * np.sin(2 * np.pi * 7 * t_(1.5)))) / SR)
 scr = bp(scr, 700, 1300) * 1.2 + bp(scr, 2200, 3200) * 0.8 + bp(noise(1.5), 2000, 5000) * 0.3
-put(bar(11), scr * np.minimum(1, t_(1.5) / 0.04) * np.exp(-t_(1.5) / 1.2), 0.5); put(bar(11), thud(60, 0.5), 0.6)
+put(bar(11), scr * np.minimum(1, t_(1.5) / 0.04) * np.exp(-t_(1.5) / 1.2), 0.22)
 # whip into the phone, landing in the cell
-put(bar(12), whoosh(END - bar(12) - 0.42, 300, 5000), 0.55); put(END - 0.42, thud(70, 0.3), 0.5); put(END - 0.42, crack(0.15), 0.2)
+put(bar(12), whoosh(END - bar(12) - 0.42, 300, 5000), 0.2)
 put(END - 0.6, lp(noise(0.6), 2500) * np.linspace(0, 1, int(0.6 * SR)) ** 3, 0.5)
 put(0.0, lp(noise(0.35), 2500) * np.linspace(1, 0, int(0.35 * SR)) ** 1.5, 0.5)   # the seam swell carries on past frame 0
 sfx = np.stack([L, R])
@@ -82,8 +60,8 @@ tt = np.arange(N) / SR
 muf = np.clip(np.minimum((tt - 12.15) / 0.08, (13.42 - tt) / 0.06), 0, 1)       # inside the heron
 ml = np.stack([lp(m[0], 500), lp(m[1], 500)]); m = m * (1 - muf) + ml * muf * 0.8
 duck = np.ones(N)
-for h in [0.34, 0.94, 1.45, DROP, 12.2, 13.39, bar(11)]:
-    k = (tt >= h) * np.exp(-np.maximum(0, tt - h) / 0.25); duck = np.minimum(duck, 1 - 0.35 * k)
+for h in [0.34, 0.94, 1.45, DROP, 12.2]:
+    k = (tt >= h) * np.exp(-np.maximum(0, tt - h) / 0.25); duck = np.minimum(duck, 1 - 0.25 * k)
 fade = np.clip(np.minimum(tt / 0.02, 0.3 + 0.7 * np.clip((END - tt) / 0.3, 0, 1) ** 1.5), 0, 1) * np.clip((END - tt) / 0.004, 0, 1)
 mix = (m * 0.8 * duck + sfx) * fade
 TL = int(0.5 * SR); tail = mfull[:, N:N + TL]; tail = np.stack([lp(tail[0], 2500), lp(tail[1], 2500)]) * np.cos(np.linspace(0, np.pi / 2, tail.shape[1])) ** 1.5

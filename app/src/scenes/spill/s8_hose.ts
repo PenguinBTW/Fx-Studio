@@ -7,6 +7,7 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import { resolveAsset } from '../../engine/assets';
 import { bar, BEAT, lerp, sm, hash, stepped, clamp } from './kit';
+import { HeroPass } from './hero';
 import { Cameos } from './cameo';
 
 const T0 = bar(7), T1 = bar(8), CS = 1.4;
@@ -41,7 +42,7 @@ export default class S8Hose extends Scene {
   private bobs: { o: THREE.Object3D; ph: number; k: number }[] = []; private mouths: THREE.Object3D[] = [];
   private cat!: THREE.Object3D; private catHead!: THREE.Object3D; private hat!: THREE.Object3D; private gloves: THREE.Object3D[] = []; private shoes: THREE.Mesh[] = [];
   private limbs: THREE.Mesh[] = []; private limbM!: THREE.ShaderMaterial;
-  private cur!: THREE.Object3D; private coreM!: THREE.MeshLambertMaterial;
+  private cur!: THREE.Object3D; private hero!: HeroPass; private coreM!: THREE.MeshLambertMaterial;
   private rt: THREE.WebGLRenderTarget | null = null; private filmU = { tCol: { value: null as THREE.Texture | null }, uT: { value: 0 }, uF: { value: 1 }, uRes: { value: new THREE.Vector2() } };
   private qs = new THREE.Scene(); private qc = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   private TIP = T0 + 2 * BEAT;
@@ -78,10 +79,9 @@ export default class S8Hose extends Scene {
       const sh = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 10).scale(1.5, 0.7, 1), this.toon([0.07, 0.07, 0.07])); this.s.add(sh); this.shoes.push(sh); }
     kit.root.visible = false; this.s.add(kit.root);
     this.coreM = new THREE.MeshLambertMaterial({ color: 0x000000, emissive: new THREE.Color(1.6, 0.4, 0.02) });
-    cur.root.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; const n = (m.material as THREE.Material).name;
-      m.material = n === 'Core' ? this.coreM : new THREE.MeshLambertMaterial({ color: n === 'Shell' ? 0x16141c : 0x050505, transparent: n === 'Shell', opacity: 0.45, depthWrite: n !== 'Shell' }); });
+    (this.hero ??= new HeroPass(this.ctx.renderer)).dress(cur, { world: this.s });
     this.cur = cur.root; this.cur.scale.setScalar(CS);
-    const sun = new THREE.DirectionalLight(0xffffff, 2); sun.position.set(-20, 30, 15); this.s.add(this.cur, sun, new THREE.HemisphereLight(0xffffff, 0x666666, 1));
+    const sun = new THREE.DirectionalLight(0xffffff, 2); sun.position.set(-20, 30, 15); this.s.add(sun, new THREE.HemisphereLight(0xffffff, 0x666666, 1));
     this.qs.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ vertexShader: QUAD_V, fragmentShader: FILM_F, uniforms: this.filmU, depthTest: false, depthWrite: false })));
   }
 
@@ -98,7 +98,7 @@ export default class S8Hose extends Scene {
     const cp = new THREE.Vector3(cx, 0.75 + 2.4 * hop, 0.4); this.cur.position.copy(cp);
     const sq = Math.max(0, 1 - hop * 4); this.cur.scale.set(CS * (1 + 0.35 * sq), CS * (1 - 0.3 * sq + 0.15 * hop), CS); this.cur.rotation.z = 0.15 * Math.cos(beat / 2);
     const dbl = t > this.TIP + 0.1 && t < this.TIP + 0.5 ? (Math.floor((t - this.TIP - 0.1) * 10) % 2 === 0 ? 1 : 0.1) : ((t * 1.06) % 1) < 0.55 ? 1 : 0.12;
-    this.coreM.emissive.setRGB(1.6 * dbl, 0.4 * dbl, 0.02 * dbl); this.G.uGlow.value = 1.2 * dbl; this.G.uGlowP.value.copy(cp);
+    this.hero.update(t, dbl); this.G.uGlow.value = 1.2 * dbl; this.G.uGlowP.value.copy(cp);
     // the cat: boneless stroll toward the cursor, head follows it, tips its hat as it passes
     const catX = cx + 4.6 - 0.6 * (ts - T0), step = beat; this.cat.position.set(catX, 0.15 * Math.abs(Math.sin(step)), -1.6); this.cat.rotation.set(0, -2.6, 0.06 * Math.sin(step));
     const bk = Math.exp(-(((ph % 1) + 1) % 1) * 7); this.cat.scale.set(1.35 * (1 + 0.1 * bk), 1.35 * (1 - 0.14 * bk + 0.06 * Math.sin(step * 2)), 1.35 * (1 + 0.1 * bk));
@@ -116,7 +116,7 @@ export default class S8Hose extends Scene {
     if (!this.rt || this.rt.width !== out.width || this.rt.height !== out.height) { this.rt?.dispose(); this.rt = new THREE.WebGLRenderTarget(out.width, out.height, { type: THREE.HalfFloatType }); }
     rr.setRenderTarget(this.rt); rr.clear(); rr.render(this.s, this.cam);
     const fr = Math.floor(t * 12); this.filmU.tCol.value = this.rt.texture; this.filmU.uT.value = t; this.filmU.uF.value = 0.93 + 0.07 * hash(fr); this.filmU.uRes.value.set(out.width, out.height);
-    rr.setRenderTarget(out); rr.clear(); rr.render(this.qs, this.qc); rr.resetState();
+    rr.setRenderTarget(out); rr.clear(); rr.render(this.qs, this.qc); this.hero.render(rr, out, this.cam, this.s); rr.resetState();
     const gw = 3 * (hash(fr * 1.3) - 0.5);
     this.cameos.draw(this.ctx.renderer, out, f.t);
     return { toneMap: 'legacy', exposure: 1.0, bloom: 0.15, bloomThreshold: 1.0, vignette: 0.0, grain: 0.0, ca: 0.0, shake: [gw, 2 * gw] };

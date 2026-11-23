@@ -6,6 +6,7 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import { resolveAsset } from '../../engine/assets';
 import { bar, lerp, sm, hash, spring, stepped, clamp } from './kit';
+import { HeroPass } from './hero';
 import { Cameos } from './cameo';
 
 const T0 = bar(2), T1 = bar(3), CS = 1.4;
@@ -29,7 +30,7 @@ export default class S4Clay extends Scene {
   private insts: GLTFInstance[] = [];
   private boil: { o: THREE.Object3D; p: THREE.Vector3; s: THREE.Vector3; i: number }[] = [];
   private frog!: THREE.Object3D; private snail!: THREE.Object3D; private stalks: THREE.Object3D[] = [];
-  private cur!: THREE.Object3D; private cores: THREE.MeshStandardMaterial[] = [];
+  private cur!: THREE.Object3D; private hero!: HeroPass; private cores: THREE.MeshStandardMaterial[] = [];
   private glow = new THREE.PointLight(0xff7a1e, 0, 25, 2);
   private ground!: THREE.ShaderMaterial;
   private path = (t: number) => {
@@ -78,13 +79,8 @@ export default class S4Clay extends Scene {
     for (let i = 0; i < 16; i++) add(cactus, -18 + 36 * hash(i * 7.9), (hash(i * 8.3) < 0.5 ? -1 : 1) * (3 + 10 * hash(i * 9.1)), 0.7 + 0.8 * hash(i * 5.5), hash(i) * 6);
     for (let i = 0; i < 6; i++) add(frog, -14 + 6 * i + 2 * hash(i), (i % 2 ? -1 : 1) * (5 + 3 * hash(i * 2)), 0.8, hash(i * 3) * 6);
     kit.root.visible = false; this.s.add(kit.root);
-    cur.root.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; const s = m.material as THREE.MeshStandardMaterial;
-      const p = new THREE.MeshPhysicalMaterial({ name: s.name, color: s.color, roughness: s.roughness });
-      if (s.name === 'Shell') { p.color.setRGB(1, 0.36, 0.03); p.roughness = 0.32; p.clearcoat = 1; }
-      if (s.name === 'Core') { p.emissive.setRGB(1, 0.32, 0); p.emissiveIntensity = 2; this.cores.push(p); }
-      if (s.name === 'Grille') p.color.setRGB(0.25, 0.05, 0);
-      m.material = p; });
-    cur.part('scan').scale.set(1, 0.4, 0.35); this.cur = cur.root; this.s.add(this.cur, this.glow);
+    (this.hero ??= new HeroPass(this.ctx.renderer)).dress(cur, { world: this.s });
+    cur.part('scan').scale.set(1, 0.4, 0.35); this.cur = cur.root; this.s.add(this.glow);
     const sun = new THREE.DirectionalLight(0xffd0a0, 2.6); sun.position.set(-30, 45, 20);
     this.s.add(sun, new THREE.HemisphereLight(0x9fb8ff, 0x8a4a30, 1.0));
   }
@@ -102,13 +98,13 @@ export default class S4Clay extends Scene {
     for (const s of this.stalks) s.scale.setScalar(1 + (be > 0 ? 0.6 * Math.max(0, spring(be + 0.05, 16, 4)) : 0));
     let sq = 1; const he = t - FROG_HIT; if (he > 0 && he < 0.3) sq = 1 - 0.4 * Math.exp(-he * 14);
     this.cur.position.copy(p); this.cur.scale.set(CS / Math.sqrt(sq), CS * sq, CS / Math.sqrt(sq)); this.cur.rotation.set(0, 0, -(t - T0) * 7);
-    const blink = ((t * 1.06) % 1) < 0.55 ? 1 : 0.12; for (const m of this.cores) m.emissiveIntensity = 0.1 + 1.6 * blink;
+    const blink = ((t * 1.06) % 1) < 0.55 ? 1 : 0.12; this.hero.update(t);
     this.glow.position.copy(p); this.glow.intensity = 25 * blink;
     // camera: low tracking dolly at cursor height, slightly ahead; the hit kicks it
     const k = clamp((t - T0) / (T1 - T0)); const kick = he > 0 ? Math.exp(-he * 10) : 0;
     this.cam.position.set(p.x - 3 + 2 * k, 2.4 + 0.6 * kick, 9.5 - 1.5 * k); this.cam.fov = 44 - 6 * kick;
     this.cam.aspect = out.width / out.height; this.cam.updateProjectionMatrix(); this.cam.lookAt(p.x + 2, 1.4, -1.5);
-    rr.setRenderTarget(out); rr.setClearColor(0xf0b080, 1); rr.clear(); rr.render(this.s, this.cam);
+    rr.setRenderTarget(out); rr.setClearColor(0xf0b080, 1); rr.clear(); rr.render(this.s, this.cam); this.hero.render(rr, out, this.cam);
     this.cameos.draw(this.ctx.renderer, out, f.t);
     return { toneMap: 'aces', exposure: 0.95, bloom: 0.12, bloomThreshold: 1.3, vignette: 0.3, grain: 0.04, ca: 0.2 + kick,
       shake: [16 * kick * Math.sin(t * 91), 16 * kick * Math.cos(t * 77)] };

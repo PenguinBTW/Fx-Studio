@@ -7,6 +7,7 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import { resolveAsset } from '../../engine/assets';
 import { bar, lerp, sm, hash, stepped, clamp } from './kit';
+import { HeroPass } from './hero';
 import { Cameos } from './cameo';
 
 const T0 = bar(8), T1 = bar(9), CS = 1.4, NB = 14;
@@ -26,7 +27,7 @@ export default class S9Garden extends Scene {
   private bf: { o: THREE.Object3D; wl: THREE.Object3D; wr: THREE.Object3D; shaft: THREE.Mesh; pool: THREE.Mesh; ph: number; r: number; h: number; c: number }[] = [];
   private lights: THREE.PointLight[] = [];
   private tail!: THREE.Object3D; private peacock!: THREE.Object3D;
-  private cur!: THREE.Object3D; private cores: THREE.MeshStandardMaterial[] = []; private shell!: THREE.MeshStandardMaterial;
+  private cur!: THREE.Object3D; private hero!: HeroPass; private cores: THREE.MeshStandardMaterial[] = []; private shell!: THREE.MeshStandardMaterial;
   private add(m: THREE.ShaderMaterial['uniforms'], f: string) { return new THREE.ShaderMaterial({ vertexShader: SHAFT_V, fragmentShader: f, uniforms: m, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }); }
   private glassify(o: THREE.Object3D) { o.traverse((x) => { const m = x as THREE.Mesh; if (!m.isMesh) return; const n = (m.material as THREE.Material).name;
     m.material = PANE[n] !== undefined ? new THREE.MeshStandardMaterial({ color: PANE[n], emissive: PANE[n], emissiveIntensity: 0.8, roughness: 0.2, side: THREE.DoubleSide })
@@ -52,14 +53,9 @@ export default class S9Garden extends Scene {
       this.s.add(shaft, pool); this.bf.push({ o, wl, wr, shaft, pool, ph: hash(i * 7) * 6.28, r: 2.2 + 3.2 * hash(i * 11), h: 1.4 + 3.0 * hash(i * 13), c: i % BCOL.length }); }
     for (let i = 0; i < 3; i++) { const l = new THREE.PointLight(BCOL[i * 2], 0, 6, 2); this.s.add(l); this.lights.push(l); }
     kit.root.visible = false; this.s.add(kit.root);
-    cur.root.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; const sm0 = m.material as THREE.MeshStandardMaterial;
-      const p = new THREE.MeshStandardMaterial({ name: sm0.name, color: sm0.color, roughness: 0.35, fog: false });
-      if (sm0.name === 'Shell') { p.color.setRGB(1, 0.36, 0.03); p.emissive.setRGB(0.5, 0.12, 0); this.shell = p; }
-      if (sm0.name === 'Core') { p.emissive.setRGB(1, 0.32, 0); this.cores.push(p); }
-      if (sm0.name === 'Grille') p.color.setRGB(0.2, 0.05, 0);
-      m.material = p; });
+    (this.hero ??= new HeroPass(this.ctx.renderer)).dress(cur, { world: this.s });
     this.cur = cur.root; this.cur.scale.setScalar(CS);
-    const sun = new THREE.DirectionalLight(0xffc890, 2.6); sun.position.set(-20, 25, 10); this.s.add(this.cur, sun, new THREE.HemisphereLight(0xffb0a0, 0x203020, 0.8));
+    const sun = new THREE.DirectionalLight(0xffc890, 2.6); sun.position.set(-20, 25, 10); this.s.add(sun, new THREE.HemisphereLight(0xffb0a0, 0x203020, 0.8));
   }
 
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
@@ -67,7 +63,7 @@ export default class S9Garden extends Scene {
     const k = (ts - T0) / (T1 - T0), run = Math.abs(Math.sin((ts - T0) * 14.4));
     const cp = new THREE.Vector3(lerp(-11, 9, k), 0.8 + 0.6 * run, 0); this.cur.position.copy(cp); this.cur.rotation.set(0, 0, -0.18 + 0.05 * run);
     this.cur.scale.set(CS * (1 + 0.1 * (1 - run)), CS * (1 - 0.08 * (1 - run)), CS);
-    const blink = ((t * 1.06) % 1) < 0.55 ? 1 : 0.12; for (const m of this.cores) m.emissiveIntensity = 0.15 + 1.4 * blink;
+    const blink = ((t * 1.06) % 1) < 0.55 ? 1 : 0.12; this.hero.update(t);
     let near = new THREE.Color(0, 0, 0), nd = 1e9;
     this.bf.forEach((b, i) => { const a = b.ph + 1.7 * (ts - T0) * (i % 2 ? 1 : -1);
       const p = new THREE.Vector3(cp.x + b.r * Math.cos(a), b.h + 0.4 * Math.sin(ts * 5 + b.ph), b.r * 0.8 * Math.sin(a) - 0.4);
@@ -78,12 +74,12 @@ export default class S9Garden extends Scene {
       (b.pool.material as THREE.ShaderMaterial).uniforms.uA.value = 0.35 + 0.35 * Math.abs(fl);
       if (i < 3) { this.lights[i].position.copy(p); this.lights[i].intensity = 5; }
       const d = p.distanceTo(cp); if (d < nd) { nd = d; near = new THREE.Color(BCOL[b.c]); } });
-    this.shell.emissive.copy(near).multiplyScalar(0.12 / (1 + 0.3 * nd)).add(new THREE.Color(0.55, 0.13, 0));
+    
     const open = sm(T0 + 0.55, T0 + 1.05, ts); this.tail.scale.set(1, 0.08 + 0.92 * open, 0.08 + 0.92 * open); this.peacock.rotation.y = -0.4 + 0.1 * Math.sin(ts * 3);
     const up = sm(T0 + 0.9, T1, t);
     this.cam.position.set(cp.x - 3.5 - 1.5 * up, 1.6 + 2.2 * up, 7 + 3 * up); this.cam.aspect = out.width / out.height; this.cam.updateProjectionMatrix();
     this.cam.lookAt(cp.x + 1.5, 2.2 + 0.8 * up, -1.2);
-    rr.setRenderTarget(out); rr.render(this.s, this.cam);
+    rr.setRenderTarget(out); rr.render(this.s, this.cam); this.hero.render(rr, out, this.cam);
     this.cameos.draw(this.ctx.renderer, out, f.t);
     return { toneMap: 'aces', exposure: 1.1, bloom: 0.6, bloomThreshold: 0.85, vignette: 0.35, grain: 0.03, ca: 0.15 };
   }
