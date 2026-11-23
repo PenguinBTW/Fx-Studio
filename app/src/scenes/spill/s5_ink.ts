@@ -46,7 +46,7 @@ const VAL: Record<string, [number, number]> = { Ink: [0.1, 0], InkWash: [0.5, 0]
 export default class S5Ink extends Scene {
   private s = new THREE.Scene(); private curS = new THREE.Scene();
   private cam = new THREE.PerspectiveCamera(40, 9 / 16, 0.5, 400);
-  private cameos = new Cameos([{ k: 'pixfish', t0: 11.7, dur: 0.5, path: 'leap', x: 0.5, y: -0.2, s: 0.12, n: 2, dir: -1 }, { k: 'glass', t0: 13.6, dur: 1.2, path: 'fly', y: 0.35, s: 0.1, n: 2 }, { k: 'crane', t0: 13.8, dur: 1.3, path: 'fly', y: 0.6, s: 0.12, n: 3 }]);
+  private cameos = new Cameos([{ k: 'crayon', t0: 11.55, dur: 1.0, path: 'fly', y: 0.62, s: 0.12, n: 2, dir: -1 }, { k: 'pixfish', t0: 11.7, dur: 0.5, path: 'leap', x: 0.5, y: -0.2, s: 0.12, n: 2, dir: -1 }, { k: 'glass', t0: 13.6, dur: 1.2, path: 'fly', y: 0.35, s: 0.1, n: 2 }, { k: 'crane', t0: 13.8, dur: 1.3, path: 'fly', y: 0.6, s: 0.12, n: 3 }]);
   private insts: GLTFInstance[] = [];
   private glowU = { uGlowP: { value: new THREE.Vector3() }, uGlow: { value: 0 }, uGlowR: { value: 1.2 } };
   private heron!: THREE.Object3D; private neck!: THREE.Object3D; private head!: THREE.Object3D; private top!: THREE.Object3D; private bot!: THREE.Object3D;

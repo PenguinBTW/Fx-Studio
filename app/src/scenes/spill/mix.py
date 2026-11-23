@@ -35,7 +35,7 @@ for i, h in enumerate([0.34, 0.94, 1.45]):
     put(h, thud(48 + 6 * i, 0.6), 0.9); put(h, crack(0.25 + 0.15 * i), 0.35 + 0.2 * i, (-1) ** i * 0.3)
 put(1.45, hp(noise(1.6), 3500) * env(1.6, 0.002, 1.6), 0.35, 0.2)
 for k in range(24): put(1.5 + 0.06 * k + 0.05 * rng.random(), chime(2500 + 3000 * rng.random(), 0.3), 0.05, rng.uniform(-0.9, 0.9))
-put(4.06, hp(noise(0.07), 1800) * env(0.07, 0.001, 0.07), 0.05, -0.3); put(4.06, thud(160, 0.12), 0.04, -0.3)
+put(4.06, hp(noise(0.07), 1800) * env(0.07, 0.001, 0.07), 0.08, -0.3); put(4.06, thud(160, 0.12), 0.06, -0.3)
 # 6.43 whale slam + splash + moan
 put(DROP, thud(38, 1.2), 1.0); put(DROP, lp(noise(0.9), 1500) * env(0.9, 0.003, 0.9), 0.5)
 put(DROP + 0.25, lp(sweep(140, 90, 2.2, lambda p: np.sin(p) + 0.3 * np.sin(2 * p)), 800) * np.sin(np.pi * t_(2.2) / 2.2), 0.25)

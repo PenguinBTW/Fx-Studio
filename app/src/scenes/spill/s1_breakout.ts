@@ -403,7 +403,8 @@ export default class S1Breakout extends Scene {
     const d = t - CUT, c = this.curX, p = this.fallP(t);
     const jolt = t > 4.06 ? Math.max(0, spring(t - 4.06, 30, 6)) : 0, flip = sm(4.72, 4.95, t);
     c.position.copy(p); c.scale.set(3.4 * (1 + 0.3 * jolt), 3.4 * (1 - 0.35 * jolt), 3.4 * (1 + 0.3 * jolt));
-    c.rotation.set(-0.55 * Math.sin(d * 2.4) - 3.1 * flip, 0.5 * Math.sin(d * 1.7), 2.2 * d + 0.6 * Math.sin(d * 3) + 1.6 * flip);
+    { const rx = -0.55 * Math.sin(d * 2.4) - 3.1 * flip, ry = 0.5 * Math.sin(d * 1.7), rz = 2.2 * d + 0.6 * Math.sin(d * 3) + 1.6 * flip, fo = sm(4.95, 5.45, t), sn = (a: number) => lerp(a, Math.round(a / Math.PI) * Math.PI, fo);
+      c.rotation.set(sn(rx), sn(ry), sn(rz)); }
     this.poseLeak(t); this.poseTrail(t);
     { const be = t - 4.06, sw = be > 0 ? Math.exp(-be * 2.2) * Math.sin(be * 7) : 0; this.bump.rotation.set(0.25 * sw, 0, -0.45 * sw - (be > 0 ? 0.12 : 0));
       const ns = be > 0 ? noSignal() : null; if (this.bumpScr.map !== ns) { this.bumpScr.map = ns; this.bumpScr.needsUpdate = true; } if (ns) ns.offset.set(0, hash(Math.floor(be * 30)) * 0.5);

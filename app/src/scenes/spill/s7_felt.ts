@@ -63,7 +63,7 @@ const colAttr = (g: THREE.BufferGeometry, rgb: number[], wool: number) => { cons
   g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3).map((_, i) => rgb[i % 3]), 3)); g.setAttribute('wool', new THREE.BufferAttribute(new Float32Array(n).fill(wool), 1)); return g; };
 export default class S7Felt extends Scene {
   private s = new THREE.Scene(); private cam = new THREE.PerspectiveCamera(40, 9 / 16, 0.3, 500);
-  private cameos = new Cameos([{ k: 'crayon', t0: 17.0, dur: 1.5, path: 'fly', y: 0.6, s: 0.13, n: 3 }, { k: 'pixbird', t0: 17.6, dur: 1.0, path: 'fly', y: 0.8, s: 0.08, n: 4, dir: -1 }, { k: 'koi', t0: 17.9, dur: 0.6, path: 'leap', x: 0.5, y: -0.3, s: 0.16 }]);
+  private cameos = new Cameos([{ k: 'pixfish', t0: 16.78, dur: 0.7, path: 'leap', x: -0.45, y: -0.1, s: 0.12, n: 2 }, { k: 'crayon', t0: 17.0, dur: 1.5, path: 'fly', y: 0.6, s: 0.13, n: 3 }, { k: 'pixbird', t0: 17.6, dur: 1.0, path: 'fly', y: 0.8, s: 0.08, n: 4, dir: -1 }, { k: 'koi', t0: 17.9, dur: 0.6, path: 'leap', x: 0.5, y: -0.3, s: 0.16 }]);
   private insts: GLTFInstance[] = [];
   private U = { uCreep: { value: 0 }, uGlow: { value: 0 }, uGlowP: { value: new THREE.Vector3() } };
   private sheep!: Fur; private fox!: Fur; private pom!: Fur; private sd: { x: number; z: number; ph: number; s: number }[] = [];

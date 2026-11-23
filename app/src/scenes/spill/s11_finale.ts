@@ -59,9 +59,9 @@ function lockTex() {
   const cv = document.createElement('canvas'); cv.width = 270; cv.height = 560; const g = cv.getContext('2d')!;
   const gr = g.createLinearGradient(0, 0, 0, 560); gr.addColorStop(0, '#1a1830'); gr.addColorStop(1, '#07070d'); g.fillStyle = gr; g.fillRect(0, 0, 270, 560);
   g.fillStyle = '#000'; g.beginPath(); g.arc(135, 22, 9, 0, 6.283); g.fill();
-  g.fillStyle = '#8a90a8'; g.textAlign = 'center'; g.font = '600 64px sans-serif'; g.fillText('9:41', 135, 130); g.font = '20px sans-serif'; g.fillText('Monday', 135, 160);
-  g.fillStyle = 'rgba(90,96,112,0.85)'; g.beginPath(); g.roundRect(18, 200, 234, 62, 14); g.fill();
-  g.fillStyle = '#c8ccd8'; g.textAlign = 'left'; g.font = '600 19px sans-serif'; g.fillText('cursor.exe', 34, 226); g.font = '16px sans-serif'; g.fillStyle = '#9aa0b0'; g.fillText('is not responding', 34, 249);
+  g.fillStyle = '#8a90a8'; g.textAlign = 'center'; g.font = '600 64px sans-serif'; g.fillText('9:41', 135, 105); g.font = '20px sans-serif'; g.fillText('Monday', 135, 133);
+  g.fillStyle = 'rgba(90,96,112,0.85)'; g.beginPath(); g.roundRect(18, 152, 234, 62, 14); g.fill();
+  g.fillStyle = '#c8ccd8'; g.textAlign = 'left'; g.font = '600 19px sans-serif'; g.fillText('cursor.exe', 34, 178); g.font = '16px sans-serif'; g.fillStyle = '#9aa0b0'; g.fillText('is not responding', 34, 201);
   g.fillStyle = '#3a3e4a'; g.fillRect(105, 530, 60, 5);
   lockT = new THREE.CanvasTexture(cv); lockT.colorSpace = THREE.SRGBColorSpace; return lockT;
 }
@@ -69,7 +69,7 @@ const LOOKERS = new Set(['deer', 'heron', 'sheep', 'fox', 'dino', 'peacock', 'sa
 
 export default class S11Finale extends Scene {
   private s = new THREE.Scene(); private cam = new THREE.PerspectiveCamera(42, 9 / 16, 0.1, 600);
-  private cameos = new Cameos([{ k: 'pixbird', t0: 24.0, dur: 2.0, path: 'fly', y: 0.8, s: 0.08, n: 6 }, { k: 'crane', t0: 24.3, dur: 1.8, path: 'fly', y: 0.6, s: 0.12, n: 3, dir: -1 }, { k: 'glass', t0: 24.6, dur: 1.6, path: 'fly', y: 0.45, s: 0.11, n: 2 }, { k: 'crayon', t0: 24.9, dur: 1.5, path: 'fly', y: 0.3, s: 0.12, n: 2, dir: -1 }, { k: 'bee', t0: 24.2, dur: 1.3, path: 'float', x: 0.72, y: 0.15, s: 0.1 }, { k: 'sheep', t0: 25.60, dur: 1.5, path: 'pop', x: -0.62, y: -0.62, s: 0.13 }, { k: 'hose', t0: 25.66, dur: 1.5, path: 'pop', x: -0.2, y: -0.5, s: 0.14, dir: -1 }, { k: 'pixbird', t0: 25.72, dur: 1.5, path: 'pop', x: 0.25, y: -0.6, s: 0.09 }, { k: 'koi', t0: 25.78, dur: 1.5, path: 'pop', x: 0.62, y: -0.55, s: 0.13, dir: -1 }, { k: 'bee', t0: 25.84, dur: 1.5, path: 'pop', x: -0.45, y: -0.25, s: 0.09 }]);
+  private cameos = new Cameos([{ k: 'pixbird', t0: 24.0, dur: 2.0, path: 'fly', y: 0.8, s: 0.08, n: 6 }, { k: 'crane', t0: 24.3, dur: 1.8, path: 'fly', y: 0.6, s: 0.12, n: 3, dir: -1 }, { k: 'glass', t0: 24.4, dur: 1.1, path: 'fly', y: 0.78, s: 0.11, n: 2 }, { k: 'crayon', t0: 24.9, dur: 1.5, path: 'fly', y: 0.3, s: 0.12, n: 2, dir: -1 }, { k: 'bee', t0: 24.2, dur: 1.3, path: 'float', x: 0.72, y: 0.15, s: 0.1 }, { k: 'sheep', t0: 25.60, dur: 1.5, path: 'pop', x: -0.62, y: -0.38, s: 0.13 }, { k: 'hose', t0: 25.66, dur: 1.5, path: 'pop', x: -0.2, y: -0.38, s: 0.14, dir: -1 }, { k: 'pixbird', t0: 25.72, dur: 1.5, path: 'pop', x: 0.25, y: -0.38, s: 0.09 }, { k: 'koi', t0: 25.78, dur: 1.5, path: 'pop', x: 0.62, y: -0.38, s: 0.13, dir: -1 }, { k: 'bee', t0: 25.84, dur: 1.5, path: 'pop', x: -0.05, y: -0.1, s: 0.09 }]);
   private insts: GLTFInstance[] = []; private s1!: S1Breakout;
   private cur!: THREE.Object3D; private hero!: HeroPass; private core: THREE.MeshStandardMaterial[] = []; private patchU = { uT: { value: 0 }, uK: { value: 0 } };
   private crowd!: THREE.Group; private scrT = { value: 0 }; private lookers: { o: THREE.Object3D; base: THREE.Euler; ph: number; y: number }[] = [];
@@ -170,7 +170,7 @@ export default class S11Finale extends Scene {
     if (t > WHIP) { p.lerp(end, we); look.copy(this.PH); }
     // keep the hero centred over the vista, then it lifts off on the scream and leads the whip into the phone
     const c0 = this.cur.position.clone(), fwd = c0.clone().sub(p).normalize();
-    const vlook = c0.clone().addScaledVector(fwd, 20).add(new THREE.Vector3(0, 4.5, 0)); look.lerp(vlook, 1 - sm(SCREAM, SCREAM + 0.5, t)); look.y -= 5.5 * sm(24.6, 25.1, t) * (1 - sm(SCREAM, SCREAM + 0.5, t));
+    const vlook = c0.clone().addScaledVector(fwd, 20).add(new THREE.Vector3(0, 4.5, 0)); look.lerp(vlook, 1 - sm(SCREAM, SCREAM + 0.5, t)); look.y -= 7.5 * sm(24.6, 25.1, t) * (1 - sm(SCREAM, SCREAM + 0.5, t));
     const lift = sm(SCREAM + 0.25, SCREAM + 0.9, t);
     if (lift > 0) { const vd = look.clone().sub(p).normalize(), D = Math.min(13, 0.6 * p.distanceTo(this.PH)); this.cur.scale.setScalar(lerp(1.9, 1.35, lift));
       this.cur.position.lerp(p.clone().addScaledVector(vd, D).add(new THREE.Vector3(0, -0.9, 0)), lift); const q0 = this.cur.quaternion.clone(); this.cur.lookAt(p); this.cur.quaternion.copy(q0.slerp(this.cur.quaternion, lift)); }

@@ -120,7 +120,7 @@ export default class S8Hose extends Scene {
     if (!this.rt || this.rt.width !== out.width || this.rt.height !== out.height) { this.rt?.dispose(); this.rt = new THREE.WebGLRenderTarget(out.width, out.height, { type: THREE.HalfFloatType }); }
     rr.setRenderTarget(this.rt); rr.clear(); rr.render(this.s, this.cam);
     const fr = Math.floor(t * 12); this.filmU.tCol.value = this.rt.texture; this.filmU.uT.value = t; this.filmU.uF.value = 0.93 + 0.07 * hash(fr); this.filmU.uRes.value.set(out.width, out.height);
-    rr.setRenderTarget(out); rr.clear(); rr.render(this.qs, this.qc); this.hero.render(rr, out, this.cam, this.s); rr.resetState();
+    rr.setRenderTarget(out); rr.clear(); rr.render(this.qs, this.qc); this.hero.render(rr, out, this.cam); rr.resetState();
     const gw = 3 * (hash(fr * 1.3) - 0.5);
     this.cameos.draw(this.ctx.renderer, out, f.t);
     return { toneMap: 'legacy', exposure: 1.0, bloom: 0.15, bloomThreshold: 1.0, vignette: 0.0, grain: 0.0, ca: 0.0, shake: [gw, 2 * gw] };
