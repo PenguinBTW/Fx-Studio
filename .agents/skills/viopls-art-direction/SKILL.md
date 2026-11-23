@@ -64,12 +64,6 @@ To ensure a scene feels premium and unified rather than a collage of unrelated s
 - No fixed palette or colour split is required; choose colours for the world being built.
 - Anti-slop only: no unmotivated colour washes or gradient ramps (see 2.1), and the focal subject must read instantly against its background (value contrast first, then hue).
 
----|---|---|---|
-| `--void` | `#050506` | Deep Space / Background | Universal scene canvas; never use pure ungrounded `#000000`. |
-| `--bone` | `#E8E4DA` | Primary Structure | All primary lines, solid meshes, kinetic text hero anchors. |
-| `--ash` | `#6B6A66` | Secondary Context | Wireframe room edges, dimension guides, inactive states, 60% opacity labels. |
-| `--signal` | `#FF2A1F` | Intentional Gap / Alert | Reserved for alerts, breaks and key reveals rather than decoration. |
-
 ---
 
 ## 4. Typography Standards: Bold, Clear & Diegetically Integrated [RULE]
