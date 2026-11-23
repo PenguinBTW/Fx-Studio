@@ -97,7 +97,7 @@ export default class S5Ink extends Scene {
     for (let i = 0; i < 3; i++) if (t >= H[i] && t < H[i + 1]) { const k = (t - H[i]) / (H[i + 1] - H[i]);
       cp = new THREE.Vector3(lerp(this.padX[i], this.padX[i + 1], k), 0.7 + 2.4 * Math.sin(Math.PI * k), 0.3 * ((i + k) % 2)); }
     this.cur.position.copy(cp); this.cur.rotation.z = -(t - T0) * 5; this.cur.visible = t < CAP;
-    const blink = ((t * 1.06) % 1) < 0.55 ? 1 : 0.12; this.hero.update(t);
+    const blink = ((t * 1.06) % 1) < 0.55 ? 1 : 0.12; this.hero.update(t, t > GULP[0] - 0.35 && t < CAP ? 1 : undefined); // lit as it's caught
     // heron: strike (smear held on 12s), gulp-swallow, puzzled stillness, hiccup-spit
     const st = sm(GULP[0] - 0.1, GULP[0] + 0.02, ts), back = sm(GULP[0] + 0.15, GULP[0] + 0.5, t), sp = t >= SPIT ? Math.max(0, spring(t - SPIT, 14, 5)) : 0;
     this.neck.rotation.z = -1.25 * st * (1 - back) - 0.7 * sp; this.head.rotation.z = 0.6 * st * (1 - back) + 0.25 * back * (1 - sm(12.9, 13.1, t)) + 0.15 * sm(12.95, 13.05, ts);
