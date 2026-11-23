@@ -22,9 +22,9 @@ void main() {
     for (int i = 0; i < 3; i++) { vec3 w = qp(i) - ro; float tc = max(dot(w, rd), 1e-4); float dd = length(w - rd * tc); vec3 col = i == 0 ? vec3(1.6, 0.12, 0.1) : i == 1 ? vec3(0.15, 1.5, 0.2) : vec3(0.15, 0.3, 1.8);
       C += col * 0.0006 / (dd * dd / (tc * tc) + 0.0015) * (i == 0 ? 1.0 : smoothstep(-16.4, -15.2, uZ)); } }
   // inside the red quark: infinite self-similar glow
-  float deep = smoothstep(-16.2, -17.2, uZ); if (deep > 0.0) { float r = length(q), a = atan(q.y, q.x); float lz = -uZ * 2.3;
+  float deep = smoothstep(-17.1, -17.8, uZ); if (deep > 0.0) { float r = length(q), a = atan(q.y, q.x); float lz = -uZ * 2.3;
     float f = 0.0; for (int o = 0; o < 4; o++) { float s = log(r + 1e-4) * 1.4 + lz + float(o) * 0.73; float k = fract(s); f += ff_fbm(vec3(cos(a) * 3.0, sin(a) * 3.0, floor(s) + float(o) * 9.0), 4) * sin(3.14159 * k); }
-    vec3 hc = 0.5 + 0.5 * cos(6.2831853 * (a * 0.4775 + lz * 0.12 + vec3(0.0, 0.33, 0.67))); hc = pow(hc, vec3(2.0)) * 1.6; vec3 fc = hc * pow(f * 0.5, 3.0) * 1.3 + vec3(1.0, 0.3, 0.2) * 0.004 / (r * r + 0.01);
+    float sec = mod(floor(a * 0.4775 + lz * 0.12 + 9.0), 3.0); vec3 hc = sec < 0.5 ? vec3(1.6, 0.1, 0.15) : sec < 1.5 ? vec3(0.1, 1.4, 0.3) : vec3(0.2, 0.35, 1.8); vec3 fc = hc * pow(f * 0.5, 6.0) * 3.0 + vec3(1.0, 0.3, 0.2) * 0.004 / (r * r + 0.01);
     C = mix(C, fc, deep); }
   float gl = step(30.2, uT) * step(uT, 31.0) * step(0.6, ff_h2(vec2(floor(uT * 24.0), floor(vUv.y * 40.0))));
   C = gl > 0.5 ? C.gbr * 1.4 + vec3(0.0, 0.2, 0.3) : C;

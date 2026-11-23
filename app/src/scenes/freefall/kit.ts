@@ -7,7 +7,7 @@ import type { Compositor } from '../../engine/gl';
 
 export const BAR = 2, BEAT = 0.5, END = 38;
 // [t, Z] keys; the fall stalls at the midpoint (18-19.5) then slams
-const KEYS: [number, number][] = [[0, 6.9], [4, 5.0], [8, 2.6], [9.3, -1.3], [11, -2.3], [15, -3.4], [18, -4.05], [19.5, -4.12], [20, -4.9], [24, -9.0], [25.3, -9.6], [26.8, -11.0], [28, -14], [31, -18], [31.8, -5.2], [33, -3.6], [35.5, -0.9], [36.8, 6.55], [END, 6.9]];
+const KEYS: [number, number][] = [[0, 6.9], [4, 5.0], [8, 2.6], [9.3, -1.3], [11, -2.3], [15, -3.4], [18, -4.05], [19.5, -4.12], [20, -4.9], [24, -9.0], [25.3, -9.6], [26.8, -11.0], [28, -14], [29.6, -15.3], [31, -18], [31.8, -5.2], [33, -3.6], [35.5, -0.9], [36.8, 6.55], [END, 6.9]];
 const M = (() => { // Fritsch-Carlson monotone tangents
   const n = KEYS.length, d: number[] = [], m: number[] = [];
   for (let i = 0; i < n - 1; i++) d.push((KEYS[i + 1]![1] - KEYS[i]![1]) / (KEYS[i + 1]![0] - KEYS[i]![0]));
@@ -26,7 +26,7 @@ export const dZ = (t: number) => (Z(t + 0.01) - Z(t - 0.01)) / 0.02;
 export const SEAMS = [3.6, 7.6, 10.6, 14.6, 19.6, 23.6, 27.6, 30.6], SEAM_DUR = 0.8;
 export const inSeam = (t: number) => SEAMS.some((a) => t >= a && t < a + SEAM_DUR);
 
-const LABELS: [number, string][] = [[0, 'low orbit'], [4, 'thunderhead'], [8, 'raindrop'], [11, 'plankton'], [15, 'diatom'], [20, 'salt crystal'], [24, 'sodium atom'], [28, 'quark'], [31, 'your screen'], [35.5, 'low orbit']];
+const LABELS: [number, string][] = [[0, 'low orbit'], [4, 'thunderhead'], [8, 'raindrop'], [11, 'plankton'], [15, 'radiolarian'], [20, 'salt crystal'], [24, 'sodium atom'], [28, 'quark'], [31, 'your screen'], [35.5, 'low orbit']];
 const TEXT: { at: number; end: number; s: string }[] = [
   { at: 0, end: 1.35, s: 'no footage.' }, { at: 1.4, end: 3.3, s: 'just code.' }, { at: 4.4, end: 6.6, s: 'how far down?' }, { at: 8.7, end: 10.4, s: 'one raindrop.' }, { at: 11.6, end: 13.4, s: 'alive.' }, { at: 15.5, end: 17.5, s: 'glass skeleton.' }, { at: 18.1, end: 19.45, s: 'closer.' }, { at: 20.6, end: 22.2, s: 'salt.' }, { at: 24.5, end: 26.0, s: 'one atom.' }, { at: 28.5, end: 30.0, s: 'smaller.' }, { at: 31.3, end: 33.4, s: "that's your screen." }, { at: 37.4, end: 38.5, s: 'no footage.' }];
 
@@ -56,10 +56,10 @@ export function hud(renderer: THREE.WebGLRenderer, comp: Compositor, out: THREE.
   g.fillStyle = 'rgba(255,255,255,0.22)'; g.fillRect(rx, r0, 3, r1 - r0); g.fillStyle = '#fff'; g.fillRect(rx - 9, r0 + p * (r1 - r0) - 2, 21, 5);
   for (const tx of TEXT) {
     if (t < tx.at || t > tx.end) continue; const lt = t - tx.at, n = tx.at === 0 ? tx.s.length : Math.min(tx.s.length, Math.floor(lt * 34) + 1), k = Math.min(1, (tx.end - t) / 0.18);
-    g.globalAlpha = alpha * k; g.font = `104px "${F.archivo(100, 900)}"`; const fs = Math.min(104, 104 * 760 / g.measureText(tx.s).width); g.font = `${fs}px "${F.archivo(100, 900)}"`; { const sb = g.createRadialGradient(cx, 1150, 10, cx, 1150, 420); sb.addColorStop(0, 'rgba(0,0,0,0.5)'); sb.addColorStop(1, 'rgba(0,0,0,0)'); g.save(); g.globalAlpha = alpha * k * (tx.at === 0 ? 1 : Math.min(1, lt * 6)); g.fillStyle = sb; g.translate(cx, 1150); g.scale(1.25, 0.4); g.translate(-cx, -1150); g.fillRect(cx - 420, 730, 840, 840); g.restore(); }
+    g.globalAlpha = alpha * k; g.font = `104px "${F.archivo(100, 900)}"`; const fs = Math.min(104, 104 * 760 / g.measureText(tx.s).width); g.font = `${fs}px "${F.archivo(100, 900)}"`; { const sb = g.createRadialGradient(cx, 1150, 10, cx, 1150, 420); sb.addColorStop(0, 'rgba(0,0,0,0.62)'); sb.addColorStop(1, 'rgba(0,0,0,0)'); g.save(); g.globalAlpha = alpha * k * (tx.at === 0 ? 1 : Math.min(1, lt * 6)); g.fillStyle = sb; g.translate(cx, 1150); g.scale(1.25, 0.4); g.translate(-cx, -1150); g.fillRect(cx - 420, 730, 840, 840); g.restore(); }
     g.fillStyle = '#fff'; g.shadowBlur = 28;
     const str = tx.s.slice(0, n), w = g.measureText(tx.s).width; g.textAlign = 'left'; g.fillText(str, cx - w / 2, 1180);
-    if (Math.floor(t * 4) % 2 === 0 || n < tx.s.length) { g.fillStyle = '#7dfcff'; g.fillRect(cx - w / 2 + g.measureText(str).width + 8, 1180 - fs * 0.77, fs * 0.44, fs * 0.83); }
+    if ((Math.floor(t * 4) % 2 === 0 && !(tx.at === 0 && lt < 0.25)) || n < tx.s.length) { g.fillStyle = '#7dfcff'; g.fillRect(cx - w / 2 + g.measureText(str).width + 8, 1180 - fs * 0.77, fs * 0.44, fs * 0.83); }
   }
   g.restore();
   comp.draw(renderer, layer.upload(), out, { mode: 'normal', opacity: 1 }); renderer.resetState();

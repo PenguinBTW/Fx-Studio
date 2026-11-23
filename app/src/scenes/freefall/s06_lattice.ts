@@ -15,7 +15,7 @@ vec3 bg(vec3 rd) { float y = rd.y * 0.5 + 0.5; vec3 c = mix(vec3(0.02, 0.0, 0.06
   vec2 g = rd.xz / (abs(rd.y) + 0.4) * 9.0; vec2 id = floor(g); float h = ff_h2(id); float d = length(fract(g) - 0.5 - (vec2(ff_h2(id + 3.1), ff_h2(id + 7.7)) - 0.5) * 0.6);
   return c * 0.6 + spec(h) * smoothstep(0.1, 0.0, d) * step(0.9, h) * 0.35; }
 float lat(vec3 p, out float sp) { vec3 c = floor(p + 0.5); vec3 f = p - c; sp = mod(c.x + c.y + c.z, 2.0); float r = sp > 0.5 ? 0.33 : 0.19;
-  vec3 a = abs(f); float bond = min(min(length(a.yz), length(a.xz)), length(a.xy)) - 0.035; return min(length(f) - r, bond); }
+  return length(f) - r; }
 vec3 crystal(vec3 aim, vec3 dir, float D) {
   vec3 ro = aim + dir * D; vec3 rd = ff_ray(-dir, vec3(0.0, 1.0, 0.0), 0.546, 0.1 * sin(uT * 0.7)); float t = 0.0; bool hit = false;
   for (int i = 0; i < 110; i++) { float h = hop(ro + rd * t); if (h < 0.0004 * (1.0 + t)) { hit = true; break; } t += h * 0.6; if (t > 40.0) break; }
@@ -33,12 +33,12 @@ vec3 lattice(float hgt, vec3 dir) {
   if (ro.y > 0.55) { if (rd.y >= -0.02) return bg(rd); t = (ro.y - 0.55) / -rd.y; }
   float t0 = t;
   for (int i = 0; i < 120; i++) { vec3 p = ro + rd * t; float h = lat(p, sp); glow += exp(-h * 10.0) * 0.018; gNa += exp(-h * 10.0) * 0.018 * (1.0 - sp); if (h < 0.0015) { hit = true; break; } t += h * 0.85; if (t - t0 > 45.0) break; }
-  vec3 p = ro + rd * t; float dt = t - t0, fog = exp(-dt * 0.11); vec3 C = vec3(0.0);
+  vec3 p = ro + rd * t; float dt = t - t0, fog = exp(-dt * 0.19); vec3 C = vec3(0.0);
   if (hit) { vec2 e = vec2(0.002, 0.0); float s2; vec3 n = normalize(vec3(lat(p + e.xyy, s2) - lat(p - e.xyy, s2), lat(p + e.yxy, s2) - lat(p - e.yxy, s2), lat(p + e.yyx, s2) - lat(p - e.yyx, s2)));
     vec3 f = p - floor(p + 0.5); bool bond = length(f) > (sp > 0.5 ? 0.34 : 0.2); float fr = pow(1.0 - abs(dot(rd, n)), 2.5);
     vec3 base = bond ? vec3(1.5, 0.7, 0.2) * (0.6 + 0.4 * sin(uT * 7.0 + dot(floor(p + 0.5), vec3(1.3, 2.1, 0.7)))) : sp > 0.5 ? vec3(0.08, 0.95, 0.35) : vec3(0.95, 0.08, 1.0);
     float dif = max(dot(n, LK), 0.0), head = max(dot(n, -rd), 0.0);
-    C = base * (0.03 + 0.55 * dif + 0.3 * head * head) + spec(fr + p.y * 0.05) * fr * 1.2 + vec3(1.0) * pow(max(dot(reflect(rd, n), LK), 0.0), 50.0) * 0.8; C *= fog; }
+    C = base * (0.03 + 0.55 * dif + 0.3 * head * head) + spec(fr + p.y * 0.05) * fr * 1.2 + base * fr * 0.7 + vec3(1.0) * pow(max(dot(reflect(rd, n), LK), 0.0), 50.0) * 0.8; C *= fog; }
   C += mix(vec3(0.3, 1.0, 0.5), vec3(0.8, 0.2, 1.0), gNa / max(glow, 1e-4)) * glow * 0.1 * (1.0 - fog * 0.6) + vec3(0.004, 0.008, 0.03) * (1.0 - fog);
   return C; }
 void main() {

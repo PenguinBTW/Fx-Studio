@@ -7,7 +7,7 @@ import { FFN } from './glsl';
 const FRAG = /* glsl */ `${FFN}
 mat3 rotY(float a) { float c = cos(a), s = sin(a); return mat3(c, 0, -s, 0, 1, 0, s, 0, c); }
 mat3 rotX(float a) { float c = cos(a), s = sin(a); return mat3(1, 0, 0, 0, c, s, 0, -s, c); }
-float spin() { float s = uT * 0.25; float snap = smoothstep(18.2, 18.9, uT); return s + snap * 1.05 + 0.12 * sin(clamp((uT - 18.2) * 9.0, 0.0, 9.42)) * exp(-max(0.0, uT - 18.6) * 4.0); }
+float spin() { float s = uT * 0.55; float snap = smoothstep(18.2, 18.9, uT); return s + snap * 1.05 + 0.12 * sin(clamp((uT - 18.2) * 9.0, 0.0, 9.42)) * exp(-max(0.0, uT - 18.6) * 4.0); }
 float hexPore(vec3 n, float k) { float la = asin(clamp(n.y, -1.0, 1.0)), lo = atan(n.z, n.x); vec2 p = vec2(lo * cos(la), la) * k;
   vec2 s = vec2(1.0, 1.7320508); vec2 a = mod(p, s) - s * 0.5, b = mod(p - s * 0.5, s) - s * 0.5; return length(dot(a, a) < dot(b, b) ? a : b); }
 float shell(vec3 p, float R, float k, float thr, float th) { float r = length(p); vec3 n = p / max(r, 1e-4);
@@ -28,7 +28,7 @@ void main() {
   for (int i = 0; i < 96; i++) { vec3 p = ro + rd * t; float h = map(p); glow += 0.004 / (0.02 + h * h * 400.0);
     if (h < 0.0015) { vec3 n = nrm(p); float fr = pow(1.0 - abs(dot(rd, n)), 2.5); float film = dot(p, p) * 3.0 + n.y;
       vec3 rhein = mix(vec3(1.0, 0.7, 0.2), vec3(0.15, 0.85, 1.0), fr); vec3 irid = 0.5 + 0.5 * cos(6.2831 * (film + vec3(0.0, 0.33, 0.67)));
-      acc += Tr * (rhein * (0.015 + 0.9 * fr * fr) + irid * 0.12 * fr); Tr *= 0.86; t += 0.02; if (Tr < 0.05) break; continue; } // glass: keep going
+      acc += Tr * (rhein * (0.015 + 0.9 * fr * fr) + irid * 0.12 * fr); Tr *= 0.62; t += 0.02; if (Tr < 0.05) break; continue; } // glass: keep going
     t += max(h * 0.8, 0.002); if (t > d + 3.0) break; }
   C = C * Tr + acc + vec3(0.2, 0.7, 1.0) * glow * 0.002;
   float stall = smoothstep(17.9, 18.15, uT) * (1.0 - smoothstep(19.4, 19.55, uT)); C *= 1.0 - 0.15 * stall;
