@@ -27,13 +27,13 @@ void main(){ float b = floor((vP.y * 2.2 + vP.x * 1.3 + 0.35 * sin(vP.z * 7.0)) 
 
 const PATCHES: [string, number, number, number][] = [ // kit, colour, x, z
   ['paper', 0xfff0d6, -2, -5], ['ink', 0x4a5f8f, -9, -15], ['pixel', 0x2fd05a, 11, -19], ['felt', 0x8ad040, -13, -25],
-  ['hose', 0xd8d4c8, 3, -28], ['garden', 0xc040d0, 14, -34], ['ps1', 0x40b0c0, -7, -37], ['clay', 0xff7a3a, 12, -10]];
+  ['hose', 0xa8a6a0, 3, -28], ['garden', 0xc040d0, 14, -34], ['ps1', 0x40b0c0, -7, -37], ['clay', 0xff7a3a, 12, -10]];
 const PROPS: Record<string, string[]> = { paper: ['tree', 'deer', 'tree'], ink: ['reed', 'heron', 'lotus', 'reed'], pixel: ['cliff', 'fern', 'salmonA'],
   felt: ['sheep', 'pom', 'sheep', 'fox'], hose: ['house', 'flower', 'house'], garden: ['arch', 'tulip', 'peacock'], ps1: ['palm', 'dino', 'pillar'], clay: [] };
 const DETAIL: Record<string, [THREE.BufferGeometry, number, number]> = {
   paper: [new THREE.ConeGeometry(0.35, 0.8, 4).translate(0, 0.4, 0), 0xfff4dc, 0], ink: [new THREE.CylinderGeometry(0.03, 0.05, 1.6, 4).translate(0, 0.8, 0), 0x15151a, 0],
   pixel: [new THREE.BoxGeometry(0.5, 0.5, 0.5).translate(0, 0.25, 0), 0x6ae04a, 0], felt: [new THREE.IcosahedronGeometry(0.35, 1).translate(0, 0.25, 0), 0xffb0d0, 0],
-  hose: [new THREE.CylinderGeometry(0.2, 0.28, 0.6, 8).translate(0, 0.3, 0), 0x8a8a84, 0], garden: [new THREE.OctahedronGeometry(0.4).scale(0.5, 1, 0.12).translate(0, 0.5, 0), 0x40e0ff, 0.9],
+  hose: [new THREE.CylinderGeometry(0.2, 0.28, 0.6, 8).translate(0, 0.3, 0), 0x18181a, 0], garden: [new THREE.OctahedronGeometry(0.4).scale(0.5, 1, 0.12).translate(0, 0.5, 0), 0x40e0ff, 0.9],
   ps1: [new THREE.BoxGeometry(0.6, 0.35, 0.6).translate(0, 0.17, 0), 0x9a948a, 0], clay: [new THREE.SphereGeometry(0.35, 10, 6).scale(1, 0.6, 1).translate(0, 0.2, 0), 0xff5a8a, 0] };
 // one patchwork continent: every region at once, soft bands where styles blend, stitched seams between them
 const PAL = PATCHES.map((p) => new THREE.Color(p[1]));
@@ -48,7 +48,7 @@ function terr(x: number, z: number, col?: THREE.Color) {
   const m = sm(1.05, 0.88, e), y = m * (h + 0.3) + (1 - m) * -1.6;
   if (col) { col.setRGB(0, 0, 0); ws.forEach((w, i) => col.add(PAL[i].clone().multiplyScalar(w / W)));
     const fx = [1, 0.9 + 0.1 * Math.sin(x * 3.1 + Math.sin(z * 2.3) * 2), ((Math.floor(x * 1.5) + Math.floor(z * 1.5)) & 1) ? 0.82 : 1,
-      ((Math.floor(x * 1.2) + Math.floor(z * 1.2)) & 1) ? 0.84 : 1, (Math.floor(x * 2) & 1) ? 0.8 : 1, 1, ((Math.floor(x * 0.8) + Math.floor(z * 0.8)) & 1) ? 0.85 : 1, 0.95][top];
+      ((Math.floor(x * 1.2) + Math.floor(z * 1.2)) & 1) ? 0.84 : 1, 1, 1, ((Math.floor(x * 0.8) + Math.floor(z * 0.8)) & 1) ? 0.85 : 1, 0.95][top];
     const seam = sm(0.3, 0.6, w2 / w1), dash = ((x + z) * 2.5 % 1 + 1) % 1 < 0.5;
     col.multiplyScalar(fx * (1 - 0.45 * seam)); if (dash) col.lerp(new THREE.Color(0xfff2dc), 0.85 * sm(0.45, 0.6, w2 / w1)); if (m < 0.98) { const bind = new THREE.Color(0x7a2436).multiplyScalar(((Math.atan2(z + 21, x) * 40) % 1 + 1) % 1 < 0.5 ? 1 : 1.5); col.lerp(bind, Math.min(1, (1 - m) * 3)); } }
   return y;
@@ -69,7 +69,7 @@ const LOOKERS = new Set(['deer', 'heron', 'sheep', 'fox', 'dino', 'peacock', 'sa
 
 export default class S11Finale extends Scene {
   private s = new THREE.Scene(); private cam = new THREE.PerspectiveCamera(42, 9 / 16, 0.1, 600);
-  private cameos = new Cameos([{ k: 'pixbird', t0: 24.0, dur: 2.0, path: 'fly', y: 0.8, s: 0.08, n: 6 }, { k: 'crane', t0: 24.3, dur: 1.8, path: 'fly', y: 0.6, s: 0.12, n: 3, dir: -1 }, { k: 'glass', t0: 24.6, dur: 1.6, path: 'fly', y: 0.45, s: 0.11, n: 2 }, { k: 'crayon', t0: 24.9, dur: 1.5, path: 'fly', y: 0.3, s: 0.12, n: 2, dir: -1 }, { k: 'koi', t0: 24.4, dur: 0.7, path: 'leap', x: -0.5, y: -0.2, s: 0.16 }, { k: 'pixfish', t0: 25.0, dur: 0.6, path: 'leap', x: 0.5, y: -0.25, s: 0.1, n: 2 }, { k: 'bee', t0: 24.2, dur: 1.3, path: 'float', x: 0.72, y: 0.15, s: 0.1 }, { k: 'sheep', t0: 25.60, dur: 1.5, path: 'pop', x: -0.62, y: -0.62, s: 0.13 }, { k: 'hose', t0: 25.66, dur: 1.5, path: 'pop', x: -0.2, y: -0.5, s: 0.14, dir: -1 }, { k: 'pixbird', t0: 25.72, dur: 1.5, path: 'pop', x: 0.25, y: -0.6, s: 0.09 }, { k: 'koi', t0: 25.78, dur: 1.5, path: 'pop', x: 0.62, y: -0.55, s: 0.13, dir: -1 }, { k: 'bee', t0: 25.84, dur: 1.5, path: 'pop', x: -0.45, y: -0.25, s: 0.09 }]);
+  private cameos = new Cameos([{ k: 'pixbird', t0: 24.0, dur: 2.0, path: 'fly', y: 0.8, s: 0.08, n: 6 }, { k: 'crane', t0: 24.3, dur: 1.8, path: 'fly', y: 0.6, s: 0.12, n: 3, dir: -1 }, { k: 'glass', t0: 24.6, dur: 1.6, path: 'fly', y: 0.45, s: 0.11, n: 2 }, { k: 'crayon', t0: 24.9, dur: 1.5, path: 'fly', y: 0.3, s: 0.12, n: 2, dir: -1 }, { k: 'koi', t0: 24.4, dur: 0.7, path: 'leap', x: -0.5, y: -0.2, s: 0.16 }, { k: 'pixfish', t0: 25.0, dur: 0.6, path: 'leap', x: -0.78, y: 0.05, s: 0.1, n: 2 }, { k: 'bee', t0: 24.2, dur: 1.3, path: 'float', x: 0.72, y: 0.15, s: 0.1 }, { k: 'sheep', t0: 25.60, dur: 1.5, path: 'pop', x: -0.62, y: -0.62, s: 0.13 }, { k: 'hose', t0: 25.66, dur: 1.5, path: 'pop', x: -0.2, y: -0.5, s: 0.14, dir: -1 }, { k: 'pixbird', t0: 25.72, dur: 1.5, path: 'pop', x: 0.25, y: -0.6, s: 0.09 }, { k: 'koi', t0: 25.78, dur: 1.5, path: 'pop', x: 0.62, y: -0.55, s: 0.13, dir: -1 }, { k: 'bee', t0: 25.84, dur: 1.5, path: 'pop', x: -0.45, y: -0.25, s: 0.09 }]);
   private insts: GLTFInstance[] = []; private s1!: S1Breakout;
   private cur!: THREE.Object3D; private hero!: HeroPass; private core: THREE.MeshStandardMaterial[] = []; private patchU = { uT: { value: 0 }, uK: { value: 0 } };
   private crowd!: THREE.Group; private scrT = { value: 0 }; private lookers: { o: THREE.Object3D; base: THREE.Euler; ph: number; y: number }[] = [];

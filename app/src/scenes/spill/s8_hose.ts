@@ -36,11 +36,11 @@ void main(){ vec3 c = texture2D(tCol, vUv).rgb; float L = dot(c, vec3(0.3, 0.59,
 const COLS: Record<string, [number, number, number]> = { HoseBlack: [0.07, 0.07, 0.07], HoseWhite: [0.95, 0.94, 0.9], HoseGrey: [0.55, 0.54, 0.52], HoseTint: [0.85, 0.2, 0.17] };
 export default class S8Hose extends Scene {
   private s = new THREE.Scene(); private cam = new THREE.PerspectiveCamera(42, 9 / 16, 0.3, 300);
-  private cameos = new Cameos([{ k: 'glass', t0: 18.7, dur: 1.6, path: 'fly', y: 0.78, s: 0.13, n: 3, dir: -1 }, { k: 'pixbird', t0: 19.3, dur: 1.0, path: 'fly', y: 0.8, s: 0.08, n: 3 }]);
+  private cameos = new Cameos([{ k: 'glass', t0: 18.7, dur: 1.6, path: 'fly', y: 0.9, s: 0.13, n: 3, dir: -1 }, { k: 'pixbird', t0: 19.3, dur: 1.0, path: 'fly', y: 0.92, s: 0.08, n: 3 }]);
   private insts: GLTFInstance[] = [];
   private G = { uGlow: { value: 0 }, uGlowP: { value: new THREE.Vector3() } };
   private bobs: { o: THREE.Object3D; ph: number; k: number }[] = []; private mouths: THREE.Object3D[] = [];
-  private cat!: THREE.Object3D; private catHead!: THREE.Object3D; private hat!: THREE.Object3D; private gloves: THREE.Object3D[] = []; private shoes: THREE.Mesh[] = [];
+  private cat!: THREE.Object3D; private catHead!: THREE.Object3D; private hat!: THREE.Object3D; private hatSh = new THREE.Mesh(new THREE.CircleGeometry(1, 20).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0, depthWrite: false })); private gloves: THREE.Object3D[] = []; private shoes: THREE.Mesh[] = [];
   private limbs: THREE.Mesh[] = []; private limbM!: THREE.ShaderMaterial;
   private cur!: THREE.Object3D; private hero!: HeroPass; private coreM!: THREE.MeshLambertMaterial;
   private rt: THREE.WebGLRenderTarget | null = null; private filmU = { tCol: { value: null as THREE.Texture | null }, uT: { value: 0 }, uF: { value: 1 }, uRes: { value: new THREE.Vector2() } };
@@ -72,7 +72,7 @@ export default class S8Hose extends Scene {
       fl.scale.setScalar(0.8 + 0.4 * hash(i * 3)); this.s.add(fl); this.bobs.push({ o: fl, ph: i * 0.8, k: 0.16 }); fl.traverse((x) => { if (x.name.startsWith('fMouth')) this.mouths.push(x); }); }
     for (let i = 0; i < 7; i++) { const c = new THREE.Group(); for (let k = 0; k < 4; k++) { const b = new THREE.Mesh(new THREE.SphereGeometry(1.2 + 0.6 * hash(i * 4 + k), 20, 12), this.toon([0.97, 0.96, 0.93])); b.position.set(1.6 * k - 2.4, 0.5 * hash(k + i), 0); b.add(new THREE.Mesh(b.geometry, this.toon([0, 0, 0], 0.08))); c.add(b); }
       c.position.set(-25 + 9 * i, 13 + 4 * hash(i), -30); this.s.add(c); this.bobs.push({ o: c, ph: i, k: 0.08 }); }
-    this.cat = this.ink(kit.part('cat')); this.catHead = kit.part('catHead'); this.hat = kit.part('hat'); this.s.add(this.cat);
+    this.cat = this.ink(kit.part('cat')); this.catHead = kit.part('catHead'); this.hat = kit.part('hat'); this.s.add(this.cat); this.s.add(this.hatSh);
     this.limbM = this.toon([0.06, 0.06, 0.06]);
     for (let i = 0; i < 4; i++) { const m = new THREE.Mesh(new THREE.BufferGeometry(), this.limbM); this.s.add(m); this.limbs.push(m); }
     for (let i = 0; i < 2; i++) { const g = this.ink(kit.part('glove').clone(), 0.02); this.s.add(g); this.gloves.push(g);
@@ -112,7 +112,7 @@ export default class S8Hose extends Scene {
       const hip = W(0, 0.7, s * 0.22), foot = W(0.45 * sw, 0.12 + 0.25 * Math.max(0, Math.cos(step + (s > 0 ? 0 : Math.PI))), s * 0.3);
       this.hoseTo(2 + i, hip, foot, W(0.35, 0, 0).sub(W(0, 0, 0)), 0.1); this.shoes[i].position.copy(foot); this.shoes[i].rotation.y = this.cat.rotation.y + Math.PI; }
     // contact: the cursor bounces off the popped-up hat as the cat passes
-    { const hk = sm(this.TIP - 0.3, this.TIP + 0.05, ts); if (hk > 0) { const hp = this.hat.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.55 * CS + 0.7, 0));
+    { const hk = sm(this.TIP - 0.3, this.TIP + 0.05, ts); if (hk > 0) { const hp = this.hat.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.5 * CS + 0.45, 0)); this.hatSh.position.copy(hp).y -= 0.5 * CS - 0.03; this.hatSh.scale.setScalar(0.55 * CS); (this.hatSh.material as THREE.MeshBasicMaterial).opacity = 0.55 * hk;
       this.cur.position.lerp(hp, hk); const land = 1 - sm(0.06, 0.16, Math.abs(ts - this.TIP - 0.1)); this.cur.scale.set(CS * (1 + 0.3 * land), CS * (1 - 0.3 * land), CS); } }
     // camera: low dolly along the street, cat in the foreground
     const hc = sm(0, 1, Math.sin(Math.PI * clamp((ts - this.TIP + 0.45) / 1.05, 0, 1)));

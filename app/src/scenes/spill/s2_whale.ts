@@ -192,7 +192,7 @@ export default class S2Whale extends Scene {
     // camera: low over the whale's back for the hit, then follows the ricochet and pulls wide to show the whale
     const kick = Math.max(0, spring(d, 38, 9));
     const close = this.whale.localToWorld(new THREE.Vector3(30, 9 + kick * 0.8, 34));
-    close.lerp(p, 0.68);
+    close.lerp(p, 0.55);
     const wide = this.whale.position.clone().add(new THREE.Vector3(60, 40, 330));
     const w = sm(0.25, 1.3, d);
     this.cam.position.copy(close.lerp(wide, w)); this.cam.fov = lerp(48, 46, w);
@@ -202,7 +202,7 @@ export default class S2Whale extends Scene {
     this.wU.uCam.value.copy(this.cam.position); rr.setRenderTarget(this.rt); rr.setClearColor(0, 1); rr.clear(); rr.render(this.main, this.cam);
     this.paintU.tScene.value = this.rt.texture; this.paintU.uRes.value.set(out.width, out.height); this.paintU.uR.value = Math.min(12, Math.round(11 * out.height / 1920)); this.paintU.uT.value = t;
     const auto = rr.autoClear; rr.autoClear = false;
-    rr.setRenderTarget(out); rr.clear(); rr.render(this.qs, this.qc); this.hero.render(rr, out, this.cam, d < 0.9 ? undefined : this.main); rr.autoClear = auto; rr.resetState();
+    rr.setRenderTarget(out); rr.clear(); rr.render(this.qs, this.qc); this.hero.render(rr, out, this.cam); rr.autoClear = auto; rr.resetState();
     const hit = Math.exp(-d * 10);
     this.cameos.draw(this.ctx.renderer, out, f.t);
     return { toneMap: 'aces', exposure: 0.82, bloom: 0.15, bloomThreshold: 1.2, vignette: 0.35, grain: 0.03, ca: 0.2 + 1.2 * hit,

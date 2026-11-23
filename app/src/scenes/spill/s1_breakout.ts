@@ -14,7 +14,7 @@ const CUT = PULSES[2];
 const GLASS_Z = 0.6, HIT_Z = GLASS_Z - 0.115;
 const INK = ['#e8202a', '#ffd21a', '#16b8e8', '#ffffff', '#e8202a', '#ffd21a', '#16b8e8', '#e8202a'];
 
-const WORDS = ['THUNK', 'THUNK!!', 'KRAK!', 'SKRSSH', 'FWOOM!', 'WHAM', 'zip', 'zip'];
+const WORDS = ['thunk', 'THUNK!!', 'KRAK!', 'SKRSSH', 'FWOOM!', 'WHAM', 'zip', 'zip'];
 function wordTex(w: string) {
   const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 256; const g = cv.getContext('2d')!;
   g.translate(512, 132); g.transform(1, 0, -0.18, 1, 0, 0); g.font = '900 190px Archivo, Impact, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
@@ -24,7 +24,7 @@ function wordTex(w: string) {
 }
 const QUAD_V = /* glsl */ `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`;
 const COMIC_F = /* glsl */ `
-uniform sampler2D tScene, tWord; uniform vec2 uRes, uC, uWP; uniform float uImp, uT, uWR; uniform vec3 uInk; varying vec2 vUv;
+uniform sampler2D tScene, tWord; uniform vec2 uRes, uC, uWP; uniform float uImp, uT, uWR, uWS; uniform vec3 uInk; varying vec2 vUv;
 float lum(vec2 uv) { vec3 c = texture2D(tScene, uv).rgb; c = c / (1.0 + c); return dot(c, vec3(0.299, 0.587, 0.114)); }
 float h1(float n) { return fract(sin(n * 91.345) * 47453.21); }
 void main() {
@@ -48,7 +48,7 @@ void main() {
   c = mix(c, vec3(1.0) - c * 0.0 , lines * (1.0 - smoothstep(0.42, 0.55, l)) * 0.0);
   c = mix(c, (uInk.r > 0.9 && uInk.g > 0.9 && uInk.b > 0.9) ? ink : vec3(1.0), lines);
   vec2 q = (vUv - uWP) * vec2(uRes.x / uRes.y, 1.0); q = mat2(cos(uWR), sin(uWR), -sin(uWR), cos(uWR)) * q;
-  vec2 wu = q / vec2(0.5, 0.125) + 0.5;
+  vec2 wu = q / (vec2(0.5, 0.125) * uWS) + 0.5;
   if (wu.x > 0.0 && wu.x < 1.0 && wu.y > 0.0 && wu.y < 1.0) { vec4 w = texture2D(tWord, wu); c = mix(c, w.rgb, w.a); }
   gl_FragColor = vec4(mix(col, c, uImp), 1.0);
 }`;
@@ -88,7 +88,7 @@ export default class S1Breakout extends Scene {
   private shards: Shard[] = [];
   private shardMat!: THREE.MeshPhysicalMaterial;
   private crackU = { uProg: { value: 0 }, uT: { value: 0 } };
-  private comicU = { tScene: { value: null as THREE.Texture | null }, uRes: { value: new THREE.Vector2(1080, 1920) }, uC: { value: new THREE.Vector2(0.5, 0.5) }, uImp: { value: 0 }, uT: { value: 0 }, uInk: { value: new THREE.Color() }, tWord: { value: null as THREE.Texture | null }, uWP: { value: new THREE.Vector2(0.5, 0.75) }, uWR: { value: 0 } };
+  private comicU = { uWS: { value: 1 }, tScene: { value: null as THREE.Texture | null }, uRes: { value: new THREE.Vector2(1080, 1920) }, uC: { value: new THREE.Vector2(0.5, 0.5) }, uImp: { value: 0 }, uT: { value: 0 }, uInk: { value: new THREE.Color() }, tWord: { value: null as THREE.Texture | null }, uWP: { value: new THREE.Vector2(0.5, 0.75) }, uWR: { value: 0 } };
   private words = WORDS.map(wordTex);
   private quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ vertexShader: QUAD_V, fragmentShader: COMIC_F, uniforms: this.comicU, depthTest: false, depthWrite: false }));
   private qs = new THREE.Scene();
@@ -427,7 +427,7 @@ export default class S1Breakout extends Scene {
       const cp = (inside ? this.cur : this.curX).getWorldPosition(new THREE.Vector3()).project(this.cam);
       Object.assign(this.comicU.uC.value, { x: cp.x * 0.5 + 0.5, y: cp.y * 0.5 + 0.5 }); this.comicU.uRes.value.set(out.width, out.height);
       this.comicU.tScene.value = this.rt.texture; this.comicU.uImp.value = imp.k; this.comicU.uT.value = t; this.comicU.uInk.value.set(INK[imp.i]);
-      this.comicU.tWord.value = this.words[imp.i]; this.comicU.uWR.value = (hash(imp.i * 7.3) - 0.5) * 0.5;
+      this.comicU.tWord.value = this.words[imp.i]; this.comicU.uWR.value = (hash(imp.i * 7.3) - 0.5) * 0.5; this.comicU.uWS.value = [0.7, 1.4, 1.15][imp.i] ?? 1;
       this.comicU.uWP.value.set(clamp(this.comicU.uC.value.x + (imp.i % 2 ? -0.08 : 0.08), 0.42, 0.58), clamp(this.comicU.uC.value.y + 0.24, 0.62, 0.8));
       rr.setRenderTarget(out); rr.clear(); rr.render(this.qs, this.qc);
     } else { rr.setRenderTarget(out); rr.setClearColor(0, 1); rr.clear(); rr.render(sc, this.cam); }
