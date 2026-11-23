@@ -36,7 +36,7 @@ export default class S09Screen extends Scene {
     const ou = this.orbit.u; const back = Math.max(0, END - t); ou.uT!.value = -back * 0.6; ou.uZ!.value = Z(0) + 0.12 * back; (ou.uRes!.value as THREE.Vector2).set(out.width, out.height);
     rr.setRenderTarget(this.img); rr.clear(); this.orbit.render(rr, this.img); rr.resetState();
     const u = this.lcd.u; u.uT!.value = t; u.uImg!.value = this.img.texture; (u.uRes!.value as THREE.Vector2).set(out.width, out.height);
-    u.uN!.value = Math.min(1920, Math.pow(10, Z(t)) / 6e-5); u.uMelt!.value = Math.min(1, Math.max(0, (t - 35.2) / 1.6)) ** 2;
+    u.uN!.value = Math.min(1920, Math.pow(10, Z(t)) / 6e-5) * out.height / H; u.uMelt!.value = Math.min(1, Math.max(0, (t - 35.2) / 1.6)) ** 2;
     rr.setRenderTarget(out); rr.setClearColor(0, 1); rr.clear(true, true, true); this.lcd.render(rr, out); rr.resetState();
     if (!inSeam(t)) hud(rr, this.ctx.comp, out, t);
     const z0 = Z(0); const melt = u.uMelt!.value as number;
