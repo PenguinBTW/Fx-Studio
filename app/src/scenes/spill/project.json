@@ -41,6 +41,24 @@
       "id": "pixel",
       "start": 15.134,
       "end": 16.874
+    },
+    {
+      "scene": "spill/s7_felt",
+      "id": "felt",
+      "start": 16.874,
+      "end": 18.614
+    },
+    {
+      "scene": "spill/s8_hose",
+      "id": "hose",
+      "start": 18.614,
+      "end": 20.354
+    },
+    {
+      "scene": "spill/s9_garden",
+      "id": "garden",
+      "start": 20.354,
+      "end": 22.094
     }
   ],
   "audio": "../../../public/audio/feel_good_inc.wav"
