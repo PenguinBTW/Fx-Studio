@@ -192,11 +192,11 @@ export default class S2Whale extends Scene {
     // camera: low over the whale's back for the hit, then follows the ricochet and pulls wide to show the whale
     const kick = Math.max(0, spring(d, 38, 9));
     const close = this.whale.localToWorld(new THREE.Vector3(30, 9 + kick * 0.8, 34));
-    close.lerp(p, 0.42);
+    close.lerp(p, 0.68);
     const wide = this.whale.position.clone().add(new THREE.Vector3(60, 40, 330));
     const w = sm(0.25, 1.3, d);
     this.cam.position.copy(close.lerp(wide, w)); this.cam.fov = lerp(48, 46, w);
-    const look = this.whale.localToWorld(new THREE.Vector3(14, 4.5, 0)).lerp(p.clone().lerp(this.whale.position.clone().add(new THREE.Vector3(10, 10, 0)), 0.5), w);
+    const look = this.whale.localToWorld(new THREE.Vector3(14, 4.5, 0)).lerp(p.clone().lerp(this.whale.position.clone().add(new THREE.Vector3(10, 10, 0)), 0.5), w).lerp(p, 0.55 * (1 - w));
     this.cam.aspect = out.width / out.height; this.cam.updateProjectionMatrix(); this.cam.lookAt(look);
     if (!this.rt || this.rt.width !== out.width || this.rt.height !== out.height) { this.rt?.dispose(); this.rt = new THREE.WebGLRenderTarget(out.width, out.height, { type: THREE.HalfFloatType }); }
     this.wU.uCam.value.copy(this.cam.position); rr.setRenderTarget(this.rt); rr.setClearColor(0, 1); rr.clear(); rr.render(this.main, this.cam);

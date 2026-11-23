@@ -25,8 +25,8 @@ void main(){ float b = floor((vP.y * 2.2 + vP.x * 1.3 + 0.35 * sin(vP.z * 7.0)) 
   gl_FragColor = vec4(c * (0.7 * l + 0.15) * (1.0 - 0.6 * seam) + vec3(0.4, 0.07, 0.0) * (1.0 - k) * (0.5 + 0.5 * pow(1.0 - abs(vN.z), 2.0)), 1.0); }`;
 
 const PATCHES: [string, number, number, number][] = [ // kit, colour, x, z
-  ['paper', 0xffd9a0, -10, -6], ['ink', 0xaab8c4, -4, -16], ['pixel', 0x2fd05a, 11, -19], ['felt', 0x8ad040, -13, -25],
-  ['hose', 0xd8d4c8, 3, -28], ['garden', 0xc040d0, 14, -34], ['ps1', 0x40b0c0, -7, -37], ['clay', 0xff8a3a, 9, -7]];
+  ['paper', 0xfff0d6, -2, -5], ['ink', 0x4a5f8f, -9, -15], ['pixel', 0x2fd05a, 11, -19], ['felt', 0x8ad040, -13, -25],
+  ['hose', 0xd8d4c8, 3, -28], ['garden', 0xc040d0, 14, -34], ['ps1', 0x40b0c0, -7, -37], ['clay', 0xff7a3a, 12, -10]];
 const PROPS: Record<string, string[]> = { paper: ['tree', 'deer', 'tree'], ink: ['reed', 'heron', 'lotus', 'reed'], pixel: ['cliff', 'fern', 'salmonA'],
   felt: ['sheep', 'pom', 'sheep', 'fox'], hose: ['house', 'flower', 'house'], garden: ['arch', 'tulip', 'peacock'], ps1: ['palm', 'dino', 'pillar'], clay: [] };
 const DETAIL: Record<string, [THREE.BufferGeometry, number, number]> = {
@@ -40,16 +40,16 @@ function terr(x: number, z: number, col?: THREE.Color) {
   const ds = PATCHES.map(([, , px, pz]) => Math.hypot(x - px, z - pz)), dmin = Math.min(...ds);
   const ws = ds.map((d) => Math.exp(-(d - dmin) * 6.0)); let W = 0, h = 0, w1 = 0, w2 = 0, top = 0;
   ws.forEach((w, i) => { W += w; if (w > w1) { w2 = w1; w1 = w; top = i; } else if (w > w2) w2 = w;
-    const sh = [0.6 * Math.abs(((x + z) * 0.22) % 1 - 0.5), 0.05 * Math.sin(x * 2 + z), Math.floor((1.3 + 0.9 * Math.sin(x * 0.3) * Math.cos(z * 0.35)) * 2) / 2,
+    const sh = [0.15 * Math.sin(x * 0.4) * Math.cos(z * 0.5), 0.05 * Math.sin(x * 2 + z), Math.floor((1.3 + 0.9 * Math.sin(x * 0.3) * Math.cos(z * 0.35)) * 2) / 2,
       0.35 * Math.sin(x * 0.8) * Math.sin(z * 0.7) + 0.3, 0.15, 0.25 + 0.1 * Math.sin(x * 1.3), Math.sin(x * 0.25 + z * 0.2) > 0 ? 1.1 : 0.3, 0.35 * (Math.sin(x * 0.5) + Math.cos(z * 0.4)) + 0.5][i];
     h += w * (0.5 + 1.3 * hash(i) + 2.4 * sh); });
   h /= W; h += 7 * sm(-24, -40, z) * (0.55 + 0.45 * Math.sin(x * 0.35 + 1.3)) + 2.2 * sm(14, 22, Math.abs(x)); const e = (x / 22) ** 2 + ((z + 21) / 19) ** 2 + 0.07 * Math.sin(Math.atan2(z + 21, x) * 7) + 0.04 * Math.sin(Math.atan2(z + 21, x) * 13);
   const m = sm(1.05, 0.88, e), y = m * (h + 0.3) + (1 - m) * -1.6;
   if (col) { col.setRGB(0, 0, 0); ws.forEach((w, i) => col.add(PAL[i].clone().multiplyScalar(w / W)));
-    const fx = [0.92 + 0.08 * Math.sin(x * 5 + z * 3), 0.85 + 0.15 * Math.sin(x * 3.1 + Math.sin(z * 2.3) * 2), ((Math.floor(x * 1.5) + Math.floor(z * 1.5)) & 1) ? 0.82 : 1,
+    const fx = [1, 0.9 + 0.1 * Math.sin(x * 3.1 + Math.sin(z * 2.3) * 2), ((Math.floor(x * 1.5) + Math.floor(z * 1.5)) & 1) ? 0.82 : 1,
       ((Math.floor(x * 1.2) + Math.floor(z * 1.2)) & 1) ? 0.84 : 1, (Math.floor(x * 2) & 1) ? 0.8 : 1, 1, ((Math.floor(x * 0.8) + Math.floor(z * 0.8)) & 1) ? 0.85 : 1, 0.95][top];
-    const seam = sm(0.55, 0.75, w2 / w1) * (((x + z) * 2.5 % 1 + 1) % 1 < 0.5 ? 1 : 0.3);
-    col.multiplyScalar(fx * (1 - 0.5 * seam)); if (m < 0.98) { const bind = new THREE.Color(0x7a2436).multiplyScalar(((Math.atan2(z + 21, x) * 40) % 1 + 1) % 1 < 0.5 ? 1 : 1.5); col.lerp(bind, Math.min(1, (1 - m) * 3)); } }
+    const seam = sm(0.3, 0.6, w2 / w1), dash = ((x + z) * 2.5 % 1 + 1) % 1 < 0.5;
+    col.multiplyScalar(fx * (1 - 0.45 * seam)); if (dash) col.lerp(new THREE.Color(0xfff2dc), 0.85 * sm(0.45, 0.6, w2 / w1)); if (m < 0.98) { const bind = new THREE.Color(0x7a2436).multiplyScalar(((Math.atan2(z + 21, x) * 40) % 1 + 1) % 1 < 0.5 ? 1 : 1.5); col.lerp(bind, Math.min(1, (1 - m) * 3)); } }
   return y;
 }
 const LOOKERS = new Set(['deer', 'heron', 'sheep', 'fox', 'dino', 'peacock', 'salmonA']);
@@ -76,7 +76,7 @@ export default class S11Finale extends Scene {
     { const g = new THREE.PlaneGeometry(56, 52, 224, 208).rotateX(-Math.PI / 2).translate(0, 0, -21), P = g.attributes.position, C = new Float32Array(P.count * 3), c = new THREE.Color();
       for (let k = 0; k < P.count; k++) { P.setY(k, terr(P.getX(k), P.getZ(k), c)); c.toArray(C, k * 3); }
       g.setAttribute('color', new THREE.BufferAttribute(C, 3)); g.computeVertexNormals();
-      const land = new THREE.Mesh(g, groundDetail(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 }), 0.45, 0.12, 0.4)); land.castShadow = land.receiveShadow = true; this.s.add(land); }
+      const land = new THREE.Mesh(g, groundDetail(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 }), 0.45, 0.05, 0.15)); land.castShadow = land.receiveShadow = true; this.s.add(land); }
     PATCHES.forEach(([id, , x, z], pi) => {
       const kit = K[id]; kit.root.visible = false; this.s.add(kit.root);
       const [geo, dc, em] = DETAIL[id]; const im = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ color: dc, roughness: 0.8, flatShading: true, emissive: em ? dc : 0x000000, emissiveIntensity: em }), 50);
@@ -93,11 +93,16 @@ export default class S11Finale extends Scene {
     // the outcrop the cursor stands on
     // the perch: a cairn of dead phones and monitors that fell before it, screens still faintly lit
     const cols = [0x3fd0ff, 0xff5ab0, 0x7cff6a, 0xffc040, 0xb08cff, 0xff7a1a];
-    [[1.5, 8.5, 0.45, 4.25, 0.12]].forEach(([w, h, dd, y, r], i) => {
-      const g = new THREE.Group(); const b = new THREE.Mesh(new THREE.BoxGeometry(w * 0.8, h, dd * 0.8), new THREE.MeshStandardMaterial({ color: PAL[[2, 4, 5, 6, 1, 3][i]], roughness: 0.75 })); b.castShadow = b.receiveShadow = true;
-      const sc = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.66, h * 0.7), new THREE.MeshBasicMaterial({ color: cols[i % cols.length], toneMapped: false }));
-      sc.position.z = dd * 0.4 + 0.01; (sc.material as THREE.MeshBasicMaterial).color.multiplyScalar(1.1 + 0.4 * hash(i * 3.7)); g.add(b, sc);
-      g.position.set(0.25 * Math.sin(i * 2.1), y, 6 + 0.2 * Math.cos(i * 1.7)); g.rotation.set(0.06 * Math.sin(i * 3.3), r, 0.05 * Math.cos(i * 2.9)); this.s.add(g); });
+    // the perch: a dead phone standing on end, black glass cracked from the corner, a greyed-out toast still on screen
+    { const top = 8.45, g = new THREE.Group(), H = top - 0.3;
+      const body = new THREE.Mesh(new THREE.BoxGeometry(3.0, H, 0.45), new THREE.MeshStandardMaterial({ color: 0x141418, roughness: 0.35, metalness: 0.6 }));
+      const glass = new THREE.Mesh(new THREE.PlaneGeometry(2.7, H - 0.45), new THREE.MeshStandardMaterial({ color: 0x0b0d16, roughness: 0.08, metalness: 0.3 }));
+      glass.position.z = 0.26; body.position.y = H / 2; glass.position.y = H / 2;
+      const toast = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 0.55), new THREE.MeshBasicMaterial({ color: 0x4a5260, toneMapped: false })); toast.position.set(0, H * 0.78, 0.27);
+      const cp: number[] = []; for (let k = 0; k < 9; k++) { const a = -0.3 - 1.2 * hash(k * 3.1), l = 1.2 + 2.8 * hash(k * 5.7); cp.push(1.25, H - 0.4, 0.28, 1.25 + l * Math.cos(Math.PI + a), H - 0.4 + l * Math.sin(Math.PI + a), 0.28); }
+      const crack = new THREE.LineSegments(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(cp, 3)), new THREE.LineBasicMaterial({ color: 0x9aa4b8 }));
+      body.castShadow = body.receiveShadow = true; g.add(body, glass, toast, crack); g.position.set(0, 0.3, 6); g.rotation.set(-0.04, 0.22, 0.03); this.s.add(g);
+      const shade = new THREE.Mesh(new THREE.CircleGeometry(1.1, 24).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.4, depthWrite: false })); shade.position.set(0, top + 0.27, 6); this.s.add(shade); }
     this.hero = new HeroPass(this.ctx.renderer); this.cur = this.hero.dress(K.cursor); this.cur.scale.setScalar(1.9); this.cur.position.set(0, 8.6, 6);
     
     

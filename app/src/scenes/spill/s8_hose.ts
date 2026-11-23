@@ -36,7 +36,7 @@ void main(){ vec3 c = texture2D(tCol, vUv).rgb; float L = dot(c, vec3(0.3, 0.59,
 const COLS: Record<string, [number, number, number]> = { HoseBlack: [0.07, 0.07, 0.07], HoseWhite: [0.95, 0.94, 0.9], HoseGrey: [0.55, 0.54, 0.52], HoseTint: [0.85, 0.2, 0.17] };
 export default class S8Hose extends Scene {
   private s = new THREE.Scene(); private cam = new THREE.PerspectiveCamera(42, 9 / 16, 0.3, 300);
-  private cameos = new Cameos([{ k: 'glass', t0: 18.7, dur: 1.6, path: 'fly', y: 0.55, s: 0.13, n: 3, dir: -1 }, { k: 'pixbird', t0: 19.3, dur: 1.0, path: 'fly', y: 0.8, s: 0.08, n: 3 }]);
+  private cameos = new Cameos([{ k: 'glass', t0: 18.7, dur: 1.6, path: 'fly', y: 0.78, s: 0.13, n: 3, dir: -1 }, { k: 'pixbird', t0: 19.3, dur: 1.0, path: 'fly', y: 0.8, s: 0.08, n: 3 }]);
   private insts: GLTFInstance[] = [];
   private G = { uGlow: { value: 0 }, uGlowP: { value: new THREE.Vector3() } };
   private bobs: { o: THREE.Object3D; ph: number; k: number }[] = []; private mouths: THREE.Object3D[] = [];
@@ -113,7 +113,7 @@ export default class S8Hose extends Scene {
       this.hoseTo(2 + i, hip, foot, W(0.35, 0, 0).sub(W(0, 0, 0)), 0.1); this.shoes[i].position.copy(foot); this.shoes[i].rotation.y = this.cat.rotation.y + Math.PI; }
     // contact: the cursor bounces off the popped-up hat as the cat passes
     { const hk = Math.sin(Math.PI * clamp((ts - this.TIP + 0.3) / 0.75, 0, 1)); if (hk > 0) { const hp = this.hat.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.55 * CS + 0.7, 0));
-      this.cur.position.lerp(hp, hk); const land = Math.exp(-Math.abs(ts - this.TIP - 0.08) * 14); this.cur.scale.set(CS * (1 + 0.3 * land), CS * (1 - 0.3 * land), CS); } }
+      this.cur.position.lerp(hp, hk); const land = 1 - sm(0.06, 0.16, Math.abs(ts - this.TIP - 0.1)); this.cur.scale.set(CS * (1 + 0.3 * land), CS * (1 - 0.3 * land), CS); } }
     // camera: low dolly along the street, cat in the foreground
     const hc = sm(0, 1, Math.sin(Math.PI * clamp((ts - this.TIP + 0.45) / 1.05, 0, 1)));
     this.cam.position.set(cx - 7.5, 2.8 + 1.8 * hc, 5.8 + 2.4 * hc); this.cam.aspect = out.width / out.height; this.cam.updateProjectionMatrix(); this.cam.lookAt(cx + 2 + 1.2 * hc, 1.3 + 2.6 * hc, 0.3);

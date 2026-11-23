@@ -358,7 +358,7 @@ export default class S1Breakout extends Scene {
       const k = t < RAMS[1] ? 0 : 1, d = t - RAMS[k], u = d / (RAMS[k + 1] - RAMS[k]), back = [1.25, 1.9][k];
       z = HIT_Z - back * 4 * u * (1 - u); sq = 1 - 0.55 * Math.exp(-d * 15) + 0.28 * sm(0.55, 0.95, u); lean = -0.2 * sm(0.4, 0.9, u) + 0.25 * Math.exp(-d * 10);
       y = 0.12 * Math.max(0, Math.sin(Math.PI * u)) * (k + 1);
-    } else { const d = t - BREAK; z = HIT_Z + 7 * d; y = 1.6 * d - 2 * d * d; sq = 1 + 0.35 * Math.exp(-d * 6) - 0.5 * Math.exp(-d * 30); rx = -3.2 * d; }
+    } else { const d = t - BREAK; z = HIT_Z + 7 * d; y = 1.6 * d - 2 * d * d; sq = 1 + 0.35 * Math.exp(-d * 6) - 0.5 * Math.exp(-d * 30); rx = -0.45 * Math.sin(d * 3.2); }
     c.position.set(0, y, z); c.rotation.set(lean + rx, 0.08 * Math.sin(t * 3), 0);
     const s = Math.max(0.35, sq); c.scale.set(1 / Math.sqrt(s), 1 / Math.sqrt(s), s);
     const hitP = RAMS.map((h) => t >= h ? 1 : 0).reduce((a: number, b) => a + b, 0);
