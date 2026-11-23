@@ -29,6 +29,12 @@
       "id": "clay",
       "start": 9.913,
       "end": 11.653
+    },
+    {
+      "scene": "spill/s5_ink",
+      "id": "ink",
+      "start": 11.653,
+      "end": 15.134
     }
   ],
   "audio": "../../../public/audio/feel_good_inc.wav"
