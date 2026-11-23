@@ -18,10 +18,10 @@ const WORDS = ['thunk', 'THUNK!!', 'KRAK!', 'SKRSSH', 'FWOOM!', 'WHAM', 'zip', '
 let noSig: THREE.CanvasTexture | undefined;
 function noSignal() {
   if (noSig) return noSig;
-  const cv = document.createElement('canvas'); cv.width = 128; cv.height = 160; const g = cv.getContext('2d')!;
-  for (let y = 0; y < 160; y += 2) for (let x = 0; x < 128; x += 2) { const v = Math.floor(40 + 200 * hash(x * 13.1 + y * 7.7)); g.fillStyle = `rgb(${v},${v},${v})`; g.fillRect(x, y, 2, 2); }
-  g.fillStyle = '#101018'; g.fillRect(14, 34, 100, 24); g.fillRect(14, 114, 100, 24); g.fillStyle = '#e8e8f0'; g.font = 'bold 15px monospace'; g.textAlign = 'center'; g.fillText('NO SIGNAL', 64, 51); g.fillText('NO SIGNAL', 64, 131);
-  noSig = new THREE.CanvasTexture(cv); noSig.colorSpace = THREE.SRGBColorSpace; noSig.repeat.set(1, 0.5); noSig.magFilter = THREE.NearestFilter; return noSig;
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 160; const g = cv.getContext('2d')!;
+  for (let y = 0; y < 160; y += 3) for (let x = 0; x < 256; x += 3) { const v = Math.floor(30 + 190 * hash(x * 13.1 + y * 7.7)); g.fillStyle = `rgb(${v},${v},${v})`; g.fillRect(x, y, 3, 3); }
+  g.fillStyle = '#0a0a12'; g.fillRect(0, 52, 256, 56); g.fillStyle = '#ffffff'; g.font = 'bold 40px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('NO SIGNAL', 128, 81);
+  noSig = new THREE.CanvasTexture(cv); noSig.colorSpace = THREE.SRGBColorSpace; noSig.magFilter = THREE.NearestFilter; return noSig;
 }
 function wordTex(w: string) {
   const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 256; const g = cv.getContext('2d')!;
@@ -403,11 +403,11 @@ export default class S1Breakout extends Scene {
     const d = t - CUT, c = this.curX, p = this.fallP(t);
     const jolt = t > 4.06 ? Math.max(0, spring(t - 4.06, 30, 6)) : 0, flip = sm(4.72, 4.95, t);
     c.position.copy(p); c.scale.set(3.4 * (1 + 0.3 * jolt), 3.4 * (1 - 0.35 * jolt), 3.4 * (1 + 0.3 * jolt));
-    { const rx = -0.55 * Math.sin(d * 2.4) - 3.1 * flip, ry = 0.5 * Math.sin(d * 1.7), rz = 2.2 * d + 0.6 * Math.sin(d * 3) + 1.6 * flip, fo = sm(4.95, 5.45, t), sn = (a: number) => lerp(a, Math.round(a / Math.PI) * Math.PI, fo);
+    { const rx = -0.55 * Math.sin(d * 2.4) - 3.1 * flip, ry = 0.5 * Math.sin(d * 1.7), rz = 2.2 * d + 0.6 * Math.sin(d * 3) + 1.6 * flip, fo = sm(4.75, 5.3, t), sn = (a: number) => lerp(a, Math.round(a / Math.PI) * Math.PI, fo);
       c.rotation.set(sn(rx), sn(ry), sn(rz)); }
     this.poseLeak(t); this.poseTrail(t);
     { const be = t - 4.06, sw = be > 0 ? Math.exp(-be * 2.2) * Math.sin(be * 7) : 0; this.bump.rotation.set(0.25 * sw, 0, -0.45 * sw - (be > 0 ? 0.12 : 0));
-      const ns = be > 0 ? noSignal() : null; if (this.bumpScr.map !== ns) { this.bumpScr.map = ns; this.bumpScr.needsUpdate = true; } if (ns) ns.offset.set(0, hash(Math.floor(be * 30)) * 0.5);
+      const ns = be > 0 ? noSignal() : null; if (this.bumpScr.map !== ns) { this.bumpScr.map = ns; this.bumpScr.needsUpdate = true; } if (ns) ns.offset.set(0.02 * (hash(Math.floor(be * 30)) - 0.5), 0);
       this.bumpScr.color.setHex(be > 0 ? (Math.floor(be * 30) % 2 ? 0xffffff : 0xb8c0c8) : 0x3fd0ff); }
     const wide = sm(0, 0.9, d), dive = sm(OUTSIDE + 0.2, OUTSIDE + 1.4, t);
     const cam = new THREE.Vector3(lerp(3, 14, wide), lerp(1.5, 4, wide), lerp(18, 58, wide));
