@@ -93,9 +93,9 @@ export default class S8Hose extends Scene {
     const dbl = t > this.TIP + 0.1 && t < this.TIP + 0.5 ? (Math.floor((t - this.TIP - 0.1) * 10) % 2 === 0 ? 1 : 0.1) : ((t * 1.06) % 1) < 0.55 ? 1 : 0.12;
     this.coreM.emissive.setRGB(1.6 * dbl, 0.4 * dbl, 0.02 * dbl); this.G.uGlow.value = 1.2 * dbl; this.G.uGlowP.value.copy(cp);
     // the cat: boneless stroll toward the cursor, head follows it, tips its hat as it passes
-    const catX = 1.5 - 1.6 * (ts - T0), step = beat; this.cat.position.set(catX, 0.15 * Math.abs(Math.sin(step)), 2.4); this.cat.rotation.set(0, Math.PI - 0.5, 0.06 * Math.sin(step));
-    this.cat.scale.set(1.35, 1.35 * (1 + 0.06 * Math.sin(step * 2)), 1.35);
-    this.catHead.rotation.y = clamp(Math.atan2(cp.z - 2.4, -(cp.x - catX)) * 0.6, -0.9, 0.9); this.catHead.rotation.z = 0.12 * Math.sin(step);
+    const catX = 1.5 - 1.6 * (ts - T0), step = beat; this.cat.position.set(catX, 0.15 * Math.abs(Math.sin(step)), 1.5); this.cat.rotation.set(0, Math.PI - 0.5, 0.06 * Math.sin(step));
+    const bk = Math.exp(-(((ph % 1) + 1) % 1) * 7); this.cat.scale.set(1.35 * (1 + 0.1 * bk), 1.35 * (1 - 0.14 * bk + 0.06 * Math.sin(step * 2)), 1.35 * (1 + 0.1 * bk));
+    this.catHead.rotation.y = clamp(Math.atan2(cp.z - 1.5, -(cp.x - catX)) * 0.6, -0.9, 0.9); this.catHead.rotation.z = 0.12 * Math.sin(step);
     const tip = sm(this.TIP - 0.15, this.TIP + 0.05, ts) * (1 - sm(this.TIP + 0.55, this.TIP + 0.75, ts));
     this.hat.position.y = 3.2 * 0 + 0.55 * tip; this.hat.rotation.z = -0.5 * tip;
     this.cat.updateMatrixWorld(true); const W = (x: number, y: number, z: number) => this.cat.localToWorld(new THREE.Vector3(x, y, z));
@@ -105,7 +105,7 @@ export default class S8Hose extends Scene {
       const hip = W(0, 0.7, s * 0.22), foot = W(0.45 * sw, 0.12 + 0.25 * Math.max(0, Math.cos(step + (s > 0 ? 0 : Math.PI))), s * 0.3);
       this.hoseTo(2 + i, hip, foot, W(0.35, 0, 0).sub(W(0, 0, 0)), 0.1); this.shoes[i].position.copy(foot); this.shoes[i].rotation.y = this.cat.rotation.y + Math.PI; }
     // camera: low dolly along the street, cat in the foreground
-    this.cam.position.set(cx - 6, 2.3, 5.0); this.cam.aspect = out.width / out.height; this.cam.updateProjectionMatrix(); this.cam.lookAt(cx + 2, 2.0, 0.3);
+    this.cam.position.set(cx - 5.5, 2.5, 5.6); this.cam.aspect = out.width / out.height; this.cam.updateProjectionMatrix(); this.cam.lookAt(cx + 2, 2.0, 0.3);
     if (!this.rt || this.rt.width !== out.width || this.rt.height !== out.height) { this.rt?.dispose(); this.rt = new THREE.WebGLRenderTarget(out.width, out.height, { type: THREE.HalfFloatType }); }
     rr.setRenderTarget(this.rt); rr.clear(); rr.render(this.s, this.cam);
     const fr = Math.floor(t * 12); this.filmU.tCol.value = this.rt.texture; this.filmU.uT.value = t; this.filmU.uF.value = 0.93 + 0.07 * hash(fr); this.filmU.uRes.value.set(out.width, out.height);

@@ -28,16 +28,17 @@ void main(){
   vec3 paper = vec3(0.95, 0.92, 0.84) * (0.96 + 0.04 * vn(gl_FragCoord.xy * 0.6));
   float tone = clamp(v + gran - 0.08, 0.0, 1.0); vec3 col = mix(vec3(0.07, 0.07, 0.09), paper, tone);
   col = mix(col, vec3(0.78, 0.12, 0.1) * (0.8 + 0.2 * v), c0.g);
+  col = mix(col, vec3(1.0, 0.42, 0.05) * (0.45 + 0.75 * v), clamp(1.0 - c0.a, 0.0, 1.0));
   float ink = smoothstep(0.25, 0.6, e) * (0.75 + 0.25 * vn(vUv * 120.0)); col = mix(col, vec3(0.05, 0.05, 0.07), ink);
-  col += c0.b * vec3(1.6, 0.55, 0.08);
+  col += c0.b * vec3(1.6, 0.55, 0.08) * (1.0 - 0.75 * clamp(1.0 - c0.a, 0.0, 1.0));
   gl_FragColor = vec4(col, 1.0);
 }`;
 // main-pass material: r = ink value, g = seal-red mask, b = orange glow (emitted through paper)
 const VAL_V = `varying vec3 vN, vW; void main(){ vec4 w = modelMatrix * vec4(position,1.0); vW = w.xyz; vN = normalize(mat3(modelMatrix) * normal); gl_Position = projectionMatrix * viewMatrix * w; }`;
-const VAL_F = /* glsl */ `uniform float uV, uRed; uniform vec3 uGlowP; uniform float uGlow, uGlowR; varying vec3 vN, vW;
+const VAL_F = /* glsl */ `uniform float uV, uRed, uHero; uniform vec3 uGlowP; uniform float uGlow, uGlowR; varying vec3 vN, vW;
 void main(){ float l = clamp(dot(normalize(vN), normalize(vec3(-0.5, 0.8, 0.35))) * 0.5 + 0.5, 0.0, 1.0);
   float v = uV * (0.65 + 0.35 * l); float g = uGlow * exp(-pow(length(vW - uGlowP) / uGlowR, 2.0));
-  gl_FragColor = vec4(v, uRed, g * smoothstep(0.2, 0.8, uV), 1.0); }`;
+  gl_FragColor = vec4(v, uRed, g * smoothstep(0.2, 0.8, uV), 1.0 - uHero); }`;
 
 const VAL: Record<string, [number, number]> = { Ink: [0.1, 0], InkWash: [0.5, 0], InkPaper: [0.97, 0], InkSeal: [0.75, 1], InkLotus: [0.9, 0.35] };
 
@@ -56,7 +57,7 @@ export default class S5Ink extends Scene {
   private qs = new THREE.Scene(); private qc = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   private hops = [T0, T0 + 0.218, T0 + 0.435];
   private padX = [-9, -5.5, -2.2, 0.6];
-  private val(v: number, red = 0) { return new THREE.ShaderMaterial({ vertexShader: VAL_V, fragmentShader: VAL_F, uniforms: { uV: { value: v }, uRed: { value: red }, ...this.glowU } }); }
+  private val(v: number, red = 0, hero = 0) { return new THREE.ShaderMaterial({ vertexShader: VAL_V, fragmentShader: VAL_F, uniforms: { uV: { value: v }, uRed: { value: red }, uHero: { value: hero }, ...this.glowU } }); }
 
   override async init() {
     const load = (id: string) => GLTFManager.instantiate(resolveAsset(id, this.ctx.project ?? 'spill').url, {});
@@ -84,7 +85,7 @@ export default class S5Ink extends Scene {
     cur.part('scan').scale.set(1, 0.4, 0.35); this.cur = cur.root; this.cur.scale.setScalar(CS);
     const sun = new THREE.DirectionalLight(0xfff0e0, 2.4); sun.position.set(-20, 30, 15); this.curS.add(this.cur, sun, new THREE.HemisphereLight(0xffffff, 0x888888, 1.2));
     // the spat-out cursor: brushed in ink, only its core still glows
-    cur2.root.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; const n = (m.material as THREE.Material).name; m.material = this.val(n === 'Core' ? 0.95 : n === 'Shell' ? 0.38 : 0.05); });
+    cur2.root.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; const n = (m.material as THREE.Material).name; m.material = this.val(n === 'Core' ? 0.95 : n === 'Shell' ? 0.6 : 0.05, 0, n === 'Shell' ? 1 : 0); });
     this.inkCur = cur2.root; this.inkCur.scale.setScalar(CS); this.s.add(this.inkCur);
     this.qs.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ vertexShader: QUAD_V, fragmentShader: INK_F, uniforms: this.inkU, depthTest: false, depthWrite: false })));
   }
@@ -106,6 +107,7 @@ export default class S5Ink extends Scene {
     const ph = (((t - DROP) / BEAT) % 1 + 1) % 1, ob = Math.exp(-((ph - 0.5) ** 2) * 60), inK = sm(GULP[1], GULP[1] + 0.1, t) * (1 - sm(SPIT - 0.02, SPIT + 0.02, t));
     const hic = sm(SPIT - 0.16, SPIT - 0.02, t) * (1 - sm(SPIT, SPIT + 0.12, t));
     this.neck.scale.set(1 + 0.18 * ob * inK + 0.4 * hic, 1 - 0.1 * hic, 1 + 0.18 * ob * inK + 0.4 * hic);
+    const pz = inK * Math.sin(Math.PI * (t - GULP[1]) / BEAT) ** 3; this.head.rotation.z += 0.42 * pz; this.neck.rotation.z += 0.16 * pz; this.head.rotation.y = 0.5 * inK * Math.sin(Math.PI * (t - GULP[1]) / (2 * BEAT)); this.heron.scale.y = 1 - 0.05 * ob * inK + 0.06 * hic;
     this.heron.updateMatrixWorld(true);
     const headP = this.head.getWorldPosition(new THREE.Vector3()), neckP = this.neck.getWorldPosition(new THREE.Vector3());
     const tip = this.top.localToWorld(new THREE.Vector3(2.4, 0, 0));
@@ -125,7 +127,7 @@ export default class S5Ink extends Scene {
     for (const k of this.kois) { const a = clamp((ts - k.t) / 0.55); k.o.visible = a > 0 && a < 1; k.o.position.set(k.x + 3 * a, 3.2 * Math.sin(Math.PI * a), k.z); k.o.rotation.set(0, 0, 2.4 * (0.5 - a)); }
     // camera
     const pcx = Math.max(cp.x, -5.5); const pre = new THREE.Vector3(pcx - 2, 3.2, 19), preL = new THREE.Vector3(pcx + 3.2, 7.5, -2);
-    const hold = new THREE.Vector3(1.5 - 0.6 * sm(GULP[1], SPIT, t), 7, 17 - 2 * sm(GULP[1], SPIT, t)), holdL = gp.clone().lerp(headP, 0.3);
+    const hold = new THREE.Vector3(1.5 - 2.4 * sm(GULP[1], SPIT, t), 7, 17 - 4.5 * sm(GULP[1], SPIT, t)), holdL = gp.clone().lerp(headP, 0.3);
     const post = e >= 0 ? this.inkCur.position.clone().add(new THREE.Vector3(4, 3, 11)) : hold, postL = e >= 0 ? this.inkCur.position.clone().add(new THREE.Vector3(-1.5, 1.2, -2)) : holdL;
     const g = sm(GULP[0] - 0.02, GULP[0] + 0.2, t), q = sm(SPIT + 0.05, SPIT + 0.35, t);
     this.cam.position.copy(pre.lerp(hold, g).lerp(post, q)); const look = preL.lerp(holdL, g).lerp(postL, q);
@@ -133,7 +135,7 @@ export default class S5Ink extends Scene {
     if (!this.rt || this.rt.width !== out.width || this.rt.height !== out.height) { this.rt?.dispose();
       this.rt = new THREE.WebGLRenderTarget(out.width, out.height, { type: THREE.HalfFloatType }); this.rt.depthTexture = new THREE.DepthTexture(out.width, out.height); }
     rr.setRenderTarget(this.rt); rr.setClearColor(new THREE.Color(0.96, 0, 0), 1); rr.clear(); rr.render(this.s, this.cam);
-    Object.assign(this.inkU, {}); this.inkU.tCol.value = this.rt.texture; this.inkU.tDep.value = this.rt.depthTexture; this.inkU.uRes.value.set(out.width, out.height); this.inkU.uB.value = Math.floor(t * 8) * 1.37;
+    Object.assign(this.inkU, {}); this.inkU.tCol.value = this.rt.texture; this.inkU.tDep.value = this.rt.depthTexture; this.inkU.uRes.value.set(out.width, out.height); this.inkU.uB.value = Math.floor(t * (t > GULP[1] && t < SPIT ? 12 : 8)) * 1.37;
     const auto = rr.autoClear; rr.autoClear = false; rr.setRenderTarget(out); rr.clear(); rr.render(this.qs, this.qc);
     if (this.cur.visible) { rr.clearDepth(); rr.render(this.curS, this.cam); }
     rr.autoClear = auto; rr.resetState();

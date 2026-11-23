@@ -288,10 +288,46 @@ export default class S1Breakout extends Scene {
     const pc = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 600, 5), body); pc.position.set(0, 7.6 + 300, 0);
     this.glows.geometry.setAttribute('aTile', new THREE.InstancedBufferAttribute(tiles, 1)); this.glows.geometry.setAttribute('aTint', new THREE.InstancedBufferAttribute(tints, 3));
     this.exS.add(this.screens, this.glows, cables, pc);
+    this.mkLeak();
   }
 
   /** blink is its face: steady on while charging, surprise double-blink after the break, terminal 1.06 Hz while falling */
+  private fallP(t: number) {
+    const d = t - CUT, g = 9, p = new THREE.Vector3(0.9 * d, 0.6 + 4.5 * d - 0.5 * g * d * d, 0.5 + 10 * d);
+    const fall = Math.max(0, t - OUTSIDE); p.y -= 18 * fall * fall * fall; p.z -= 2.5 * fall * fall; return p;
+  }
+
+  /** Screen Sky depth: near screens whipping past the lens, and one CRT leaking its pixels into the fall */
+  private leakPx!: THREE.InstancedMesh; private leakA = new THREE.Vector3(); private leakB = new THREE.Vector3();
+  private mkLeak() {
+    const atlas = screenAtlas(), N = 26, dm = new THREE.Object3D(), tiles = new Float32Array(N + 1), tints = new Float32Array((N + 1) * 3).fill(1);
+    const body = new THREE.InstancedMesh(new THREE.BoxGeometry(1.08, 1.08, 0.14).translate(0, 0, -0.08), new THREE.MeshStandardMaterial({ color: 0x15141a, roughness: 0.45, metalness: 0.6 }), N + 1);
+    const glow = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), screenMaterial(atlas, this.screenT), N + 1);
+    for (let i = 0; i < N; i++) { const ti = 3.15 + 0.13 * i, c = this.fallP(ti), a = hash(i * 5.3) * 6.283, r = 3.2 + 5 * hash(i * 2.9);
+      dm.position.copy(c).add(new THREE.Vector3(Math.cos(a) * r, 2 + 4 * hash(i * 7.1), Math.sin(a) * r * 0.6 - 2)); dm.lookAt(c.clone().add(new THREE.Vector3(3, 8, 9)));
+      const sc = 1.2 + 1.6 * hash(i * 3.3); dm.scale.set(sc * (hash(i) < 0.4 ? 0.56 : 1.5), sc, sc); dm.updateMatrix(); body.setMatrixAt(i, dm.matrix); glow.setMatrixAt(i, dm.matrix);
+      tiles[i] = Math.floor(hash(i * 9.1) * 8) + 0.5 * hash(i * 1.3); }
+    this.leakB.copy(this.fallP(4.62)); this.leakA.copy(this.fallP(4.2)).add(new THREE.Vector3(-6.5, 1.5, -5));
+    dm.position.copy(this.leakA); dm.lookAt(this.fallP(4.2).add(new THREE.Vector3(3, 8, 9))); dm.rotateZ(0.12); dm.scale.set(7.5, 5.6, 5); dm.updateMatrix();
+    body.setMatrixAt(N, dm.matrix); glow.setMatrixAt(N, dm.matrix); tiles[N] = 2;
+    glow.geometry.setAttribute('aTile', new THREE.InstancedBufferAttribute(tiles, 1)); glow.geometry.setAttribute('aTint', new THREE.InstancedBufferAttribute(tints, 3));
+    body.frustumCulled = glow.frustumCulled = false;
+    const P = 320; this.leakPx = new THREE.InstancedMesh(new THREE.BoxGeometry(0.34, 0.34, 0.34), new THREE.MeshBasicMaterial({ toneMapped: false }), P); this.leakPx.frustumCulled = false;
+    const pal = [[0.2, 1.6, 0.5], [1.7, 0.4, 1.2], [0.3, 0.9, 1.9], [1.9, 1.5, 0.3], [1.6, 1.6, 1.7]], c = new THREE.Color();
+    for (let i = 0; i < P; i++) { const q = pal[Math.floor(hash(i * 4.7) * 5)]; this.leakPx.setColorAt(i, c.setRGB(q[0], q[1], q[2])); }
+    this.exS.add(body, glow, this.leakPx);
+  }
+
+  private poseLeak(t: number) {
+    const M = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3(), on = sm(3.3, 3.8, t);
+    for (let i = 0; i < this.leakPx.count; i++) { const u = (t * 0.55 + hash(i * 3.1)) % 1, j = new THREE.Vector3(hash(i * 1.7) - 0.5, hash(i * 2.3) - 0.5, hash(i * 5.9) - 0.5).multiplyScalar(2.4 + 5 * u);
+      p.copy(this.leakA).lerp(this.leakB, u * 1.4).add(j); p.y -= 6 * u * u; const k = on * Math.min(1, u * 8) * (1 - u) * 1.6; s.setScalar(k);
+      M.compose(p, q.setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.floor(u * 8) * 0.4), s); this.leakPx.setMatrixAt(i, M); }
+    this.leakPx.instanceMatrix.needsUpdate = true;
+  }
+
   private blink(t: number) {
+    if (t > 4.06 && t < 4.42) return Math.floor((t - 4.06) / 0.09) % 2 ? 1 : 0.06;
     if (t < BREAK) return (t > 0.5 && t < 0.68) || (t > 1.08 && t < 1.24) ? 0.05 : 1;
     if (t < BREAK + 0.25) return 1;
     const d = t - (BREAK + 0.25);
@@ -335,11 +371,11 @@ export default class S1Breakout extends Scene {
 
   /** outside: the cursor tumbles out of the hole toward us, then falls past the screens */
   private poseOut(t: number) {
-    const d = t - CUT, g = 9, c = this.curX;
-    const p = new THREE.Vector3(0.9 * d, 0.6 + 4.5 * d - 0.5 * g * d * d, 0.5 + 10 * d);
-    const fall = Math.max(0, t - OUTSIDE); p.y -= 18 * fall * fall * fall; p.z -= 2.5 * fall * fall;
-    c.position.copy(p); c.scale.setScalar(3.4);
-    c.rotation.set(-5.5 * d, 1.3 * d, 2.2 * d + 0.6 * Math.sin(d * 3));
+    const d = t - CUT, c = this.curX, p = this.fallP(t);
+    const jolt = t > 4.06 ? Math.max(0, spring(t - 4.06, 30, 6)) : 0, flip = sm(4.72, 4.95, t);
+    c.position.copy(p); c.scale.set(3.4 * (1 + 0.3 * jolt), 3.4 * (1 - 0.35 * jolt), 3.4 * (1 + 0.3 * jolt));
+    c.rotation.set(-5.5 * d - 3.1 * flip, 1.3 * d, 2.2 * d + 0.6 * Math.sin(d * 3) + 1.6 * flip);
+    this.poseLeak(t);
     const wide = sm(0, 0.9, d), dive = sm(OUTSIDE + 0.2, OUTSIDE + 1.4, t);
     const cam = new THREE.Vector3(lerp(3, 14, wide), lerp(1.5, 4, wide), lerp(18, 58, wide));
     const follow = new THREE.Vector3(p.x + 3, p.y + 6, p.z + 9);

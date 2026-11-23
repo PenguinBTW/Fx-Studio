@@ -93,7 +93,7 @@ export default class S2Whale extends Scene {
   private cores: THREE.MeshStandardMaterial[] = [];
   private glow = new THREE.PointLight(0xff7a1e, 0, 0, 2);
   private contactL = new THREE.Vector3();
-  private splash!: THREE.InstancedMesh;
+  private splash!: THREE.InstancedMesh; private spout!: THREE.InstancedMesh;
   private drops: { v: THREE.Vector3; s: number }[] = [];
   private rt: THREE.WebGLRenderTarget | null = null;
   private paintU = { tScene: { value: null as THREE.Texture | null }, uRes: { value: new THREE.Vector2(1080, 1920) }, uR: { value: 6 }, uT: { value: 0 } };
@@ -140,6 +140,10 @@ export default class S2Whale extends Scene {
       this.drops.push({ v: new THREE.Vector3(Math.cos(a) * (6 + 16 * hash(i * 3.1)), up * 26, Math.sin(a) * (6 + 16 * hash(i * 4.1))), s: 0.12 + 0.4 * hash(i * 5.3) ** 2 });
       const p = pal[i % 7 === 0 ? 3 : Math.floor(hash(i * 6.7) * 3)]; this.splash.setColorAt(i, c.setRGB(p[0], p[1], p[2])); }
     this.main.add(this.splash);
+    // blowhole spout: the whale answers the hit with a painted plume
+    this.spout = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 10, 8), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.25, emissive: 0x334466 }), 90);
+    for (let i = 0; i < 90; i++) this.spout.setColorAt(i, c.setRGB(...([[1.25, 1.2, 1.15], [0.6, 0.85, 1.3], [0.9, 1.05, 1.3]][i % 3] as [number, number, number])));
+    this.spout.frustumCulled = false; this.whale.add(this.spout);
     cur.root.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; const s = m.material as THREE.MeshStandardMaterial;
       const p = new THREE.MeshPhysicalMaterial({ name: s.name, color: s.color, roughness: s.roughness });
       if (s.name === 'Shell') { p.color.setRGB(1, 0.36, 0.03); p.roughness = 0.32; p.clearcoat = 1; p.clearcoatRoughness = 0.08; }
@@ -183,6 +187,12 @@ export default class S2Whale extends Scene {
       q.setFromUnitVectors(new THREE.Vector3(0, 1, 0), vel.normalize());
       M.compose(pp, q, new THREE.Vector3(k * 0.7, k * (1 + sp * 0.12 * Math.exp(-tt * 2)), k * 0.7)); this.splash.setMatrixAt(i, M); });
     this.splash.instanceMatrix.needsUpdate = true;
+    for (let i = 0; i < 90; i++) { const tt = d - 0.22 - 0.5 * hash(i * 2.9), a = hash(i * 7.3) * 6.28, r = 1.2 * hash(i * 4.4);
+      const base = this.contactL.clone().add(new THREE.Vector3(3.5, 0.3, 0)), vy = 22 + 10 * hash(i * 3.7);
+      const k = tt <= 0 ? 0 : 2.2 * (0.35 + 0.5 * hash(i * 8.1)) * (1 - sm(0.7, 1.3, tt)) * Math.min(1, tt * 10);
+      const pp = base.add(new THREE.Vector3(Math.cos(a) * r * (1 + 9 * tt * tt), vy * tt - 16 * tt * tt, Math.sin(a) * r * (1 + 9 * tt * tt)));
+      M.compose(pp, q.identity(), new THREE.Vector3(k, k * 1.3, k)); this.spout.setMatrixAt(i, M); }
+    this.spout.instanceMatrix.needsUpdate = true;
     // camera: low over the whale's back for the hit, then follows the ricochet and pulls wide to show the whale
     const kick = Math.max(0, spring(d, 38, 9));
     const close = this.whale.localToWorld(new THREE.Vector3(33, 4 + kick * 0.8, 13));
