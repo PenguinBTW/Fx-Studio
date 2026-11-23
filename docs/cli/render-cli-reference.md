@@ -65,7 +65,7 @@ bun scripts/render.ts compare --active-scene act2 --ref-scene benchmark
 | :--- | :--- | :--- | :--- |
 | `--project <name>` | string | Active pointer (`active.json`) | Target project directory in `app/src/scenes/` (e.g. `--project brand_campaign` or `--project product_reveal`). Overrides `active.json` without modifying disk. |
 | `--size <WxH>` | string | project.json `size`, else `1920x1080` | Logical canvas, e.g. `1080x1920` for vertical. |
-| `--720p` / `--1080p` / `--4k` | flag | None | Resolution presets that keep the project orientation (`--4k` = 1080p layout at `--scale 2`). Same as `--res 720p`. |
+| `--720p` / `--1080p` / `--4k` | flag | None | Resolution presets that keep the project orientation. `--4k` is `--scale 2` on whatever canvas is selected (3840x2160 only from a 1920x1080 canvas). Same as `--res 720p`. |
 | `--vertical` (`--shorts`, `--portrait`) / `--horizontal` (`--landscape`) | flag | None | Force 9:16 or 16:9 when the project is the other way round. |
 | `--scale <n>` | integer ($1 \dots 4$) | `1` | Multiplies the logical canvas: `--scale 2` on 1920x1080 = $3840 \times 2160$ (4K UHD). |
 | `--samples <n\|auto>` | integer / `auto` | Mode dependent | Number of sub-frames averaged per output frame over the shutter window. Defaults to `1` for `motion`, `1` or `8` for `video`. `--samples auto` enables adaptive supersampling ($4 \dots 324$ spp). |
