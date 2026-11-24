@@ -1,0 +1,16 @@
+{
+  "project": "dryfall",
+  "meta": { "title": "Dryfall", "aspectRatio": "16:9", "fps": 60, "duration": 19 },
+  "entries": [
+    { "scene": "dryfall/dryfall", "id": "i", "start": 0, "end": 3.5,
+      "caption": { "fig": "i", "text": "NOON LEDGE", "dur": 2.4 } },
+    { "scene": "dryfall/dryfall", "id": "ii", "start": 3.5, "end": 9.6,
+      "caption": { "fig": "ii", "text": "THE CROSSING", "dur": 2.4 } },
+    { "scene": "dryfall/dryfall", "id": "iii", "start": 9.6, "end": 13.0,
+      "caption": { "fig": "iii", "text": "RAVEN ON THE LOG", "dur": 2.4 } },
+    { "scene": "dryfall/dryfall", "id": "iv", "start": 13.0, "end": 16.4,
+      "caption": { "fig": "iv", "text": "FLOOR LIFE", "dur": 2.4 } },
+    { "scene": "dryfall/dryfall", "id": "v", "start": 16.4, "end": 19.0,
+      "caption": { "fig": "v", "text": "SETTLE", "dur": 2.4 } }
+  ]
+}
