@@ -1,0 +1,6 @@
+{
+  "project": "neonrain",
+  "entries": [
+    { "scene": "neonrain/neonrain", "id": "alley", "start": 0, "end": 20 }
+  ]
+}
