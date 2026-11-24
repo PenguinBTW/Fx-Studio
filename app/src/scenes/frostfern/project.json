@@ -1,0 +1,11 @@
+{
+  "project": "frostfern",
+  "meta": { "title": "Frostfern — ice ferns on a blue-hour pane", "aspectRatio": "16:9", "fps": 60, "duration": 24 },
+  "entries": [
+    { "scene": "frostfern/frostfern", "id": "act-bare",   "start": 0,  "end": 5,  "caption": { "fig": "i",   "text": "BARE PANE", "dur": 4 } },
+    { "scene": "frostfern/frostfern", "id": "act-grow",   "start": 5,  "end": 10, "caption": { "fig": "ii",  "text": "DENDRITE CREEP", "dur": 4 } },
+    { "scene": "frostfern/frostfern", "id": "act-sweep",  "start": 10, "end": 15, "caption": { "fig": "iii", "text": "HEADLIGHT SWEEP", "dur": 4 } },
+    { "scene": "frostfern/frostfern", "id": "act-forest", "start": 15, "end": 20, "caption": { "fig": "iv",  "text": "FERN FOREST", "dur": 4 } },
+    { "scene": "frostfern/frostfern", "id": "act-settle", "start": 20, "end": 24, "caption": { "fig": "v",   "text": "CANDLE SETTLE", "dur": 3.5 } }
+  ]
+}
