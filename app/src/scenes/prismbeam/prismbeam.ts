@@ -110,6 +110,7 @@ export default class PrismbeamScene extends Scene {
   private glintGeo: THREE.BufferGeometry;
   private floorGeo: THREE.BufferGeometry;
   private floorMat: THREE.MeshBasicMaterial;
+  private crystalBox: THREE.Box3 | null = null;
 
   private _tmp = { p: new THREE.Vector3(), d: new THREE.Vector3() };
 
@@ -225,6 +226,9 @@ export default class PrismbeamScene extends Scene {
       if (mesh.isMesh && !this.glintGeo.getAttribute('position')) {
         this.glintGeo = new THREE.EdgesGeometry(mesh.geometry, 24);
         mesh.add(new THREE.LineSegments(this.glintGeo, this.glintMat));
+        // Local bounds of the crystal for the probe telemetry below.
+        mesh.geometry.computeBoundingBox();
+        this.crystalBox = mesh.geometry.boundingBox;
         // A faint inner glow so the crystal reads against the near-black
         // (the glTF transmission material has no environment to refract).
         const mm = mesh.material as THREE.MeshPhysicalMaterial;
@@ -324,6 +328,45 @@ export default class PrismbeamScene extends Scene {
 
     // ---- late glints ---------------------------------------------------------
     this.glintMat.opacity = 0.09 + 0.5 * glintOn * (0.55 + 0.45 * Math.sin(lt * 2.1));
+
+    // ---- telemetry: publish the crystal's screen bounds --------------------
+    if (typeof window !== 'undefined' && this.crystalBox && this.inst) {
+      const P = (window as any).__motion || (window as any).__pdoom;
+      if (P && P.probe && P.textProbes && P.recordText !== false) {
+        this.inst.root.updateMatrixWorld(true);
+        const v = this._tmp.p;
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        const bb = this.crystalBox;
+        for (let c = 0; c < 8; c++) {
+          v.set(
+            c & 1 ? bb.max.x : bb.min.x,
+            c & 2 ? bb.max.y : bb.min.y,
+            c & 4 ? bb.max.z : bb.min.z,
+          ).applyMatrix4(this.inst.root.matrixWorld).project(this.camera);
+          const px = (v.x * 0.5 + 0.5) * this.ctx.W;
+          const py = (-v.y * 0.5 + 0.5) * this.ctx.H;
+          if (px < minX) minX = px; if (px > maxX) maxX = px;
+          if (py < minY) minY = py; if (py > maxY) maxY = py;
+        }
+        const w = maxX - minX, h = maxY - minY;
+        P.textProbes.push({
+          frameIdx: P.currentFrameIdx ?? 0,
+          t: lt,
+          text: 'crystal',
+          fontFamily: 'Archivo, sans-serif',
+          fontPx: 24,
+          fillStyle: '#dfe8ff',
+          globalAlpha: 1,
+          layerId: 'prismbeam',
+          bbox: [minX, minY, maxX, maxY],
+          w, h,
+          cx: (minX + maxX) / 2,
+          cy: (minY + maxY) / 2,
+          hPct: (h / this.ctx.H) * 100,
+          isStroke: false,
+        });
+      }
+    }
 
     // ---- camera: slow push-in, beam-left composition -------------------------
     const u = Math.min(lt / TAKE, 1);
