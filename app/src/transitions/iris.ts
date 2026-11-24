@@ -79,7 +79,12 @@ export default class Iris implements Transition {
     this.pass.render(renderer, out);
     renderer.resetState();
 
-    const peak = Math.sin(u * Math.PI);
+    // Effects must die with the wipe: coverage completes at u=0.85, but the sin(u·π)
+    // envelope still sits near half-strength there — without fading it, bloom/CA/exposure
+    // ride the already-pure-B tail of the window and then snap off at the seam end.
+    const coverU = Math.min(1, u / 0.85);
+    const tail = coverU * coverU * (3 - 2 * coverU); // smoothstep of coverage progress
+    const peak = Math.sin(u * Math.PI) * (1 - tail);
     return {
       bloom: 0.55 + peak * 0.45,
       ca: 1.2 + peak * 5.0,
