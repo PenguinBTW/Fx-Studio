@@ -112,10 +112,12 @@ function meteorGlow(m: Meteor, t: number): number {
   const fall = Math.exp(-Math.pow((f - 0.3) / 0.5, 2) * 3.2);
   return m.amp * rise * fall;
 }
-// Fireball afterglow: lingers after the streak is gone.
+// Fireball afterglow: lingers after the streak is gone. The (1-exp) ramp-in
+// hands the sprite off smoothly instead of popping back to 50% opacity the
+// instant the streak dies.
 function afterglow(m: Meteor, t: number): number {
   const tau = t - (m.s + m.d);
-  return m.fire && tau > 0 ? 0.9 * Math.exp(-tau / 2.2) : 0;
+  return m.fire && tau > 0 ? 0.9 * (1 - Math.exp(-tau / 0.15)) * Math.exp(-tau / 2.2) : 0;
 }
 
 const TRAIL = 26; // vertices per streak
@@ -303,7 +305,9 @@ export default class MeteorfallScene extends Scene {
       for (let i = 0; i < R_N; i++) {
         const x = -16 + (32 * i) / (R_N - 1);
         p.setXYZ(i, x, ridgeY(x), -9.5);
-        p.setXYZ(R_N + i, x, -8, -9.5);
+        // Bottom edge stops at the flat top: the flats below stay visible
+        // (running the fan to the frame bottom would hide them entirely).
+        p.setXYZ(R_N + i, x, FLAT_Y, -9.5);
       }
       p.needsUpdate = true;
     }
@@ -386,7 +390,10 @@ export default class MeteorfallScene extends Scene {
 
     // ---- Camera: slow pan across the ridge + slight push-in ------------------
     const halfHfov = Math.atan(Math.tan((this.camera.fov * Math.PI) / 360) * this.camera.aspect);
-    const dist = Math.max(14, 13.5 / Math.tan(halfHfov) / 0.98) * (1.04 - 0.05 * u);
+    // Portrait crops the frame edges instead of shrinking the whole scene to
+    // a sliver: the width we insist on covering scales with aspect.
+    const wantW = 13.5 * Math.min(1, this.camera.aspect);
+    const dist = Math.max(14, wantW / Math.tan(halfHfov) / 0.98) * (1.04 - 0.05 * u);
     this.camera.position.set(
       Math.sin(lt * 0.05) * 0.5 - 0.4,
       1.6 + Math.sin(lt * 0.04) * 0.2,
