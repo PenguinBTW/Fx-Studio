@@ -1,0 +1,46 @@
+{
+  "project": "reedwarbler",
+  "meta": {
+    "title": "Reed Warbler — drainage pond at warm noon",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 22
+  },
+  "entries": [
+    {
+      "scene": "reedwarbler/reedwarbler",
+      "id": "i",
+      "start": 0,
+      "end": 4.4,
+      "caption": { "fig": "i", "text": "NOON STILL", "dur": 2.4 }
+    },
+    {
+      "scene": "reedwarbler/reedwarbler",
+      "id": "ii",
+      "start": 4.4,
+      "end": 9.6,
+      "caption": { "fig": "ii", "text": "WARBLER", "dur": 2.4 }
+    },
+    {
+      "scene": "reedwarbler/reedwarbler",
+      "id": "iii",
+      "start": 9.6,
+      "end": 14.6,
+      "caption": { "fig": "iii", "text": "DRAGONFLY", "dur": 2.4 }
+    },
+    {
+      "scene": "reedwarbler/reedwarbler",
+      "id": "iv",
+      "start": 14.6,
+      "end": 19.0,
+      "caption": { "fig": "iv", "text": "MOORHEN", "dur": 2.4 }
+    },
+    {
+      "scene": "reedwarbler/reedwarbler",
+      "id": "v",
+      "start": 19.0,
+      "end": 22.0,
+      "caption": { "fig": "v", "text": "SETTLE", "dur": 2.4 }
+    }
+  ]
+}
