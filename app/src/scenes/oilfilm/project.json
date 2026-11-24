@@ -1,0 +1,13 @@
+{
+  "project": "oilfilm",
+  "entries": [
+    {
+      "scene": "oilfilm/oilfilm",
+      "id": "oilfilm",
+      "start": 0.0,
+      "end": 20.0,
+      "caption": { "fig": "01", "text": "OILFILM", "dur": 3.5 }
+    }
+  ],
+  "transitions": []
+}
