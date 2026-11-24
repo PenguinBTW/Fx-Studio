@@ -255,7 +255,7 @@ export default class KestrelhoverScene extends Scene {
         const W = P.width || 1920, H = P.height || 1080;
         this.cam.updateMatrixWorld();
         const [kx, ky] = kestrelXY(t);
-      if (ky > -0.05 && ky < 1.05) {
+      if (ky > -0.02 && ky < 0.99) {
         aToV(kx, ky + 0.015, this.p).project(this.cam);
         const px = (this.p.x * 0.5 + 0.5) * W, py = (0.5 - this.p.y * 0.5) * H;
         P.textProbes.push({
