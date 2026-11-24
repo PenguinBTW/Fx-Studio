@@ -193,7 +193,11 @@ export default class KelvinWake extends Scene {
     const ro = new THREE.Vector3(srcX - 8, h, zoff);
     // look-at drifts further astern of the source over the shot, so the vessel
     // visibly crosses the frame left -> right while the camera still tracks it.
-    const target = new THREE.Vector3(srcX - (8 + 18 * p), 0, -4);
+    // The offset is capped to ~80% of the visible half-width so portrait
+    // exports keep the source on screen.
+    const asp = out.width / out.height;
+    const offsetCap = Math.abs(zoff) * 0.45 * asp * 0.8;
+    const target = new THREE.Vector3(srcX - Math.min(2 + 22 * p, offsetCap), 0, -4);
     const fw = target.clone().sub(ro).normalize();
     const rt = new THREE.Vector3().crossVectors(fw, new THREE.Vector3(0, 1, 0)).normalize();
     const up = new THREE.Vector3().crossVectors(rt, fw).normalize();
