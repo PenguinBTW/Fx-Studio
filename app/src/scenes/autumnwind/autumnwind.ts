@@ -205,19 +205,21 @@ void main() {
     // gust displacement: a monotone dose so a fading gust never rewinds the
     // path — leaves keep the distance the wind already carried them
     float gustDose = smoothstep(9.0, 16.5, uT) - smoothstep(9.0, 16.5, t0);
+    // helices tighten as the gust accumulates (radius dose, no phase rewind)
+    float gR = R * (1.0 - 0.35 * gustDose);
 
     // drift path: corkscrew + downwind drift, gust adds lift oscillation
     vec3 d = vec3(
-      position.x - 0.28 * live - 3.0 * gustDose + R * sin(om * live + ph),
+      position.x - 0.28 * live - 3.0 * gustDose + gR * sin(om * live + ph),
       position.y - fall * live + 0.45 * g * sin(uT * 3.1 + ph)
-                + R * 0.35 * cos(om * live * 0.9 + ph * 1.3),
-      position.z + R * cos(om * live + ph)
+                + gR * 0.35 * cos(om * live * 0.9 + ph * 1.3),
+      position.z + gR * cos(om * live + ph)
     );
 
     // touchdown: closed-form landing time, then freeze on the gravel.
     // Landing height grades with depth — far leaves touch down near the
     // horizon edge of the painted gravel, near ones lower in frame.
-    float yG = max(-2.45, -2.5 - 0.15 * (position.z + 16.0))
+    float yG = min(-2.62, -2.5 - 0.15 * (position.z + 16.0))
              - fract(aSeed * 7.7) * 0.25;
     float tLand = t0 + max(0.0, position.y - yG) / max(fall, 0.05);
     // vortex leaves stay airborne through the swirl window (t≈12.5–16.5)
@@ -226,10 +228,11 @@ void main() {
     float sLand = smoothstep(0.0, 0.9, uT - tLand);
     float liveL = tLand - t0;
     float doseL = smoothstep(9.0, 16.5, tLand) - smoothstep(9.0, 16.5, t0);
+    float gRL = R * (1.0 - 0.35 * doseL);
     vec3 dLand = vec3(
-      position.x - 0.28 * liveL - 3.0 * doseL + R * sin(om * liveL + ph),
+      position.x - 0.28 * liveL - 3.0 * doseL + gRL * sin(om * liveL + ph),
       yG,
-      position.z + R * cos(om * liveL + ph)
+      position.z + gRL * cos(om * liveL + ph)
     );
     pos = mix(d, dLand, sLand);
     pos.y = max(pos.y, yG);
