@@ -149,7 +149,9 @@ vec2 robinPos(float t, out float fly) {
   // hop bounce while hopping
   float hopB = abs(sin(t * 14.0)) * (sstep(6.0, 6.2, t) - sstep(6.9, 7.1, t)) * 0.006;
   p.y += hopB;
-  fly = max(out_, back * (1.0 - sstep(12.6, 12.8, t))) + hopB * 30.0;
+  // flap during the arrival glide, outbound flight and return
+  float arr = sstep(ROBIN - 0.3, ROBIN - 0.1, t) * (1.0 - sstep(ROBIN + 0.15, ROBIN + 0.35, t));
+  fly = max(out_, max(arr, back * (1.0 - sstep(12.6, 12.8, t)))) + hopB * 30.0;
   return p;
 }
 float robinAt(vec2 uv, vec2 p, float t, float fly) {
