@@ -1,0 +1,32 @@
+{
+  "project": "sandstorm",
+  "meta": {
+    "title": "Sandstorm: The Wall",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 20.0
+  },
+  "entries": [
+    {
+      "scene": "sandstorm/sandstorm",
+      "id": "act-rise",
+      "start": 0.0,
+      "end": 8.0,
+      "caption": { "fig": "01", "text": "THE WALL ON THE HORIZON", "dur": 4.0 }
+    },
+    {
+      "scene": "sandstorm/sandstorm",
+      "id": "act-contact",
+      "start": 8.0,
+      "end": 15.0,
+      "caption": { "fig": "02", "text": "THE FRONT HITS", "dur": 4.0 }
+    },
+    {
+      "scene": "sandstorm/sandstorm",
+      "id": "act-settle",
+      "start": 15.0,
+      "end": 20.0,
+      "caption": { "fig": "03", "text": "THE SETTLE", "dur": 4.0 }
+    }
+  ]
+}
