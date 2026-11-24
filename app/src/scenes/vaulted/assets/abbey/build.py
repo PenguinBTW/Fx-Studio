@@ -82,10 +82,17 @@ def tube(name, pts, r0, r1, matl, ring=8):
     pts = [P(*p) for p in pts]
     V, F = [], []
     n = len(pts)
+    prev_a = None
     for i, p in enumerate(pts):
         t = (Vector(pts[min(i + 1, n - 1)]) - Vector(pts[max(i - 1, 0)])).normalized()
         up = Vector((0, 0, 1)) if abs(t.z) < 0.9 else Vector((1, 0, 0))
-        a = t.cross(up).normalized(); b = t.cross(a).normalized()
+        a = t.cross(up).normalized()
+        # keep the frame continuous — an `up` swap between sections would
+        # stitch opposite ring sides together
+        if prev_a is not None and a.dot(prev_a) < 0:
+            a = -a
+        b = t.cross(a).normalized()
+        prev_a = a
         r = r0 + (r1 - r0) * i / (n - 1)
         for k in range(ring):
             th = TAU * k / ring
