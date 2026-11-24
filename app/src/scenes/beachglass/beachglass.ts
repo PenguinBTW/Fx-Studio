@@ -275,11 +275,11 @@ export default class BeachglassScene extends Scene {
     // low macro drift tracking the glint lane; settle as the ebb ends
     const track = ss(7.0, 12.0, t) * (1 - ss(16.0, 19.0, t));
     this.cam.position.set(
-      -8 + lane * 30 * track + Math.sin(t * 0.12) * 0.8,
+      -8 + (lane - 1.15) * 30 * track + Math.sin(t * 0.12) * 0.8,
       3.5 - track * 0.8,
       26 - track * 4.0,
     );
-    this.cam.lookAt(-6 + lane * 26 * track, 6.5, PZ + 10);
+    this.cam.lookAt(-6 + (lane - 1.15) * 26 * track, 6.5, PZ + 10);
 
     // diagnostics: hero glass + surf line probes
     if (typeof window !== 'undefined') {
