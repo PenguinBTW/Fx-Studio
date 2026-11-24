@@ -321,11 +321,18 @@ export class AnalyticalParticles {
       const d = center.distanceTo(s.center);
       const need = d + maxRadius;
       if (need > s.radius) {
-        // Minimal enclosing sphere: r' = (r + d + maxR)/2, center shifted (r' - r) toward the new
-        // emitter. The old lerp-by-maxR/need left the previous sphere poking out when r was large.
-        const r2 = (s.radius + need) / 2;
-        s.center.lerp(center, d > 1e-9 ? (r2 - s.radius) / d : 0);
-        s.radius = r2;
+        if (d + s.radius <= maxRadius) {
+          // The new emitter's volume already encloses the old sphere — take it as-is; the merge
+          // formula would overshoot past its center and undersize the radius.
+          s.center.copy(center);
+          s.radius = maxRadius;
+        } else {
+          // Minimal enclosing sphere: r' = (r + d + maxR)/2, center shifted (r' - r) toward the new
+          // emitter. The old lerp-by-maxR/need left the previous sphere poking out when r was large.
+          const r2 = (s.radius + need) / 2;
+          s.center.lerp(center, d > 1e-9 ? (r2 - s.radius) / d : 0);
+          s.radius = r2;
+        }
       }
       this.geo.boundingBox!.expandByPoint(new THREE.Vector3(origin[0] - maxRadius, origin[1] - maxRadius, origin[2] - maxRadius));
       this.geo.boundingBox!.expandByPoint(new THREE.Vector3(origin[0] + maxRadius, origin[1] + maxRadius, origin[2] + maxRadius));
