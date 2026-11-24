@@ -32,11 +32,11 @@ const camPose = (t: number) => {
   const pull = sstep(4.5, DUR - 0.5, t);
   const yaw = 0.45 + t * 0.024 + 0.012 * Math.sin(t * 0.7) + 0.42 * pull;
   const pitch = 0.10 + 0.04 * Math.sin(t * 0.17 + 0.6) + 0.10 * pull;
-  const radius = 1.30 + 1.55 * pull;
+  const radius = 1.30 + 1.75 * pull;
   const tgt: [number, number, number] = [
-    0.45 - 0.25 * pull,
+    0.45 - 0.10 * pull,
     0.95 + 0.20 * pull,
-    -0.55 - 0.15 * pull,
+    -0.55 - 0.05 * pull,
   ];
   return { tgt, radius, pitch, yaw };
 };

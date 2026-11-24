@@ -56,7 +56,9 @@ def finish(ob, m):
 
 def box(name, loc, scale, m, bevel=0.015, rot=(0,0,0)):
     bpy.ops.mesh.primitive_cube_add(size=1, location=loc, rotation=rot)
-    ob = bpy.context.object; ob.scale = scale
+    # `scale` is authored as half-extents
+    ob = bpy.context.object
+    ob.scale = (scale[0] * 2, scale[1] * 2, scale[2] * 2)
     bpy.ops.object.transform_apply(scale=True)
     if bevel:
         mod = ob.modifiers.new('b', 'BEVEL'); mod.width = bevel; mod.segments = 2
@@ -267,7 +269,7 @@ def tub():
     pts = []
     prof = [(0.0, 0.0), (0.34, 0.0), (0.40, 0.30), (0.36, 0.62), (0.30, 0.62)]
     bpy.ops.mesh.primitive_cylinder_add(vertices=28, radius=0.36, depth=0.62,
-        location=(1.75, 1.3, 0.33))
+        end_fill_type='NOTHING', location=(1.75, 1.3, 0.33))
     t = bpy.context.object
     t.scale = (1.0, 1.0, 1.0)
     t.data.materials.append(WOOD_D)
