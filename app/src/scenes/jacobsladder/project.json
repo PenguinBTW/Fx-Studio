@@ -1,0 +1,6 @@
+{
+  "project": "jacobsladder",
+  "entries": [
+    { "scene": "jacobsladder/ladder", "id": "jacobsladder", "start": 0.0, "end": 20.0 }
+  ]
+}
