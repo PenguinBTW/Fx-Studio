@@ -388,7 +388,11 @@ export default defineScene({
       const x0 = 6 + (rng() - 0.5) * 20;      // seeded right-of-center, drift left
       const y0 = 1.5 + rng() * 7.0;
       const z0 = -4 - 14 * Math.pow(rng(), 1.2);
-      const fall = 0.5 + 0.5 * rng();
+      // pick the touchdown first (18.5–21 s), then set the fall rate so the
+      // closed-form descent lands on time — mirrors the shader's yG(z) law
+      const tL = 18.5 + rng() * 2.5;
+      const yGEst = Math.min(-2.62, -2.5 - 0.15 * (z0 + 16)) - 0.12;
+      const fall = Math.max(0.45, (y0 - yGEst) / Math.max(tL - t0, 0.5));
       const R = 0.4 + 0.7 * rng();
       const ph = rng() * Math.PI * 2;
       put(x0, y0, z0, 0, rng() * 100, t0, fall, R, ph);
@@ -398,10 +402,14 @@ export default defineScene({
       const x0 = 4 + (rng() - 0.5) * 12;
       const y0 = 0.5 + rng() * 5.0;
       const z0 = -3 - 8 * rng();
-      const fall = 0.45 + 0.4 * rng();
+      const t0v = 0.4 + rng() * 3.0;
+      // land after the swirl window but before the cut (tL ≥ 16.8 in shader)
+      const tL = 19.5 + rng() * 2.0;
+      const yGEst = Math.min(-2.62, -2.5 - 0.15 * (z0 + 16)) - 0.12;
+      const fall = Math.max(0.45, (y0 - yGEst) / Math.max(tL - t0v, 0.5));
       const R = 0.5 + 0.6 * rng();
       const ph = rng() * Math.PI * 2;
-      put(x0, y0, z0, 1, rng() * 100, 0.4 + rng() * 3.0, fall, R, ph);
+      put(x0, y0, z0, 1, rng() * 100, t0v, fall, R, ph);
     }
     // settled leaves: resting on the gravel from frame 0 (foreground texture)
     for (let s2 = 0; s2 < NSET; s2++) {
