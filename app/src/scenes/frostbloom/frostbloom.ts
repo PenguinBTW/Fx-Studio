@@ -147,7 +147,7 @@ void main() {
   vWarm = aWarm;
   vKind = aKind;
   float base = (aKind > 0.5) ? 2.0 : 1.2;
-  float size = base * (1.0 + glint * 2.4);
+  float size = base * (1.0 + glint * 2.4) * born;
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
   gl_PointSize = min(size * 300.0 / max(1.0, -mv.z), 30.0);
   gl_Position = projectionMatrix * mv;
@@ -332,7 +332,7 @@ export default defineScene({
       // the first glints are on-camera when they fade in
       const edge = i % 4;
       const x = edge === 0 ? -9.7 + rng() * 1.1 : edge === 1 ? 8.6 + rng() * 1.1 : -8.6 + rng() * 17.2;
-      const y = edge === 2 ? -4.85 + rng() * 0.9 : edge === 3 ? 3.95 + rng() * 0.9 : -4.6 + rng() * 9.2;
+      const y = edge === 2 ? -5.5 + rng() * 0.9 : edge === 3 ? 4.6 + rng() * 0.9 : -4.9 + rng() * 9.8;
       gp[i * 3] = x; gp[i * 3 + 1] = y; gp[i * 3 + 2] = 0.05;
       gs[i] = rng() * 100;
     }
