@@ -389,8 +389,9 @@ void main() {
     // with the last quarter accelerating into free fall.
     float grow = smoothstep(aTo.x, aTo.y, uT);
     float u = smoothstep(aTo.y, aTo.z, uT);
-    p.x = position.x + 0.07 * u * u;
-    p.y = position.y - 0.08 * u * u - 9.0 * pow(max(0.0, u - 0.72), 2.0);
+    // slide reaches the modeled petal tip (~0.37, 0.28) exactly at u=0.72
+    p.x = position.x + 0.16 * u * u;
+    p.y = position.y - 0.17 * u * u - 9.0 * pow(max(0.0, u - 0.72), 2.0);
     a = grow * (0.9 - 0.3 * u) * (1.0 - smoothstep(0.93, 1.0, u));
     sz = 5.0 + 6.0 * grow;
   } else if (aKind < 5.5) {
