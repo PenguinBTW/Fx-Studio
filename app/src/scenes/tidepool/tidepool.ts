@@ -25,11 +25,12 @@ const int MOTES = 9;
 const int ANEM = 6;
 
 // drip i's j-th event time: a steady cadence per drip, staggered by seed;
-// first ring lands at/just before t=2; last start ~17.9 so t=18 stays calm
+// first ring lands at/just before t=2; last start ~15.5 so the t=18
+// surface is decayed-calm (a ring older than ~2.5s holds <3% amplitude)
 float dripTime(int i, int j) {
   float fj = float(j);
-  float seed = hash11(float(i) * 7.13 + 0.37) * 1.2;
-  return 1.4 + fj * 2.2 + seed + (float(i) * 0.7);
+  float seed = hash11(float(i) * 7.13 + 0.37) * 1.1;
+  return 1.3 + fj * 2.1 + seed + (float(i) * 0.65);
 }
 
 vec2 dripPos(int i) {
@@ -44,7 +45,7 @@ float rippleH(vec2 p, float t) {
   for (int i = 0; i < DRIPS; i++) {
     vec2 c = dripPos(i);
     float d = length(p - c);
-    for (int j = 0; j < 7; j++) {
+    for (int j = 0; j < 6; j++) {
       float t0 = dripTime(i, j);
       float age = t - t0;
       if (age <= 0.0 || age > 3.2) continue;
