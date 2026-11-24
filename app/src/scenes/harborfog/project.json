@@ -1,0 +1,11 @@
+{
+  "project": "harborfog",
+  "meta": { "title": "Harborfog — a fishing harbor swallowed in dusk fog", "aspectRatio": "16:9", "fps": 60, "duration": 24 },
+  "entries": [
+    { "scene": "harborfog/harborfog", "id": "act-fog",     "start": 0,    "end": 4.8,  "caption": { "fig": "i",   "text": "FOG THICK", "dur": 4 } },
+    { "scene": "harborfog/harborfog", "id": "act-lamps",   "start": 4.8,  "end": 9.6,  "caption": { "fig": "ii",  "text": "FIRST LAMPS", "dur": 4 } },
+    { "scene": "harborfog/harborfog", "id": "act-beam",    "start": 9.6,  "end": 14.4, "caption": { "fig": "iii", "text": "BEAM SWEEPS", "dur": 4 } },
+    { "scene": "harborfog/harborfog", "id": "act-bird",    "start": 14.4, "end": 19.2, "caption": { "fig": "iv",  "text": "CORMORANT — FOGHORN FAR OFF", "dur": 4 } },
+    { "scene": "harborfog/harborfog", "id": "act-settle",  "start": 19.2, "end": 24,   "caption": { "fig": "v",   "text": "SWELL SETTLES", "dur": 3.5 } }
+  ]
+}
