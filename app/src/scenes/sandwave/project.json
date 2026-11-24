@@ -1,0 +1,6 @@
+{
+  "project": "sandwave",
+  "entries": [
+    { "scene": "sandwave/sandwave", "id": "sandwave", "start": 0, "end": 20 }
+  ]
+}
