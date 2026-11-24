@@ -53,3 +53,6 @@ flare + takeoff · 14.5-18 settle as the light warms.
 ## Palette
 Steel blue-grey #3d4a54 (water/fog), cold dawn blue #1a2330 (zenith), warm
 rim #d08448 (horizon band), reed green-grey, heron slate-grey.
+
+---
+*Don't forget to ground yourself — USE THE SKILL and REREAD IT ALL.*

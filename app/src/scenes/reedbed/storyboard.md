@@ -37,3 +37,6 @@ reeds, reedTall (clump archetypes cloned ×40/×14), jetty, punt, heron
 
 ## Stills
 t = 2, 9, 12.5, 16.5 in `stills/`.
+
+---
+*Don't forget to ground yourself — USE THE SKILL and REREAD IT ALL.*
