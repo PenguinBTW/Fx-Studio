@@ -25,6 +25,30 @@ still hedge → wren dart (L→M, tail flicks, hides) → snail detail (antennae
 leaf bend, dew glint) → skylark spiral rise → wren re-emerges higher and darts
 off → settle (butterfly cross, brief robin).
 
+## Conceptual mapping
+
+| idea | visual mechanic |
+|------|-----------------|
+| low raking sun | rim ramp on hedge top edge + warm halo, no visible sun disc detail |
+| light through gaps | hashed gap columns × angled `shaftAt` bands re-lighting grass/track/wren |
+| wren as "working the hedge" | perch→tail-flick→dart→hide loop inside the hedge silhouette |
+| snail = stillness at close range | tiny geometry, slow antennae envelope, single dew glint |
+| field life | one-shot silhouettes (lark, robin, butterfly) on staggered envelopes |
+
+## Anti-cliché audit
+- No god-rays volumetric cones: shafts are thin flat bands tied to real gap
+  positions, not a global sunburst.
+- No golden-hour lens flare/bokeh overlays; light is geometry-driven only.
+- No zoom/pan theatrics: near-static camera, all interest in silhouettes.
+- Wren/silhouettes stay abstract cut-outs — no feather detail, no eyes.
+
+## Eye-tracking map
+1. entry: hedge rim line (brightest contrast, center-right)
+2. shaft columns → grass pool where they land
+3. wren perch (first moving silhouette, mid-frame)
+4. snail leaf edge (frame right, during the quiet beat)
+5. skylark diagonal exit → settle back on the hedge line
+
 ## Determinism
 All motion closed-form f(t): hash seeds for blade/gap variation, smoothstep
 envelopes per beat, no simulation state.

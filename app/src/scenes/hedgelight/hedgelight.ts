@@ -36,7 +36,9 @@ const wrenBPos = (u: number): [number, number, number] => {
   const top = 0.60 + 0.05 * Math.sin(0.62 * 7) + 0.03 * Math.sin(0.62 * 17 + 2);
   if (u < 0.3) return [0.62, top - 0.04 + u / 0.3 * 0.06, Math.min(1, u / 0.3)];
   const d = ss(0.7, 1.0, u);
-  return [0.62 + d * 0.55, top + 0.02 + d * 0.06 + Math.abs(Math.sin(d * 9)) * 0.03, 1];
+  const x = 0.62 + d * 0.55;
+  // visibility drops once fully off-frame so probes stop recording it
+  return [x, top + 0.02 + d * 0.06 + Math.abs(Math.sin(d * 9)) * 0.03, x > 1.06 ? 0 : 1];
 };
 
 const PW = 300, PH = 114, PY = 8, PZ = -80;
@@ -101,7 +103,8 @@ float shaftAt(vec2 uv, float t) {
     // ray runs down-left from the gap at the hedge top toward the grass
     float line = uv.y - (0.60 + (uv.x - gx - sway) * 0.55);
     float band = 1.0 - smoothstep(0.006, 0.03, abs(line));
-    float reach = (1.0 - smoothstep(gx - 0.02, gx + 0.16, uv.x)) * smoothstep(gx - 0.30, gx - 0.26, uv.x);
+    // shaft runs down-left to the dirt track (x ≈ gx-0.55 at y ≈ 0.30)
+    float reach = (1.0 - smoothstep(gx - 0.02, gx + 0.16, uv.x)) * smoothstep(gx - 0.60, gx - 0.55, uv.x);
     s = max(s, band * reach);
   }
   return s;
@@ -178,13 +181,16 @@ void main() {
     float body = 1.0 - smoothstep(0.0015, 0.005, sdSeg(uv, vec2(0.842, 0.352 - bend), vec2(0.862, 0.355 - bend)));
     vec3 sn = vec3(0.09, 0.07, 0.05);
     col = mix(col, sn, clamp(shell + body, 0.0, 1.0) * 0.95);
-    // antennae extend over the snail beat
+    // antennae extend over the snail beat — gated so sdSeg never sees a
+    // zero-length segment while they are retracted
     float ae = uSnail;
+    if (ae > 0.02) {
     float a1 = 1.0 - smoothstep(0.0008, 0.003, sdSeg(uv, sp + vec2(0.010, 0.004),
       sp + vec2(0.010 + 0.010 * ae, 0.004 + 0.014 * ae)));
     float a2 = 1.0 - smoothstep(0.0008, 0.003, sdSeg(uv, sp + vec2(0.012, 0.002),
       sp + vec2(0.012 + 0.014 * ae, 0.002 + 0.010 * ae)));
     col = mix(col, sn, clamp(a1 + a2, 0.0, 1.0) * ae * 0.95);
+    }
     // dew bead on the shell rim — glints once mid-beat
     float glint = exp(-((t - 10.0) * (t - 10.0)) / 0.18);
     float dew = 1.0 - smoothstep(0.0008, 0.003, ellipse(uv, sp + vec2(0.004, 0.011), vec2(0.003)));
@@ -194,7 +200,8 @@ void main() {
   // ---- skylark: spiral rise from the field left, out right
   if (uLark > 0.0 && uLark < 1.0) {
     float u = uLark;
-    vec2 lp = vec2(0.30 + 0.06 * sin(u * 18.0) + smoothstep(0.8, 1.0, u) * 0.5,
+    // exit push carries it fully off-frame right before uLark ends
+    vec2 lp = vec2(0.30 + 0.06 * sin(u * 18.0) + smoothstep(0.75, 1.0, u) * 0.9,
                    0.36 + u * 0.34);
     float fl = abs(sin(t * 13.0)) * 0.010;
     float bd = 1.0 - smoothstep(0.001, 0.005, ellipse(uv, lp, vec2(0.007, 0.004)));
