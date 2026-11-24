@@ -58,7 +58,7 @@ in vec3 vWp;
 out vec4 fragColor;
 uniform float uI;
 void main() {
-  float along = 1.0 - vUv.y;                    // 1 at the apex, 0 at the floor
+  float along = vUv.y;                          // vUv.y = 1 at the apex, 0 at the floor
   float body = pow(along, 1.5);
   body *= smoothstep(0.0, 0.08, vUv.y) * (1.0 - smoothstep(0.92, 1.0, vUv.y));
   float rim = pow(abs(normalize(vN).z), 0.7);
@@ -218,7 +218,9 @@ export default class VaultedScene extends Scene {
       pool.position.copy(s.apex).addScaledVector(SHAFT_DIR, s.len);
       pool.position.y = 0.05;
       pool.userData.ph = s.ph;
-      this.shaftGroup.add(pool);
+      // pools sit on the flagstones — not in shaftGroup, whose sway would
+      // tilt them under the slab
+      this.scene3D.add(pool);
       this.poolMats.push(poolMat);
     }
 
@@ -287,14 +289,14 @@ export default class VaultedScene extends Scene {
     mx.fillStyle = mg;
     mx.fillRect(0, 0, 64, 64);
     this.moonSprite = new THREE.CanvasTexture(mcv);
-    const moonBill = new THREE.Sprite(new THREE.SpriteMaterial({
+    this.moonBill = new THREE.Sprite(new THREE.SpriteMaterial({
       map: this.moonSprite, transparent: true, opacity: 0.95,
       blending: THREE.AdditiveBlending, depthWrite: false, fog: false,
     }));
     // hung inside the lancet opening — the moon framed by the ruin
-    moonBill.position.set(0.3, 5.9, 22.2);   // in front of the glow plane
-    moonBill.scale.setScalar(5.5);
-    this.scene3D.add(moonBill);
+    this.moonBill.position.set(0.3, 5.9, 22.2);   // in front of the glow plane
+    this.moonBill.scale.setScalar(5.5);
+    this.scene3D.add(this.moonBill);
 
     // --- night-glow behind the far wall: a soft sky gradient so the lancet
     // opening reads as a luminous slit, not a dark hole
@@ -326,6 +328,8 @@ export default class VaultedScene extends Scene {
 
   private moonSprite!: THREE.Texture;
 
+  private moonBill!: THREE.Sprite;
+
   private stars!: THREE.Points;
 
   private dustSprite!: THREE.Texture;
@@ -347,7 +351,7 @@ export default class VaultedScene extends Scene {
       const isCore = i % 2 === 1;
       const ph = SHAFTS[Math.floor(i / 2)].ph;
       this.shaftMats[i].uniforms.uI.value =
-        ((isCore ? 0.5 : 0.2) + 0.06 * Math.sin(t * 0.5 + ph)) * (0.55 + 0.45 * env);
+        ((isCore ? 0.38 : 0.15) + 0.05 * Math.sin(t * 0.5 + ph)) * (0.55 + 0.45 * env);
     }
     for (let i = 0; i < this.poolMats.length; i++) {
       this.poolMats[i].uniforms.uI.value =
@@ -436,6 +440,12 @@ export default class VaultedScene extends Scene {
     (this.dust.material as THREE.Material).dispose();
     this.dustSprite.dispose();
     for (const m of this.shaftMats) m.dispose();
+    for (const m of this.poolMats) m.dispose();
+    // non-mesh members the traverse below skips
+    this.stars.geometry.dispose();
+    (this.stars.material as THREE.Material).dispose();
+    (this.moonBill.material as THREE.Material).dispose();
+    this.moonSprite.dispose();
     this.scene3D.traverse((o) => {
       const m = o as THREE.Mesh;
       if (m.isMesh) {

@@ -249,13 +249,10 @@ prim('wall', 'box', (0, 0.5, -18.5), (3.0, 1.0, 0.7), matl=STONE_D, bevel=0.03) 
 prim('wall', 'box', (-6.1, 5.0, 19.0), (7.8, 10.0, 0.9), matl=STONE_D, bevel=0.03)
 prim('wall', 'box', (6.1, 5.0, 19.0), (7.8, 10.0, 0.9), matl=STONE_D, bevel=0.03)
 prim('wall', 'box', (0, 0.55, 19.0), (4.6, 1.1, 1.0), matl=STONE_D, bevel=0.03)   # sill
-# pointed head: two long boxes angled to meet at the apex
-def angled_wall(name, cx, cy, cz, ln, ang):
-    o = prim('wall', 'box', (cx, cy, cz), (ln, 0.55, 0.9), rot=(0, 0, ang), matl=STONE_D, bevel=0.03)
-    return o
-# left leg of the arch leans right toward the apex, right leg mirrors
-angled_wall('wall', -1.15, 8.0, 19.0, 6.2, math.radians(-34))
-angled_wall('wall', 1.15, 8.0, 19.0, 6.2, math.radians(34))
+# pointed head: two curved legs meeting at the apex (0, 10.5) — tubes, so the
+# placement is absolute with no rotation ambiguity
+tube('wall', [(-2.2, 6.3, 19.0), (-1.35, 8.6, 19.0), (0, 10.4, 19.0)], 0.34, 0.24, STONE_D, ring=7)
+tube('wall', [(2.2, 6.3, 19.0), (1.35, 8.6, 19.0), (0, 10.4, 19.0)], 0.34, 0.24, STONE_D, ring=7)
 # broken mullion stub rising from the sill, snapped off
 tube('wall', [(0, 1.1, 19.0), (0.05, 2.4, 19.0), (-0.02, 3.8, 19.0)], 0.10, 0.06, STONE_D, ring=7)
 # crumbled teeth along the wall tops
@@ -350,7 +347,8 @@ for name, p in parts.items():
         parts[name]['root'] = p['objs'][0]
     root = parts[name]['root']
     if name in ('floor', 'columns', 'wall'):
-        vcolor_noise(root, hash(name) % 10, 0.42)
+        # stable seed — hash() varies per process (PYTHONHASHSEED)
+        vcolor_noise(root, sum((i + 1) * ord(c) for i, c in enumerate(name)) % 10, 0.42)
     root.name = name
     root['fx_part'] = name
 
