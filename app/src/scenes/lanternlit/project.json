@@ -1,0 +1,32 @@
+{
+  "project": "lanternlit",
+  "meta": {
+    "title": "Lanternlit: A River Release",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 24.0
+  },
+  "entries": [
+    {
+      "scene": "lanternlit/lanternlit",
+      "id": "act-release",
+      "start": 0.0,
+      "end": 8.0,
+      "caption": { "fig": "01", "text": "THE RELEASE", "dur": 4.0 }
+    },
+    {
+      "scene": "lanternlit/lanternlit",
+      "id": "act-bridge",
+      "start": 8.0,
+      "end": 16.0,
+      "caption": { "fig": "02", "text": "OVER THE BRIDGE", "dur": 4.0 }
+    },
+    {
+      "scene": "lanternlit/lanternlit",
+      "id": "act-stars",
+      "start": 16.0,
+      "end": 24.0,
+      "caption": { "fig": "03", "text": "INTO STARS", "dur": 4.0 }
+    }
+  ]
+}
