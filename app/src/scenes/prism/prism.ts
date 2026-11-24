@@ -55,8 +55,9 @@ void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(p
 const BEAM_FRAG = `precision highp float;
 uniform float uI; in vec2 vUv; out vec4 fragColor;
 void main(){
-  float core = exp(-pow((vUv.y - 0.5) * 6.0, 2.0));
-  float body = exp(-pow((vUv.y - 0.5) * 2.2, 2.0)) * 0.35;
+  float d = vUv.y - 0.5;
+  float core = exp(-(d * 6.0) * (d * 6.0));
+  float body = exp(-(d * 2.2) * (d * 2.2)) * 0.35;
   float taper = mix(0.55, 1.0, vUv.x) * smoothstep(0.0, 0.06, vUv.x);
   fragColor = vec4(vec3(0.95, 0.92, 0.84) * (core + body) * taper * uI, 1.0);
 }`;
@@ -95,7 +96,7 @@ void main(){
 
 export default class PrismScene extends Scene {
   private three = new THREE.Scene();
-  private cam = new THREE.PerspectiveCamera(42, 16 / 9, 0.1, 100);
+  private cam: THREE.PerspectiveCamera;
   private prism = new THREE.Group();
   private fanU: Record<string, THREE.IUniform>;
   private beamU: Record<string, THREE.IUniform>;
@@ -104,6 +105,7 @@ export default class PrismScene extends Scene {
 
   constructor(ctx: SceneCtx) {
     super(ctx);
+    this.cam = new THREE.PerspectiveCamera(42, ctx.W / ctx.H, 0.1, 100);
 
     // room: dark floor + back wall (floor unlit — the fan lives on the wall)
     const floor = new THREE.Mesh(
@@ -144,6 +146,7 @@ export default class PrismScene extends Scene {
     shape.closePath();
     const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.85, bevelEnabled: false });
     geo.center();
+    geo.computeBoundingBox();
     this.prismU = { uGlow: { value: new THREE.Vector3() }, uGlowI: { value: 0 } };
     this.prism.add(new THREE.Mesh(geo, new THREE.ShaderMaterial({
       uniforms: this.prismU, vertexShader: PRISM_VERT, fragmentShader: PRISM_FRAG,
@@ -158,13 +161,14 @@ export default class PrismScene extends Scene {
     this.prism.position.copy(PRISM_POS);
     this.three.add(this.prism);
 
-    // suspension wire into the dark
-    const topY = s * 1.7 * 0.58;
+    // suspension wire from the prism's top vertex into the dark
+    const tipY = geo.boundingBox!.max.y;
+    const wireLen = 4 - tipY;
     const wire = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.004, 0.004, 4, 6),
+      new THREE.CylinderGeometry(0.004, 0.004, wireLen, 6),
       new THREE.MeshBasicMaterial({ color: 0x1c1c20 }),
     );
-    wire.position.copy(PRISM_POS).add(new THREE.Vector3(0, topY + 2, 0));
+    wire.position.copy(PRISM_POS).add(new THREE.Vector3(0, tipY + wireLen / 2, 0));
     this.three.add(wire);
 
     // beam: two crossed additive planes along the beam axis
@@ -232,5 +236,15 @@ export default class PrismScene extends Scene {
       exposure: 1.05, bloom: 0.9, bloomThreshold: 0.5, bloomRadius: 0.8,
       ca: 0.6, grain: 0.05, vignette: 0.5, fade: clamp01(fade), toneMap: 'agx',
     };
+  }
+
+  override dispose(): void {
+    this.three.traverse((o) => {
+      const m = o as THREE.Mesh;
+      m.geometry?.dispose();
+      const mat = m.material as THREE.Material | THREE.Material[] | undefined;
+      if (Array.isArray(mat)) mat.forEach((x) => x.dispose());
+      else mat?.dispose();
+    });
   }
 }
