@@ -1,0 +1,39 @@
+{
+  "project": "watertank",
+  "meta": {
+    "title": "Water Tank: Rooftop Noon",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 20.0
+  },
+  "entries": [
+    {
+      "scene": "watertank/watertank",
+      "id": "act-still",
+      "start": 0.0,
+      "end": 5.0,
+      "caption": { "fig": "01", "text": "NOON ON THE TAR ROOF", "dur": 2.6 }
+    },
+    {
+      "scene": "watertank/watertank",
+      "id": "act-loop",
+      "start": 5.0,
+      "end": 9.5,
+      "caption": { "fig": "02", "text": "ONE CIRCUIT OF THE TANK", "dur": 2.6 }
+    },
+    {
+      "scene": "watertank/watertank",
+      "id": "act-bag",
+      "start": 9.5,
+      "end": 14.0,
+      "caption": { "fig": "03", "text": "THE BAG COMES THROUGH", "dur": 2.6 }
+    },
+    {
+      "scene": "watertank/watertank",
+      "id": "act-settle",
+      "start": 14.0,
+      "end": 20.0,
+      "caption": { "fig": "04", "text": "ROOFTOP SETTLE", "dur": 2.6 }
+    }
+  ]
+}
