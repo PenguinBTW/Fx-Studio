@@ -145,7 +145,8 @@ void main() {
     // spark x follows the channel's bend: the arc spans between rails at
     // the bend's own height, not at h
     float gEff = gapHalf(sy) + 0.004 * sy * sy;
-    float sx = cx - gEff + u * 2.0 * gEff + (h3 - 0.5) * 0.02;
+    float sx = clamp(cx - gEff + u * 2.0 * gEff + (h3 - 0.5) * 0.02,
+                     cx - gEff * 0.96, cx + gEff * 0.96);   // never outside a rail
     float clock = fract(uT * (1.5 + h3 * 3.0) + h1 * 9.0);
     float burst = 1.0 + 2.5 * smoothstep(0.86, 0.96, ph);        // starve burst
     // sparks ride the burn envelope so none stays lit across the re-strike
