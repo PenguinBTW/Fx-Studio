@@ -1,0 +1,6 @@
+{
+  "project": "mirrormarsh",
+  "entries": [
+    { "scene": "mirrormarsh/mirrormarsh", "id": "mirrormarsh", "start": 0, "end": 20 }
+  ]
+}
