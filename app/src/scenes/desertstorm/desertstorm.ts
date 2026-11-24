@@ -27,6 +27,17 @@ const ss = (a: number, b: number, x: number) => {
   return t * t * (3 - 2 * t);
 };
 
+// JS mirror of the shader's gustEnv so ∫gustEnv dt (uGi) can be evaluated
+// once per frame on the CPU instead of per-pixel in GLSL.
+const gustEnvJS = (t: number) =>
+  0.25 + 0.55 * ss(4.5, 8.5, t) * (1 - ss(14.0, 18.5, t))
+  + 0.20 * Math.sin(t * 1.7) * ss(4.5, 7.0, t) * (1 - ss(14.0, 18.0, t));
+const gustIntJS = (t: number) => {
+  let s = 0;
+  for (let i = 0; i < 32; i++) s += gustEnvJS((t * i) / 32);
+  return (s * t) / 32;
+};
+
 const VERT = /* glsl */ `
 out vec2 vUv;
 void main() {
@@ -42,6 +53,7 @@ const FRAG = /* glsl */ `
 precision highp float;
 in vec2 vUv;
 uniform float uT;
+uniform float uGi;
 out vec4 fragColor;
 const float HZ = 0.40;
 const float RW = 0.30;
@@ -91,13 +103,9 @@ float gustEnv(float t) {
   return 0.25 + 0.55 * sstep(4.5, 8.5, t) * (1.0 - sstep(14.0, 18.5, t))
        + 0.20 * sin(t * 1.7) * sstep(4.5, 7.0, t) * (1.0 - sstep(14.0, 18.0, t));
 }
-// ∫gustEnv dt (fixed-sum quadrature): positions must integrate the gust,
-// not multiply by it — t*g reverses direction when g falls.
-float gustInt(float t) {
-  float s = 0.0;
-  for (int i = 0; i < 32; i++) { s += gustEnv(t * float(i) / 32.0); }
-  return s * t / 32.0;
-}
+// ∫gustEnv dt is carried in on uGi (computed once per frame on the CPU —
+// it depends only on t, so a per-pixel 32-tap quadrature would be wasted
+// work). Positions must integrate the gust: t*g reverses when g falls.
 
 vec3 skyCol(vec2 uv, float t) {
   // late afternoon: amber horizon warming toward the off-frame sun (right),
@@ -326,7 +334,7 @@ void main() {
   vec2 uv = vUv;
   float t = uT;
   float g = gustEnv(t);
-  float gi = gustInt(t);
+  float gi = uGi;
 
   // mild shimmer wobble in the road band only (front-lit, subtle)
   float band = sstep(HZ, HZ - 0.10, uv.y) * sstep(HZ - 0.30, HZ - 0.06, uv.y);
@@ -427,7 +435,7 @@ export default class DesertstormScene extends Scene {
   private cam: THREE.PerspectiveCamera;
   private rig = new CameraRig();
   private layer = new Layer2D(W, H);
-  private u = { uT: { value: 0 } };
+  private u = { uT: { value: 0 }, uGi: { value: 0 } };
   private v = new THREE.Vector3();
 
   constructor(ctx: SceneCtx) {
@@ -445,6 +453,7 @@ export default class DesertstormScene extends Scene {
     const t = f.lt;
     const r = this.ctx.renderer;
     this.u.uT.value = t;
+    this.u.uGi.value = gustIntJS(t);
 
     // CameraRig: near-static low shot down the road. Slight push through
     // the take; micro shake for ~1.5s when the front arrives (~t 9–12).
