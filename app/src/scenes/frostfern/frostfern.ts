@@ -153,7 +153,7 @@ void main() {
   float grown = smoothstep(aT + 0.28, aT + 0.9, uT);
   float tw = 0.75 + 0.25 * sin(uT * 2.2 + aSeed * 17.0);
   float front = 1.0 + (1.0 - grown) * 1.6;          // growth front glows
-  float sweep = uSweepI * 1.0 - smoothstep(0.0, 1.4, abs(position.x - uSweepX));
+  float sweep = uSweepI * (1.0 - smoothstep(0.0, 1.4, abs(position.x - uSweepX)));
   float wet = aGlisten * uGlisten;                   // post-droplet glisten
   vA = appear * front * tw * (1.35 + 0.75 * sweep + wet * 1.2);
   vWarm = clamp(sweep + wet * 0.55, 0.0, 1.0);
@@ -238,8 +238,8 @@ void main() {
     float ap = smoothstep(aT0 - 0.15, aT0 + 0.15, uT);
     float frontGlow = exp(-abs(uT - aT0) * 1.1);
     float tw = 0.5 + 0.5 * sin(uT * (2.0 + fract(aSeed) * 2.0) + aSeed * 40.0);
-    float sweep = uSweepI * 1.0 - smoothstep(0.0, 1.2, abs(p.x - uSweepX));
-    float wet = 1.0 - smoothstep(0.0, 0.8, distance(p.xy, uWet.xy)) * uGlisten;
+    float sweep = uSweepI * (1.0 - smoothstep(0.0, 1.2, abs(p.x - uSweepX)));
+    float wet = (1.0 - smoothstep(0.0, 0.8, distance(p.xy, uWet.xy))) * uGlisten;
     a = ap * (0.25 + 0.75 * tw) * (0.35 + frontGlow * 0.9 + sweep * 1.2 + wet * 1.3);
     vWarm = clamp(sweep + wet * 0.5, 0.0, 1.0);
     sz = 4.5 + frontGlow * 4.5 + sweep * 3.5 + wet * 3.0;
