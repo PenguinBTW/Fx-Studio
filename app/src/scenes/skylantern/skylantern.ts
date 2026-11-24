@@ -81,10 +81,11 @@ function lanternGlow(l: Lantern, t: number): number {
   const up = t - l.t0;
   if (up < 0) return 0.35 + 0.1 * Math.sin(3 * t + l.flick);   // pre-lift: dim ember
   const flick = 0.82 + 0.12 * Math.sin(6.5 * t + l.flick) + 0.06 * Math.sin(13 * t + l.flick * 1.7);
-  const alt = pos(l, t, _p).y - FLOOR_Y;
-  const hazeFade = Math.exp(-Math.max(0, alt - 12) * 0.07);    // high lanterns dissolve into the sky
-  return flick * Math.max(0.12, hazeFade);
+  return flick * Math.max(0.12, hazeFadeFromAlt(pos(l, t, _p).y));
 }
+// Altitude fade shared by glow and silhouette: 1 at the floor, →0 high up.
+const hazeFadeFromAlt = (y: number): number =>
+  Math.exp(-Math.max(0, (y - FLOOR_Y) - 12) * 0.07);
 const _p = new THREE.Vector3();
 const _c = new THREE.Color();
 
@@ -241,6 +242,7 @@ export default class SkylanternScene extends Scene {
         this.ownedMats.push(clone);
         if (nm.includes('paper') || nm.includes('shell')) {
           clone.emissive = new THREE.Color('#ff8226'); // baked GLB emissive is too pale — warm amber instead
+          clone.transparent = true;                  // paper fades out high in the haze
           paper.push(clone);
         } else if (nm.includes('flame')) flame.push(clone);
       });
@@ -282,9 +284,10 @@ export default class SkylanternScene extends Scene {
       L.root.rotation.z = 0.06 * Math.sin(l.swayW * lt + l.swayP);
       L.root.rotation.x = 0.05 * Math.sin(l.swayW * 0.7 * lt + l.swayP * 1.7);
       const g = lanternGlow(l, lt);
+      const fade = Math.max(0.12, hazeFadeFromAlt(_p.y));
       for (const m of L.paper) {
         m.emissiveIntensity = 0.9 * g;
-        m.opacity = 1;
+        m.opacity = Math.min(1, 0.25 + 0.75 * fade); // high lanterns stop blocking the stars
       }
       for (const m of L.flame) m.emissiveIntensity = 7 * g;
       L.haloMat.opacity = 0.16 * g;
