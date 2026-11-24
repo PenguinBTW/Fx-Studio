@@ -1,10 +1,10 @@
 // Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
-// millridget — a 3D smock windmill on a low ridge at dusk. Blender-built mill
-// (assets/mill/model.glb: tapered timber body, slate cap, lattice sails), real
-// 3D ridge terrain + instanced grass, raking 2600K sun, a starling flock
-// crossing the sky, warm window light. All motion closed-form f(t): sails turn
-// slowly, flock sweeps once, light cools into night. Layer2D captions anchored
-// to world points (the canvas probe hook records them).
+// millridget — a 3D smock windmill on a low ridge at dusk, cinematic pass.
+// Blender-built mill (assets/mill/model.glb: stone base, weatherboarded smock
+// body, slate cap, lattice sails, fantail), displaced heightfield ridge, tufted
+// instanced grass with shader sway, scattered rocks, a flapping starling
+// murmuration, key/fill/rim dusk lighting with FogExp2 aerial perspective and
+// a true cooling-into-dusk settle. All motion closed-form f(t).
 import * as THREE from 'three';
 import { Scene, type Frame, type SceneCtx, type PostOverrides } from '../../engine/scene';
 import { CameraRig, orbitPosition } from '../../engine/rig';
@@ -27,8 +27,8 @@ const hash = (n: number) => {
 
 // beats
 const FLOCK = 6.0;    // starlings cross the sky
-const GUST = 11.5;    // a gust swings the sails a touch faster
-const SETTLE = 16.0;
+const GUST = 11.5;    // a gust drives the sails harder for a while
+const SETTLE = 15.5;  // dusk cools
 
 // ridge heightfield — shared by terrain + object placement
 const ridgeH = (x: number, z: number) =>
@@ -38,13 +38,14 @@ const ridgeH = (x: number, z: number) =>
   0.15 * Math.sin(x * 0.4) * Math.sin(z * 0.35);
 
 const MILL_TOP = ridgeH(0, 0);
+const MILL_Y = MILL_TOP - 0.4;
 
 const CAPTIONS: Array<[number, number, string, [number, number, number]]> = [
-  [0.8, 3.0, 'the mill still turns on the ridge', [0, MILL_TOP + 1.0, 0]],
-  [4.6, 6.6, 'grass remembers the day', [4, MILL_TOP - 1.5, 4]],
-  [8.6, 10.8, 'a murmuration moves through', [0, MILL_TOP + 9.0, -6]],
-  [11.2, 13.2, 'one gust finds the sails', [0, MILL_TOP + 5.0, 0]],
-  [15.0, 17.4, 'dusk holds the ridge', [0, MILL_TOP + 3.0, 0]],
+  [0.8, 3.0, 'the mill still turns on the ridge', [0, MILL_Y + 1.0, 0]],
+  [4.6, 6.6, 'grass remembers the day', [4, MILL_Y - 1.5, 4]],
+  [8.6, 10.8, 'a murmuration moves through', [0, MILL_Y + 10.0, -6]],
+  [11.4, 13.4, 'one gust finds the sails', [0, MILL_Y + 5.0, 0]],
+  [15.2, 17.6, 'dusk holds the ridge', [0, MILL_Y + 3.0, 0]],
 ];
 
 const SKY_VERT = /* glsl */ `
@@ -55,27 +56,133 @@ const SKY_VERT = /* glsl */ `
   }
 `;
 
-// dusk sky dome: warm band low toward the sun azimuth (-x), deep blue above
+// dusk sky dome: warm band low toward the sun azimuth (-x), deep blue above.
+// uDusk 0→1 cools the whole palette into night.
 const SKY_FRAG = /* glsl */ `
   precision highp float;
   varying vec3 vDir;
   uniform float uT;
+  uniform float uDusk;
   float h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
   void main() {
     vec3 d = normalize(vDir);
     float h = clamp(d.y, -0.1, 1.0);
-    vec3 col = mix(vec3(0.30, 0.16, 0.13), vec3(0.025, 0.035, 0.09), smoothstep(0.0, 0.55, h));
+    vec3 lo = mix(vec3(0.22, 0.12, 0.11), vec3(0.08, 0.07, 0.12), uDusk);
+    vec3 hi = mix(vec3(0.020, 0.030, 0.085), vec3(0.010, 0.014, 0.045), uDusk);
+    vec3 col = mix(lo, hi, smoothstep(0.0, 0.5, h));
     // sun-side warmth: band tightens toward azimuth of the set sun (-x, slightly -z)
-    float sunAmt = smoothstep(0.6, 1.0, dot(normalize(d.xz), normalize(vec2(-1.0, -0.35))));
-    col += vec3(0.55, 0.22, 0.06) * sunAmt * exp(-h * 4.5) * 1.4;
-    // faint stars high up, twinkling
+    float sunAmt = smoothstep(0.55, 1.0, dot(normalize(d.xz), normalize(vec2(-1.0, -0.35))));
+    col += vec3(0.65, 0.24, 0.05) * sunAmt * exp(-h * 4.0) * (1.6 - 0.9 * uDusk);
+    // faint stars high up, twinkling, brighter as dusk deepens
     vec2 sp = vec2(atan(d.x, d.z) * 30.0, d.y * 60.0);
-    float star = step(0.997, h21(floor(sp))) * smoothstep(0.45, 0.8, d.y)
+    float star = step(0.996, h21(floor(sp))) * smoothstep(0.4, 0.8, d.y)
                * (0.4 + 0.6 * sin(uT * 2.0 + h21(floor(sp) + 7.0) * 40.0));
-    col += vec3(0.8, 0.85, 1.0) * star;
+    col += vec3(0.8, 0.85, 1.0) * star * (0.5 + uDusk);
     gl_FragColor = vec4(col, 1.0);
   }
 `;
+
+// seeded value-noise texture for the mill's PBR breakup (map + rough + bump)
+function noiseTexture(size: number, octaves: number): THREE.CanvasTexture {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = size;
+  const c = cv.getContext('2d')!;
+  const img = c.createImageData(size, size);
+  const val = (x: number, y: number, o: number) => {
+    let acc = 0, amp = 1, fr = 1, tot = 0;
+    for (let k = 0; k < o; k++) {
+      acc += amp * hash(Math.floor(x * fr) * 13.7 + Math.floor(y * fr) * 71.3 + k * 101.0);
+      tot += amp; amp *= 0.55; fr *= 2.03;
+    }
+    return acc / tot;
+  };
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    const v = Math.floor((0.78 + 0.22 * val(x / 9, y / 9, octaves)) * 255);
+    const i = (y * size + x) * 4;
+    img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+    img.data[i + 3] = 255;
+  }
+  c.putImageData(img, 0, 0);
+  const tx = new THREE.CanvasTexture(cv);
+  tx.wrapS = tx.wrapT = THREE.RepeatWrapping;
+  tx.repeat.set(2, 2);
+  return tx;
+}
+
+// a grass tuft: 6 tapered blades fanned around the origin, vertex-colored
+// root-dark to tip-straw; ~40 tris per tuft
+function tuftGeometry(): THREE.BufferGeometry {
+  const pos: number[] = [];
+  const col: number[] = [];
+  const nrm: number[] = [];
+  const blades = 6;
+  for (let b = 0; b < blades; b++) {
+    const a = (b / blades) * Math.PI * 2 + 0.4 * Math.sin(b * 7.0);
+    const lean = 0.10 + 0.16 * hash(b * 3.3);
+    const hgt = 0.42 + 0.22 * hash(b * 5.1);
+    const wid = 0.030;
+    const dx = Math.cos(a), dz = Math.sin(a);
+    // blade = 2 stacked quads bending outward
+    const bx = lean * dx, bz = lean * dz;
+    const px = -dz * wid, pz = dx * wid;
+    const quad = (y0: number, y1: number, w0: number, w1: number, lx: number, lz: number, shade: number) => {
+      const p = [
+        [px * w0, y0, pz * w0], [-px * w0, y0, -pz * w0],
+        [px * w1 + lx, y1, pz * w1 + lz], [-px * w1 + lx, y1, -pz * w1 + lz],
+      ];
+      pos.push(
+        p[0][0], p[0][1], p[0][2], p[1][0], p[1][1], p[1][2], p[2][0], p[2][1], p[2][2],
+        p[1][0], p[1][1], p[1][2], p[3][0], p[3][1], p[3][2], p[2][0], p[2][1], p[2][2],
+      );
+      for (let k = 0; k < 6; k++) col.push(shade, shade, shade);
+      for (let k = 0; k < 6; k++) nrm.push(0, 0.8, 0.6);
+    };
+    quad(0, hgt * 0.55, 1.0, 0.7, bx * 0.5, bz * 0.5, 0.62);
+    quad(hgt * 0.55, hgt, 0.7, 0.12, bx, bz, 1.35);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3));
+  g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(col), 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(nrm), 3));
+  g.computeVertexNormals();
+  return g;
+}
+
+// swallow-silhouette bird: lathe-ish body diamond + swept wings; aWing weights
+// wing verts so the shader can flap them, aPhase varies flap per instance
+function birdGeometry(): THREE.BufferGeometry {
+  const pos: number[] = [];
+  const wing: number[] = [];
+  const tri = (a: number[], b: number[], c: number[], w: number[]) => {
+    pos.push(...a, ...b, ...c);
+    wing.push(...w);
+  };
+  // body: slim diamond flying +x, tail fork -x
+  const nose = [0.42, 0, 0], tail = [-0.42, 0, 0];
+  const top = [0, 0.09, 0], bot = [0, -0.07, 0];
+  const lf = [0, 0, 0.075], rt = [0, 0, -0.075];
+  tri(nose, top, lf, [0, 0, 0]); tri(nose, lf, bot, [0, 0, 0]);
+  tri(nose, bot, rt, [0, 0, 0]); tri(nose, rt, top, [0, 0, 0]);
+  tri(tail, lf, top, [0, 0, 0]); tri(tail, bot, lf, [0, 0, 0]);
+  tri(tail, rt, bot, [0, 0, 0]); tri(tail, top, rt, [0, 0, 0]);
+  // tail fork
+  tri(tail, [-0.55, 0.02, 0.09], [-0.55, 0.02, -0.09], [0.15, 0.15, 0.15]);
+  // left wing: root at body, swept back, scythe tip — 3 tris, aWing grows outboard
+  const wl = [[0.05, 0.02, 0.05], [-0.18, 0.03, 0.45], [-0.42, 0.04, 0.78], [-0.05, 0.02, 0.32]];
+  tri(wl[0], wl[1], wl[3], [0, 0.45, 0.1]);
+  tri(wl[1], wl[2], wl[3], [0.45, 1.0, 0.1]);
+  tri(wl[0], wl[3], [0.05, 0.0, 0.05], [0, 0.1, 0]);
+  // right wing mirrored
+  const wr = wl.map((p) => [p[0], p[1], -p[2]]);
+  tri(wr[0], wr[3], wr[1], [0, 0.1, 0.45]);
+  tri(wr[1], wr[3], wr[2], [0.45, 0.1, 1.0]);
+  tri(wr[0], [0.05, 0.0, -0.05], wr[3], [0, 0, 0.1]);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3));
+  g.setAttribute('aWing', new THREE.BufferAttribute(new Float32Array(wing), 1));
+  g.computeVertexNormals();
+  return g;
+}
 
 export default class MillridgetScene extends Scene {
   private rig = new CameraRig();
@@ -86,109 +193,269 @@ export default class MillridgetScene extends Scene {
   private skyMat!: THREE.ShaderMaterial;
   private mill!: GLTFInstance;
   private sails!: THREE.Object3D;
-  private windowLight = new THREE.PointLight(0xff9a3c, 0.9, 9, 2);
+  private sun!: THREE.DirectionalLight;
+  private hemi!: THREE.HemisphereLight;
+  private rim!: THREE.DirectionalLight;
+  private windowLight = new THREE.PointLight(0xff9a3c, 0.9, 10, 2);
   private starlings!: THREE.InstancedMesh;
+  private birdMat!: THREE.MeshBasicMaterial;
   private grass!: THREE.InstancedMesh;
+  private grass2!: THREE.InstancedMesh;
+  private rocks!: THREE.InstancedMesh;
+  private swayU = { value: 0 };
+  private flapU = { value: 0 };
+  private glow!: THREE.Sprite;
+  private noiseTex!: THREE.CanvasTexture;
   private dummy = new THREE.Object3D();
 
   override async init() {
     const scene = this.three;
+    scene.fog = new THREE.FogExp2(0x241a18, 0.0105);
 
-    // ---- lighting: raking 2600K dusk sun from the west, cool ambient sky ----
+    // ---- lighting: 2600K raking key, cool hemisphere fill, blue rim ----
     const [kr, kg, kb] = blackbodyToLinearSRGB(2600);
-    const sun = new THREE.DirectionalLight(new THREE.Color(kr, kg, kb), 3.0);
-    sun.position.set(-30, 9, -12);
-    sun.castShadow = true;
-    sun.shadow.mapSize.set(2048, 2048);
-    sun.shadow.camera.left = -30;
-    sun.shadow.camera.right = 30;
-    sun.shadow.camera.top = 30;
-    sun.shadow.camera.bottom = -30;
-    sun.shadow.camera.far = 90;
-    sun.shadow.bias = -0.0005;
-    scene.add(sun);
+    this.sun = new THREE.DirectionalLight(new THREE.Color(kr, kg, kb), 3.2);
+    this.sun.position.set(-30, 9, -12);
+    this.sun.castShadow = true;
+    this.sun.shadow.mapSize.set(2048, 2048);
+    this.sun.shadow.camera.left = -26;
+    this.sun.shadow.camera.right = 26;
+    this.sun.shadow.camera.top = 26;
+    this.sun.shadow.camera.bottom = -26;
+    this.sun.shadow.camera.far = 90;
+    this.sun.shadow.bias = -0.0004;
+    this.sun.shadow.normalBias = 0.02;
+    scene.add(this.sun);
 
     const [cr, cg, cb] = blackbodyToLinearSRGB(7500);
-    const hemi = new THREE.HemisphereLight(new THREE.Color(cr, cg, cb), 0x1a1410, 0.5);
-    scene.add(hemi);
+    this.hemi = new THREE.HemisphereLight(new THREE.Color(cr, cg, cb), 0x1c1410, 0.45);
+    scene.add(this.hemi);
 
-    // ---- sky dome ----
+    // cool rim from behind-right — separates the mill from the sky
+    this.rim = new THREE.DirectionalLight(0x4a5f8a, 0.7);
+    this.rim.position.set(18, 12, 16);
+    scene.add(this.rim);
+
+    // ---- sky dome + sun glow sprite ----
     this.skyMat = new THREE.ShaderMaterial({
       vertexShader: SKY_VERT,
       fragmentShader: SKY_FRAG,
-      uniforms: { uT: { value: 0 } },
+      uniforms: { uT: { value: 0 }, uDusk: { value: 0 } },
       side: THREE.BackSide,
       depthWrite: false,
     });
-    const sky = new THREE.Mesh(new THREE.SphereGeometry(300, 32, 20), this.skyMat);
-    scene.add(sky);
+    scene.add(new THREE.Mesh(new THREE.SphereGeometry(300, 32, 20), this.skyMat));
 
-    // ---- ridge terrain: displaced grid, grass-scrub PBR ----
-    const geo = new THREE.PlaneGeometry(240, 160, 160, 100);
+    const glowCv = document.createElement('canvas');
+    glowCv.width = glowCv.height = 128;
+    const gc = glowCv.getContext('2d')!;
+    const grad = gc.createRadialGradient(64, 64, 4, 64, 64, 64);
+    grad.addColorStop(0, 'rgba(255,190,110,0.9)');
+    grad.addColorStop(0.35, 'rgba(255,140,60,0.35)');
+    grad.addColorStop(1, 'rgba(255,120,40,0)');
+    gc.fillStyle = grad;
+    gc.fillRect(0, 0, 128, 128);
+    this.glow = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: new THREE.CanvasTexture(glowCv),
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }));
+    this.glow.position.set(-115, 17, -48);
+    this.glow.scale.setScalar(70);
+    scene.add(this.glow);
+
+    // ---- ridge terrain: displaced grid with vertex-color scrub variation ----
+    const geo = new THREE.PlaneGeometry(260, 190, 170, 120);
     geo.rotateX(-Math.PI / 2);
     const pos = geo.attributes.position as THREE.BufferAttribute;
     const colors = new Float32Array(pos.count * 3);
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i), z = pos.getZ(i);
       pos.setY(i, ridgeH(x, z) - 0.4);
-      const g = 0.32 + 0.16 * hash(x * 3.7 + z * 9.1) + 0.08 * Math.sin(x * 0.8);
-      colors[i * 3] = g * 0.55;
-      colors[i * 3 + 1] = g * 0.62;
-      colors[i * 3 + 2] = g * 0.28;
+      const n = hash(x * 3.7 + z * 9.1) * 0.5 + hash(x * 13.1 + z * 5.3) * 0.5;
+      const g = 0.30 + 0.20 * n + 0.06 * Math.sin(x * 0.8 + 2.0);
+      colors[i * 3] = g * 0.62;
+      colors[i * 3 + 1] = g * 0.72;
+      colors[i * 3 + 2] = g * 0.30;
     }
     geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     geo.computeVertexNormals();
     const ground = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
       vertexColors: true,
-      roughness: 0.95,
+      roughness: 0.96,
       metalness: 0.0,
     }));
     ground.receiveShadow = true;
     scene.add(ground);
 
-    // ---- instanced grass tufts on the slope ----
-    const blade = new THREE.ConeGeometry(0.05, 0.5, 4);
-    blade.translate(0, 0.25, 0);
-    const grassMat = new THREE.MeshStandardMaterial({ color: 0x2e3a18, roughness: 0.9 });
-    this.grass = new THREE.InstancedMesh(blade, grassMat, 3500);
-    let gi = 0;
-    for (let i = 0; i < 3500; i++) {
-      const a = hash(i * 2.17) * Math.PI * 2;
-      const r = 2.5 + Math.sqrt(hash(i * 5.71)) * 42;
-      const x = Math.cos(a) * r, z = Math.sin(a) * r * 0.8;
-      this.dummy.position.set(x, ridgeH(x, z) - 0.45, z);
-      this.dummy.rotation.set((hash(i * 7.3) - 0.5) * 0.5, hash(i * 3.9) * Math.PI * 2, (hash(i * 11.7) - 0.5) * 0.5);
-      const s = 0.6 + hash(i * 13.3) * 1.1;
-      this.dummy.scale.set(s, s * (0.7 + hash(i * 17.1) * 0.9), s);
-      this.dummy.updateMatrix();
-      this.grass.setMatrixAt(gi++, this.dummy.matrix);
-    }
-    scene.add(this.grass);
+    // ---- grass: two instanced tuft meshes with shader sway ----
+    const blade = tuftGeometry();
+    const mkGrassMat = (tint: number) => {
+      const m = new THREE.MeshStandardMaterial({
+        color: tint,
+        vertexColors: true,
+        roughness: 0.9,
+        side: THREE.DoubleSide,
+      });
+      m.onBeforeCompile = (sh) => {
+        sh.uniforms.uSway = this.swayU;
+        sh.vertexShader = 'uniform float uSway;\n' + sh.vertexShader.replace(
+          '#include <begin_vertex>',
+          `#include <begin_vertex>
+          #ifdef USE_INSTANCING
+            float wp = instanceMatrix[3][0] * 0.31 + instanceMatrix[3][2] * 0.23;
+            transformed.x += sin(uSway * 1.7 + wp) * transformed.y * 0.10;
+            transformed.z += cos(uSway * 1.3 + wp * 1.7) * transformed.y * 0.05;
+          #endif`,
+        );
+      };
+      return m;
+    };
+    this.grass = new THREE.InstancedMesh(blade, mkGrassMat(0x7a7c34), 2400);
+    this.grass2 = new THREE.InstancedMesh(blade, mkGrassMat(0x8a7434), 1600);
+    const scatter = (mesh: THREE.InstancedMesh, n: number, r0: number, r1: number, seed: number) => {
+      for (let i = 0; i < n; i++) {
+        const a = hash(seed + i * 2.17) * Math.PI * 2;
+        const r = r0 + Math.sqrt(hash(seed + i * 5.71)) * (r1 - r0);
+        const x = Math.cos(a) * r, z = Math.sin(a) * r * 0.78;
+        this.dummy.position.set(x, ridgeH(x, z) - 0.45, z);
+        this.dummy.rotation.set((hash(seed + i * 7.3) - 0.5) * 0.3, hash(seed + i * 3.9) * Math.PI * 2, 0);
+        const s = 0.7 + hash(seed + i * 13.3) * 1.4;
+        this.dummy.scale.set(s, s * (0.8 + hash(seed + i * 17.1) * 0.9), s);
+        this.dummy.updateMatrix();
+        mesh.setMatrixAt(i, this.dummy.matrix);
+      }
+      mesh.instanceMatrix.needsUpdate = true;
+      mesh.frustumCulled = false;
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+    };
+    scatter(this.grass, 2400, 2.4, 44, 11);
+    scatter(this.grass2, 1600, 2.0, 34, 733);
 
-    // ---- the mill (Blender GLB) ----
+    // ---- scattered rocks ----
+    const rockGeo = new THREE.DodecahedronGeometry(0.4, 0);
+    const rockMat = new THREE.MeshStandardMaterial({ color: 0x58524a, roughness: 0.95 });
+    this.rocks = new THREE.InstancedMesh(rockGeo, rockMat, 90);
+    for (let i = 0; i < 90; i++) {
+      const a = hash(991 + i * 2.9) * Math.PI * 2;
+      const r = 4 + Math.sqrt(hash(991 + i * 7.7)) * 40;
+      const x = Math.cos(a) * r, z = Math.sin(a) * r * 0.8;
+      this.dummy.position.set(x, ridgeH(x, z) - 0.35, z);
+      this.dummy.rotation.set(hash(i * 3.1) * 3, hash(i * 5.9) * 3, hash(i * 9.7) * 3);
+      const s = 0.3 + hash(i * 11.3) * 1.6;
+      this.dummy.scale.set(s, s * (0.5 + hash(i * 13.7) * 0.5), s);
+      this.dummy.updateMatrix();
+      this.rocks.setMatrixAt(i, this.dummy.matrix);
+    }
+    this.rocks.castShadow = true;
+    this.rocks.receiveShadow = true;
+    scene.add(this.rocks);
+
+    // ---- distant tree line + hedges for horizon layering ----
+    const hedgeMat = new THREE.MeshStandardMaterial({ color: 0x141b10, roughness: 1 });
+    const trunkGeo = new THREE.CylinderGeometry(0.10, 0.16, 1.6, 6);
+    trunkGeo.translate(0, 0.8, 0);
+    const canopyGeo = new THREE.IcosahedronGeometry(1, 1);
+    canopyGeo.scale(1.25, 0.85, 1.25);
+    const mkTree = (s: number): THREE.Group => {
+      const g = new THREE.Group();
+      const tr = new THREE.Mesh(trunkGeo, hedgeMat);
+      tr.scale.setScalar(s);
+      const c1 = new THREE.Mesh(canopyGeo, hedgeMat);
+      c1.position.y = 1.7 * s;
+      c1.scale.setScalar(s * 1.1);
+      const c2 = new THREE.Mesh(canopyGeo, hedgeMat);
+      c2.position.set(0.5 * s, 2.1 * s, 0.2 * s);
+      c2.scale.setScalar(s * 0.75);
+      g.add(tr, c1, c2);
+      return g;
+    };
+    // far treeline: a broken dark band at the horizon, ~8-11 m trees
+    for (let i = 0; i < 26; i++) {
+      const x = -120 + i * 9.5 + (hash(i * 3.7) - 0.5) * 6;
+      const z = -88 - hash(i * 7.1) * 18;
+      const tr = mkTree(1.6 + hash(i * 9.9) * 1.4);
+      tr.position.set(x, ridgeH(x, z) - 0.5, z);
+      tr.rotation.y = hash(i * 17.3) * Math.PI;
+      scene.add(tr);
+    }
+    // low hedge band closer in, broken
+    const hedgeGeo = new THREE.IcosahedronGeometry(1, 1);
+    hedgeGeo.scale(1.6, 0.55, 0.8);
+    for (let i = 0; i < 30; i++) {
+      if (hash(i * 4.1) < 0.2) continue;
+      const x = -95 + i * 6.6 + (hash(i * 6.7) - 0.5) * 3;
+      const z = -55 - hash(i * 8.9) * 6;
+      const hb = new THREE.Mesh(hedgeGeo, hedgeMat);
+      hb.position.set(x, ridgeH(x, z) + 0.3, z);
+      const s = 1.4 + hash(i * 11.9) * 1.8;
+      hb.scale.set(s * (1.2 + hash(i * 13.1)), s * 0.55, s);
+      hb.rotation.y = hash(i * 15.7) * Math.PI;
+      scene.add(hb);
+    }
+    // a second sparse line on the east side so the far rim is never bare
+    for (let i = 0; i < 12; i++) {
+      const x = 60 + i * 9 + (hash(i * 2.3) - 0.5) * 6;
+      const z = -60 + i * 4 + (hash(i * 5.9) - 0.5) * 8;
+      const tr = mkTree(1.5 + hash(i * 8.3) * 1.3);
+      tr.position.set(x, ridgeH(x, z) - 0.5, z);
+      tr.rotation.y = hash(i * 12.7) * Math.PI;
+      scene.add(tr);
+    }
+    // two solitary trees on the flanks for midground depth
+    for (const [x, z, s] of [[-26, -38, 2.4], [30, -44, 2.8]] as const) {
+      const tr = mkTree(s);
+      tr.position.set(x, ridgeH(x, z) - 0.4, z);
+      tr.rotation.y = hash(x) * Math.PI;
+      scene.add(tr);
+    }
+
+    // ---- the mill (Blender GLB) + procedural texture breakup ----
     this.mill = await GLTFManager.instantiate(resolveAsset('mill', this.ctx.project ?? 'millridget').url, {
       castShadow: true,
       receiveShadow: true,
     });
-    this.mill.root.position.set(0, MILL_TOP - 0.4, 0);
-    this.mill.root.rotation.y = 0.35; // face the sails three-quarter to camera
+    this.mill.root.position.set(0, MILL_Y, 0);
+    this.mill.root.rotation.y = 0.45;
+    this.noiseTex = noiseTexture(256, 4);
+    this.mill.root.traverse((o) => {
+      const m = o as THREE.Mesh;
+      const mats = m.material as THREE.MeshStandardMaterial | THREE.MeshStandardMaterial[] | undefined;
+      if (!mats) return;
+      for (const mm of Array.isArray(mats) ? mats : [mats]) {
+        if (mm.name === 'WindowGlass') continue;
+        mm.map = this.noiseTex;
+        mm.roughnessMap = this.noiseTex;
+        mm.bumpMap = this.noiseTex;
+        mm.bumpScale = 0.4;
+      }
+    });
     scene.add(this.mill.root);
     const sails = this.mill.part('sails');
     this.sails = sails ?? this.mill.root;
-    this.windowLight.position.set(0, MILL_TOP + 3.2, -2.4);
+    this.windowLight.position.set(0, MILL_Y + 3.55, -2.6);
     scene.add(this.windowLight);
 
-    // ---- starlings: instanced bird silhouettes on a closed-form murmuration ----
-    const birdGeo = new THREE.BufferGeometry();
-    birdGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([
-      -0.9, 0, 0, 0, 0.12, 0.28, 0, -0.05, 0.02,
-      0, 0.12, 0.28, 0.9, 0, 0, 0, -0.05, 0.02,
-      0, -0.05, 0.02, 0, 0, -0.28, 0.9, 0, 0,
-      0, -0.05, 0.02, -0.9, 0, 0, 0, 0, -0.28,
-    ]), 3));
-    birdGeo.computeVertexNormals();
-    const birdMat = new THREE.MeshBasicMaterial({ color: 0x06070c, side: THREE.DoubleSide });
-    this.starlings = new THREE.InstancedMesh(birdGeo, birdMat, 160);
+    // ---- starlings: flapping swallow silhouettes on a murmuration ribbon ----
+    const birdGeo = birdGeometry();
+    const phases = new Float32Array(170);
+    for (let i = 0; i < 170; i++) phases[i] = hash(i * 9.77) * Math.PI * 2;
+    birdGeo.setAttribute('aPhase', new THREE.InstancedBufferAttribute(phases, 1));
+    this.birdMat = new THREE.MeshBasicMaterial({ color: 0x0b0a12, side: THREE.DoubleSide });
+    this.birdMat.onBeforeCompile = (sh) => {
+      sh.uniforms.uFlap = this.flapU;
+      sh.vertexShader = 'uniform float uFlap;\nattribute float aWing;\nattribute float aPhase;\n' +
+        sh.vertexShader.replace(
+          '#include <begin_vertex>',
+          `#include <begin_vertex>
+          transformed.y += sin(uFlap * 14.0 + aPhase) * aWing * 0.55;
+          transformed.z += (cos(uFlap * 14.0 + aPhase) - 1.0) * aWing * 0.12 * sign(position.z);`,
+        );
+    };
+    this.starlings = new THREE.InstancedMesh(birdGeo, this.birdMat, 170);
+    this.starlings.frustumCulled = false;
     scene.add(this.starlings);
   }
 
@@ -209,16 +476,14 @@ export default class MillridgetScene extends Scene {
     const u = clamp01((t - FLOCK) / 7.0);
     const ph = hash(i * 7.77);
     const w = ph * Math.PI * 2;
-    // flock centroid: arcs across the sky left→right, swelling at mid-pass
-    const cx = -40 + 82 * u;
-    const cy = MILL_TOP + 9.5 + 2.0 * Math.sin(u * Math.PI) + 0.6 * Math.sin(t * 0.9 + 1.0);
-    const cz = -8 + 6 * Math.sin(u * 2.4);
-    // murmuration ribbon: birds ride a slow wave around the centroid
-    const s = i / 160;
+    const cx = -46 + 95 * u;
+    const cy = MILL_Y + 10.5 + 2.2 * Math.sin(u * Math.PI) + 0.6 * Math.sin(t * 0.9 + 1.0);
+    const cz = -9 + 6 * Math.sin(u * 2.4);
+    const s = i / 170;
     const ribbon = Math.sin(u * Math.PI * 3 + s * 9.0);
     out.set(
-      cx + (ph - 0.5) * 9 + Math.sin(w + t * 2.1 + u * 14.0) * (1.4 + 2.4 * Math.sin(u * Math.PI)),
-      cy + Math.sin(w * 2.0 + t * 2.7) * 1.3 + ribbon * 2.2 * (ph - 0.3),
+      cx + (ph - 0.5) * 10 + Math.sin(w + t * 2.1 + u * 14.0) * (1.4 + 2.4 * Math.sin(u * Math.PI)),
+      cy + Math.sin(w * 2.0 + t * 2.7) * 1.3 + ribbon * 2.4 * (ph - 0.3),
       cz + (hash(i * 3.3) - 0.5) * 5 + Math.cos(w + t * 1.9) * 1.6,
     );
   }
@@ -226,38 +491,58 @@ export default class MillridgetScene extends Scene {
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
     const t = f.lt;
     const r = this.ctx.renderer;
+    r.shadowMap.enabled = true;
+    r.shadowMap.type = THREE.PCFSoftShadowMap;
     this.skyMat.uniforms.uT.value = t;
+    this.swayU.value = t;
+    this.flapU.value = t;
 
-    // sails: slow turn, eased harder by the gust — one clock for the mill
-    const gust = ss(GUST, GUST + 0.4, t) * (1 - ss(GUST + 1.0, GUST + 1.8, t));
-    this.sails.rotation.z = t * 0.42 + 0.9 * gust * (t - GUST);
+    const settle = ss(SETTLE, 17.4, t);
+    this.skyMat.uniforms.uDusk.value = settle;
 
-    // window light breathes faintly; dusk deepens at settle
-    const settle = ss(SETTLE, 17.6, t);
-    this.windowLight.intensity = 0.8 + 0.2 * Math.sin(t * 5.0) + 0.4 * settle;
+    // sails: one monotonic clock — the gust only ever adds advance, never reverses
+    const gust = ss(GUST, GUST + 1.3, t);
+    this.sails.rotation.z = t * 0.42 + 1.5 * gust;
+
+    // dusk cooling: key sun drops and reddens, fill dims, window warms up
+    const sun0 = 3.2;
+    this.sun.intensity = sun0 * (1 - 0.55 * settle);
+    this.sun.color.setRGB(1.0, 0.62 - 0.18 * settle, 0.38 - 0.14 * settle);
+    this.hemi.intensity = 0.45 * (1 - 0.4 * settle);
+    this.rim.intensity = 0.7 + 0.25 * settle;
+    this.windowLight.intensity = 0.8 + 0.15 * Math.sin(t * 5.0) + 0.5 * settle;
+    (this.three.fog as THREE.FogExp2).density = 0.0105 + 0.004 * settle;
+    this.glow.material.opacity = 1 - 0.45 * settle;
 
     // starlings only during their crossing window
-    this.starlings.count = t > FLOCK - 0.5 && t < FLOCK + 7.2 ? 160 : 0;
-    for (let i = 0; i < this.starlings.count; i++) {
+    const n = t > FLOCK - 0.5 && t < FLOCK + 7.4 ? 170 : 0;
+    this.starlings.count = n;
+    for (let i = 0; i < n; i++) {
       this.starling(i, t, this.v);
       this.dummy.position.copy(this.v);
-      const flap = Math.sin(t * (14 + hash(i * 2.2) * 6) + i * 1.7);
-      this.dummy.rotation.set(0, Math.atan2(1, 0) , flap * 0.9); // banked sweep + wing flap
-      const s = 0.5 + hash(i * 9.4) * 0.5;
+      // bird geometry flies +x (the flock's heading); a little bank adds life
+      this.dummy.rotation.set(0, 0, Math.sin(t * 2.1 + i) * 0.28);
+      const s = 0.55 + hash(i * 9.4) * 0.55;
       this.dummy.scale.setScalar(s);
       this.dummy.updateMatrix();
       this.starlings.setMatrixAt(i, this.dummy.matrix);
     }
-    this.starlings.instanceMatrix.needsUpdate = true;
+    if (n) this.starlings.instanceMatrix.needsUpdate = true;
 
-    // CameraRig: slow orbit drift holding the mill at mid-frame
-    const yaw = -0.35 + t * 0.035 + 0.05 * Math.sin(t * 0.07);
-    const rad = 24 - 3.5 * ss(2, 9, t) + 1.5 * settle;
-    const pos = orbitPosition([0, MILL_TOP + 4.4, 0], rad, 0.16 + 0.03 * Math.sin(t * 0.05), yaw);
+    // CameraRig: slow orbit drift; mill held on the left third, low eye looking up
+    const yaw = -0.55 + t * 0.030 + 0.04 * Math.sin(t * 0.07);
+    const rad = 21 - 2.5 * ss(2, 9, t) + 1.0 * settle;
+    const pos = orbitPosition([0, MILL_Y + 4.6, 0], rad, 0.10 + 0.02 * Math.sin(t * 0.05), yaw);
     this.rig.position = pos;
-    this.rig.target = [0, MILL_TOP + 4.4 + 0.4 * Math.sin(t * 0.06), 0];
-    this.rig.roll = 0.004 * Math.sin(t * 0.05);
-    this.rig.focalLengthPx = (this.ctx.H / 2) / Math.tan(0.5 * 42 * Math.PI / 180);
+    // aim right of the mill so it frames on the left third of the shot
+    const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+    this.rig.target = [
+      right.x * 4.2,
+      MILL_Y + 4.9 + 0.3 * Math.sin(t * 0.06),
+      right.z * 4.2,
+    ];
+    this.rig.roll = 0.003 * Math.sin(t * 0.05);
+    this.rig.focalLengthPx = (this.ctx.H / 2) / Math.tan(0.5 * 40 * Math.PI / 180);
     this.rig.syncToThreeCamera(this.rig.evalCam(t), this.cam);
 
     r.setRenderTarget(out);
@@ -295,13 +580,13 @@ export default class MillridgetScene extends Scene {
     }
 
     return {
-      exposure: 1.0,
-      bloom: 0.3,
-      bloomThreshold: 0.72,
-      bloomRadius: 0.65,
-      ca: 0.06,
-      grain: 0.06,
-      vignette: 0.4,
+      exposure: 1.05,
+      bloom: 0.45,
+      bloomThreshold: 0.68,
+      bloomRadius: 0.7,
+      ca: 0.05,
+      grain: 0.05,
+      vignette: 0.45,
       level: ss(0, 0.9, t) * (1 - ss(this.ctx.end - 0.9, this.ctx.end, t)),
     };
   }
@@ -309,6 +594,13 @@ export default class MillridgetScene extends Scene {
   override dispose() {
     this.layer.dispose();
     this.mill?.dispose();
+    this.noiseTex?.dispose();
+    this.glow?.material.map?.dispose();
+    this.glow?.material.dispose();
+    this.starlings?.dispose();
+    this.grass?.dispose();
+    this.grass2?.dispose();
+    this.rocks?.dispose();
     this.three.traverse((o) => {
       const m = o as THREE.Mesh;
       m.geometry?.dispose();

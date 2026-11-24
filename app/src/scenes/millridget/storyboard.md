@@ -11,23 +11,21 @@
 
 | t | Frame |
 |---|-------|
-| 2.0 | Mill on the ridge, sails mid-turn, raking shadow |
-| 7.5 | Flock entering frame right-of-left, mill steady |
-| 9.6 | Murmuration ribbon overhead, mill below |
-| 11.9 | Gust beat — sails leant into the wind |
-| 17.0 | Dusk settle — warm window, cool field |
+| 2.0 | Mill on the left third, sails mid-turn, raking shadow across the wheat |
+| 9.6 | Murmuration ribbon crossing overhead, mill below |
+| 12.5 | Gust beat — sails swung further around, window glowing |
+| 17.0 | Dusk settle — cooled sky, warm window against the dark field |
 
 ![t=2.0](stills/f_0002.00.png)
-![t=7.5](stills/f_0007.50.png)
 ![t=9.6](stills/f_0009.60.png)
-![t=11.9](stills/f_0011.90.png)
+![t=12.5](stills/f_0012.50.png)
 ![t=17.0](stills/f_0017.00.png)
 
 ## Camera
 
-CameraRig orbit: yaw drifts `-0.35 + t*0.035` rad, radius eases 24→20.5m over the
-shot, small settle bob late. Target held on the mill's cap. 42mm lens — the mill
-stays mid-frame the whole pass.
+CameraRig orbit: yaw drifts `-0.55 + t*0.030` rad, radius eases 21→18.5m over the
+shot. Target offset right of the mill so it holds on the left third; low eye,
+40mm lens looking slightly up.
 
 ## Assets
 
