@@ -62,7 +62,7 @@ void main() {
   col = mix(col, vec3(0.012, 0.012, 0.020), trees * 0.92);
   col = mix(col, vec3(0.006, 0.006, 0.010), treesNear * 0.97);
   // field below the trees: faint cool reflection of the sky
-  col = mix(col, vec3(0.020, 0.018, 0.026), smoothstep(treelineFar, 0.0, y) * 0.55);
+  col = mix(col, vec3(0.020, 0.018, 0.026), (1.0 - smoothstep(0.0, treelineFar, y)) * 0.55);
 
   // faint high stars pricking through the dusk
   vec2 sg = floor(vUv * vec2(220.0, 120.0));
@@ -139,10 +139,13 @@ export default class MurmurationScene extends Scene {
     const by = 2.7 * Math.sin(ph);
     const bz = 3.4 * Math.cos(ph) * Math.sin(th);
 
-    // ribbon: descending stream that dives into the treeline (y→-8)
-    const a = frac(u + t * 0.028);
+    // ribbon: descending stream that dives into the treeline (y→-8).
+    // No wraparound: each bird's stream parameter only advances, and only
+    // once the ribbon phase begins, so birds land in the treeline and stay
+    // there instead of teleporting back up.
+    const a = Math.min(1, u + Math.max(0, t - 15) * 0.06);
     const rx = -11 + 20 * a + 0.9 * Math.sin(a * 7 + t * 0.4 + w * 4.0);
-    const ry = 9.0 - 17.0 * Math.pow(a, 1.15) + 0.5 * Math.sin(a * 11 + v * 8.0);
+    const ry = 9.0 - 19.5 * Math.pow(a, 1.15) + 0.5 * Math.sin(a * 11 + v * 8.0);
     const rz = -1.5 + 1.2 * Math.sin(a * 5 + w * 9.0);
 
     // --- phase weights ----------------------------------------------------
@@ -159,14 +162,17 @@ export default class MurmurationScene extends Scene {
     // split & rejoin around t≈14: offset both attractor shapes
     const split = (smooth(12.0, 13.4, t) - smooth(14.6, 15.8, t)) * 3.1 * group;
 
-    let px = (cx + kx) * wKnot + (cx + bx + split) * wBlob + rx * wRib;
-    let py = (cy + ky) * wKnot + (cy + by) * wBlob + ry * wRib;
-    let pz = (cz + kz) * wKnot + (cz + bz) * wBlob + rz * wRib;
     // when no shape weight dominates, fall back to a loose shell of the knot
     const shell = 1 - Math.max(wKnot, Math.max(wBlob, wRib));
-    px += shell * (cx + kx * 1.15);
-    py += shell * (cy + ky * 1.15 + 0.8);
-    pz += shell * (cz + kz * 1.15);
+    // barycentric blend: normalize by total weight so overlapping phases
+    // interpolate positions instead of scaling them (which lifted the flock)
+    const tw = wKnot + wBlob + wRib + shell || 1;
+    let px = ((cx + kx) * wKnot + (cx + bx + split) * wBlob + rx * wRib
+      + shell * (cx + kx * 1.15)) / tw;
+    let py = ((cy + ky) * wKnot + (cy + by) * wBlob + ry * wRib
+      + shell * (cy + ky * 1.15 + 0.8)) / tw;
+    let pz = ((cz + kz) * wKnot + (cz + bz) * wBlob + rz * wRib
+      + shell * (cz + kz * 1.15)) / tw;
 
     // gather: interpolate scattered → massed
     px = sx + (px - sx) * gather;
@@ -200,6 +206,9 @@ export default class MurmurationScene extends Scene {
       this.ay.set(0, 1, 0).cross(this.ax).normalize();
       this.az.crossVectors(this.ax, this.ay);
       this.m.makeBasis(this.ax, this.ay, this.az).setPosition(this.p0);
+      // birds that reach the treeline land: collapse the tick so the flock
+      // disappears into the trees instead of sliding visibly across them
+      if (this.p0.y < -8.5) this.m.scale(this.ay.set(0, 0, 0));
       this.birds.setMatrixAt(i, this.m);
     }
     this.birds.instanceMatrix.needsUpdate = true;
@@ -232,6 +241,8 @@ export default class MurmurationScene extends Scene {
   }
 
   override dispose() {
+    // release the instanced attribute buffers (instanceMatrix/instanceColor)
+    this.birds.dispose();
     this.three.traverse((o: THREE.Object3D) => {
       const m = o as THREE.Mesh;
       if (m.geometry) m.geometry.dispose();
