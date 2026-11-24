@@ -43,3 +43,4 @@ reads. 56 mm.
 3. CURLEW (8.5–13) — wading bird beat on the near channel.
 4. SECOND SWEEP (13–17.5) — bat pass against the lamp.
 5. SETTLE (17.5–22) — rabbit hop, beam fades to glow, stars hold.
+// Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
