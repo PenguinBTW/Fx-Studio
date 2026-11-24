@@ -117,11 +117,12 @@ void main() {
   vec3 sky = mix(vec3(0.95, 0.55, 0.33), vec3(0.07, 0.10, 0.22), smoothstep(0.52, 0.85, y));
   sky = mix(sky, vec3(1.0, 0.72, 0.42), exp(-(y - 0.58) * (y - 0.58) * 900.0) * 0.85);
 
-  // low sun wafer — a pale disc flattened by atmosphere, fading at impact
-  vec2 sd = vec2((x - 0.30) * 2.63, y - 0.60);
+  // low sun wafer — a pale disc flattened by atmosphere just above the serac
+  // line, dimming at impact
+  vec2 sd = vec2((x - 0.30) * 2.63, y - 0.84);
   float sdd = length(sd);
   float wafer = 1.0 - smoothstep(0.012, 0.030, sdd);
-  wafer *= 0.6 + 0.4 * smoothstep(0.59, 0.61, y); // squashed bottom
+  wafer *= 0.6 + 0.4 * smoothstep(0.83, 0.85, y); // squashed bottom
   sky += vec3(1.0, 0.72, 0.45) * wafer * (1.3 - 0.8 * uImpact);
   sky += vec3(0.9, 0.5, 0.30) * exp(-sdd * sdd * 900.0) * 0.5;
 
@@ -132,8 +133,9 @@ void main() {
   float dist = length(vec2((x - IMPACT_X) * 1.8, (WATERLINE - y) * 2.6));
 
   // --- ice wall ------------------------------------------------------------
-  // crack path: a branching polyline inside the slab zone — endpoints fixed,
-  // revealed progressively by uCrack.
+  // crack path: a branching zigzag polyline inside the slab zone — endpoints
+  // fixed, revealed progressively by uCrack. Distance is measured in cuv
+  // (pre-drop uv) below so the fracture rides the slab as it falls.
   vec2 c0 = vec2(0.56, 0.80);
   vec2 c1 = vec2(0.585, 0.72);
   vec2 c2 = vec2(0.565, 0.66);
@@ -141,60 +143,69 @@ void main() {
   vec2 c4 = vec2(0.575, 0.50);
   vec2 c5 = vec2(0.615, 0.46);
   vec2 c6 = vec2(0.605, WATERLINE);
-  float segCount = 6.0;
-  float reveal = uCrack * segCount;
-  float crackD = 1e9;
-  crackD = min(crackD, seg(vec2(x, y), c0, c1) + (1.0 - clamp(reveal - 0.0, 0.0, 1.0)) * 1e3);
-  crackD = min(crackD, seg(vec2(x, y), c1, c2) + (1.0 - clamp(reveal - 1.0, 0.0, 1.0)) * 1e3);
-  crackD = min(crackD, seg(vec2(x, y), c2, c3) + (1.0 - clamp(reveal - 2.0, 0.0, 1.0)) * 1e3);
-  crackD = min(crackD, seg(vec2(x, y), c3, c4) + (1.0 - clamp(reveal - 3.0, 0.0, 1.0)) * 1e3);
-  crackD = min(crackD, seg(vec2(x, y), c4, c5) + (1.0 - clamp(reveal - 4.0, 0.0, 1.0)) * 1e3);
-  crackD = min(crackD, seg(vec2(x, y), c5, c6) + (1.0 - clamp(reveal - 5.0, 0.0, 1.0)) * 1e3);
-  // branchlets ignite slightly later
-  float br1 = seg(vec2(x, y), c2, c2 + vec2(0.045, -0.05)) + (1.0 - clamp(reveal - 2.2, 0.0, 1.0)) * 1e3;
-  float br2 = seg(vec2(x, y), c4, c4 + vec2(-0.035, -0.04)) + (1.0 - clamp(reveal - 4.2, 0.0, 1.0)) * 1e3;
-  crackD = min(crackD, min(br1, br2));
+  float reveal = uCrack * 6.0;
 
-  // slab drop transform: rotate+translate the slab's sampling uv around its
-  // top pivot as uSlump grows — the block leaves with ~12° of torque.
+  // slab drop: the block translates down and rolls ~15° around a pivot near
+  // its top corner. q is the pre-drop uv this pixel maps back to; when q
+  // lands inside the original slab footprint the pixel shows moved ice —
+  // wherever that footprint has been carried to (including below the
+  // waterline). Where the footprint has been vacated, the scar shows.
   float drop = uSlump * uSlump * 0.42;
   float roll = uSlump * 0.26;
   vec2 piv = vec2(SLAB_X1, wallTop(0.61) - 0.02);
-  vec2 suv = vec2(x, y);
   float ca = cos(roll), sa = sin(roll);
-  vec2 rel = suv - piv;
-  vec2 ruv = vec2(rel.x * ca - rel.y * sa, rel.x * sa + rel.y * ca) + piv;
-  ruv.y += drop;
+  vec2 rel = vec2(x, y) - piv;
+  vec2 q = vec2(rel.x * ca - rel.y * sa, rel.x * sa + rel.y * ca) + piv;
+  q.y += drop;
+
+  bool inSlabOrig = x >= SLAB_X0 && x <= SLAB_X1 && y >= WATERLINE;
+  bool movedCovers = uSlump > 0.001
+    && q.x >= SLAB_X0 && q.x <= SLAB_X1
+    && q.y >= WATERLINE && q.y <= wallTop(q.x) + 0.005;
 
   float wt = wallTop(x);
   float inWall = 1.0 - smoothstep(wt - 0.004, wt + 0.004, y);
   inWall *= smoothstep(WATERLINE - 0.004, WATERLINE + 0.004, y);
 
-  bool inSlab = x >= SLAB_X0 && x <= SLAB_X1 && y >= WATERLINE;
-  vec3 ice;
-  if (inSlab && uSlump > 0.001) {
-    // moved slab: sample the same wall at the rotated/dropped uv
-    ice = wallColor(vec2(ruv.x, ruv.y));
-    ice *= 1.0 - 0.25 * uSlump; // shadowing as it tips away
-    // darken the scar it leaves behind
-    float scar = inWall * uSlump * smoothstep(0.0, 0.10, y - WATERLINE) * (1.0 - smoothstep(0.25, 0.40, y - WATERLINE));
-    ice = mix(ice, vec3(0.28, 0.38, 0.50), clamp(scar, 0.0, 1.0) * 0.7);
-  } else {
-    ice = wallColor(vec2(x, y));
+  vec3 ice = wallColor(vec2(x, y));
+  // scar: the torn face left behind where the slab footprint is vacated
+  if (inSlabOrig) {
+    float torn = uSlump * smoothstep(SLAB_X0 - 0.004, SLAB_X0 + 0.004, x)
+      * (1.0 - smoothstep(SLAB_X1 - 0.004, SLAB_X1 + 0.004, x));
+    ice = mix(ice, vec3(0.22, 0.34, 0.50), torn * (1.0 - smoothstep(0.32, 0.44, y - WATERLINE)) * 0.75);
   }
-  // residual scar where the slab tore away (drawn over the remaining wall)
-  if (!inSlab) {
-    float scarEdge = smoothstep(SLAB_X0 - 0.008, SLAB_X0 + 0.004, x) * (1.0 - smoothstep(SLAB_X1 - 0.004, SLAB_X1 + 0.008, x));
-    ice = mix(ice, vec3(0.30, 0.40, 0.52), scarEdge * inWall * uAfter * 0.55);
+  col = mix(col, ice, inWall);
+  if (inSlabOrig && !movedCovers) {
+    // gap the slab left: darker torn face across the vacated footprint
+    col = mix(col, vec3(0.20, 0.32, 0.46), inWall * uSlump * 0.8);
   }
-  col = mix(col, ice, inWall * (inSlab ? 1.0 : 1.0));
+  // moved slab on top of wall/sea
+  if (movedCovers) {
+    vec3 slab = wallColor(q);
+    slab *= 1.0 - 0.25 * uSlump;                 // shadowing as it tips
+    slab = mix(slab, vec3(0.30, 0.42, 0.56), smoothstep(0.25, 0.42, drop) * 0.5); // spray-dark underside
+    col = slab;
+  }
 
-  // glowing blue fracture on top of the wall
-  float crackGlow = 1.0 - smoothstep(0.0008, 0.0030, crackD);
-  float crackHalo = exp(-crackD * crackD * 90000.0) * 0.35;
+  // glowing blue fracture — measured in pre-drop uv so it rides the slab down
+  vec2 cuv = movedCovers ? q : vec2(x, y);
+  float crackD2 = 1e9;
+  crackD2 = min(crackD2, seg(cuv, c0, c1) + (1.0 - clamp(reveal - 0.0, 0.0, 1.0)) * 1e3);
+  crackD2 = min(crackD2, seg(cuv, c1, c2) + (1.0 - clamp(reveal - 1.0, 0.0, 1.0)) * 1e3);
+  crackD2 = min(crackD2, seg(cuv, c2, c3) + (1.0 - clamp(reveal - 2.0, 0.0, 1.0)) * 1e3);
+  crackD2 = min(crackD2, seg(cuv, c3, c4) + (1.0 - clamp(reveal - 3.0, 0.0, 1.0)) * 1e3);
+  crackD2 = min(crackD2, seg(cuv, c4, c5) + (1.0 - clamp(reveal - 4.0, 0.0, 1.0)) * 1e3);
+  crackD2 = min(crackD2, seg(cuv, c5, c6) + (1.0 - clamp(reveal - 5.0, 0.0, 1.0)) * 1e3);
+  float br1m = seg(cuv, c2, c2 + vec2(0.045, -0.05)) + (1.0 - clamp(reveal - 2.2, 0.0, 1.0)) * 1e3;
+  float br2m = seg(cuv, c4, c4 + vec2(-0.035, -0.04)) + (1.0 - clamp(reveal - 4.2, 0.0, 1.0)) * 1e3;
+  crackD2 = min(crackD2, min(br1m, br2m));
+
+  float crackGlow = 1.0 - smoothstep(0.0008, 0.0030, crackD2);
+  float crackHalo = exp(-crackD2 * crackD2 * 90000.0) * 0.35;
   vec3 crackCol = vec3(0.30, 0.58, 1.0);
-  float crackFlicker = 0.85 + 0.15 * sin(t * 37.0 + crackD * 4000.0);
-  col += crackCol * (crackGlow * 1.15 + crackHalo) * inWall * crackFlicker * (1.0 - uSlump);
+  float crackFlicker = 0.85 + 0.15 * sin(t * 37.0 + crackD2 * 4000.0);
+  col += crackCol * (crackGlow * 1.15 + crackHalo) * crackFlicker
+       * (movedCovers ? 0.8 * (1.0 - uSlump) : inWall * (1.0 - uSlump));
 
   // --- sea ---------------------------------------------------------------
   if (y < WATERLINE) {
@@ -207,12 +218,16 @@ void main() {
     float wv = sin(y * 240.0 + vnoise2(vec2(x * 8.0, y * 20.0)) * 6.0 - t * 1.3);
     sea *= 1.0 + wv * 0.05;
 
-    // expanding swell rings from the impact point
+    // expanding swell rings from the impact point — squared deltas, no pow
+    // on signed bases (undefined in GLSL ES).
     float ringT = max(0.0, t - 11.3);
     float ringPos = ringT * 0.10;
-    float ring = exp(-pow((dist - ringPos) * 30.0, 2.0));
-    float ring2 = exp(-pow((dist - ringPos * 0.72) * 34.0, 2.0)) * 0.7;
-    float ring3 = exp(-pow((dist - ringPos * 0.45) * 38.0, 2.0)) * 0.5;
+    float rd1 = (dist - ringPos) * 30.0;
+    float rd2 = (dist - ringPos * 0.72) * 34.0;
+    float rd3 = (dist - ringPos * 0.45) * 38.0;
+    float ring = exp(-rd1 * rd1);
+    float ring2 = exp(-rd2 * rd2) * 0.7;
+    float ring3 = exp(-rd3 * rd3) * 0.5;
     float ringDecay = exp(-ringT * 0.5) * (1.0 - smoothstep(0.0, 0.02, abs(dist - ringPos) - 0.15)) + 0.4 * exp(-ringT * 0.4);
     sea += vec3(0.55, 0.72, 0.85) * (ring + ring2 + ring3) * ringDecay * uImpact;
 
@@ -220,24 +235,29 @@ void main() {
     float crownR = uImpact * 0.085 * (1.0 + 0.35 * uSlump);
     float crownD = abs(dist - crownR);
     float crownH = (1.0 - smoothstep(11.3, 13.5, t)) * 0.10 + 0.02;
-    float inCrown = exp(-crownD * crownD * 9000.0) * smoothstep(crownH * 2.5, crownH * 0.2, sw);
+    float crownFade = (1.0 - smoothstep(12.2, 15.5, t));            // dies out fully
+    float inCrown = exp(-crownD * crownD * 9000.0)
+                  * (1.0 - smoothstep(crownH * 0.2, crownH * 2.5, sw))
+                  * uImpact * crownFade;                            // gated to impact
     float foam = fbm2(vec2(x * 30.0 + t * 2.0, y * 60.0 - t * 3.0));
-    sea += vec3(0.85, 0.93, 1.0) * inCrown * (0.5 + 0.5 * foam) * (1.0 - 0.5 * uAfter);
+    sea += vec3(0.85, 0.93, 1.0) * inCrown * (0.5 + 0.5 * foam);
 
     // foam streak wash under the wall after impact
-    float wash = smoothstep(0.10, 0.0, sw) * uAfter * (0.4 + 0.3 * foam);
+    float wash = (1.0 - smoothstep(0.0, 0.10, sw)) * uAfter * (0.4 + 0.3 * foam);
     sea = mix(sea, vec3(0.55, 0.68, 0.78), wash * 0.45);
     col = sea;
   }
 
   // --- mist + glitter over the splash -------------------------------------
-  float mistZone = exp(-pow(dist * 2.2, 2.0)) * smoothstep(WATERLINE + 0.26, WATERLINE + 0.02, y);
+  float mz = dist * 2.2;
+  float mistZone = exp(-mz * mz) * (1.0 - smoothstep(WATERLINE + 0.02, WATERLINE + 0.26, y));
   float mst = fbm2(vec2(x * 12.0 + t * 0.8, y * 22.0 - t * 1.6));
   col = mix(col, vec3(0.72, 0.80, 0.88), mistZone * mst * uMist * 0.55);
-  // glitter: sparse twinkling specks above the waterline post-impact
+  // glitter: sparse twinkling specks above the waterline — fades with the mist
   float spk = hash1(floor(x * 640.0) + floor(y * 360.0) * 57.0);
   float tw = step(0.9985, fract(spk + t * 0.35)) * mistZone;
-  col += vec3(0.9, 0.95, 1.0) * tw * (0.4 + 0.6 * uAfter) * uImpact * 0.9;
+  col += vec3(0.9, 0.95, 1.0) * tw * (0.4 + 0.6 * uAfter) * uImpact * 0.9
+       * (1.0 - smoothstep(16.0, 19.0, t));
 
   // faint atmospheric haze banding
   col = mix(col, col * vec3(0.92, 0.97, 1.05), uAfter * 0.15);
