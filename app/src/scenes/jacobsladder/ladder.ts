@@ -135,20 +135,25 @@ void main() {
     float slot = floor(fi / 5.0);
     float ph = fract(uT / CYCLE + slot / NARC);
     float h = arcH(ph);
-    float g = gapHalf(h);
     float h1 = hash11(fi * 7.31 + slot * 3.7);
     float h2 = hash11(fi * 13.7 + slot * 11.3);
     float h3 = hash11(fi * 5.9 + slot * 23.1);
-    float sx = cx + (h1 * 2.0 - 1.0) * g * 0.9;
-    float u = clamp((sx - cx + g) / max(2.0 * g, 1e-4), 0.0, 1.0);
+    float u = 0.06 + 0.88 * h1;
     float seed = slot * 17.0 + floor(uT / CYCLE + slot / NARC);
     float sy = h + (0.016 + 0.030 * (h / 0.80)) * arcWiggle(u, uT, seed)
              + (h2 - 0.5) * 0.03;
+    // spark x follows the channel's bend: the arc spans between rails at
+    // the bend's own height, not at h
+    float gEff = gapHalf(sy) + 0.004 * sy * sy;
+    float sx = cx - gEff + u * 2.0 * gEff + (h3 - 0.5) * 0.02;
     float clock = fract(uT * (1.5 + h3 * 3.0) + h1 * 9.0);
     float burst = 1.0 + 2.5 * smoothstep(0.86, 0.96, ph);        // starve burst
-    // sparks ride the channel's burn envelope so none stays lit across the
-    // re-strike jump (position hops top->base while the clock keeps running)
-    float spark = smoothstep(0.93, 1.0, clock) * burst * arcBurn(ph);
+    // sparks ride the burn envelope so none stays lit across the re-strike
+    // jump — except a short window near starvation where the burst scatters
+    // while the channel dies (still dark by ph→1, before the jump)
+    float gate = max(arcBurn(ph),
+                     smoothstep(0.86, 0.90, ph) * (1.0 - smoothstep(0.97, 1.0, ph)));
+    float spark = smoothstep(0.93, 1.0, clock) * burst * gate;
     float d2 = (p.x - sx) * (p.x - sx) + (p.y - sy) * (p.y - sy);
     c += CORE * spark * exp(-d2 * 3.0e5) * 0.8;
   }
