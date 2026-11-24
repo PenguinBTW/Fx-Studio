@@ -217,7 +217,7 @@ void main() {
       float back = 1.0 - smoothstep(0.004, 0.008, length((uv - vp) / vec2(1.7, 0.6)));
       float nose = 1.0 - smoothstep(0.002, 0.005, length((uv - (vp + vec2(0.011, 0.004))) / vec2(1.0, 0.7)));
       col = mix(col, vec3(0.05, 0.04, 0.03), clamp(back + nose, 0.0, 1.0) * 0.9);
-      float wake = (1.0 - smoothstep(0.001, 0.004, abs(uv.y - (0.482 + 0.004 * sin(uv.x * 80.0 - t * 3.0))))) *
+      float wake = (1.0 - smoothstep(0.001, 0.004, abs(uv.y - (0.470 + 0.004 * sin(uv.x * 80.0 - t * 3.0))))) *
                    step(vp.x - 0.05, uv.x) * step(uv.x, vp.x);
       col = mix(col, vec3(0.10, 0.12, 0.13), wake * 0.4);
     }
@@ -273,7 +273,7 @@ export default class DawnditchScene extends Scene {
         const W = P.width || 1920, H = P.height || 1080;
         this.cam.updateMatrixWorld();
         if (vgone > -0.5 && vx > -0.02 && vx < 0.99) {
-          aToV(vx, vmode > 0.9 ? 0.49 : 0.515, this.p).project(this.cam);
+          aToV(vx, vmode > 0.9 ? 0.472 : 0.515, this.p).project(this.cam);
           const px = (this.p.x * 0.5 + 0.5) * W, py = (0.5 - this.p.y * 0.5) * H;
           P.textProbes.push({
             frameIdx: P.currentFrameIdx ?? 0, t, text: 'vole',
