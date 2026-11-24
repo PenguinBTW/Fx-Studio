@@ -293,9 +293,13 @@ export default defineScene({
     sc.add(stars);
 
     ctx.rig.setLensMm(48);
-    // register the flight path so God-View's non-rendering sampler sees it
+    // register the flight path keyed to this entry's absolute-time window, so
+    // God-View's sampler and updateCamera's evalPath both land on camPos(t)
     const wps = [];
-    for (let i = 0; i <= 8; i++) wps.push({ t: i / 8, pos: camPos(i / 8 * 24), target: camTarget(i / 8 * 24) });
+    for (let i = 0; i <= 8; i++) {
+      const wt = ctx.sceneCtx.start + (i / 8) * (ctx.sceneCtx.end - ctx.sceneCtx.start);
+      wps.push({ t: i / 8, pos: camPos(wt), target: camTarget(wt) });
+    }
     ctx.rig.setPath(wps);
     ctx.rig.position = camPos(0);
     ctx.rig.target = camTarget(0);
@@ -316,8 +320,7 @@ export default defineScene({
     S.ringMat.uniforms.uBright.value = 0.5 + bright * 0.7;
     S.starMat.uniforms.uT.value = t;
 
-    ctx.rig.position = camPos(t);
-    ctx.rig.target = camTarget(t);
+    // evalPath(f.p) drives the pose via the per-entry waypoint window
     ctx.updateCamera(t, f.p);
     ctx.flush(out, true);
   },

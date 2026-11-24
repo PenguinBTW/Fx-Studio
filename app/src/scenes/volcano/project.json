@@ -1,0 +1,32 @@
+{
+  "project": "volcano",
+  "meta": {
+    "title": "Volcano: Night Eruption",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 24.0
+  },
+  "entries": [
+    {
+      "scene": "volcano/volcano",
+      "id": "act-breathe",
+      "start": 0.0,
+      "end": 8.0,
+      "caption": { "fig": "01", "text": "THE MOUNTAIN BREATHES", "dur": 4.0 }
+    },
+    {
+      "scene": "volcano/volcano",
+      "id": "act-fountain",
+      "start": 8.0,
+      "end": 16.0,
+      "caption": { "fig": "02", "text": "THE FOUNTAIN SWELLS", "dur": 4.0 }
+    },
+    {
+      "scene": "volcano/volcano",
+      "id": "act-rain",
+      "start": 16.0,
+      "end": 24.0,
+      "caption": { "fig": "03", "text": "THE SKY RAINS FIRE", "dur": 4.0 }
+    }
+  ]
+}
