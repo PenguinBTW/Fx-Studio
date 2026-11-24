@@ -153,7 +153,7 @@ void main() {
   float grown = smoothstep(aT + 0.28, aT + 0.9, uT);
   float tw = 0.75 + 0.25 * sin(uT * 2.2 + aSeed * 17.0);
   float front = 1.0 + (1.0 - grown) * 1.6;          // growth front glows
-  float sweep = uSweepI * smoothstep(1.4, 0.0, abs(position.x - uSweepX));
+  float sweep = uSweepI * 1.0 - smoothstep(0.0, 1.4, abs(position.x - uSweepX));
   float wet = aGlisten * uGlisten;                   // post-droplet glisten
   vA = appear * front * tw * (1.35 + 0.75 * sweep + wet * 1.2);
   vWarm = clamp(sweep + wet * 0.55, 0.0, 1.0);
@@ -196,7 +196,7 @@ void main() {
     col += vec3(0.5, 0.6, 0.75) * exp(-dot(d, d) * 90000.0) * 0.8;
   }
   // headlight sweep washes the pane warm-white
-  float band = smoothstep(0.35, 0.0, abs(q.x - uSweepX));
+  float band = 1.0 - smoothstep(0.0, 0.35, abs(q.x - uSweepX));
   col += vec3(1.0, 0.85, 0.6) * band * uSweepI * 0.5;
   gl_FragColor = vec4(col, 1.0);
 }`;
@@ -238,8 +238,8 @@ void main() {
     float ap = smoothstep(aT0 - 0.15, aT0 + 0.15, uT);
     float frontGlow = exp(-abs(uT - aT0) * 1.1);
     float tw = 0.5 + 0.5 * sin(uT * (2.0 + fract(aSeed) * 2.0) + aSeed * 40.0);
-    float sweep = uSweepI * smoothstep(1.2, 0.0, abs(p.x - uSweepX));
-    float wet = smoothstep(0.8, 0.0, distance(p.xy, uWet.xy)) * uGlisten;
+    float sweep = uSweepI * 1.0 - smoothstep(0.0, 1.2, abs(p.x - uSweepX));
+    float wet = 1.0 - smoothstep(0.0, 0.8, distance(p.xy, uWet.xy)) * uGlisten;
     a = ap * (0.25 + 0.75 * tw) * (0.35 + frontGlow * 0.9 + sweep * 1.2 + wet * 1.3);
     vWarm = clamp(sweep + wet * 0.5, 0.0, 1.0);
     sz = 4.5 + frontGlow * 4.5 + sweep * 3.5 + wet * 3.0;
@@ -295,7 +295,7 @@ void main() {
 
 // per-act state — each project entry instantiates its own ctx, so shared
 // module state MUST be keyed on it or uniforms land on the wrong act
-interface FU { back: THREE.ShaderMaterial; fernMat: THREE.ShaderMaterial; ptMat: THREE.ShaderMaterial; candle: THREE.ShaderMaterial; }
+interface FU { back: THREE.ShaderMaterial; fernMat: THREE.ShaderMaterial; ptMat: THREE.ShaderMaterial; mothMat: THREE.ShaderMaterial; candle: THREE.ShaderMaterial; glistenT: number; }
 const U = new WeakMap<object, FU>();
 
 const scene = defineScene({
@@ -343,7 +343,7 @@ const scene = defineScene({
         transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
       }),
     );
-    candle.position.set(0, -2.55, -2.35);
+    candle.position.set(0.35, -1.05, -2.35);
     ctx.scene3D.add(candle);
 
     // ---- window frame + mullion cross (foreground, dark wood) ---------------
@@ -398,18 +398,20 @@ const scene = defineScene({
       addPt(1, rng() * 9, 0, 0, [(rng() - 0.5) * 5.4, -1.2 + rng() * 2.8, -1.1 - rng() * 0.6], [0, 0, 0]);
     }
     // condensation droplets near the warm rim — slide down-left; #3 crosses WET
+    // (~78% along its eased slide reaches WET.y — glisten starts there)
+    let glistenT = GLISTEN_T;
     for (let i = 0; i < 9; i++) {
       const dx = -2.4 + i * 0.55 + (rng() - 0.5) * 0.2;
       const cross = i === 3;
       const start = cross ? WET.y + 0.9 : -1.55 + rng() * 0.25;
       const end = cross ? WET.y - 0.15 : -1.95 - rng() * 0.3;
       const t0 = cross ? 15.2 : 6 + rng() * 14;
-      addPt(2, rng() * 31, t0, 5 + rng() * 4,
+      const dur = 5 + rng() * 4;
+      if (cross) glistenT = t0 + 0.78 * dur;
+      addPt(2, rng() * 31, t0, dur,
         [cross ? WET.x : dx, start, -2.0],
         [cross ? WET.x + 0.12 : dx + (rng() - 0.5) * 0.4, end, -2.0]);
     }
-    // the moth — one tap at the far window
-    addPt(3, 0, MOTH.t0, MOTH.t1, [1.9, 0.9, -3.2], [0, 0, 0]);
 
     const pg = new THREE.BufferGeometry();
     pg.setAttribute("position", new THREE.BufferAttribute(new Float32Array(P), 3));
@@ -428,10 +430,36 @@ const scene = defineScene({
     });
     ctx.scene3D.add(new THREE.Points(pg, ptMat));
 
+    // the moth — one tap at the far window (own draw call: a silhouette needs
+    // NormalBlending — the additive points material can only brighten)
+    const mothPts = new THREE.Points(
+      (() => {
+        const g = new THREE.BufferGeometry();
+        g.setAttribute("position", new THREE.BufferAttribute(new Float32Array([1.9, 0.9, -3.2]), 3));
+        g.setAttribute("aKind", new THREE.BufferAttribute(new Float32Array([3]), 1));
+        g.setAttribute("aSeed", new THREE.BufferAttribute(new Float32Array([0]), 1));
+        g.setAttribute("aT0", new THREE.BufferAttribute(new Float32Array([MOTH.t0]), 1));
+        g.setAttribute("aT1", new THREE.BufferAttribute(new Float32Array([MOTH.t1]), 1));
+        g.setAttribute("aTo", new THREE.BufferAttribute(new Float32Array([0, 0, 0]), 3));
+        return g;
+      })(),
+      new THREE.ShaderMaterial({
+        vertexShader: PT_VERT, fragmentShader: PT_FRAG,
+        uniforms: {
+          uT: { value: 0 }, uSweepX: { value: -4 }, uSweepI: { value: 0 },
+          uGlisten: { value: 0 }, uWet: { value: new THREE.Vector3(WET.x, WET.y, -2.1) },
+        },
+        transparent: true, blending: THREE.NormalBlending, depthWrite: false,
+      }),
+    );
+    ctx.scene3D.add(mothPts);
+
     U.set(ctx, {
       back: back.material as THREE.ShaderMaterial,
       fernMat, ptMat,
+      mothMat: mothPts.material as THREE.ShaderMaterial,
       candle: candle.material as THREE.ShaderMaterial,
+      glistenT,
     });
   },
 
@@ -445,8 +473,8 @@ const scene = defineScene({
     const su = Math.min(Math.max((t - SWEEP.t0) / (SWEEP.t1 - SWEEP.t0), 0), 1);
     const sweepI = su <= 0 || su >= 1 ? 0 : Math.sin(su * Math.PI);
     const sweepX = -4.2 + su * 8.4;
-    // post-droplet glisten
-    const glisten = Math.min(Math.max((t - GLISTEN_T) / 1.6, 0), 1);
+    // post-droplet glisten — timed to when the crossing droplet reaches WET
+    const glisten = Math.min(Math.max((t - u.glistenT) / 1.6, 0), 1);
 
     u.back.uniforms.uT!.value = t;
     u.back.uniforms.uSweepX!.value = sweepX / 6.4 + 0.5;
@@ -459,6 +487,7 @@ const scene = defineScene({
     u.ptMat.uniforms.uSweepX!.value = sweepX;
     u.ptMat.uniforms.uSweepI!.value = sweepI;
     u.ptMat.uniforms.uGlisten!.value = glisten;
+    u.mothMat.uniforms.uT!.value = t;
     u.candle.uniforms.uT!.value = t;
 
     ctx.flush(out, true);
