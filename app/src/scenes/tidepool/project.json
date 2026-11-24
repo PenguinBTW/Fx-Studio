@@ -1,0 +1,11 @@
+{
+  "project": "tidepool",
+  "entries": [
+    {
+      "scene": "tidepool/tidepool",
+      "id": "tidepool",
+      "start": 0.0,
+      "end": 20.0
+    }
+  ]
+}
