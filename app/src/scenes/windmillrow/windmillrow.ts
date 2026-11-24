@@ -370,13 +370,24 @@ export default class WindmillRowScene extends Scene {
 
     // CameraRig: establishing frame holds the far mill + low sun at the
     // right edge, pans left along the ridge, then settles on the near mill.
-    // Narrower frames must pan FURTHER, not less — scale the sweep so the
-    // closing target still keeps the near mill (wx -70.4) inside the frame.
+    // Narrower frames must pan FURTHER and dwell on the mid mill mid-scene,
+    // otherwise the sweep midpoint leaves all mills out of frame.
     const halfW = 104.0 * Math.tan(0.5 * 40 * Math.PI / 180) * (this.ctx.W / this.ctx.H);
     const targetEnd = Math.min(-22.0, -70.4 + 0.85 * halfW);
-    const pan = ss(1, 14, t) * ((40.0 - targetEnd) / 62.0);
-    this.rig.position = [45.0 - 63.0 * pan + 0.8 * Math.sin(t * 0.06), 6.5, 24.0];
-    this.rig.target = [40.0 - 62.0 * pan, -2.0 + 1.5 * pan, PZ];
+    let targetX: number;
+    if (halfW >= 60.0) {
+      const pan = ss(1, 14, t) * ((40.0 - targetEnd) / 62.0);
+      targetX = 40.0 - 62.0 * pan;
+    } else {
+      // narrow path: reach the mid mill by t~8, dwell through peak wind,
+      // then continue left so the near mill + crow land the closing beat
+      const tMid = 16.0 - 0.45 * halfW;
+      targetX = 40.0 - (40.0 - tMid) * ss(1, 8, t)
+              - (tMid - targetEnd) * ss(10.5, 17.5, t);
+    }
+    const progress = (40.0 - targetX) / (40.0 - targetEnd);
+    this.rig.position = [targetX + 5.0 + 0.8 * Math.sin(t * 0.06), 6.5, 24.0];
+    this.rig.target = [targetX, -2.0 + 1.5 * progress, PZ];
     this.rig.focalLengthPx = (this.ctx.H / 2) / Math.tan(0.5 * 40 * Math.PI / 180);
     this.rig.syncToThreeCamera(this.rig.evalCam(t), this.cam);
 
