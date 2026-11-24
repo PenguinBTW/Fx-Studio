@@ -18,6 +18,10 @@ import { mulberry32 } from '../../engine/util';
 const WATER_Y = -3.0;      // waterline — water band's top edge
 const PLOP_T = 19.0;       // frog plop time
 const PLOP = { x: 1.5, z: -9.0 }; // plop centre on the water (world)
+const MOON_X = 16.2;       // moon world x on the backdrop (uv 0.68 × 90 wide)
+const MOON_Z = -32.0;      // backdrop plane z
+const WATER_Z = -14.0;     // water band plane z
+const QUAD_W = 90.0;       // both quads share this width
 
 // chorus: first flashes → full chorus → sudden still → rekindle
 function camPos(t: number): [number, number, number] {
@@ -128,6 +132,7 @@ ${GLSL_COMMON}
 ${GLSL_NOISE}
 varying vec2 vUv;
 uniform float uT;
+uniform vec3 uCam;
 
 void main() {
   // mirrored gradient: darkest at the bottom, horizon colour at top
@@ -142,24 +147,34 @@ void main() {
   float rip = fbm3(vec3(vUv.x * 26.0, vUv.y * 60.0 - uT * 0.22, 0.4), 3, 2.0, 0.5);
   col *= 0.92 + 0.16 * rip;
 
-  // moon glint: vertical wobbling column of light under the moon
-  float gx = 0.70 + 0.012 * fbm3(vec3(vUv.y * 30.0, uT * 0.3, 2.0), 2, 2.0, 0.5);
-  float gl = exp(-pow((vUv.x - gx) / 0.020, 2.0));
+  // moon glint: vertical wobbling column of light under the moon. The
+  // quad is far wider than the frame, so uv.x is not a screen fraction —
+  // project the moon's world x through the camera onto the water plane.
+  float tanM = (${MOON_X.toFixed(1)} - uCam.x) / (uCam.z - (${MOON_Z.toFixed(1)}));
+  float gx = 0.5 + (uCam.x + (uCam.z - (${WATER_Z.toFixed(1)})) * tanM) / ${QUAD_W.toFixed(1)}
+           + 0.012 * fbm3(vec3(vUv.y * 30.0, uT * 0.3, 2.0), 2, 2.0, 0.5);
+  float gdx = (vUv.x - gx) / 0.020;
+  float gl = exp(-gdx * gdx);
   gl *= (0.35 + 0.45 * vUv.y) * (0.55 + 0.45 * smoothstep(0.0, 9.0, uT));
   gl *= 0.7 + 0.3 * rip;
   col += vec3(0.60, 0.63, 0.52) * gl * 1.8;
 
-  // frog plop: one ring spreading from t≈19, rim catching the moonlight
+  // frog plop: one ring spreading from t≈19, rim catching the moonlight.
+  // Centre projected from the same world point plopBend scatters from,
+  // or the splash and the scatter diverge.
   float pt = uT - ${PLOP_T.toFixed(1)};
   if (pt > 0.0) {
+    float tanP = (${PLOP.x.toFixed(1)} - uCam.x) / (uCam.z - (${PLOP.z.toFixed(1)}));
+    vec2 pc = vec2(0.5 + (uCam.x + (uCam.z - (${WATER_Z.toFixed(1)})) * tanP) / ${QUAD_W.toFixed(1)}, 0.42);
     float pr = 0.02 + 0.30 * smoothstep(0.0, 2.6, pt);
-    float pd = length((vUv - vec2(0.56, 0.42)) * vec2(2.2, 1.0));
-    float ring = exp(-pow((pd - pr) / 0.012, 2.0));
+    float pd = length((vUv - pc) * vec2(2.2, 1.0));
+    float rd = (pd - pr) / 0.012;
+    float ring = exp(-rd * rd);
     ring *= 1.0 - smoothstep(0.0, 3.2, pt);
     col += vec3(0.24, 0.31, 0.38) * ring;
     // faint trailing inner ripple
-    float pd2 = length((vUv - vec2(0.56, 0.42)) * vec2(2.2, 1.0));
-    float ring2 = exp(-pow((pd2 - pr * 0.6) / 0.010, 2.0)) * 0.4;
+    float rd2 = (pd - pr * 0.6) / 0.010;
+    float ring2 = exp(-rd2 * rd2) * 0.4;
     col += vec3(0.25, 0.30, 0.38) * ring2 * (1.0 - smoothstep(0.0, 2.8, pt));
   }
 
@@ -178,6 +193,7 @@ varying float vKind;
 varying float vSeed;
 uniform float uT;
 uniform vec3 uCamPos;
+uniform float uPx;   // render-target height / 1080 — keeps sprites a fixed frame fraction
 
 // per-seed flash rhythm: slow brighten, sharp falloff, variable period.
 // chorus envelope: sparse → full → sudden still → rekindle.
@@ -272,7 +288,7 @@ void main() {
   vKind = aKind;
   vSeed = aSeed;
   vec4 mv = modelViewMatrix * vec4(pos, 1.0);
-  gl_PointSize = min(size * 300.0 / max(1.0, -mv.z), (aKind > 2.5) ? 260.0 : 90.0);
+  gl_PointSize = min(size * 300.0 * uPx / max(1.0, -mv.z), ((aKind > 2.5) ? 260.0 : 90.0) * uPx);
   gl_Position = projectionMatrix * mv;
   if (vA < 0.004) gl_Position = vec4(0.0, 0.0, -10.0, 1.0); // cull dead sprites
 }
@@ -319,6 +335,7 @@ interface FmState {
   backMat: THREE.ShaderMaterial;
   waterMat: THREE.ShaderMaterial;
   flyMat: THREE.ShaderMaterial;
+  owlMat: THREE.ShaderMaterial;
 }
 const fmStates = new WeakMap<SceneContext, FmState>();
 
@@ -346,16 +363,16 @@ export default defineScene({
     const waterMat = new THREE.ShaderMaterial({
       vertexShader: QUAD_VERT,
       fragmentShader: WATER_FRAG,
-      uniforms: { uT: { value: 0 } },
+      uniforms: { uT: { value: 0 }, uCam: { value: new THREE.Vector3() } },
     });
     const water = new THREE.Mesh(new THREE.PlaneGeometry(90, 8), waterMat);
     water.position.set(0, WATER_Y - 4.0, -14);
     water.renderOrder = 1;
     sc.add(water);
 
-    // --- one points cloud: fireflies, reflections, heroes, owl
-    const NF = 110, NH = 6, NO = 1;
-    const N = NF * 2 + NH + NO;
+    // --- one points cloud: fireflies, reflections, heroes
+    const NF = 110, NH = 6;
+    const N = NF * 2 + NH;
     const pos = new Float32Array(N * 3);
     const seed = new Float32Array(N);
     const kind = new Float32Array(N);
@@ -387,9 +404,6 @@ export default defineScene({
       put(-8 + rng() * 16, -1.5 + rng() * 2.5, -1.5 - rng() * 2.5,
           2, rng() * 100, 17.5 + rng() * 2.0, 0, 1.2 + rng() * 1.4, rng() * Math.PI * 2);
     }
-    // owl: crosses the sky once during the calm beat
-    put(-9, 4.2, -22, 3, rng() * 100, 19.4, 2.4, 0, rng() * 6.28);
-
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     geo.setAttribute('aSeed', new THREE.BufferAttribute(seed, 1));
@@ -401,12 +415,33 @@ export default defineScene({
       transparent: true,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
-      uniforms: { uT: { value: 0 }, uCamPos: { value: new THREE.Vector3() } },
+      uniforms: { uT: { value: 0 }, uCamPos: { value: new THREE.Vector3() }, uPx: { value: 1 } },
     });
     const flies = new THREE.Points(geo, flyMat);
     flies.frustumCulled = false;
     flies.renderOrder = 2;
     sc.add(flies);
+
+    // owl: crosses the sky once during the calm beat. Its own point +
+    // material — a silhouette needs normal alpha blending; additive light
+    // can only brighten the sky behind it.
+    const owlGeo = new THREE.BufferGeometry();
+    owlGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([-9, 4.2, -22]), 3));
+    owlGeo.setAttribute('aSeed', new THREE.BufferAttribute(new Float32Array([rng() * 100]), 1));
+    owlGeo.setAttribute('aKind', new THREE.BufferAttribute(new Float32Array([3]), 1));
+    owlGeo.setAttribute('aAux', new THREE.BufferAttribute(new Float32Array([19.4, 2.4, 0, rng() * 6.28]), 4));
+    const owlMat = new THREE.ShaderMaterial({
+      vertexShader: FLY_VERT,
+      fragmentShader: FLY_FRAG,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.NormalBlending,
+      uniforms: { uT: { value: 0 }, uCamPos: { value: new THREE.Vector3() }, uPx: { value: 1 } },
+    });
+    const owl = new THREE.Points(owlGeo, owlMat);
+    owl.frustumCulled = false;
+    owl.renderOrder = 2;
+    sc.add(owl);
 
     // --- camera: gentle drift along the waterline
     ctx.rig.setLensMm(55);
@@ -418,7 +453,7 @@ export default defineScene({
     ctx.rig.setPath(wps);
     ctx.updateCamera(0, 0);
 
-    fmStates.set(ctx, { backMat, waterMat, flyMat });
+    fmStates.set(ctx, { backMat, waterMat, flyMat, owlMat });
   },
 
   render(ctx: SceneContext, f: Frame, out: THREE.WebGLRenderTarget) {
@@ -427,9 +462,15 @@ export default defineScene({
     st.backMat.uniforms.uT.value = t;
     st.waterMat.uniforms.uT.value = t;
     st.flyMat.uniforms.uT.value = t;
+    st.owlMat.uniforms.uT.value = t;
     ctx.updateCamera(t, f.p);
-    (st.flyMat.uniforms.uCamPos.value as THREE.Vector3).set(
-      ctx.rig.position[0], ctx.rig.position[1], ctx.rig.position[2]);
+    const cp = ctx.rig.position;
+    (st.waterMat.uniforms.uCam.value as THREE.Vector3).set(cp[0], cp[1], cp[2]);
+    (st.flyMat.uniforms.uCamPos.value as THREE.Vector3).set(cp[0], cp[1], cp[2]);
+    (st.owlMat.uniforms.uCamPos.value as THREE.Vector3).set(cp[0], cp[1], cp[2]);
+    const px = out.height / 1080;
+    st.flyMat.uniforms.uPx.value = px;
+    st.owlMat.uniforms.uPx.value = px;
     ctx.flush(out, true);
   },
 });
