@@ -206,7 +206,6 @@ export default class LorenzScene extends Scene {
 
     // head index — pure lookup of f(t)
     const headF = Math.min(STEPS - 1, this.startIdx + t * (this.anchor.rate / DT));
-    const hx = this.traj[Math.max(0, Math.min(STEPS - 1, Math.round(headF))) * 3]; // lobe side for the warm accent
 
     // grow the trail in: during the first ~1.5s the window is still short —
     // spine handles it via clamping (tail pins at trajectory start).
@@ -214,6 +213,7 @@ export default class LorenzScene extends Scene {
 
     this.sample(headF, this.tmp);
     this.head.position.set(this.tmp[0], this.tmp[1], this.tmp[2]);
+    const hx = this.tmp[0]; // interpolated head x — lobe side for the warm accent
     const side = hx >= 0 ? 1 : -1;
     this.trailMat.uniforms.uHeadSide!.value = side;
     this.headMat.uniforms.uHeadSide!.value = side;
