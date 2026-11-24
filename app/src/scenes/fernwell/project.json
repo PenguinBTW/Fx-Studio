@@ -1,0 +1,39 @@
+{
+  "project": "fernwell",
+  "meta": {
+    "title": "Fern Well: Golden Hour Corner",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 20.0
+  },
+  "entries": [
+    {
+      "scene": "fernwell/fernwell",
+      "id": "act-still",
+      "start": 0.0,
+      "end": 4.5,
+      "caption": { "fig": "01", "text": "THE WELL AT GOLDEN HOUR", "dur": 2.4 }
+    },
+    {
+      "scene": "fernwell/fernwell",
+      "id": "act-robin",
+      "start": 4.5,
+      "end": 11.5,
+      "caption": { "fig": "02", "text": "A ROBIN ON THE BUCKET", "dur": 2.6 }
+    },
+    {
+      "scene": "fernwell/fernwell",
+      "id": "act-wing",
+      "start": 11.5,
+      "end": 17.0,
+      "caption": { "fig": "03", "text": "WINGS ACROSS THE STONES", "dur": 2.6 }
+    },
+    {
+      "scene": "fernwell/fernwell",
+      "id": "act-settle",
+      "start": 17.0,
+      "end": 20.0,
+      "caption": { "fig": "04", "text": "GLINT IN THE MOUTH", "dur": 2.6 }
+    }
+  ]
+}
