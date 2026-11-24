@@ -20,9 +20,10 @@ const TAKE = 20;
 const CAUCHY_A = 1.620;
 const CAUCHY_B = 16000;
 // Facet outward-normal angles of the authored GLB cross-section (degrees in
-// the XZ plane, atan2(z,x)): the three flat sides of the triangular prism.
-const FACE_ENTRY = 150; // faces the incoming beam (-X side, +Z tilt)
-const FACE_EXIT = 30;   // faces +X/+Z — the side the internal ray reaches
+// the XZ plane, atan2(z,x)): the three flat sides of the triangular prism are
+// {180, 60, -60} — read off model.glb's face normals, not assumed.
+const FACE_ENTRY = 180; // faces the incoming beam (-X)
+const FACE_EXIT = 60;   // faces +X/+Z — the side the internal ray reaches
 const APOTHEM = 0.31;   // facet-plane distance from centre (0.62·1.0·0.5)
 const SCALE = 1.0;      // scene scale applied to the GLB
 const BEAM_Y = 0.78;    // beam height — upper-middle of the crystal
@@ -49,13 +50,14 @@ function hash(i: number, salt: number): number {
 }
 
 /**
- * Prism rotation about +Y (radians). Base ~0.44 rad holds incidence near 55°
- * (a 60° prism at n≈1.66 only transmits for i ≳ 45° — below that the internal
- * ray TIRs off the exit facet and the fan dies). The mid-take sweep pushes
- * incidence toward grazing, which both sweeps the fan and grows the spread.
+ * Prism rotation about +Y (radians). With FACE_ENTRY = 180 the incidence angle
+ * equals phi itself, so base ~0.96 rad holds incidence near 55° (a 60° prism
+ * at n≈1.66 only transmits for i ≳ 45° — below that the internal ray TIRs off
+ * the exit facet and the fan dies). The mid-take sweep pushes incidence toward
+ * grazing, which both sweeps the fan and grows the spread.
  */
 function prismPhi(lt: number): number {
-  return 0.44 + 0.011 * lt + 0.28 * smooth((lt - 8.5) / 9.5);
+  return Math.PI / 6 + 0.44 + 0.011 * lt + 0.28 * smooth((lt - 8.5) / 9.5);
 }
 
 /**
