@@ -21,7 +21,10 @@ const ARM_R = [0.88, 1.46, 2.06];
 const PLANET_Y = [1.42, 1.58, 1.75];           // planet centres (world y)
 const OMEGA = [0.34, 0.21, 0.125];             // arm/ring angular rates (rad/s)
 const PHI = [0.35, 2.40, 4.60];                // per-arm phase so planets spread
-const GEAR_W = [-0.62, 0.85, -0.55];           // gear train, alternating mesh
+// Gear train: gear_0 drives pinion gear_3 (30/12), gear_1 drives pinion gear_2
+// (20/9) — meshing pairs rotate counter at exact tooth ratios.
+const GEAR_W = [0.40, -0.55, 0.55 * (20 / 9), -0.40 * (30 / 12)];
+const GEAR_PH = [0.0, 0.7, Math.PI / 9, Math.PI / 12];  // tooth phase at t=0
 const CAPTIONS: [number, number, string, number][] = [
   // [t0, t1, text, fontSize]
   [1.1, 4.6, 'THE ORRERY', 54],
@@ -62,35 +65,49 @@ function makeTex(size: number, fn: (u: number, v: number, px: Uint8ClampedArray,
   return t;
 }
 // brushed brass: fine circumferential streaks in the roughness channel
-const brushed = () => makeTex(256, (u, v, px, i) => {
+const brushed = () => {
   const n = vnoise(7);
-  const r = 0.42 + 0.26 * fbm(n, u * 48, v * 5) + 0.10 * fbm(n, u * 9, v * 90, 2);
-  const g = Math.max(0, Math.min(255, Math.round(r * 255)));
-  px[i] = px[i + 1] = px[i + 2] = g; px[i + 3] = 255;
-}, false);
-// marble: base colour veined by ridged fbm
-const marble = (base: [number, number, number], vein: [number, number, number], seed: number) =>
-  makeTex(256, (u, v, px, i) => {
-    const n = vnoise(seed);
-    const t = Math.abs(Math.sin((u * 3.0 + fbm(n, u * 5, v * 5) * 3.2) * Math.PI));
-    const w = Math.pow(1 - t, 4) * 0.85 + 0.15 * fbm(n, u * 9, v * 9);
-    const m = clamp01(w);
+  return makeTex(256, (u, v, px, i) => {
+    const r = 0.42 + 0.26 * fbm(n, u * 48, v * 5) + 0.10 * fbm(n, u * 9, v * 90, 2);
+    const g = Math.max(0, Math.min(255, Math.round(r * 255)));
+    px[i] = px[i + 1] = px[i + 2] = g; px[i + 3] = 255;
+  }, false);
+};
+// wood grain: long dark streaks for the lacquered desk (roughness + bump)
+const woodgrain = () => {
+  const n = vnoise(51);
+  return makeTex(256, (u, v, px, i) => {
+    const g = 0.52 + 0.30 * fbm(n, u * 2.5, v * 42) + 0.12 * fbm(n, u * 14, v * 60, 2);
+    const b = Math.max(0, Math.min(255, Math.round(g * 255)));
+    px[i] = px[i + 1] = px[i + 2] = b; px[i + 3] = 255;
+  }, false);
+};
+// marble: base colour crossed by two ridged-fbm vein networks
+const marble = (base: [number, number, number], vein: [number, number, number], seed: number) => {
+  const n = vnoise(seed);
+  return makeTex(256, (u, v, px, i) => {
+    const w1 = Math.pow(1 - Math.abs(Math.sin((u * 3.0 + fbm(n, u * 5, v * 5) * 3.2) * Math.PI)), 5);
+    const w2 = Math.pow(1 - Math.abs(Math.sin((v * 2.2 + fbm(n, u * 7 + 13.7, v * 7 + 13.7, 5) * 4.1) * Math.PI)), 7) * 0.55;
+    const m = clamp01(w1 * 0.78 + w2 + 0.12 * fbm(n, u * 9, v * 9));
     px[i] = Math.round((base[0] * (1 - m) + vein[0] * m) * 255);
     px[i + 1] = Math.round((base[1] * (1 - m) + vein[1] * m) * 255);
     px[i + 2] = Math.round((base[2] * (1 - m) + vein[2] * m) * 255);
     px[i + 3] = 255;
   });
+};
 // ember: dark crust over molten turbulence
-const ember = () => makeTex(256, (u, v, px, i) => {
+const ember = () => {
   const n = vnoise(31);
-  const e = fbm(n, u * 6, v * 6, 5);
-  const hot = Math.pow(clamp01(e * 1.35 - 0.12), 1.6);
-  const crack = 0.3 + 0.7 * sstep(0.30, 0.46, e);
-  px[i] = Math.round(255 * hot * crack);
-  px[i + 1] = Math.round(140 * hot * hot * crack);
-  px[i + 2] = Math.round(30 * hot * hot * hot);
-  px[i + 3] = 255;
-}, false);
+  return makeTex(256, (u, v, px, i) => {
+    const e = fbm(n, u * 6, v * 6, 5);
+    const hot = Math.pow(clamp01(e * 1.35 - 0.12), 1.6);
+    const crack = 0.3 + 0.7 * sstep(0.30, 0.46, e);
+    px[i] = Math.round(255 * hot * crack);
+    px[i + 1] = Math.round(140 * hot * hot * crack);
+    px[i + 2] = Math.round(30 * hot * hot * hot);
+    px[i + 3] = 255;
+  }, false);
+};
 
 // ------------------------------------------------------------ dust motes
 const DUST_VERT = `
@@ -99,14 +116,18 @@ uniform float uT;
 varying float vA;
 void main() {
   float s = seed;
-  // distribute through a beam volume above the orrery
-  vec3 p = vec3(mix(-2.6, 2.6, fract(s * 7.31)),
-                mix(0.4, 3.4, fract(s * 13.7)),
-                mix(-2.6, 2.6, fract(s * 3.97)));
+  // 60% cluster along the key shaft (upper-right of frame), rest ambient
+  vec3 beam = vec3(mix(0.4, 3.1, fract(s * 7.31)),
+                   mix(0.7, 3.3, fract(s * 13.7)),
+                   mix(-0.5, 2.3, fract(s * 3.97)));
+  vec3 amb  = vec3(mix(-2.6, 2.6, fract(s * 7.31)),
+                   mix(0.4, 3.4, fract(s * 13.7)),
+                   mix(-2.6, 2.6, fract(s * 3.97)));
+  vec3 p = mix(beam, amb, step(0.62, fract(s * 1.73)));
   p += 0.30 * vec3(sin(uT * 0.31 + s * 9.0), 0.6 * sin(uT * 0.23 + s * 17.0), cos(uT * 0.27 + s * 11.0));
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
   float tw = 0.55 + 0.45 * sin(uT * (1.1 + fract(s * 5.0)) + s * 40.0);
-  vA = tw * smoothstep(9.0, 3.0, -mv.z) * smoothstep(0.5, 1.6, -mv.z);
+  vA = tw * (1.0 - smoothstep(3.0, 9.0, -mv.z)) * smoothstep(0.5, 1.6, -mv.z);
   gl_PointSize = (1.5 + 2.5 * fract(s * 29.0)) * (55.0 / -mv.z);
   gl_Position = projectionMatrix * mv;
 }`;
@@ -114,8 +135,34 @@ const DUST_FRAG = `
 varying float vA;
 void main() {
   vec2 c = gl_PointCoord - 0.5;
-  float a = smoothstep(0.5, 0.05, length(c)) * vA * 0.32;
+  float a = (1.0 - smoothstep(0.05, 0.5, length(c))) * vA * 0.32;
   gl_FragColor = vec4(1.0, 0.72, 0.42, a);
+}`;
+
+// ------------------------------------------------------------ steam wisp
+const WISP_VERT = `
+attribute float seed;
+uniform float uT;
+varying float vA;
+void main() {
+  float s = seed;
+  float age = fract(uT * 0.045 + s * 0.61803);      // closed-form rise cycle
+  vec3 base = vec3(0.42 + 0.30 * fract(s * 3.1), 1.52,
+                   -0.42 + 0.30 * fract(s * 7.7));
+  vec3 p = base + vec3(sin(age * 9.0 + s * 20.0) * (0.10 + 0.25 * age),
+                       age * 1.15,
+                       cos(age * 7.0 + s * 14.0) * (0.10 + 0.25 * age));
+  vec4 mv = modelViewMatrix * vec4(p, 1.0);
+  vA = smoothstep(0.0, 0.18, age) * (1.0 - smoothstep(0.45, 1.0, age));
+  gl_PointSize = (3.0 + 8.0 * age) * (55.0 / -mv.z);
+  gl_Position = projectionMatrix * mv;
+}`;
+const WISP_FRAG = `
+varying float vA;
+void main() {
+  vec2 c = gl_PointCoord - 0.5;
+  float a = (1.0 - smoothstep(0.08, 0.5, length(c))) * vA * 0.035;
+  gl_FragColor = vec4(0.55, 0.48, 0.42, a);
 }`;
 
 // ------------------------------------------------------------ scene
@@ -131,8 +178,8 @@ export default defineScene({
 
     // HDR environment for PBR sheen (studio-soft; scene lighting stays dramatic)
     const pmrem = new THREE.PMREMGenerator(r);
-    const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-    ctx.scene3D.environment = env;
+    const envRT = pmrem.fromScene(new RoomEnvironment(), 0.04);
+    ctx.scene3D.environment = envRT.texture;
     ctx.scene3D.background = new THREE.Color(0x040308);
     ctx.scene3D.environmentIntensity = 0.35;
     pmrem.dispose();
@@ -150,8 +197,8 @@ export default defineScene({
       envMapIntensity: 1.1,
     });
     const steel = new THREE.MeshPhysicalMaterial({
-      color: 0x8f98a2, metalness: 0.96, roughness: 0.30,
-      roughnessMap: texBrush, envMapIntensity: 1.3,
+      color: 0x5d646e, metalness: 0.96, roughness: 0.38,
+      roughnessMap: texBrush, envMapIntensity: 0.85,
     });
     const emberMat = new THREE.MeshPhysicalMaterial({
       color: 0x1a0a04, roughness: 0.5, metalness: 0.0,
@@ -173,9 +220,19 @@ export default defineScene({
       roughness: 0.26, metalness: 0.08, clearcoat: 0.6, clearcoatRoughness: 0.20,
       envMapIntensity: 1.0,
     });
+    const ruby = new THREE.MeshPhysicalMaterial({
+      color: 0x5a0410, roughness: 0.30, metalness: 0.45,
+      emissive: new THREE.Color(0.10, 0.002, 0.004), emissiveIntensity: 0.5,
+      clearcoat: 0.5, clearcoatRoughness: 0.25, envMapIntensity: 0.45,
+    });
+    const ebony = new THREE.MeshPhysicalMaterial({
+      color: 0x0d0a07, roughness: 0.5, metalness: 0.05,
+      clearcoat: 0.4, clearcoatRoughness: 0.3, envMapIntensity: 0.5,
+    });
     const mats: Record<string, THREE.Material> = {
       Brass: brass, BrassDark: brassDark, Steel: steel, Ember: emberMat,
       Moonstone: marbleA, RustVein: marbleB, SeaMarble: marbleC,
+      Ruby: ruby, Ebony: ebony,
     };
     inst.root.traverse((o) => {
       const m = o as THREE.Mesh;
@@ -185,19 +242,21 @@ export default defineScene({
       m.castShadow = m.receiveShadow = true;
     });
 
-    // ---- desk: dark lacquered slab, catches the ember pool
+    // ---- desk: lacquered wood slab with grain sheen + faint reflection
+    const texDesk = woodgrain();
     const desk = new THREE.Mesh(
       new THREE.CylinderGeometry(5.0, 5.0, 0.14, 72),
       new THREE.MeshPhysicalMaterial({
-        color: 0x060402, roughness: 0.72, metalness: 0.0,
-        clearcoat: 0.12, clearcoatRoughness: 0.6, envMapIntensity: 0.12,
+        color: 0x070503, roughness: 0.55, metalness: 0.0,
+        roughnessMap: texDesk, bumpMap: texDesk, bumpScale: 0.012,
+        clearcoat: 0.22, clearcoatRoughness: 0.5, envMapIntensity: 0.15,
       }));
     desk.position.y = -0.07;
     desk.receiveShadow = true;
     ctx.scene3D.add(desk);
 
     // ---- lighting: ember glow + hard warm key + cold rim + faint fill
-    const emberLight = new THREE.PointLight(0xff6a22, 7, 9, 2);
+    const emberLight = new THREE.PointLight(0xff9a55, 4.5, 9, 2);
     emberLight.position.set(0, SUN_Y, 0);
     ctx.scene3D.add(emberLight);
 
@@ -232,8 +291,8 @@ export default defineScene({
         void main(){
           float edge = sin(vUv.x*3.14159);
           float fall = smoothstep(0.02,0.75,vUv.y)*(1.0-smoothstep(0.55,1.0,vUv.y));
-          float a = edge*edge*fall*(0.030+0.010*sin(uT*0.7));
-          gl_FragColor = vec4(1.0,0.62,0.30,a);
+          float a = edge*edge*fall*(0.009+0.004*sin(uT*0.7));
+          gl_FragColor = vec4(0.95,0.52,0.22,a);
         }`,
     });
     const shaft = new THREE.Mesh(new THREE.ConeGeometry(1.9, 5.6, 48, 1, true), shaftMat);
@@ -242,8 +301,8 @@ export default defineScene({
     shaft.rotateX(-Math.PI / 2);
     ctx.scene3D.add(shaft);
 
-    // ---- dust motes drifting in the light
-    const N = 120;
+    // ---- dust motes: dense inside the key shaft, sparse ambient
+    const N = 190;
     const dg = new THREE.BufferGeometry();
     dg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * 3), 3));
     const seeds = new Float32Array(N);
@@ -258,6 +317,22 @@ export default defineScene({
     dust.frustumCulled = false;
     ctx.scene3D.add(dust);
 
+    // ---- steam wisp rising off the warm cup
+    const NW = 42;
+    const wg = new THREE.BufferGeometry();
+    wg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(NW * 3), 3));
+    const wseeds = new Float32Array(NW);
+    for (let i = 0; i < NW; i++) wseeds[i] = i * 0.75488 + 0.37;
+    wg.setAttribute('seed', new THREE.BufferAttribute(wseeds, 1));
+    const wispMat = new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      uniforms: { uT: { value: 0 } },
+      vertexShader: WISP_VERT, fragmentShader: WISP_FRAG,
+    });
+    const wisp = new THREE.Points(wg, wispMat);
+    wisp.frustumCulled = false;
+    ctx.scene3D.add(wisp);
+
     // ---- camera + captions
     ctx.rig.setLensMm(58);
     ctx.text('cap0', CAPTIONS[0]![2]!, { fontSize: CAPTIONS[0]![3]!, fontFamily: 'Archivo, sans-serif', fontWeight: 700, color: '#f5e2c4', letterSpacing: 6, align: 'center', alpha: 0 });
@@ -266,6 +341,16 @@ export default defineScene({
 
     ctxState.inst = inst; ctxState.emberLight = emberLight;
     ctxState.emberMat = emberMat; ctxState.shaftMat = shaftMat; ctxState.dustMat = dustMat;
+    ctxState.wispMat = wispMat; ctxState.envRT = envRT; ctxState.keyLight = key;
+    ctxState.textures = [texBrush, texDesk];
+  },
+
+  dispose: () => {
+    ctxState.envRT?.dispose();
+    ctxState.keyLight?.shadow.map?.dispose();
+    for (const t of ctxState.textures ?? []) t.dispose();
+    ctxState.envRT = undefined; ctxState.keyLight = undefined;
+    ctxState.textures = undefined; ctxState.inst = undefined;
   },
 
   render: (ctx: SceneContext, f: Frame, out): PostOverrides => {
@@ -281,15 +366,19 @@ export default defineScene({
       const pl = inst.part(`planet_${i}`)!;
       pl.position.set(ARM_R[i]! * Math.cos(th), PLANET_Y[i]!, -ARM_R[i]! * Math.sin(th));
       pl.rotation.y = t * (0.55 + i * 0.27);
-      inst.part(`gear_${i}`)!.rotation.y = GEAR_W[i]! * t + i * 0.7;
+    }
+    // four-gear train at exact meshing ratios (phase offset sets tooth contact)
+    for (let i = 0; i < 4; i++) {
+      inst.part(`gear_${i}`)!.rotation.y = GEAR_W[i]! * t + GEAR_PH[i]!;
     }
 
     // ember breathing + flicker
     const fl = 0.88 + 0.09 * Math.sin(t * 6.3) + 0.05 * Math.sin(t * 13.7 + 2.1);
-    ctxState.emberLight!.intensity = 7 * fl;
+    ctxState.emberLight!.intensity = 4.5 * fl;
     ctxState.emberMat!.emissiveIntensity = 1.7 * fl;
     ctxState.shaftMat!.uniforms.uT!.value = t;
     ctxState.dustMat!.uniforms.uT!.value = t;
+    ctxState.wispMat!.uniforms.uT!.value = t;
 
     // ---- camera: slow low orbit, gentle push-in on the last beats
     const push = sstep(13.5, DUR - 0.4, t);
@@ -313,9 +402,9 @@ export default defineScene({
 
     ctx.flush(out, true);
     return {
-      exposure: 0.95,
-      bloom: 0.34, bloomThreshold: 0.92, bloomRadius: 0.7,
-      halation: 0.10, ca: 0.9, grain: 0.05, vignette: 0.48,
+      exposure: 0.93,
+      bloom: 0.26, bloomThreshold: 0.95, bloomRadius: 0.65,
+      halation: 0.07, ca: 0.8, grain: 0.045, vignette: 0.48,
       dof: 0.45, focusDist: 0.14, focalRange: 0.24, dofRadius: 3.0,
     };
   },
@@ -327,4 +416,8 @@ const ctxState: {
   emberMat?: THREE.MeshPhysicalMaterial;
   shaftMat?: THREE.ShaderMaterial;
   dustMat?: THREE.ShaderMaterial;
+  wispMat?: THREE.ShaderMaterial;
+  envRT?: THREE.WebGLRenderTarget;
+  keyLight?: THREE.SpotLight;
+  textures?: THREE.DataTexture[];
 } = {};
