@@ -309,8 +309,10 @@ for a_pt in ANCHORS:
     mid = tuple((a_pt[k] + HUB[k]) / 2 for k in range(3))
     mid = (mid[0], mid[1] + (0.02 if a_pt[1] > HUB[1] else -0.01), mid[2])
     tube('web', [a_pt, mid, HUB], 0.004, 0.004, WEB, ring=5)
-# capture spiral between the radials
+# capture spiral between the radials — beads are collected ON the same
+# points the silk runs through, so every drop actually sits on a thread
 random.seed(seed_of('web'))
+spiral_pts = []
 for turn in range(4):
     frac = 0.30 + turn * 0.18
     pts = []
@@ -320,16 +322,19 @@ for turn in range(4):
                   for j in range(3))
         pts.append(p)
     pts.append(pts[0])
+    # subdivide each span so beads can sit between thread vertices too
+    dense = []
+    for k in range(len(pts) - 1):
+        dense.append(pts[k])
+        dense.append(tuple((pts[k][j] + pts[k + 1][j]) / 2 for j in range(3)))
+    spiral_pts.extend(dense)
     tube('web', pts, 0.003, 0.003, WEB, ring=4)
-# dew beads strung on the spiral
+# dew beads strung along the spiral threads
 random.seed(seed_of('dew'))
-for i in range(34):
-    a = random.uniform(0, TAU); fr = random.uniform(0.30, 0.86)
-    ang = a
-    x = HUB[0] + math.cos(ang) * fr * 0.85
-    y = HUB[1] + math.sin(ang) * fr * 0.55 - 0.02
-    z = HUB[2] + math.sin(ang * 0.5) * fr * 0.15
-    prim('web', 'ico', (x, y, z), (random.uniform(0.010, 0.020),), matl=DEW, verts=8)
+bead_idx = sorted(random.sample(range(len(spiral_pts)), min(34, len(spiral_pts))))
+for i in bead_idx:
+    x, y, z = spiral_pts[i]
+    prim('web', 'ico', (x, y - 0.008, z), (random.uniform(0.010, 0.020),), matl=DEW, verts=8)
 
 
 # ================= ferns =================

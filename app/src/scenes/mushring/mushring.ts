@@ -70,9 +70,10 @@ export default class MushringScene extends Scene {
   private moteSeed!: Float32Array;
   private moteSprite!: THREE.Texture;
   private fireflies!: THREE.Points;
+  private flyMat!: THREE.ShaderMaterial;
   private flySeed!: Float32Array;
   private flySprite!: THREE.Texture;
-  private focus = { dist: 5.0 };
+  private focus = { dist: 0 };  // <=0 = snap on first frame
   private p = new THREE.Vector3();
 
   override async init(): Promise<void> {
@@ -96,9 +97,10 @@ export default class MushringScene extends Scene {
     });
     this.scene3D.add(this.floor.root);
 
-    // dew beads read as glass, not stone — drop roughness hard
-    const dewNode = this.floor.node('web');
-    dewNode?.traverse((o) => {
+    // dew beads read as glass, not stone — drop roughness hard on every
+    // mesh carrying the Dew material (a named part resolves to a single
+    // mesh, so walk the whole root instead)
+    this.floor.root.traverse((o) => {
       const m = o as THREE.Mesh;
       if (m.isMesh && m.material instanceof THREE.MeshStandardMaterial &&
           m.material.name.includes('Dew')) {
@@ -207,6 +209,10 @@ export default class MushringScene extends Scene {
     }
     const flyGeo = new THREE.BufferGeometry();
     flyGeo.setAttribute('position', new THREE.BufferAttribute(flyPos, 3));
+    // per-fly blink phase — they must NOT pulse in lockstep
+    const flyPhase = new Float32Array(flyN);
+    for (let i = 0; i < flyN; i++) flyPhase[i] = this.flySeed[i * 4 + 3] * TAU;
+    flyGeo.setAttribute('aPhase', new THREE.BufferAttribute(flyPhase, 1));
     const fcv = document.createElement('canvas');
     fcv.width = fcv.height = 32;
     const fctx = fcv.getContext('2d')!;
@@ -216,12 +222,35 @@ export default class MushringScene extends Scene {
     fgrd.addColorStop(1, 'rgba(255,180,60,0)');
     fctx.fillStyle = fgrd; fctx.fillRect(0, 0, 32, 32);
     this.flySprite = new THREE.CanvasTexture(fcv);
-    const flyMat = new THREE.PointsMaterial({
-      map: this.flySprite, size: 0.16, transparent: true, opacity: 0.95,
-      blending: THREE.AdditiveBlending, depthWrite: false, fog: false,
-      color: new THREE.Color(0xffc86e),
+    const flyMat = new THREE.ShaderMaterial({
+      glslVersion: THREE.GLSL3,
+      uniforms: { uT: { value: 0 }, uMap: { value: this.flySprite }, uSize: { value: 0.16 } },
+      vertexShader: /* glsl */ `
+        attribute float aPhase;
+        uniform float uT, uSize;
+        out float vA;
+        void main() {
+          // per-fly closed-form blink: different phase + rate per seed
+          float b = sin(uT * (1.1 + fract(aPhase) * 0.9) + aPhase) * 0.5 + 0.5;
+          vA = 0.25 + 0.75 * b * b;
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          gl_PointSize = uSize * 900.0 / max(0.5, -mv.z);
+          gl_Position = projectionMatrix * mv;
+        }`,
+      fragmentShader: /* glsl */ `
+        precision highp float;
+        in float vA;
+        out vec4 fragColor;
+        uniform sampler2D uMap;
+        void main() {
+          vec4 c = texture(uMap, gl_PointCoord);
+          fragColor = vec4(vec3(1.0, 0.78, 0.43) * c.a * vA, c.a * vA);
+        }`,
+      transparent: true, blending: THREE.AdditiveBlending,
+      depthWrite: false,
     });
     this.fireflies = new THREE.Points(flyGeo, flyMat);
+    this.flyMat = flyMat;
     this.fireflies.frustumCulled = false;
     this.scene3D.add(this.fireflies);
   }
@@ -233,8 +262,10 @@ export default class MushringScene extends Scene {
       -1.6 + t * 0.16 + Math.sin(t * 0.9) * 0.08,
       0.62 + Math.sin(t * 0.5) * 0.05,
       -5.6 + t * 0.045 + Math.sin(t * 0.33) * 0.10);
+    // hold the aim nearly still through the dew close-up (5–11s) so the
+    // web stays in frame for its beat, then pan left for the settle
     const aim = new THREE.Vector3(
-      0.4 - t * 0.10,
+      0.45 - t * 0.015 - smooth(11.5, 17, t) * 1.6,
       0.55 + smooth(5, 9, t) * 0.15,
       -0.6 + t * 0.03);
     return { pos, aim };
@@ -281,18 +312,21 @@ export default class MushringScene extends Scene {
       fp.setXYZ(i, cx, cy, cz);
     }
     fp.needsUpdate = true;
-    // blink: closed-form pulse per fly, gated so they never all light at once
-    const fm = this.fireflies.material as THREE.PointsMaterial;
-    fm.opacity = 0.55 + 0.35 * Math.sin(t * 1.4) * Math.sin(t * 0.53);
+    this.flyMat.uniforms.uT!.value = t;
 
-    // focus racks: ring edge → dew web → log, smoothed
+    // focus racks: ring edge → dew web → log, smoothed; distance measured
+    // ALONG the camera axis (a euclidean distance leaves off-center
+    // subjects soft), and snapped on the first frame so a new beat opens
+    // in focus instead of pulling from a stale plane
     const target =
       t < 5 ? new THREE.Vector3(0.4, 0.6, -2.3)
       : t < 11 ? new THREE.Vector3(1.95, 0.78, -1.55)
       : t < 16 ? new THREE.Vector3(0.0, 0.55, -0.5)
       : new THREE.Vector3(-2.3, 1.0, 0.9);
-    const d = pos.distanceTo(target);
-    this.focus.dist += (d - this.focus.dist) * Math.min(1, f.dt * 1.2);
+    const fwd = this.p.copy(aim).sub(pos).normalize();
+    const d = this.p.copy(target).sub(pos).dot(fwd);
+    if (this.focus.dist <= 0) this.focus.dist = d;
+    else this.focus.dist += (d - this.focus.dist) * Math.min(1, f.dt * 1.2);
 
     const renderer = this.ctx.renderer;
     renderer.setRenderTarget(out);
@@ -337,6 +371,8 @@ export default class MushringScene extends Scene {
         aperture: 26,
         maxRadius: 20,
         samples: 40,
+        near: this.camera3D.near,
+        far: this.camera3D.far,
       },
     } as PostOverrides;
   }
