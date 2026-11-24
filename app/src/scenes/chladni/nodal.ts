@@ -35,10 +35,20 @@ export function nodalPoints(mode: ChladniMode, cells = 140): Float32Array {
     }
   }
   const pts: number[] = [];
+  const seen = new Set<number>();
+  const EPS = 1e-9;
   const push = (x0: number, y0: number, w0: number, x1: number, y1: number, w1: number) => {
-    const f = w0 / (w0 - w1);
-    pts.push(x0 + (x1 - x0) * f, y0 + (y1 - y0) * f);
+    // A crossing exists on an exact-zero vertex too: whole branches of the zero
+    // set (e.g. the x=y diagonal, where w is identically zero) sit on grid
+    // vertices and strict sign-change tests would skip them entirely.
+    const f = Math.abs(w0) < EPS ? 0 : w0 / (w0 - w1);
+    const px = x0 + (x1 - x0) * f, py = y0 + (y1 - y0) * f;
+    const key = Math.round(px * 1e6) * 2e6 + Math.round(py * 1e6);
+    if (seen.has(key)) return;
+    seen.add(key);
+    pts.push(px, py);
   };
+  const crosses = (a: number, b: number) => a * b < 0 || ((Math.abs(a) < EPS) !== (Math.abs(b) < EPS));
   for (let j = 0; j < N; j++) {
     const y0 = j / N, y1 = (j + 1) / N;
     for (let i = 0; i < N; i++) {
@@ -47,10 +57,10 @@ export function nodalPoints(mode: ChladniMode, cells = 140): Float32Array {
       const b = w[j * (N + 1) + i + 1]!;
       const c = w[(j + 1) * (N + 1) + i]!;
       const d = w[(j + 1) * (N + 1) + i + 1]!;
-      if (a * b < 0) push(x0, y0, a, x1, y0, b);
-      if (c * d < 0) push(x0, y1, c, x1, y1, d);
-      if (a * c < 0) push(x0, y0, a, x0, y1, c);
-      if (b * d < 0) push(x1, y0, b, x1, y1, d);
+      if (crosses(a, b)) push(x0, y0, a, x1, y0, b);
+      if (crosses(c, d)) push(x0, y1, c, x1, y1, d);
+      if (crosses(a, c)) push(x0, y0, a, x0, y1, c);
+      if (crosses(b, d)) push(x1, y0, b, x1, y1, d);
     }
   }
   return new Float32Array(pts);

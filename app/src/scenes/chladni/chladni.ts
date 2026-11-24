@@ -8,23 +8,30 @@
 //
 // Palette: --ink void, --bone grains/edges, --ash secondary lines,
 // --signal ONLY the rim pulse + LED flare at each resonant step.
+// The machined rig is a Blender asset (assets/rig); dynamic electronics
+// (display, LED) live in drive.ts.
 // =============================================================================
 
 import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
-import { LineBatch } from '../../engine/lines';
 import { W, H } from '../../engine/gl';
 import { clamp, lerp } from '../../engine/util';
-import { HEX, LIN } from '../../engine/palette';
-import { GrainField, STEP_TIMES, PLATE_HALF } from './grains';
-import { DriveRig, cameraAt, rimPulseAt } from './drive';
+import { HEX } from '../../engine/palette';
+import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
+import { resolveAsset } from '../../engine/assets';
+import { GrainField, PLATE_HALF } from './grains';
+import { Readout, cameraAt, rimPulseAt } from './drive';
+
+/** Bulb position inside the lamp head (assets/rig/build.py) — the motivated key. */
+const BULB_POS = new THREE.Vector3(0.026, 0.273, 0.095);
+const PLATE_CENTRE = new THREE.Vector3(0, 0, 0);
 
 export default class ChladniScene extends Scene {
   private scene3D = new THREE.Scene();
   private camera3D = new THREE.PerspectiveCamera(36, W / H, 0.005, 100);
   private grains = new GrainField();
-  private rig = new DriveRig();
-  private bench = new LineBatch(8000, { blend: 'max' });
+  private readout = new Readout();
+  private rig!: GLTFInstance;
   private pulseRing!: THREE.Mesh;
   private pulseMat!: THREE.MeshBasicMaterial;
 
@@ -33,17 +40,33 @@ export default class ChladniScene extends Scene {
     this.scene3D.background = new THREE.Color(HEX.ink);
     this.scene3D.fog = new THREE.FogExp2(new THREE.Color(HEX.ink), 0.55);
 
-    // Motivated single-world lighting: the lamp above the plate + cool rim fill
-    const key = new THREE.SpotLight(new THREE.Color(HEX.bone), 2.2, 4, 0.5, 0.5, 1.6);
-    key.position.set(0, 0.40, 0);
-    key.target.position.set(0, 0, 0);
+    // The machined rig — materials cloned so grade tweaks stay local to this instance.
+    this.rig = await GLTFManager.instantiate(resolveAsset('rig', 'chladni').url, {});
+    const own = new Map<THREE.Material, THREE.Material>();
+    this.rig.root.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (m.isMesh) {
+        const mine = (x: THREE.Material) => {
+          let c = own.get(x);
+          if (!c) own.set(x, (c = x.clone()));
+          return c;
+        };
+        m.material = Array.isArray(m.material) ? m.material.map(mine) : mine(m.material);
+      }
+    });
+    this.scene3D.add(this.rig.root);
+
+    // Motivated single-world lighting: the lamp's bulb over the plate + cool rim fill
+    const key = new THREE.SpotLight(new THREE.Color(HEX.bone), 2.1, 4, 0.62, 0.5, 1.6);
+    key.position.copy(BULB_POS);
+    key.target.position.copy(PLATE_CENTRE);
     this.scene3D.add(key, key.target);
-    const rim = new THREE.DirectionalLight(new THREE.Color('#8fa3c4'), 0.3);
+    const rim = new THREE.DirectionalLight(new THREE.Color('#8fa3c4'), 0.32);
     rim.position.set(-0.4, 0.25, -0.5);
     this.scene3D.add(rim);
-    this.scene3D.add(new THREE.AmbientLight(new THREE.Color(HEX.ink), 0.25));
+    this.scene3D.add(new THREE.AmbientLight(new THREE.Color(HEX.ink), 0.28));
 
-    this.scene3D.add(this.rig.group);
+    this.scene3D.add(this.readout.group);
     this.scene3D.add(this.grains.mesh);
 
     // Rim pulse ring hugging the plate edge — flares --signal per step
@@ -56,18 +79,8 @@ export default class ChladniScene extends Scene {
     });
     this.pulseRing = new THREE.Mesh(new THREE.TorusGeometry(PLATE_HALF * 1.06, 0.0012, 8, 96), this.pulseMat);
     this.pulseRing.rotation.x = Math.PI / 2;
-    this.pulseRing.position.y = 0.006;
+    this.pulseRing.position.y = 0.004;
     this.scene3D.add(this.pulseRing);
-
-    // Faint wireframe bench context (ash, depth-faded grid)
-    const A = LIN.ash;
-    const g = 0.12;
-    for (let i = -5; i <= 5; i++) {
-      const f = 1.0 - 0.5 * clamp(Math.abs(i) / 5);
-      const a = 0.16 * f;
-      this.bench.seg(i * g, -0.065, -0.6, i * g, -0.065, 0.6, 0.0006, A[0], A[1], A[2], a);
-      this.bench.seg(-0.6, -0.065, i * g, 0.6, -0.065, i * g, 0.0006, A[0], A[1], A[2], a);
-    }
   }
 
   override render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
@@ -80,7 +93,7 @@ export default class ChladniScene extends Scene {
     this.camera3D.lookAt(cam.target);
     this.camera3D.updateProjectionMatrix();
 
-    this.rig.update(t);
+    this.readout.update(t);
     this.grains.update(t);
 
     const rp = rimPulseAt(t);
@@ -91,24 +104,34 @@ export default class ChladniScene extends Scene {
     renderer.setRenderTarget(out);
     renderer.clear(true, true, true);
     renderer.render(this.scene3D, this.camera3D);
-    this.bench.flush(renderer, out, this.camera3D);
     renderer.resetState();
 
-    // Beat-aware grade: warm exposure under the lamp; mild DoF during the macro beat
+    // Beat-aware grade: warm exposure under the lamp; physical depth DoF during
+    // the macro beat (real focal plane, not a screen-space radial).
     const macro = clamp((t - 9.0) / 2.0) * (1 - clamp((t - 15.0) / 2.0));
+    const focus = cam.pos.distanceTo(cam.target);
     return {
-      exposure: 0.92,
+      exposure: 0.88,
       bloom: 0.3 + rp * 0.3,
-      bloomThreshold: 0.88,
+      bloomThreshold: 0.90,
       bloomRadius: 0.4,
       vignette: 0.32,
       grain: 0.04,
       ca: 0.25,
-      dof: macro * 0.7,
-      focusDist: 0.06,
-      focalRange: 0.32,
-      dofRadius: 5,
+      depthDof: macro > 0.01
+        ? { enabled: true, focusDistance: focus, aperture: 10 * macro, maxRadius: 10, blades: 6, samples: 24 }
+        : undefined,
       fade: lerp(1, 0, clamp(t / 0.4)),
     };
+  }
+
+  override dispose(): void {
+    this.rig.dispose();
+    const m = this.grains.mesh;
+    m.geometry.dispose();
+    (m.material as THREE.Material).dispose();
+    this.readout.dispose();
+    this.pulseRing.geometry.dispose();
+    this.pulseMat.dispose();
   }
 }

@@ -14,8 +14,8 @@ export const STEP_TIMES = [3.5, 9.0, 15.0];
 export const MIGRATE = 1.9;
 /** Plate half-size (m); plate is square in the XZ plane centred on origin. */
 export const PLATE_HALF = 0.15;
-const GRAIN_COUNT = 4500;
-const GRAIN_Y = 0.0045; // resting height above plate surface (plate top y = 0.004)
+const GRAIN_COUNT = 5200;
+const GRAIN_Y = 0.0008; // resting height above plate surface (plate top y = 0)
 
 export class GrainField {
   readonly mesh: THREE.InstancedMesh;
@@ -30,7 +30,7 @@ export class GrainField {
 
   constructor() {
     const rng = mulberry32(90210);
-    const geo = new THREE.OctahedronGeometry(0.0011);
+    const geo = new THREE.OctahedronGeometry(0.0012);
     const mat = new THREE.MeshStandardMaterial({
       color: new THREE.Color(HEX.bone),
       roughness: 0.92,
