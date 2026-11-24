@@ -529,7 +529,8 @@ export default defineScene({
       const cyc = d.gather + d.fall + d.rest;
       const bucket = ((d.seed * 7.0) % 1 + 1) % 1;
       const k = Math.floor((t - d.off) / cyc);
-      for (let m = Math.max(0, k - 2); m <= k; m++) {
+      // k-1 is the oldest cycle that can still plop inside the 4s ring window
+      for (let m = Math.max(0, k - 1); m <= k; m++) {
         const cs = d.off + m * cyc;
         // gate on plop time — mirrors chorusEnv(cs + gather + fall) in the shader
         if (bucket >= chorus(cs + d.gather + d.fall)) continue;
