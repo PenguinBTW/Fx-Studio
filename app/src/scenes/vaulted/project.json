@@ -1,0 +1,39 @@
+{
+  "project": "vaulted",
+  "meta": {
+    "title": "Vaulted: One Small Flame",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 20.0
+  },
+  "entries": [
+    {
+      "scene": "vaulted/vaulted",
+      "id": "act-open",
+      "start": 0.0,
+      "end": 5.0,
+      "caption": { "fig": "01", "text": "A ROOF OPEN TO HEAVEN", "dur": 2.6 }
+    },
+    {
+      "scene": "vaulted/vaulted",
+      "id": "act-light",
+      "start": 5.0,
+      "end": 10.0,
+      "caption": { "fig": "02", "text": "LIGHT THROUGH THE BREACH", "dur": 2.6 }
+    },
+    {
+      "scene": "vaulted/vaulted",
+      "id": "act-flame",
+      "start": 10.0,
+      "end": 15.0,
+      "caption": { "fig": "03", "text": "ONE SMALL FLAME", "dur": 2.6 }
+    },
+    {
+      "scene": "vaulted/vaulted",
+      "id": "act-settle",
+      "start": 15.0,
+      "end": 20.0,
+      "caption": { "fig": "04", "text": "THE STONES KEEP WATCH", "dur": 2.6 }
+    }
+  ]
+}

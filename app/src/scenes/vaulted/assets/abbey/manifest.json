@@ -1,0 +1,15 @@
+{
+  "id": "abbey",
+  "version": 1,
+  "source": "build.py",
+  "budgets": { "tris": 140000, "textureMB": 0 },
+  "parts": {
+    "floor": "floor",
+    "columns": "columns",
+    "arches": "arches",
+    "wall": "wall",
+    "rubble": "rubble",
+    "ivy": "ivy",
+    "sconce": "sconce"
+  }
+}
