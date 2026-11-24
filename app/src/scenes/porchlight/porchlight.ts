@@ -111,6 +111,13 @@ vec2 mothPos(float i, float t, out float alive, out float landed) {
   p += vec2(0.006 * sin(t * (9.0 + i) + i), 0.005 * sin(t * (11.0 + i * 0.7) + i * 2.0)) / vec2(ASPECT, 1.0);
   vec2 land = LP + vec2((h1(sd + 7.0) - 0.5) * 1.8 * LR / ASPECT, -LR * (0.3 + 0.6 * h1(sd + 8.0)));
   p = mix(p, land, landed);
+  if (i < 0.5) {
+    // moth 0 makes the low pass the cat swipes at
+    float dip = sstep(SWIPE - 0.9, SWIPE + 0.1, t) * (1.0 - sstep(SWIPE + 0.35, SWIPE + 1.15, t));
+    p = mix(p, CAT + vec2(-0.028, 0.048) + vec2(0.008 * sin(t * 18.0) / ASPECT, 0.005 * sin(t * 23.0)), dip);
+    alive = max(alive, dip);
+    landed *= 1.0 - dip;
+  }
   return p;
 }
 // moth silhouette: body + wings fluttering as a fast scale flicker
