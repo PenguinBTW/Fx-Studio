@@ -47,7 +47,7 @@ const SEGS: { t0: number; t1: number; kind: SegKind; to?: number }[] = [
   { t0: 13.2, t1: 13.8, kind: 'dart', to: 3 },
   { t0: 13.8, t1: 16.2, kind: 'hover', to: 3 },
   { t0: 16.2, t1: 17.0, kind: 'dart', to: -1 },     // to perch
-  { t0: 17.0, t1: 20.6, kind: 'perch' },
+  { t0: 17.0, t1: 20.6, kind: 'perch', to: -1 },    // held at perch — exit dart starts here
   { t0: 20.6, t1: 21.4, kind: 'dart', to: -2 },     // exit
 ];
 const GONE_T = 21.4;
