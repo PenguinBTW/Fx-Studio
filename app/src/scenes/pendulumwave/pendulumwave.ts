@@ -41,6 +41,8 @@ export default class PendulumWaveScene extends Scene {
   private strings: THREE.Line[] = [];
   private trails: THREE.Line[] = [];
   private tmp = new THREE.Vector3();
+  private railMat: THREE.Material;
+  private railGeo: THREE.BufferGeometry;
 
   constructor(ctx: SceneCtx) {
     super(ctx);
@@ -48,10 +50,9 @@ export default class PendulumWaveScene extends Scene {
     this.camera = new THREE.PerspectiveCamera(38, ctx.W / ctx.H, 0.1, 300);
 
     // Ceiling rail the strings hang from.
-    const rail = new THREE.Mesh(
-      new THREE.BoxGeometry(N_BOBS * SPACING + 4, 0.22, 0.22),
-      new THREE.MeshBasicMaterial({ color: 0x2a2d31 })
-    );
+    this.railGeo = new THREE.BoxGeometry(N_BOBS * SPACING + 4, 0.22, 0.22);
+    this.railMat = new THREE.MeshBasicMaterial({ color: 0x2a2d31 });
+    const rail = new THREE.Mesh(this.railGeo, this.railMat);
     rail.position.y = RAIL_Y;
     this.threeScene.add(rail);
 
@@ -70,6 +71,7 @@ export default class PendulumWaveScene extends Scene {
         sg,
         new THREE.LineBasicMaterial({ color: 0x3c4046, transparent: true, opacity: 0.75 })
       );
+      str.frustumCulled = false; // endpoints move every frame; cached bounds go stale
       this.threeScene.add(str);
       this.strings.push(str);
 
@@ -109,7 +111,12 @@ export default class PendulumWaveScene extends Scene {
     const ease = 1 - Math.pow(1 - Math.min(lt / 2, 1), 3); // easeOutCubic 0→1
     const cy = 12.5 - 9.5 * ease;
     const cx = Math.sin(0.11 * lt) * 2.6;
-    this.camera.position.set(cx, cy, 30);
+    // Keep the full row in frame at any aspect: half-extent of the sweep is
+    // the outer anchor + string length * sin(SWING), plus a small margin.
+    const halfRow = (CENTER * SPACING) + LEN * Math.sin(SWING) + 1.0;
+    const halfHfov = THREE.MathUtils.degToRad(this.camera.fov / 2);
+    const dist = Math.max(30, halfRow / (Math.tan(halfHfov) * this.camera.aspect));
+    this.camera.position.set(cx, cy, dist);
     this.camera.lookAt(Math.sin(0.11 * lt + 0.4) * 1.4, -0.8 + 1.2 * ease, 0);
     this.camera.updateMatrixWorld();
 
@@ -152,6 +159,8 @@ export default class PendulumWaveScene extends Scene {
   }
 
   override dispose(): void {
+    this.railGeo.dispose();
+    this.railMat.dispose();
     for (const b of this.bobs) {
       b.geometry.dispose();
       (b.material as THREE.Material).dispose();
