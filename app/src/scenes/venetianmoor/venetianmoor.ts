@@ -231,7 +231,8 @@ vec3 canalScene(vec2 uv, float t) {
   {
     // dart - pause - dart: progress plateaus mid-run before the second dart
     float rr = uRat < 0.42 ? uRat * 1.2 : (uRat < 0.58 ? 0.504 : 0.504 + (uRat - 0.58) * 1.2);
-    float rx = 0.04 + 0.24 * (rr + 0.04 * sin(uRat * 21.0) * uRat * (1.0 - uRat));
+    float moving = 1.0 - step(0.42, uRat) * (1.0 - step(0.58, uRat));
+    float rx = 0.04 + 0.24 * (rr + 0.04 * (0.5 + 0.5 * sin(uRat * 21.0)) * uRat * (1.0 - uRat) * moving);
     vec2 rpp = uv - vec2(rx, 0.235);
     float rat = 1.0 - smoothstep(0.005, 0.008, length(rpp * vec2(1.0, 1.9)));
     rat += 1.0 - smoothstep(0.003, 0.004, length(rpp - vec2(-0.009, 0.004) * vec2(1.0, 1.9)));
