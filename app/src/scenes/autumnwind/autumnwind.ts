@@ -151,7 +151,7 @@ void main() {
   col += vec3(0.12, 0.07, 0.02) * (1.0 - smoothstep(0.15, 0.75, vUv.x)) * vUv.y;
 
   // pond patch: lower-left of the visible gravel — dark water + shimmer
-  vec2 pc = vec2((vUv.x - 0.32) / 0.18, (vUv.y - 0.50) / 0.18);
+  vec2 pc = vec2((vUv.x - 0.37) / 0.16, (vUv.y - 0.56) / 0.16);
   float pond = 1.0 - smoothstep(0.92, 1.0, length(pc));
   vec3 water = mix(vec3(0.02, 0.05, 0.06), vec3(0.05, 0.08, 0.09), vUv.y);
   float rip = fbm3(vec3(vUv.x * 30.0, vUv.y * 44.0 - uT * 0.4, 3.3), 3, 2.0, 0.5);
@@ -200,23 +200,34 @@ void main() {
     float ph = aAux.w;
     float live = max(uT - t0, 0.0);
     float g = gustEnv(uT);
-    float om = (1.1 + fract(aSeed * 5.1) * 1.2) * (1.0 + 1.4 * g); // helix rate
+    float om = 1.1 + fract(aSeed * 5.1) * 1.2; // helix rate (per-leaf constant)
 
-    // drift path: corkscrew + downwind drift, gust adds lift + speed
+    // gust displacement: a monotone dose so a fading gust never rewinds the
+    // path — leaves keep the distance the wind already carried them
+    float gustDose = smoothstep(9.0, 16.5, uT) - smoothstep(9.0, 16.5, t0);
+
+    // drift path: corkscrew + downwind drift, gust adds lift oscillation
     vec3 d = vec3(
-      position.x - 0.55 * live * (0.5 + 2.4 * g) + R * sin(om * live + ph),
-      position.y - fall * live * (1.0 - 0.45 * g) + 0.45 * g * sin(uT * 3.1 + ph)
+      position.x - 0.28 * live - 3.0 * gustDose + R * sin(om * live + ph),
+      position.y - fall * live + 0.45 * g * sin(uT * 3.1 + ph)
                 + R * 0.35 * cos(om * live * 0.9 + ph * 1.3),
       position.z + R * cos(om * live + ph)
     );
 
-    // touchdown: closed-form landing time, then freeze on the gravel
-    float yG = -3.35 - fract(aSeed * 7.7) * 0.35;
+    // touchdown: closed-form landing time, then freeze on the gravel.
+    // Landing height grades with depth — far leaves touch down near the
+    // horizon edge of the painted gravel, near ones lower in frame.
+    float yG = max(-2.45, -2.5 - 0.15 * (position.z + 16.0))
+             - fract(aSeed * 7.7) * 0.25;
     float tLand = t0 + max(0.0, position.y - yG) / max(fall, 0.05);
+    // vortex leaves stay airborne through the swirl window (t≈12.5–16.5)
+    if (aKind > 0.5 && aKind < 1.5)
+      tLand = max(tLand, 16.8 + fract(aSeed * 9.1) * 2.6);
     float sLand = smoothstep(0.0, 0.9, uT - tLand);
     float liveL = tLand - t0;
+    float doseL = smoothstep(9.0, 16.5, tLand) - smoothstep(9.0, 16.5, t0);
     vec3 dLand = vec3(
-      position.x - 0.55 * liveL * (0.5 + 2.4 * gustEnv(tLand)) + R * sin(om * liveL + ph),
+      position.x - 0.28 * liveL - 3.0 * doseL + R * sin(om * liveL + ph),
       yG,
       position.z + R * cos(om * liveL + ph)
     );
@@ -297,7 +308,7 @@ void main() {
                  : vec3(0.82, 0.55, 0.10);
     // vein shading: darken along lobe creases + midrib
     float crease = 0.85 + 0.15 * cos(th * 5.0);
-    leafCol *= crease * (0.85 + 0.3 * exp(-pow(q.x / 0.04, 2.0)));
+    leafCol *= crease * (0.85 + 0.3 * exp(-q.x * q.x / 0.0016));
     // warm rim from the sun side
     leafCol += vec3(0.18, 0.08, 0.0) * (1.0 - smoothstep(-0.4, 0.0, q.x + q.y));
     col = leafCol;
