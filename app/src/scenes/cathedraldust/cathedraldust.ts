@@ -364,11 +364,13 @@ export default class CathedraldustScene extends Scene {
     const t = f.lt;
     const r = this.ctx.renderer;
     this.u.uT.value = t;
-    this.u.uDrift.value = this.rig.position[0];
 
     // CameraRig: very slow push toward the rose window + slight lateral
     // drift so the beams parallax; near-static otherwise.
     const push = ss(0.5, 19.0, t);
+    // same closed form as rig.position[0] — deterministic regardless of
+    // which frame rendered before this one (e.g. a still at t)
+    this.u.uDrift.value = 0.55 * push + 0.15 * Math.sin(t * 0.05);
     this.rig.position = [
       0.55 * push + 0.15 * Math.sin(t * 0.05),
       5.5 + 1.0 * push,
