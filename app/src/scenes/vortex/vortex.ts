@@ -11,6 +11,7 @@
 // t≈14 beat. Camera: slow orbit-drift + push-in. Everything is f(t).
 import * as THREE from 'three';
 import { Scene, type Frame, type SceneCtx, type PostOverrides } from '../../engine/scene';
+import { orbitPosition } from '../../engine/rig';
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 const ss = (a: number, b: number, x: number) => {
@@ -18,6 +19,12 @@ const ss = (a: number, b: number, x: number) => {
   return t * t * (3 - 2 * t);
 };
 const frac = (x: number) => x - Math.floor(x);
+
+// Backdrop plane mapping (must match the mesh below): uv → world.
+const PW = 320, PH = 140, PY = 8, PZ = -80;
+// the mesh is built larger than the design region so off-axis camera
+// framings never reach its edge; FRAG remaps vUv back into design space
+const BKG_SX = 1.7, BKG_SY = 1.9;
 
 const VERT = /* glsl */ `
 out vec2 vUv;
@@ -28,6 +35,8 @@ void main() {
 
 const FRAG = /* glsl */ `
 precision highp float;
+#define BKG_SX ${BKG_SX.toFixed(2)}
+#define BKG_SY ${BKG_SY.toFixed(2)}
 in vec2 vUv;
 uniform float uT;
 out vec4 fragColor;
@@ -47,8 +56,10 @@ float n2(vec2 p) {
 }
 
 void main() {
-  float x = vUv.x;
-  float y = vUv.y;
+  // remap so an oversized backdrop keeps the design region centered —
+  // the camera never sees past the plane's edge
+  float x = (vUv.x - 0.5) * BKG_SX + 0.5;
+  float y = (vUv.y - 0.5) * BKG_SY + 0.5;
   float t = uT;
 
   // funnel narrative envelopes — grow-in by ~t3, slight dissolution by ~t19
@@ -73,7 +84,8 @@ void main() {
   float ground = 1.0 - smoothstep(0.375, 0.388, y);
   col = mix(col, vec3(0.018, 0.016, 0.019) * (0.8 + 0.4 * vnoise(x * 30.0)), ground * 0.97);
   // horizon haze band
-  col += vec3(0.07, 0.06, 0.065) * exp(-pow((y - 0.385) * 30.0, 2.0)) * 0.35;
+  float hq = (y - 0.385) * 30.0;
+  col += vec3(0.07, 0.06, 0.065) * exp(-hq * hq) * 0.35;
 
   // --- the funnel -----------------------------------------------------------
   // analytic tube: base pinned just above the horizon, ragged edges advected
@@ -94,12 +106,14 @@ void main() {
   float churn = 0.6 * n2(vec2(dx * 90.0 - t * sw * 4.0, y * 5.0))
               + 0.4 * n2(vec2(dx * 40.0 - t * sw * 2.2, y * 2.5));
   vec3 fcol = vec3(0.048, 0.041, 0.038) * (0.55 + 0.8 * churn);
-  float limb = exp(-pow(max(0.0, d + 0.003) * 30.0, 2.0));
-  fcol += vec3(0.50, 0.31, 0.15) * limb * smoothstep(0.012, -0.018, dx) * (0.55 + 0.45 * churn);
-  fcol += vec3(0.03, 0.027, 0.030) * smoothstep(0.015, -0.015, -dx); // right side darker still
+  float lq = max(0.0, d + 0.003) * 30.0;
+  float limb = exp(-lq * lq);
+  fcol += vec3(0.50, 0.31, 0.15) * limb * (1.0 - smoothstep(-0.018, 0.012, dx)) * (0.55 + 0.45 * churn);
+  fcol += vec3(0.03, 0.027, 0.030) * (1.0 - smoothstep(-0.015, 0.015, -dx)); // right side darker still
   col = mix(col, fcol, inside * 0.95 * dissolve);
   // dust cap where the funnel widens aloft
-  float cap = exp(-pow((x - 0.5) * 14.0, 2.0) - pow((y - ftop) * 26.0, 2.0));
+  float cq1 = (x - 0.5) * 14.0, cq2 = (y - ftop) * 26.0;
+  float cap = exp(-(cq1 * cq1 + cq2 * cq2));
   col += vec3(0.09, 0.077, 0.065) * cap * 0.4 * form * dissolve;
 
   // --- kicked-up ground dust around the base --------------------------------
@@ -141,8 +155,6 @@ void main() {
 
 const DUST = 1500;
 const DEBRIS = 70;
-// Backdrop plane mapping (must match the mesh below): uv → world.
-const PW = 320, PH = 140, PY = 8, PZ = -80;
 // Funnel axis in world space — in front of the backdrop so orbiting motes
 // on the far side stay in front of the plane (max orbit radius ~17).
 const AX = 0, AZ = -58, Y_BASE = -4, Y_TOP = 52;
@@ -196,7 +208,7 @@ const seeds: Seed[] = [];
       rMul: debris ? 0.90 + s4 * 0.30 : 0.60 + s3 * 0.42,
       wd: 1.6 + s3 * 2.4,
       cycV: 0.045 + s6 * 0.05,
-      size: debris ? 0.50 + s4 * 0.60 : 0.15 + s4 * 0.30,
+      size: debris ? 0.45 + s4 * 0.50 : 0.10 + s4 * 0.22,
       sub: s6,
       tint: debris ? debTint.clone() : dustTint.clone().lerp(dustTint2, s4),
     });
@@ -221,7 +233,7 @@ export default class VortexScene extends Scene {
     this.cam = new THREE.PerspectiveCamera(40, ctx.W / ctx.H, 0.1, 400);
 
     const back = new THREE.Mesh(
-      new THREE.PlaneGeometry(PW, PH),
+      new THREE.PlaneGeometry(PW * BKG_SX, PH * BKG_SY),
       new THREE.ShaderMaterial({ uniforms: this.u, vertexShader: VERT, fragmentShader: FRAG, glslVersion: THREE.GLSL3 }),
     );
     back.position.set(0, PY, PZ);
@@ -275,8 +287,9 @@ export default class VortexScene extends Scene {
   private place(i: number, t: number): void {
     const s = seeds[i]!;
     const dis = dissolveEnv(t);
-    // thinning: a fraction of seeds drops out as the storm calms late
-    if (s.sub < dis * 0.9) {
+    // thinning: dis ramps 0→1 late — the lowest-sub half of seeds drops
+    // out as the storm calms (caps at 50%, the "slight dissolution")
+    if (s.sub < dis * 0.5) {
       this.m.makeScale(0, 0, 0);
       this.motes.setMatrixAt(i, this.m);
       this.aLit.setX(i, 0);
@@ -286,10 +299,12 @@ export default class VortexScene extends Scene {
     const g = formEnv(t);
     let x: number, y: number, z: number, th: number, h: number;
     let fling = 0;
+    let fadeMul = 1;
 
     if (s.debris) {
       // cycle: spiral up for 78% of the loop, ballistic fling for the rest
-      const cyc = frac(s.h0 + t * s.cycV);
+      const cycU = s.h0 + t * s.cycV;
+      const cyc = frac(cycU);
       if (cyc < 0.78) {
         h = cyc / 0.78;
         th = s.p0 + s.wd * t;
@@ -297,10 +312,14 @@ export default class VortexScene extends Scene {
         x = AX + r * Math.cos(th);
         y = Y_BASE + h * (Y_TOP - Y_BASE);
         z = AZ + r * Math.sin(th);
+        // fade the respawn in so the wrap from mid-air to the base doesn't pop
+        fadeMul = ss(0.0, 0.05, cyc);
       } else {
-        const tf = ((cyc - 0.78) / 0.22) * 1.4;          // seconds since ejection
-        const tEject = t - tf;
-        const thE = s.p0 + s.wd * tEject;
+        // ejection happened when cyc crossed 0.78 — pin the launch frame to
+        // that instant so the debris doesn't pivot around the funnel midflight
+        const tE = (Math.floor(cycU) + 0.78 - s.h0) / s.cycV;
+        const tf = t - tE;                             // seconds since ejection
+        const thE = s.p0 + s.wd * tE;
         const rE = funnelR(1) * s.rMul;
         // tangential release + a small up-kick; fling scaled by the t≈14 beat
         const vMul = (0.15 + 0.85 * debrisEnv(t)) * (0.5 + 0.5 * s.sub);
@@ -322,6 +341,7 @@ export default class VortexScene extends Scene {
           return;
         }
         fling = fade;
+        fadeMul = fade;
       }
     } else {
       const p = this.spiral(s, t, g);
@@ -338,7 +358,8 @@ export default class VortexScene extends Scene {
     // scale: form-in ramp, debris fling brightness bump, late thinning
     const sc = s.size
       * (s.debris ? (0.6 + 0.4 * g) * (0.6 + 0.6 * fling) : (0.4 + 0.6 * g))
-      * (1 - 0.45 * dis);
+      * (1 - 0.45 * dis)
+      * fadeMul;
     this.e.set(0, 0, s.debris ? th * 1.3 + s.p0 : 0);
     this.q.setFromEuler(this.e);
     this.scl.set(sc, sc, sc);
@@ -364,7 +385,12 @@ export default class VortexScene extends Scene {
     const push = ss(0, this.ctx.end, t);
     const yaw = 0.13 + 0.055 * Math.sin(t * 0.07);
     const rad = 88 - 11 * push;
-    this.cam.position.set(AX + rad * Math.sin(yaw), 9.5 + 2.0 * ss(3, 18, t), AZ + rad * Math.cos(yaw));
+    const camY = 9.5 + 2.0 * ss(3, 18, t);
+    // closed-form orbit drift via the rig's analytical solver; pitch keeps
+    // the camera below the look target so the funnel looms
+    const pitch = Math.asin((camY - 26) / rad);
+    const [cx, cy, cz] = orbitPosition([AX, 26, AZ], rad, pitch, yaw);
+    this.cam.position.set(cx, cy, cz);
     this.cam.lookAt(AX, 26, AZ);
 
     r.setRenderTarget(out);
