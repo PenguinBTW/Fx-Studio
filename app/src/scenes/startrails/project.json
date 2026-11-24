@@ -1,0 +1,11 @@
+{
+  "project": "startrails",
+  "entries": [
+    {
+      "scene": "startrails/startrails",
+      "id": "star_trails",
+      "start": 0.0,
+      "end": 20.0
+    }
+  ]
+}
