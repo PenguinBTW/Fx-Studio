@@ -66,9 +66,12 @@ const LANTERNS: Lantern[] = [];
 const pos = (l: Lantern, t: number, out: THREE.Vector3): THREE.Vector3 => {
   const up = Math.max(0, t - l.t0);
   const swayGrow = Math.min(1, up / 4);                   // sway builds once aloft
+  // The GLB is centered, so resting height = floor + half the model height
+  // (0.62 * scale / 2); otherwise the flame and rim sink below the ground.
+  const baseY = FLOOR_Y + 0.31 * l.scale;
   return out.set(
     l.x0 + l.drift * up + l.swayA * swayGrow * Math.sin(l.swayW * t + l.swayP),
-    FLOOR_Y + l.v * up,
+    baseY + l.v * up,
     l.z0 + 0.6 * swayGrow * Math.sin(l.swayW * 0.7 * t + l.swayP * 1.7),
   );
 };
@@ -79,7 +82,7 @@ function lanternGlow(l: Lantern, t: number): number {
   if (up < 0) return 0.35 + 0.1 * Math.sin(3 * t + l.flick);   // pre-lift: dim ember
   const flick = 0.82 + 0.12 * Math.sin(6.5 * t + l.flick) + 0.06 * Math.sin(13 * t + l.flick * 1.7);
   const alt = pos(l, t, _p).y - FLOOR_Y;
-  const hazeFade = Math.exp(-Math.max(0, alt - 26) * 0.05);    // dissolves into sky
+  const hazeFade = Math.exp(-Math.max(0, alt - 12) * 0.07);    // high lanterns dissolve into the sky
   return flick * Math.max(0.12, hazeFade);
 }
 const _p = new THREE.Vector3();
@@ -88,7 +91,7 @@ const _c = new THREE.Color();
 export default class SkylanternScene extends Scene {
   private threeScene: THREE.Scene;
   private camera: THREE.PerspectiveCamera;
-  private inst: GLTFInstance | null = null;
+  private insts: GLTFInstance[] = [];
   private lanterns: { root: THREE.Object3D; paper: THREE.MeshStandardMaterial[]; flame: THREE.MeshStandardMaterial[]; halo: THREE.Sprite; haloMat: THREE.SpriteMaterial }[] = [];
   private starGeo: THREE.BufferGeometry;
   private starMat: THREE.PointsMaterial;
@@ -119,10 +122,11 @@ export default class SkylanternScene extends Scene {
     const skyTex = new THREE.CanvasTexture(sc);
     skyTex.colorSpace = THREE.SRGBColorSpace;
     const skyGeo = new THREE.PlaneGeometry(220, 90);
-    const sky = new THREE.Mesh(skyGeo, new THREE.MeshBasicMaterial({ map: skyTex, fog: false }));
+    const skyMat = new THREE.MeshBasicMaterial({ map: skyTex, fog: false });
+    const sky = new THREE.Mesh(skyGeo, skyMat);
     sky.position.set(0, 22, -60);
     this.threeScene.add(sky);
-    this.ownedGeos.push(skyGeo); this.ownedTexs.push(skyTex);
+    this.ownedGeos.push(skyGeo); this.ownedTexs.push(skyTex); this.ownedMats.push(skyMat);
 
     // ---- star field (fades in as the sky darkens overhead) -------------------
     const NS = 320;
@@ -131,7 +135,7 @@ export default class SkylanternScene extends Scene {
     for (let i = 0; i < NS; i++) {
       sp[i * 3] = (hash(i, 31) - 0.5) * 160;
       sp[i * 3 + 1] = 14 + hash(i, 32) * 40;
-      sp[i * 3 + 2] = -55 - hash(i, 33) * 10;
+      sp[i * 3 + 2] = -47 - hash(i, 33) * 10;   // in front of the sky plane (-60), behind the lanterns
       sb[i] = 0.4 + 0.6 * hash(i, 34);
     }
     this.starGeo = new THREE.BufferGeometry();
@@ -147,11 +151,12 @@ export default class SkylanternScene extends Scene {
 
     // ---- valley floor + ridge silhouettes ------------------------------------
     const floorGeo = new THREE.PlaneGeometry(240, 80);
-    const floor = new THREE.Mesh(floorGeo, new THREE.MeshBasicMaterial({ color: '#05040a' }));
+    const floorMat = new THREE.MeshBasicMaterial({ color: '#05040a' });
+    const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.position.set(0, FLOOR_Y - 0.05, -30);
     this.threeScene.add(floor);
-    this.ownedGeos.push(floorGeo);
+    this.ownedGeos.push(floorGeo); this.ownedMats.push(floorMat);
 
     const ridge = (zDepth: number, color: string, amp: number, off: number) => {
       const N = 140;
@@ -170,10 +175,11 @@ export default class SkylanternScene extends Scene {
       const g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
       g.setIndex(idx);
-      const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color }));
+      const mat = new THREE.MeshBasicMaterial({ color });
+      const m = new THREE.Mesh(g, mat);
       m.frustumCulled = false;
       this.threeScene.add(m);
-      this.ownedGeos.push(g);
+      this.ownedGeos.push(g); this.ownedMats.push(mat);
     };
     ridge(-44, '#0d0b1c', 4.2, 0.0);   // far range, lighter (aerial perspective)
     ridge(-30, '#070612', 3.0, 9.0);   // near range, darker
@@ -213,13 +219,15 @@ export default class SkylanternScene extends Scene {
   }
 
   override async init(): Promise<void> {
-    this.inst = await GLTFManager.instantiate(
+    const asset = await GLTFManager.load(
       resolveAsset('skylantern', this.ctx.project).url, { center: true });
-    const src = this.inst.root;
-    // Clone per lantern with per-lantern paper/flame materials so the flicker
-    // and haze fade can dim each individually.
+    // One skeleton-safe instance per lantern (asset.instantiate →
+    // SkeletonUtils.clone); each also gets per-lantern paper/flame material
+    // clones so the flicker and haze fade can dim each individually.
     for (const l of LANTERNS) {
-      const root = src.clone(true);
+      const inst = asset.instantiate({ center: true });
+      this.insts.push(inst);
+      const root = inst.root;
       root.traverse((o) => { o.frustumCulled = false; });
       const paper: THREE.MeshStandardMaterial[] = [];
       const flame: THREE.MeshStandardMaterial[] = [];
@@ -307,7 +315,8 @@ export default class SkylanternScene extends Scene {
   }
 
   override dispose(): void {
-    this.inst?.dispose();
+    for (const inst of this.insts) inst.dispose();
+    this.insts = [];
     for (const g of this.ownedGeos) g.dispose();
     for (const m of this.ownedMats) m.dispose();
     for (const t of this.ownedTexs) t.dispose();
