@@ -570,7 +570,7 @@ const scene = defineScene({
     const beamHit = (x: number, y: number) => {
       const dx = x + 4.32, dy = y - (WATER_Y + 1.68);
       if (Math.hypot(dx, dy) > 5.6) return 0;
-      return Math.max(0, 1 - Math.abs(Math.atan2(dy, dx) - beamAng) / 0.10);
+      return Math.max(0, 1 - Math.abs(Math.atan2(dy, dx) - beamAng) / 0.08); // fan half-angle
     };
     st._aOnAttr.setX(st._gullIdx, beamIn * beamHit(0.55, WATER_Y + 0.33));
     st._dustIdx.forEach((i: number, k: number) =>
