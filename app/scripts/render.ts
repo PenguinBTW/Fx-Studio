@@ -865,30 +865,35 @@ async function motion(page: Page) {
     }
   }
 
-  // Scene-authored waivers: <scene dir>/findings.json { waivers: { "<id|rule>": reason } }
+  // Scene-authored waivers: <scene dir>/findings.json { waivers: { "<key>": reason } }.
+  // When the file exists it is authoritative: prior-report waivers are not restored,
+  // so deleting a scene waiver actually unwaives on rerun into the same --out dir.
+  // Keys must cite a time window (RULE-t0-t1 or a full flag id); bare rule names are
+  // rejected per the findings.json waiver protocol (no blanket exceptions).
   const { dir: sceneDir } = await loadProject();
   const sceneFindingsPath = path.join(sceneDir, 'findings.json');
   if (existsSync(sceneFindingsPath)) {
     try {
       const sceneFindings = JSON.parse(await Bun.file(sceneFindingsPath).text());
       for (const [k, v] of Object.entries(sceneFindings?.waivers ?? {})) {
+        if (!/-\d+-\d+/.test(k)) continue;
         if (typeof v === 'string' && v.trim()) waivers[k] = waivers[k] ?? v;
       }
     } catch {}
-  }
-
-  const priorFindingsPath = path.join(outDir, 'findings.json');
-  if (existsSync(priorFindingsPath)) {
-    try {
-      const priorFindings = JSON.parse(await Bun.file(priorFindingsPath).text());
-      if (Array.isArray(priorFindings)) {
-        for (const pf of priorFindings) {
-          if (pf.waived && pf.waiverReason && pf.id) {
-            waivers[pf.id] = waivers[pf.id] ?? pf.waiverReason;
+  } else {
+    const priorFindingsPath = path.join(outDir, 'findings.json');
+    if (existsSync(priorFindingsPath)) {
+      try {
+        const priorFindings = JSON.parse(await Bun.file(priorFindingsPath).text());
+        if (Array.isArray(priorFindings)) {
+          for (const pf of priorFindings) {
+            if (pf.waived && pf.waiverReason && pf.id) {
+              waivers[pf.id] = waivers[pf.id] ?? pf.waiverReason;
+            }
           }
         }
-      }
-    } catch {}
+      } catch {}
+    }
   }
 
   console.log('[motion] Evaluating rule-based flags (F01–F16)...');
