@@ -1,0 +1,16 @@
+{
+  "project": "pinecol",
+  "meta": { "title": "Pine Colonnade", "aspectRatio": "16:9", "fps": 60, "duration": 22 },
+  "entries": [
+    { "scene": "pinecol/pinecol", "id": "i", "start": 0, "end": 4.0,
+      "caption": { "fig": "i", "text": "STILL COLONNADE", "dur": 2.4 } },
+    { "scene": "pinecol/pinecol", "id": "ii", "start": 4.0, "end": 10.5,
+      "caption": { "fig": "ii", "text": "SQUIRREL", "dur": 2.4 } },
+    { "scene": "pinecol/pinecol", "id": "iii", "start": 10.5, "end": 14.0,
+      "caption": { "fig": "iii", "text": "WOODPECKER", "dur": 2.4 } },
+    { "scene": "pinecol/pinecol", "id": "iv", "start": 14.0, "end": 17.5,
+      "caption": { "fig": "iv", "text": "JAY", "dur": 2.4 } },
+    { "scene": "pinecol/pinecol", "id": "v", "start": 17.5, "end": 22.0,
+      "caption": { "fig": "v", "text": "SETTLE", "dur": 2.4 } }
+  ]
+}
