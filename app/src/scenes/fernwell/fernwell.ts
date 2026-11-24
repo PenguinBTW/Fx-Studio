@@ -77,7 +77,7 @@ float sdSeg(vec2 p, vec2 a, vec2 b) {
 }
 // golden beam: wedge from the hedge gap upper-left sweeping right-down
 float beam(vec2 uv) {
-  float d = ((1.0 - uv.x) * 0.55 + (1.0 - uv.y) * 0.45) - 0.34;
+  float d = ((1.0 - uv.x) * 0.55 + (1.0 - uv.y) * 0.45) - 0.48;
   float w = exp(-d * d / (0.18 * 0.18)) * (1.0 - smoothstep(0.80, 0.98, uv.y));
   // hedge-gap slats: the beam arrives as raking stripes
   w *= 0.55 + 0.45 * smoothstep(0.30, 0.55, fract((-uv.x * 0.6 - uv.y * 0.8) * 9.0));
