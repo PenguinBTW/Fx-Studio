@@ -32,11 +32,18 @@ export interface HeightFogOpts {
 export function fogOpticalDepth(y0: number, y1: number, dist: number, baseDensity: number, heightFalloff: number): number {
   if (dist <= 0 || baseDensity <= 0) return 0;
   if (heightFalloff === 0) return baseDensity * dist;
-  const k = (y1 - y0) / dist;
-  const bk = heightFalloff * k;
-  // exact limit when the ray is horizontal (bk → 0): 1−e^(−bk·d) → bk·d
-  if (Math.abs(bk) < 1e-7) return baseDensity * Math.exp(-heightFalloff * y0) * dist;
-  return (baseDensity * Math.exp(-heightFalloff * y0) * (1 - Math.exp(-bk * dist))) / bk;
+  const dy = y1 - y0;
+  const bdy = heightFalloff * dy;
+  // shallow rays: total exponent change decides, not slope alone — a long shallow ray
+  // can still span many scale heights. Midpoint density, error O((b·dy)²/24).
+  if (Math.abs(bdy) < 1e-3) {
+    return baseDensity * Math.exp(-heightFalloff * (y0 + y1) / 2) * dist;
+  }
+  // difference form: a·(e^(−b·y0) − e^(−b·y1))·d/(b·dy) — mathematically identical to
+  // the factored integral but NEVER evaluates large exponentials for positive heights
+  // (the factored form overflows float32 shaders on downward rays, e.g. y0=100→y1=0).
+  const k = dy / dist;
+  return (baseDensity * (Math.exp(-heightFalloff * y0) - Math.exp(-heightFalloff * y1))) / (heightFalloff * k);
 }
 
 /** Beer-Lambert transmittance T = e^(−τ). */
@@ -100,10 +107,13 @@ export const ATMOSPHERE_GLSL = /* glsl */ `
 float fogOpticalDepth(float y0, float y1, float dist, float baseDensity, float heightFalloff) {
   if (dist <= 0.0 || baseDensity <= 0.0) return 0.0;
   if (heightFalloff == 0.0) return baseDensity * dist;
-  float k = (y1 - y0) / dist;
-  float bk = heightFalloff * k;
-  if (abs(bk) < 1e-7) return baseDensity * exp(-heightFalloff * y0) * dist;
-  return baseDensity * exp(-heightFalloff * y0) * (1.0 - exp(-bk * dist)) / bk;
+  float dy = y1 - y0;
+  float bdy = heightFalloff * dy;
+  // shallow-ray branch keys on TOTAL height change, not slope — midpoint density
+  if (abs(bdy) < 1e-3) return baseDensity * exp(-heightFalloff * (y0 + y1) * 0.5) * dist;
+  // difference form — no large exponentials for positive heights (float32-safe)
+  float k = dy / dist;
+  return baseDensity * (exp(-heightFalloff * y0) - exp(-heightFalloff * y1)) / (heightFalloff * k);
 }
 float fogTransmittance(float y0, float y1, float dist, float baseDensity, float heightFalloff) {
   return exp(-fogOpticalDepth(y0, y1, dist, baseDensity, heightFalloff));
