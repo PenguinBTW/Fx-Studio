@@ -175,7 +175,9 @@ void main() {
   float flap = mix(fly, sit, uLanded);
   vec3 p = position;
   float side = sign(p.x);
-  p = vec3(p.x * cos(flap * side), p.y, abs(position.x) * sin(flap * side));
+  // sign(p.x)*flap keeps both wings mirroring — abs() here used to bank
+  // the silhouette (one tip up, other down) instead of flapping
+  p = vec3(p.x * cos(flap * side), p.y, position.x * sin(flap * side));
   mat4 im = mat4(1.0);
   #ifdef USE_INSTANCING
     im = instanceMatrix;
@@ -380,7 +382,36 @@ export default class MonarchflowScene extends Scene {
     this.hero.quaternion.setFromEuler(this.e.set(Math.PI / 2 - 0.3, Math.PI, 0));
     this.milkweed.rotation.z = Math.sin(t * 0.9) * 0.02 * land;
 
-    // diagnostics: publish hero screen bounds so probes see the node
+    // seed motes: backlit drift
+    for (let i = 0; i < MOTES; i++) {
+      const u = hash(i * 11), w = hash(i * 17);
+      const mx = frac(u + t * (0.006 + 0.008 * w));
+      const my = 0.25 + w * 0.5 + Math.sin(t * 0.3 + i) * 0.03;
+      uvToWorld(mx, my, this.p);
+      this.p.z += 1.5 + w * 3;
+      const tw = 0.3 + 0.7 * (Math.sin(t * 2 + i * 5) * 0.5 + 0.5);
+      this.sv.setScalar(tw);
+      this.m.compose(this.p, this.q.identity(), this.sv);
+      this.motes.setMatrixAt(i, this.m);
+    }
+    this.motes.instanceMatrix.needsUpdate = true;
+
+    // camera: pan left with the ribbon, then drift to the hero perch
+    const track = ss(4.5, 9.0, t);
+    const toHero = ss(13.0, 17.0, t);
+    this.cam.position.set(
+      -14 * track + 16 * toHero + Math.sin(t * 0.06) * 0.8,
+      8 - 3.5 * toHero,
+      30 - 17 * toHero,
+    );
+    this.cam.lookAt(
+      -20 * track + 30 * toHero,
+      9 - 8.0 * toHero + Math.sin(t * 0.07) * 0.4,
+      -50 + 32 * toHero,
+    );
+
+    // diagnostics: publish hero screen bounds so probes see the node —
+    // after the camera moves so the projection uses this frame's view
     if (typeof window !== 'undefined') {
       const P = (window as any).__motion || (window as any).__pdoom;
       if (P?.probe && P.textProbes && P.recordText) {
@@ -409,34 +440,6 @@ export default class MonarchflowScene extends Scene {
         }
       }
     }
-
-    // seed motes: backlit drift
-    for (let i = 0; i < MOTES; i++) {
-      const u = hash(i * 11), w = hash(i * 17);
-      const mx = frac(u + t * (0.006 + 0.008 * w));
-      const my = 0.25 + w * 0.5 + Math.sin(t * 0.3 + i) * 0.03;
-      uvToWorld(mx, my, this.p);
-      this.p.z += 1.5 + w * 3;
-      const tw = 0.3 + 0.7 * (Math.sin(t * 2 + i * 5) * 0.5 + 0.5);
-      this.sv.setScalar(tw);
-      this.m.compose(this.p, this.q.identity(), this.sv);
-      this.motes.setMatrixAt(i, this.m);
-    }
-    this.motes.instanceMatrix.needsUpdate = true;
-
-    // camera: pan left with the ribbon, then drift to the hero perch
-    const track = ss(4.5, 9.0, t);
-    const toHero = ss(13.0, 17.0, t);
-    this.cam.position.set(
-      -14 * track + 16 * toHero + Math.sin(t * 0.06) * 0.8,
-      8 - 3.5 * toHero,
-      30 - 17 * toHero,
-    );
-    this.cam.lookAt(
-      -20 * track + 34 * toHero,
-      9 - 9.5 * toHero + Math.sin(t * 0.07) * 0.4,
-      -50 + 32 * toHero,
-    );
 
     r.setRenderTarget(out);
     r.clear(true, true, true);
