@@ -1,6 +1,5 @@
 # coralreef — visual plan
 
-Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
 
 Shallow reef glade in morning light, ~18 s, fully procedural, closed-form f(t).
 
@@ -28,3 +27,5 @@ Shallow reef glade in morning light, ~18 s, fully procedural, closed-form f(t).
 - "morning over the glade" (1–4.5)
 - "the schools cross" (6.5–11)
 - "the anemone breathes" (12.5–17.5)
+
+Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL

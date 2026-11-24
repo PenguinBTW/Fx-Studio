@@ -57,11 +57,11 @@ void main() {
   // water column: pale morning aqua up top → deep teal below
   vec3 c = mix(vec3(0.02, 0.15, 0.20), vec3(0.24, 0.55, 0.52), smoothstep(0.02, 0.85, uv.y));
   // bright surface band — wavy shimmer line + specular flicker
-  float surf = 0.86 + 0.03 * sin(su.x * 9.0 + t * 0.7) + 0.015 * fbm3(vec3(su.x * 18.0, t * 0.4, 2.0), 3);
+  float surf = 0.52 + 0.03 * sin(su.x * 9.0 + t * 0.7) + 0.015 * fbm3(vec3(su.x * 18.0, t * 0.4, 2.0), 3);
   float surfBand = smoothstep(surf - 0.10, surf + 0.05, uv.y);
   c = mix(c, vec3(0.75, 0.88, 0.80), surfBand * (0.45 + 0.35 * uAwake));
   // sun glow through the surface
-  float sun = exp(-(pow((uv.x - 0.62) * 4.2, 2.0) + pow((uv.y - 1.02) * 6.5, 2.0)));
+  float sun = exp(-(pow(abs(uv.x - 0.62) * 4.2, 2.0) + pow(abs(uv.y - 1.02) * 6.5, 2.0)));
   c += vec3(1.0, 0.92, 0.68) * sun * (1.4 + 0.8 * uAwake);
 
   // god-ray shafts: slow columns of light leaning from the surface
@@ -79,7 +79,7 @@ void main() {
   c += vec3(0.80, 0.88, 0.72) * rays * 0.45 * (0.4 + 0.6 * uRays);
 
   // distant reef silhouette band along the base
-  float reefH = 0.10 + 0.07 * fbm3(vec3(su.x * 2.6, 4.2, 0.0), 4)
+  float reefH = 0.24 + 0.07 * fbm3(vec3(su.x * 2.6, 4.2, 0.0), 4)
               + 0.05 * max(0.0, sin(su.x * 5.5 + 1.7));
   float reef = 1.0 - smoothstep(reefH - 0.01, reefH + 0.02, uv.y);
   vec3 reefCol = mix(vec3(0.05, 0.16, 0.18), vec3(0.16, 0.22, 0.20), fbm3(vec3(su.x * 8.0, 8.0, 0.0), 3));
@@ -87,7 +87,7 @@ void main() {
 
   // suspended motes drifting down
   vec2 mp = fract(su * vec2(9.0, 6.0) + vec2(0.0, -t * 0.02)) - 0.5;
-  float mote = smoothstep(0.06, 0.0, length(mp)) * step(0.82, h21(floor(su * vec2(9.0, 6.0) + vec2(0.0, -t * 0.02))));
+  float mote = (1.0 - smoothstep(0.0, 0.06, length(mp))) * step(0.82, h21(floor(su * vec2(9.0, 6.0) + vec2(0.0, -t * 0.02))));
   c += vec3(0.5, 0.62, 0.58) * mote * 0.18;
 
   // morning warm cast grows with the awaken beat
@@ -151,7 +151,7 @@ void main() {
   float edge = fbm3(vec3(vUv.x * 6.0 + uSeed * 13.0, vUv.y * 2.0 - t * 0.10, uSeed), 3);
   float a = core * (0.5 + 0.5 * edge) * (1.0 - vUv.y * 0.75) * uAmp;
   vec3 c = vec3(0.85, 0.90, 0.72) * a;
-  fragColor = vec4(c, a);
+  fragColor = vec4(c, 0.0);
 }`;
 
 /* ---------------- fish school billboards ----------------------------------- */
@@ -208,7 +208,7 @@ void main() {
   vec2 p = vUv;
   // body: ellipse centered (0.36,0.5), rx 0.30 ry 0.15
   float be = length(vec2((p.x - 0.36) / 0.30, (p.y - 0.5) / 0.15));
-  float body = smoothstep(1.03, 0.97, be);
+  float body = (1.0 - smoothstep(0.97, 1.03, be));
   // tail: triangle flaring from x=0.62 to x=0.98
   float th = (p.x - 0.62) / 0.36 * 0.20;
   float tail = step(0.60, p.x) * step(abs(p.y - 0.5), th);
@@ -218,7 +218,7 @@ void main() {
   float a = max(body, max(tail, fin * 0.9)) * uSchool;
   if (a < 0.02) discard;
   // shading: dark back, lighter belly glint
-  float belly = smoothstep(0.62, 0.42, p.y);
+  float belly = (1.0 - smoothstep(0.42, 0.62, p.y));
   vec3 c = uTint * (0.55 + 0.35 * vShade) + vec3(0.18, 0.20, 0.18) * belly * body;
   fragColor = vec4(c, a);
 }`;
@@ -263,11 +263,11 @@ in float vA;
 out vec4 fragColor;
 void main() {
   float d = length(vUv - 0.5) * 2.0;
-  float ring = smoothstep(1.0, 0.8, d) - smoothstep(0.75, 0.4, d);
-  float glint = smoothstep(0.35, 0.0, length(vUv - vec2(0.38, 0.62))) * 1.4;
+  float ring = (1.0 - smoothstep(0.8, 1.0, d)) - smoothstep(0.75, 0.4, d);
+  float glint = (1.0 - smoothstep(0.0, 0.35, length(vUv - vec2(0.38, 0.62)))) * 1.4;
   float a = (ring + glint) * vA;
   if (a < 0.02) discard;
-  fragColor = vec4(vec3(0.85, 0.95, 0.95), a * 0.8);
+  fragColor = vec4(vec3(0.85, 0.95, 0.95) * (a * 0.8), 0.0);
 }`;
 
 /* ---------------- anemone tentacles ---------------------------------------- */
@@ -635,9 +635,11 @@ export default class CoralReefScene extends Scene {
     const g = this.layer.ctx;
     this.layer.clear();
     const duck = overlayTextDuck(f.tin, f.tout);
+    let anyVis = false;
     for (const c of CAPTIONS) {
       const a = ss(c.at, c.at + 0.5, t) * (1 - ss(c.end - 0.5, c.end, t)) * duck;
       if (a <= 0) continue;
+      anyVis = true;
       g.save();
       g.globalAlpha = a;
       const text = c.s.toUpperCase();
@@ -662,7 +664,7 @@ export default class CoralReefScene extends Scene {
       g.fillText(text, this.ctx.W / 2, this.ctx.H - 120);
       g.restore();
     }
-    this.ctx.comp.draw(r, this.layer.upload(), out, { mode: 'normal', opacity: 1 });
+    if (anyVis) this.ctx.comp.draw(r, this.layer.upload(), out, { mode: 'normal', opacity: 1 });
     r.resetState();
 
     return {
@@ -686,6 +688,9 @@ export default class CoralReefScene extends Scene {
       const mat = m.material as THREE.Material | THREE.Material[] | undefined;
       if (Array.isArray(mat)) mat.forEach((x) => x.dispose());
       else if (mat) mat.dispose();
+      if ((m as unknown as THREE.InstancedMesh).isInstancedMesh) {
+        (m as THREE.InstancedMesh).dispose();
+      }
     });
   }
 }
