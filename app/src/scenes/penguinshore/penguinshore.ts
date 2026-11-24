@@ -97,7 +97,7 @@ void main() {
   vec3 water = mix(vec3(0.10, 0.14, 0.21), vec3(0.17, 0.24, 0.33), smoothstep(0.30, 0.47, y));
   // swell crests: discrete foam lines advancing shoreward, broken up so
   // they read as wavelets rather than continuous blinds
-  float crestPh = y * 95.0 - x * 22.0 - t * 1.4
+  float crestPh = y * 95.0 - x * 22.0 + t * 1.4
                 + 3.0 * sin(x * 15.0) + 1.5 * sin(x * 41.0 + y * 30.0);
   float crest = smoothstep(0.55, 0.95, sin(crestPh));
   float crestDark = smoothstep(0.5, 0.95, -sin(crestPh));
@@ -151,10 +151,10 @@ void main() {
     float sp = smoothstep(11.8, 15.4, t);
     float sx2 = mix(0.06, 0.94, sp);
     float sy2 = beachY(sx2) + 0.018 + 0.004 * sin(t * 2.0);
-    vec2 sq = (vUv - vec2(sx2, sy2)) * vec2(1.0, 1.0);
-    float seal = 1.0 - smoothstep(0.040, 0.055, length(sq / vec2(0.050, 0.011)));
+    // ellipse lengths are normalized by their radii — edges in body-radius units
+    float seal = 1.0 - smoothstep(0.55, 0.9, length((vUv - vec2(sx2, sy2)) / vec2(0.050, 0.011)));
     // slight head bump at the leading edge
-    float shead = 1.0 - smoothstep(0.010, 0.016, length((vUv - vec2(sx2 + 0.048, sy2 + 0.006)) * vec2(1.4, 2.4)));
+    float shead = 1.0 - smoothstep(0.45, 0.8, length((vUv - vec2(sx2 + 0.048, sy2 + 0.006)) / vec2(0.016, 0.010)));
     col = mix(col, vec3(0.07, 0.09, 0.12), max(seal, shead) * 0.85);
   }
 
@@ -165,14 +165,14 @@ void main() {
     float t0 = 4.0 + fi * 0.45 + h1 * 0.5;
     float dur = 5.0 + h2 * 1.5;
     float pr = (t - t0) / dur;
-    if (pr <= 0.0 || pr >= 1.0) continue;
+    if (pr <= 0.0) continue;
     float x0 = 0.05 + 0.08 * h3;
     float x1 = 0.56 + 0.10 * h1;
-    float px = mix(x0, x1, pr) + 0.010 * sin(t * 1.7 + h1 * 6.0);
+    float px = mix(x0, x1, min(pr, 1.0)) + 0.010 * sin(t * 1.7 + h1 * 6.0);
     float r = 0.8 + 0.5 * h2; // arcs per second
     float ph = fract((t - t0) * r);
     float pwl = beachY(px) + 0.006;
-    if (ph < 0.55 && sealGate > 0.02) {
+    if (ph < 0.55 && sealGate > 0.02 && pr < 1.0) {
       float bp = ph / 0.55;
       float bh = 0.055 + 0.028 * h1;
       float py = pwl + bh * sin(bp * 3.1416);
@@ -199,8 +199,9 @@ void main() {
         }
       }
     }
-    // landed penguin pauses upright at the waterline for a beat
-    if (ph >= 0.55 && ph < 0.55 + 2.0 / (dur * r) * 0.55 && pr > 0.92) {
+    // landed penguin stays upright at the waterline (no upper bound on the
+    // stand window — it keeps standing once the crossing is done)
+    if ((pr > 0.92 && ph >= 0.55) || pr >= 1.0) {
       float stand = peng(vUv, vec2(px, pwl + 0.014), 0.0, 0.030);
       col = mix(col, vec3(0.08, 0.08, 0.11), stand * 0.9);
     }
@@ -251,11 +252,12 @@ void main() {
     col = mix(col, vec3(0.08, 0.08, 0.11), cpen * 0.95);
   }
 
-  // --- skua diving once over the colony edge ---------------------------------
-  if (t > 11.0 && t < 11.8) {
-    float sp = (t - 11.0) / 0.8;
-    float kx = mix(0.96, 0.74, sp);
-    float ky = 0.62 - 0.13 * sin(sp * 3.1416);
+  // --- skua diving once over the colony edge (timed to the second pan leg
+  // so both wide and narrow exports keep it in frame) -------------------------
+  if (t > 13.0 && t < 14.0) {
+    float sp = (t - 13.0) / 1.0;
+    float kx = mix(0.80, 0.58, sp);
+    float ky = 0.60 - 0.11 * sin(sp * 3.1416);
     vec2 bd = (vUv - vec2(kx, ky)) * vec2(2.2, 5.0);
     float skua = 1.0 - smoothstep(0.010, 0.017, length(bd));
     col = mix(col, vec3(0.06, 0.06, 0.09), skua * 0.9);
@@ -306,7 +308,9 @@ export default class PenguinshoreScene extends Scene {
     // Narrow frames pan FURTHER so the colony still lands in frame; the
     // path dwells on the surf break while the porpoise chain crosses.
     const halfW = 104.0 * Math.tan(0.5 * 40 * Math.PI / 180) * (this.ctx.W / this.ctx.H);
-    const targetEnd = Math.max(76.8, 121.6 - 0.75 * halfW);
+    // cap the end point so the backdrop's right edge never enters frame:
+    // right frame edge ≈ targetX + halfW + 4.7 (pos offset), backdrop ends at 160
+    const targetEnd = Math.min(Math.max(76.8, 121.6 - 0.75 * halfW), Math.max(30.0, 154.0 - halfW));
     let targetX: number;
     if (halfW >= 60.0) {
       const pan = ss(2, 16, t) * ((targetEnd + 32.0) / 108.8);
