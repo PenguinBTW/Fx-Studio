@@ -46,7 +46,9 @@ const beamSweep = (t: number) => {
 const beamEnv = (t: number) => {
   const u = (t % BEAM_PERIOD) / BEAM_PERIOD;
   // ramps up through the pass, fades during the backswing
-  return Math.pow(Math.sin(Math.PI * clamp01(u / 0.80)), 0.8);
+  const env = Math.pow(Math.sin(Math.PI * clamp01(u / 0.80)), 0.8);
+  // SETTLE act: the shaft dies away through 17.5–20.5 s and stays a lamp glow
+  return env * (1 - sCurve(clamp01((t - 17.5) / 3.0)));
 };
 // signed wrapped angle difference
 const wrapAng = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -446,19 +448,31 @@ export default defineScene({
     {
       st.curlewMat = st.lifeMat.clone(); st.curlewMat.uniforms.uA!.value = 0;
       st.curlew = new THREE.Group();
-      const p: number[] = [], c: number[] = [];
       const cc = [0.022, 0.022, 0.026];
+      const p: number[] = [], c: number[] = [];
       poly(p, c, [[-0.075, 0.0], [0.05, 0.0], [0.075, 0.035], [0.05, 0.055], [-0.06, 0.05], [-0.09, 0.02]], cc); // body
-      ribbon(p, c, [[0.05, 0.045], [0.075, 0.09], [0.085, 0.11]], 0.020, 0.014, cc);                          // neck
-      poly(p, c, [[0.075, 0.095], [0.105, 0.095], [0.108, 0.115], [0.078, 0.115]], cc);                        // head
-      // decurved bill — curves down from the head
-      ribbon(p, c, [[0.105, 0.102], [0.150, 0.085], [0.175, 0.055]], 0.006, 0.002, cc);
       ribbon(p, c, [[-0.03, 0.0], [-0.032, -0.075]], 0.010, 0.004, cc);                                        // legs
       ribbon(p, c, [[0.025, 0.0], [0.022, -0.075]], 0.010, 0.004, cc);
       const g = new THREE.BufferGeometry();
       g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(p), 3));
       g.setAttribute("color", new THREE.BufferAttribute(new Float32Array(c), 3));
-      st.curlewBill = new THREE.Mesh(g, st.curlewMat);
+      const body = new THREE.Mesh(g, st.curlewMat);
+      body.frustumCulled = false;
+      st.curlew.add(body);
+      // neck+head+bill on their own pivot at the neck base, so the probe dips
+      // only the head assembly while the legs stay planted
+      const P = { x: 0.05, y: 0.045 };
+      const hp: number[] = [], hc: number[] = [];
+      const off = (pts: number[][]): number[][] => pts.map(([x, y]) => [x - P.x, y - P.y]);
+      ribbon(hp, hc, off([[0.05, 0.045], [0.075, 0.09], [0.085, 0.11]]), 0.020, 0.014, cc);                    // neck
+      poly(hp, hc, off([[0.075, 0.095], [0.105, 0.095], [0.108, 0.115], [0.078, 0.115]]), cc);                  // head
+      // decurved bill — curves down from the head
+      ribbon(hp, hc, off([[0.105, 0.102], [0.150, 0.085], [0.175, 0.055]]), 0.006, 0.002, cc);
+      const hg = new THREE.BufferGeometry();
+      hg.setAttribute("position", new THREE.BufferAttribute(new Float32Array(hp), 3));
+      hg.setAttribute("color", new THREE.BufferAttribute(new Float32Array(hc), 3));
+      st.curlewBill = new THREE.Mesh(hg, st.curlewMat);
+      st.curlewBill.position.set(P.x, P.y, 0.001);
       st.curlewBill.frustumCulled = false;
       st.curlew.add(st.curlewBill);
       st.curlew.position.set(-1.7, -0.72, 0.06);
