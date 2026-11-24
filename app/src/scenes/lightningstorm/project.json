@@ -1,0 +1,32 @@
+{
+  "project": "lightningstorm",
+  "meta": {
+    "title": "Lightning Storm: The Barrage",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 24.0
+  },
+  "entries": [
+    {
+      "scene": "lightningstorm/lightningstorm",
+      "id": "act-gather",
+      "start": 0.0,
+      "end": 8.0,
+      "caption": { "fig": "01", "text": "THE CELL GATHERS", "dur": 4.0 }
+    },
+    {
+      "scene": "lightningstorm/lightningstorm",
+      "id": "act-strike",
+      "start": 8.0,
+      "end": 16.0,
+      "caption": { "fig": "02", "text": "THE FIRST STRIKE", "dur": 4.0 }
+    },
+    {
+      "scene": "lightningstorm/lightningstorm",
+      "id": "act-barrage",
+      "start": 16.0,
+      "end": 24.0,
+      "caption": { "fig": "03", "text": "THE BARRAGE", "dur": 4.0 }
+    }
+  ]
+}
