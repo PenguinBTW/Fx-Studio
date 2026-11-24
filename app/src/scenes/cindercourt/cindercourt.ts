@@ -347,6 +347,7 @@ void main() {
                   u + 0.15 * sin(u * 3.14));
     float wings = sstep(1.0, 0.55, sdist(uv, fp + vec2(0.0, abs(sin(u * 18.0)) * 0.006),
                     vec2(0.012 / ASPECT, 0.006)));
+    wings *= 1.0 - sstep(RAVEN_IN - 0.05, RAVEN_IN + 0.12, t); // dissolve into the perched bird
     col = mix(col, vec3(0.012, 0.010, 0.014), wings);
   }
 
