@@ -216,9 +216,15 @@ function flowerGeometry(lavender: boolean): THREE.BufferGeometry {
   const w = 0.055;
   quad([[-w * 0.15, 0, 0], [w * 0.15, 0, 0], [0, h, 0.02], [0, h, -0.02]], [0.24, 0.34, 0.13]);
   quad([[0, 0, -w * 0.15], [0, 0, w * 0.15], [-0.02, h, 0], [0.02, h, 0]], [0.24, 0.34, 0.13]);
-  // blossom: small dome of 4 fanned petals
-  quad([[-w, h, 0], [0, h, -w], [0, h + 0.07, 0], [w, h, 0]], petal);
-  quad([[-w, h, 0], [w, h, 0], [0, h + 0.07, 0], [0, h, w]], petal);
+  // blossom: closed 4-fan dome — every rim-to-rim sector gets a petal
+  const rim = [[0, h, -w], [w, h, 0], [0, h, w], [-w, h, 0]];
+  const apex = [0, h + 0.07, 0];
+  for (let p = 0; p < 4; p++) {
+    const a = rim[p], b = rim[(p + 1) % 4];
+    pos.push(...a, ...b, ...apex);
+    for (let k = 0; k < 3; k++) col.push(...petal);
+    for (let k = 0; k < 3; k++) nrm.push(0, 1, 0);
+  }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3));
   g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(col), 3));
@@ -286,7 +292,7 @@ export default class MillridgetScene extends Scene {
   private rocks!: THREE.InstancedMesh;
   private sunBase = new THREE.Color();
   private sunDusk = new THREE.Color();
-  private spill!: THREE.Sprite;
+  private spill!: THREE.Mesh;
   private swayU = { value: 0 };
   private flapU = { value: 0 };
   private glow!: THREE.Sprite;
@@ -544,15 +550,19 @@ export default class MillridgetScene extends Scene {
     sg.addColorStop(1, 'rgba(255,140,60,0)');
     sc.fillStyle = sg;
     sc.fillRect(0, 0, 64, 64);
-    this.spill = new THREE.Sprite(new THREE.SpriteMaterial({
+    // a plane glued to the wall face under the window (the mill's 0.45 yaw
+    // puts the wall normal at ~-2.69 rad) — not a camera-facing sprite
+    const spillMat = new THREE.MeshBasicMaterial({
       map: new THREE.CanvasTexture(spillCv),
       transparent: true,
       opacity: 0.0,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
-    }));
-    this.spill.position.set(-0.95, MILL_Y + 3.35, -1.85);
-    this.spill.scale.set(3.2, 2.2, 1);
+      side: THREE.DoubleSide,
+    });
+    this.spill = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 2.2), spillMat);
+    this.spill.position.set(-1.02, MILL_Y + 3.4, -1.95);
+    this.spill.rotation.y = Math.atan2(-0.435, -0.900);
     scene.add(this.spill);
     // rocky outcrop on the crest behind the mill — silhouette breakup
     for (let i = 0; i < 9; i++) {
@@ -641,7 +651,7 @@ export default class MillridgetScene extends Scene {
     this.hemi.intensity = 0.45 * (1 - 0.4 * settle);
     this.rim.intensity = 0.7 + 0.25 * settle;
     this.windowLight.intensity = 1.1 + 0.18 * Math.sin(t * 5.0) + 0.6 * settle;
-    this.spill.material.opacity = (0.18 + 0.04 * Math.sin(t * 5.0 + 1.0)) * (1 + 0.6 * settle);
+    (this.spill.material as THREE.MeshBasicMaterial).opacity = (0.18 + 0.04 * Math.sin(t * 5.0 + 1.0)) * (1 + 0.6 * settle);
     (this.three.fog as THREE.FogExp2).density = 0.0105 + 0.004 * settle;
     this.glow.material.opacity = 1 - 0.45 * settle;
 
@@ -736,8 +746,10 @@ export default class MillridgetScene extends Scene {
     this.flowers?.dispose();
     this.flowers2?.dispose();
     this.rocks?.dispose();
-    this.spill?.material.map?.dispose();
-    this.spill?.material.dispose();
+    this.spill?.geometry?.dispose();
+    const spillM = this.spill?.material as THREE.MeshBasicMaterial | undefined;
+    spillM?.map?.dispose();
+    spillM?.dispose();
     this.three.traverse((o) => {
       const m = o as THREE.Mesh;
       m.geometry?.dispose();

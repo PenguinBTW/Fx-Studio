@@ -113,7 +113,8 @@ for nm, (sx, sz, px, pz) in {
 # sill under the opening
 wsill = box('winSill', (0.72, 0.18, 0.07), (0, -1.74, 3.55 - 0.42), TIMBER_D, bev=0.025)
 wsill['fx_part'] = 'win'; parent(wsill, body)
-glass = box('glass', (0.48, 0.06, 0.58), (0, -1.78, 3.55), GLASS, bev=0.015)
+# pane recessed inside the frame so the mullions sit proud of its face
+glass = box('glass', (0.48, 0.06, 0.58), (0, -1.71, 3.55), GLASS, bev=0.015)
 glass['fx_part'] = 'win'; parent(glass, body)
 mullv = box('mullV', (0.04, 0.05, 0.58), (0, -1.76, 3.55), TIMBER_D)
 mullh = box('mullH', (0.48, 0.05, 0.04), (0, -1.76, 3.55), TIMBER_D)
@@ -143,10 +144,11 @@ def sailparts(k):
         p = box(f'cloth{k}_{j}', (0.86, 0.02, 0.40), (0.52, -2.02, 4.25 + 2.55 + j * 0.44), CANVAS)
         p.rotation_euler[2] = math.radians(1.2 if j % 2 else -1.2)
         grp.append(p)
-    # diagonal braces across the lattice (tilt in the sail's x-z plane = rot.y)
+    # diagonal braces across the lattice (tilt in the sail's x-z plane = rot.y);
+    # unbeveled thin stock keeps the export under the 20k-tri budget
     brace_ang = math.atan(0.98 / 3.0)
-    grp.append(box(f'brace{k}u', (0.045, 0.05, 3.3), (0.5, -2.04, 4.25 + 2.9), SAIL_WOOD, bev=0.012, rot=(0, brace_ang, 0)))
-    grp.append(box(f'brace{k}l', (0.045, 0.05, 3.3), (0.5, -2.04, 4.25 + 2.9), SAIL_WOOD, bev=0.012, rot=(0, -brace_ang, 0)))
+    grp.append(box(f'brace{k}u', (0.045, 0.05, 3.3), (0.5, -2.04, 4.25 + 2.9), SAIL_WOOD, rot=(0, brace_ang, 0)))
+    grp.append(box(f'brace{k}l', (0.045, 0.05, 3.3), (0.5, -2.04, 4.25 + 2.9), SAIL_WOOD, rot=(0, -brace_ang, 0)))
     return grp, ang
 
 for k in range(4):
