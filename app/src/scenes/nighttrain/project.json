@@ -1,0 +1,11 @@
+{
+  "project": "nighttrain",
+  "entries": [
+    {
+      "scene": "nighttrain/nighttrain",
+      "id": "night_viaduct",
+      "start": 0,
+      "end": 20
+    }
+  ]
+}
