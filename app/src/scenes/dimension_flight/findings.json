@@ -2,6 +2,7 @@
   "project": "dimension_flight",
   "audit_timestamp": "2026-11-24T04:00:00Z",
   "note": "Loaded by `bun scripts/render.ts motion` (scene-dir findings.json). Keys are RULE-t0-t1 windows in hundredths of a second — ordinal-free, so re-audits at any width/fps that flag the same windows match automatically. Bare rule names are rejected by the loader; every waiver cites its exact window per the waiver protocol.",
+  "governed_rules": ["F11", "F12"],
   "waivers": {
     "F11-120-193": "Dawn river-valley sunrise is the intended bright hero light of beat 1",
     "F11-4527-4840": "Aether glowstone gate sequence is intentionally luminous",

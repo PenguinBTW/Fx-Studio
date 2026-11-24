@@ -871,13 +871,18 @@ async function motion(page: Page) {
   // is authoritative per-rule: for any rule it governs, prior-report waivers are not
   // restored, so deleting a scene waiver actually unwaives on rerun into the same
   // --out dir. Rules it does not mention still inherit operator waivers saved in the
-  // previous report.
+  // previous report. Governed rules come from an optional "governed_rules" list plus
+  // every rule named by a waiver key — the list exists so removing a rule's last
+  // waiver does not silently hand the rule back to prior-report restoration.
   const { dir: sceneDir } = await loadProject();
   const sceneFindingsPath = path.join(sceneDir, 'findings.json');
   const sceneGoverns = new Set<string>();
   if (existsSync(sceneFindingsPath)) {
     try {
       const sceneFindings = JSON.parse(await Bun.file(sceneFindingsPath).text());
+      for (const r of sceneFindings?.governed_rules ?? []) {
+        if (typeof r === 'string' && r.trim()) sceneGoverns.add(r);
+      }
       for (const [k, v] of Object.entries(sceneFindings?.waivers ?? {})) {
         if (!/-\d+-\d+/.test(k)) continue;
         sceneGoverns.add(k.split('-')[0]!);
