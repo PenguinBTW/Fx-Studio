@@ -35,7 +35,9 @@ function lightDir(lt: number, out: THREE.Vector3): THREE.Vector3 {
 // ~t=14 → pull back out for the closing silhouette. All piecewise f(t).
 function camPos(lt: number, out: THREE.Vector3): THREE.Vector3 {
   const u = Math.min(lt / TAKE, 1);
-  const inZ = 3.7 - 2.9 * smooth((lt - 3.0) / 9.5);        // 3.7 → 0.8 through t≈12.5
+  // The shell mouth sits ~0.44 in world z — the dolly must cross it (0.35)
+  // for the deep-cavity beat, not stop outside.
+  const inZ = 3.7 - 3.35 * smooth((lt - 3.0) / 9.5);        // 3.7 → 0.35 through t≈12.5
   const backZ = 3.1 * smooth((lt - 15.6) / 3.4);           // pull out for the silhouette
   const az = 0.42 - 0.55 * u + 0.05 * Math.sin(lt * 0.4);  // gentle arc
   const r = inZ + backZ;
