@@ -296,7 +296,7 @@ varying float vSeed;
 varying float vFlap;
 uniform float uT;
 uniform float uPx;
-uniform float uLeadZ;  // lead-boat z — drip beads stay in the tracked band
+
 
 void main() {
   float t0 = aAux.x;
@@ -310,8 +310,8 @@ void main() {
 
   if (aKind < 0.5) {
     // curb drip bead: gather on the curb lip → fall → tiny plop
-    // beads ride a band just ahead of the tracking camera's look point
-    pos.z = position.z + uLeadZ;
+    // beads sit at fixed world-z curb spots — the flash and its ripple
+    // ring stay at the same point across the whole cycle
     float gather = amp, fall = rate, rest = ph;
     float cyc = gather + fall + rest;
     float pc = mod(uT - t0, cyc);
@@ -529,7 +529,7 @@ export default defineScene({
     }
 
     // --- points: additive (drips, debris, splash drops)
-    const ND = 10, NB = 16, NS = 9;
+    const ND = 26, NB = 16, NS = 9;
     const pos = new Float32Array((ND + NB + NS) * 3);
     const seed = new Float32Array(ND + NB + NS);
     const kind = new Float32Array(ND + NB + NS);
@@ -545,8 +545,9 @@ export default defineScene({
     };
     // curb drip beads: run-off dripping off the curb lip into the channel
     for (let dI = 0; dI < ND; dI++) {
-      // z is an offset ahead of the lead boat — beads stay in the tracked band
-      const z = -2 - rng() * 7;
+      // fixed world-z curb sites spanning the camera's traverse so a few
+      // drips are always in frame as the tracking shot moves downstream
+      const z = -33.5 + rng() * 41.5;
       const gather = 2.0 + rng() * 3.0;
       const fall = Math.sqrt(2 * 0.35 / 8) * (0.9 + rng() * 0.2);
       const rest = 0.6 + rng() * 2.4;
@@ -573,7 +574,7 @@ export default defineScene({
     const addMat = new THREE.ShaderMaterial({
       vertexShader: PT_VERT, fragmentShader: PT_FRAG,
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-      uniforms: { uT: { value: 0 }, uPx: { value: 1 }, uLeadZ: { value: 0 } },
+      uniforms: { uT: { value: 0 }, uPx: { value: 1 } },
     });
     const addPts = new THREE.Points(geo, addMat);
     addPts.frustumCulled = false;
@@ -677,19 +678,18 @@ export default defineScene({
     // ---- rings: splash + curb drip plops feed the uniform array
     const rings = st.groundMat.uniforms.uRings.value as THREE.Vector3[];
     const act: { x: number; z: number; t0: number }[] = [];
-    const lz = leadZ(t);
-    st.addMat.uniforms.uLeadZ.value = lz;
+
     // sneaker splash ring
     const splashAge = t - (SPLASH_T + 0.55);
     if (splashAge > 0 && splashAge <= 3.5) act.push({ x: -1.0, z: -30.0, t0: SPLASH_T + 0.55 });
-    // curb drip plops: mirror of the vertex-shader cycle; bead z rides the band
+    // curb drip plops: mirror of the vertex-shader cycle at fixed bead spots
     for (const d of st.drips) {
       const cyc = d.gather + d.fall + d.rest;
       const k = Math.floor((t - d.off) / cyc);
       for (let m = Math.max(0, k - 1); m <= k; m++) {
         const plopT = d.off + m * cyc + d.gather + d.fall;
         const age = t - plopT;
-        if (age > 0 && age <= 3.5) act.push({ x: d.x - 0.35, z: d.z + leadZ(plopT), t0: plopT });
+        if (age > 0 && age <= 3.5) act.push({ x: d.x - 0.35, z: d.z, t0: plopT });
       }
     }
     act.sort((a, b) => b.t0 - a.t0);
