@@ -329,6 +329,16 @@ export default class PrismbeamScene extends Scene {
     // ---- late glints ---------------------------------------------------------
     this.glintMat.opacity = 0.09 + 0.5 * glintOn * (0.55 + 0.45 * Math.sin(lt * 2.1));
 
+    // ---- camera: slow push-in, beam-left composition -------------------------
+    const u = Math.min(lt / TAKE, 1);
+    this.camera.position.set(
+      -0.35 + 0.5 * u + Math.sin(lt * 0.06) * 0.2,
+      2.6 - 0.4 * u,
+      6.4 - 1.3 * u,
+    );
+    this.camera.lookAt(0.3, 0.85, 0);
+    this.camera.updateMatrixWorld();
+
     // ---- telemetry: publish the crystal's screen bounds --------------------
     if (typeof window !== 'undefined' && this.crystalBox && this.inst) {
       const P = (window as any).__motion || (window as any).__pdoom;
@@ -367,16 +377,6 @@ export default class PrismbeamScene extends Scene {
         });
       }
     }
-
-    // ---- camera: slow push-in, beam-left composition -------------------------
-    const u = Math.min(lt / TAKE, 1);
-    this.camera.position.set(
-      -0.35 + 0.5 * u + Math.sin(lt * 0.06) * 0.2,
-      2.6 - 0.4 * u,
-      6.4 - 1.3 * u,
-    );
-    this.camera.lookAt(0.3, 0.85, 0);
-    this.camera.updateMatrixWorld();
 
     const r = this.ctx.renderer;
     r.setRenderTarget(out);
