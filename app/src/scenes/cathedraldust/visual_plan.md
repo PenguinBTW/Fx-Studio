@@ -47,3 +47,5 @@ denser at floor.
 
 still beams (0–4) → motes drifting (always) → pigeon transit (9–13.4) →
 sun-arc shift, beam 2 fades / beam 3 enters (13–18) → settle (18–20).
+
+// Do not forget to ground yourself when its time USE THE SKILL and REREAD IT ALL

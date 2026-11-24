@@ -37,6 +37,7 @@ const FRAG = /* glsl */ `
 precision highp float;
 in vec2 vUv;
 uniform float uT;
+uniform float uDrift;
 out vec4 fragColor;
 const float FLOOR = 0.30;
 const float ASPECT = ${(16 / 9).toFixed(4)};
@@ -113,7 +114,7 @@ vec3 wallCol(vec2 uv, float t) {
   vec3 c = mix(vec3(0.10, 0.11, 0.14), vec3(0.16, 0.16, 0.19), uv.y);
   c += vec3(0.05, 0.04, 0.02) * fbm2(uv * vec2(6.0, 3.0));
   // block joints: faint horizontal courses
-  float course = smoothstep(0.012, 0.004, abs(fract(uv.y * 14.0) - 0.5) - 0.46);
+  float course = sstep(0.012, 0.004, abs(fract(uv.y * 14.0) - 0.5) - 0.46);
   c *= 1.0 - 0.10 * course;
   // stone mottle
   c *= 0.85 + 0.30 * fbm2(uv * 22.0 + 3.1);
@@ -179,12 +180,13 @@ vec2 pigeonPos(float t) {
   float a2 = sstep(10.0, 10.8, t);
   float a3 = sstep(10.8, 12.6, t);
   float a4 = sstep(12.6, 13.6, t);
-  // loop around cL during a3
+  // blend onto the ellipse early in a3, then ride it a full turn around cL
+  float on = sstep(10.8, 11.2, t);
   float th = 3.6 + a3 * 6.28318;
   vec2 loop = cL + vec2(cos(th) * 0.10, sin(th) * 0.075);
   vec2 p = mix(p0, p1, a1);
   p = mix(p, vec2(0.50, 0.55), a2);
-  p = mix(p, loop, a3);
+  p = mix(p, loop, on);
   p = mix(p, p3, a4);
   return p;
 }
@@ -215,16 +217,18 @@ float chain(vec2 uv, float t) {
 // stone-dust puff: a fragment drops ~t14.0, the puff expands and fades
 float puff(vec2 uv, float t) {
   float dt = t - 14.0;
-  if (dt < 0.0) return 0.0;
+  if (dt < -0.05) return 0.0;
   vec2 c0 = vec2(0.58, FLOOR + 0.01);
-  float R = 0.02 + 0.10 * sstep(0.0, 1.2, dt);
-  float fade = 1.0 - sstep(0.5, 1.8, dt);
+  float pt = dt - 0.17; // puff only after the fragment reaches the floor
+  float R = 0.02 + 0.10 * sstep(0.0, 1.2, pt);
+  float fade = 1.0 - sstep(0.5, 1.8, pt);
   vec2 d = (uv - c0) * vec2(ASPECT, 1.6);
-  float m = (1.0 - smoothstep(R * 0.6, R, length(d))) * (0.5 + 0.5 * fbm3(uv * 40.0 + dt * 3.0));
+  float m = (1.0 - smoothstep(R * 0.6, R, length(d))) * (0.5 + 0.5 * fbm3(uv * 40.0 + pt * 3.0))
+          * step(0.0, pt);
   // the falling fragment itself for ~0.35s before the puff
   float frag = 0.0;
   if (dt < 0.4 && dt > -0.05) {
-    vec2 fp = vec2(0.58, 0.78 - 2.2 * (dt + 0.05));
+    vec2 fp = vec2(0.58, max(0.78 - 2.2 * (dt + 0.05), FLOOR + 0.005));
     frag = (1.0 - smoothstep(0.004, 0.010, length((uv - fp) * vec2(ASPECT, 1.0)))) * sstep(-0.05, 0.1, dt);
   }
   return clamp(m * fade + frag, 0.0, 1.0);
@@ -241,7 +245,7 @@ void main() {
   float vaultEdge = 0.78 + 0.04 * sin(uv.x * 3.0) + 0.03 * fbm2(vec2(uv.x * 8.0, 4.4));
   float breach = sstep(0.60, 0.68, uv.x) * sstep(0.90, 0.82, uv.x); // x in ~0.60..0.86
   float ragged = fbm3(vec2(uv.x * 14.0, 2.2)) * 0.05;
-  float vault = sstep(vaultEdge - ragged * breach, vaultEdge, uv.y);
+  float vault = sstep(vaultEdge - max(ragged * breach, 0.001), vaultEdge, uv.y);
   // inside the breach the vault is gone (sky-black gap)
   float gap = vault * breach * sstep(0.05, 0.12, ragged + 0.04);
   c = mix(c, vec3(0.02, 0.02, 0.03), vault * (1.0 - gap) * 0.92);
@@ -266,10 +270,10 @@ void main() {
   c = mix(c, floorC, fm);
 
   // ---- columns in soft fog (near=darker) ----
-  c = mix(c, vec3(0.04, 0.045, 0.06), columnMask(uv, 0.11, 0.045, 1.0));
+  c = mix(c, vec3(0.04, 0.045, 0.06), columnMask(uv, 0.16, 0.045, 1.0));
   c = mix(c, vec3(0.06, 0.065, 0.08), columnMask(uv, 0.29, 0.030, 0.85));
   c = mix(c, vec3(0.06, 0.065, 0.08), columnMask(uv, 0.73, 0.030, 0.85));
-  c = mix(c, vec3(0.04, 0.045, 0.06), columnMask(uv, 0.90, 0.050, 1.0));
+  c = mix(c, vec3(0.04, 0.045, 0.06), columnMask(uv, 0.85, 0.050, 1.0));
 
   // ---- rose window + thrown color ----
   float winM = 0.0;
@@ -292,12 +296,13 @@ void main() {
       float spd = 0.008 + 0.014 * h1(i * 3.3 + kk * 9.0);
       float y0 = h1(i * 11.7 + kk * 5.0);
       float yy = fract(y0 - t * spd * (1.0 + 0.6 * kk));
-      float xx = fract(h1(i * 17.1 + kk * 13.0) + t * (0.004 + 0.006 * kk) + 0.03 * sin(t * 0.4 + sd * 20.0));
+      float xx = fract(h1(i * 17.1 + kk * 13.0) + t * (0.004 + 0.006 * kk) + 0.03 * sin(t * 0.4 + sd * 20.0) - uDrift * (0.04 + 0.10 * kk));
       float sz = 0.0012 + 0.0022 * h1(i * 5.9 + kk * 7.0) + 0.0016 * kk;
       vec2 mp = vec2(xx, yy);
       float dm = length((uv - mp) * vec2(ASPECT, 1.0));
       float mote = 1.0 - smoothstep(sz * 0.6, sz, dm);
-      float lit = 0.35 + 3.0 * beamAt(mp, t);
+      float lit = 0.35;
+      if (mote > 0.0) lit += 3.0 * beamAt(mp, t);
       float twk = 0.6 + 0.7 * step(0.965, h1(floor(t * 3.0) + i * 23.0 + kk * 91.0));
       c += vec3(1.0, 0.92, 0.70) * mote * lit * twk * (0.5 + 0.5 * sd);
     }
@@ -341,7 +346,7 @@ export default class CathedraldustScene extends Scene {
   private cam: THREE.PerspectiveCamera;
   private rig = new CameraRig();
   private layer = new Layer2D(W, H);
-  private u = { uT: { value: 0 } };
+  private u = { uT: { value: 0 }, uDrift: { value: 0 } };
   private v = new THREE.Vector3();
 
   constructor(ctx: SceneCtx) {
@@ -359,6 +364,7 @@ export default class CathedraldustScene extends Scene {
     const t = f.lt;
     const r = this.ctx.renderer;
     this.u.uT.value = t;
+    this.u.uDrift.value = this.rig.position[0];
 
     // CameraRig: very slow push toward the rose window + slight lateral
     // drift so the beams parallax; near-static otherwise.
