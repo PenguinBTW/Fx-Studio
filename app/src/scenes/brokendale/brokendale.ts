@@ -233,8 +233,8 @@ void main() {
     col = mix(col, stone, wall);
     // last light: warm thin rim on the gable + chimney top edges
     float rim = 0.0;
-    if (uv.x > 0.575 && uv.x < 0.685) {
-      float gt = (uv.x < 0.594) ? gableTop(uv.x) + (uv.x > 0.573 ? 0.038 : 0.0) : gableTop(uv.x);
+    if (uv.x > 0.573 && uv.x < 0.685) {
+      float gt = (uv.x < 0.594) ? gableTop(0.584) + 0.038 : gableTop(uv.x);
       rim = 1.0 - sstep(0.0, 0.007, gt - uv.y);
     }
     col += vec3(0.85, 0.52, 0.22) * rim * 0.8;
