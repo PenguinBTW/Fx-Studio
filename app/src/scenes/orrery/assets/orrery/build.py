@@ -23,8 +23,11 @@ def mat(name, col, rough=0.4, metal=0.0, emit=None, es=0.0):
     bsdf.inputs['Roughness'].default_value = rough
     bsdf.inputs['Metallic'].default_value = metal
     if emit is not None:
-        bsdf.inputs['Emission'].default_value = (*emit, 1.0)
-        bsdf.inputs['Emission Strength'].default_value = es
+        # Blender 4 renamed 'Emission' to 'Emission Color'
+        sock = bsdf.inputs.get('Emission') or bsdf.inputs.get('Emission Color')
+        if sock is not None: sock.default_value = (*emit, 1.0)
+        strength = bsdf.inputs.get('Emission Strength')
+        if strength is not None: strength.default_value = es
     return m
 
 BRASS      = mat('Brass',      (0.46, 0.24, 0.075), 0.30, 0.94)
@@ -34,6 +37,8 @@ EMBER      = mat('Ember',      (1.00, 0.34, 0.05),  0.55, 0.0, emit=(1.0, 0.22, 
 MARBLE_A   = mat('Moonstone',  (0.78, 0.76, 0.72),  0.34, 0.02)
 MARBLE_B   = mat('RustVein',   (0.52, 0.16, 0.08),  0.30, 0.05)
 MARBLE_C   = mat('SeaMarble',  (0.10, 0.30, 0.30),  0.28, 0.08)
+RUBY       = mat('Ruby',       (0.55, 0.015, 0.04),  0.16, 0.55, emit=(0.35, 0.01, 0.02), es=0.8)
+EBONY      = mat('Ebony',      (0.05, 0.035, 0.030), 0.55, 0.05)
 
 def fxpart(ob, name):
     ob.name = name
@@ -98,37 +103,68 @@ def cyl(name, loc, radius, depth, m, verts=48, bevel=0.0):
     finish(ob, m, bevel=bevel)
     return fxpart(ob, name)
 
-def gear(name, teeth, R, thick, z, m, tooth_w=0.09, tooth_h=0.10):
-    """Spur gear: bevelled hub + rim disc + teeth merged into one mesh."""
+def gear(name, teeth, R, thick, z, m, tooth_w=0.10, tooth_h=0.09, center=(0, 0)):
+    """Spur gear: bevelled hub + rim disc + teeth + jeweled pivot cap.
+    center: (x, y) so gears can mesh off-axis on the plinth."""
+    cx, cy = center
     parts = []
     bpy.ops.mesh.primitive_cylinder_add(vertices=64, radius=R, depth=thick,
-        location=(0, 0, z))
+        location=(cx, cy, z))
     core = bpy.context.object
+    core.data.materials.append(m)
     parts.append(core)
     # bore hub
-    bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=R*0.28, depth=thick*1.7,
-        location=(0, 0, z))
-    parts.append(bpy.context.object)
+    bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=R*0.20, depth=thick*1.5,
+        location=(cx, cy, z))
+    hub = bpy.context.object
+    hub.data.materials.append(m)
+    parts.append(hub)
     for i in range(teeth):
         a = 2 * math.pi * i / teeth
-        bpy.ops.mesh.primitive_cube_add(size=1.0, location=(math.cos(a)*R, math.sin(a)*R, z))
+        bpy.ops.mesh.primitive_cube_add(size=1.0, location=(cx + math.cos(a)*R, cy + math.sin(a)*R, z))
         t = bpy.context.object
         t.scale = (tooth_h, tooth_w * R * 2 * math.pi / teeth, thick * 1.05)
         t.rotation_euler[2] = a
+        t.data.materials.append(m)
         parts.append(t)
+    # jeweled pivot — tiny ruby dome on the arbor
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=20, ring_count=12, radius=0.026,
+        location=(cx, cy, z + thick * 0.78))
+    jw = bpy.context.object
+    jw.scale = (1.0, 1.0, 0.55)
+    jw.data.materials.append(RUBY)
+    parts.append(jw)
     bpy.ops.object.select_all(action='DESELECT')
     for p in parts: p.select_set(True)
     bpy.context.view_layer.objects.active = parts[0]
     bpy.ops.object.join()
     ob = bpy.context.object
-    finish(ob, m, bevel=min(thick * 0.18, 0.012), bevel_seg=2)
+    finish(ob, m, bevel=min(thick * 0.18, 0.010), bevel_seg=2)
     return fxpart(ob, name)
 
-def ring(name, R, minor, z, m, tilt_deg):
+def ring(name, R, minor, z, m, tilt_deg, ticks=24):
+    """Orbit ring: torus + engraved degree ticks sunk into the upper surface."""
     bpy.ops.mesh.primitive_torus_add(major_segments=96, minor_segments=20,
         location=(0, 0, z), major_radius=R, minor_radius=minor)
     ob = bpy.context.object
-    # engrave: thin second torus slightly proud, steel — gives a machined edge
+    ob.data.materials.append(m)
+    parts = [ob]
+    # engraved markings — dark notches every 15°, longer every 90°
+    for i in range(ticks):
+        a = 2 * math.pi * i / ticks
+        long = (i % 6) == 0
+        bpy.ops.mesh.primitive_cube_add(size=1.0,
+            location=(math.cos(a) * R, math.sin(a) * R, z + minor * 0.72))
+        k = bpy.context.object
+        k.scale = (0.008 if long else 0.004, 0.032 if long else 0.020, 0.006)
+        k.rotation_euler[2] = a
+        k.data.materials.append(BRASS_DARK)
+        parts.append(k)
+    bpy.ops.object.select_all(action='DESELECT')
+    for p in parts: p.select_set(True)
+    bpy.context.view_layer.objects.active = parts[0]
+    bpy.ops.object.join()
+    ob = bpy.context.object
     finish(ob, m)
     if tilt_deg:
         M = mathutils_rot(math.radians(tilt_deg), (1, 0, 0))
@@ -168,10 +204,26 @@ lathe('cup', [
 # Sun — ember sphere floating just above the cup.
 sphere('sun', (0, 0, 1.86), 0.335, EMBER)
 
-# Gears — exposed train on the upper column, descending sizes.
-gear('gear_0', 22, 0.55, 0.055, 0.86, BRASS)
-gear('gear_1', 16, 0.40, 0.050, 0.99, STEEL)
-gear('gear_2', 12, 0.30, 0.046, 1.10, BRASS)
+# Gear train — a main drive wheel + coaxial sister wheel, each driving a pinion
+# on a brass post, so teeth visibly mesh (pitch circles touch: R0+R3=0.67, R1+R2=0.45).
+gear('gear_0', 30, 0.50, 0.050, 0.88,  BRASS, tooth_h=0.085)
+gear('gear_1', 20, 0.30, 0.044, 0.985, STEEL, tooth_h=0.075)
+gear('gear_2',  9, 0.15, 0.044, 0.985, BRASS, tooth_h=0.075, center=(0.45, 0))
+gear('gear_3', 12, 0.17, 0.050, 0.88,  STEEL, tooth_h=0.085, center=(0.67, 0))
+
+# Pinion posts rising from the plinth flange (folded into `base`).
+def post_into_base(x, z1):
+    bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=0.024,
+        depth=z1 - 0.62, location=(x, 0, (0.62 + z1) / 2))
+    p = bpy.context.object
+    p.data.materials.append(BRASS_DARK)
+    bpy.ops.object.select_all(action='DESELECT')
+    p.select_set(True); bpy.data.objects['base'].select_set(True)
+    bpy.context.view_layer.objects.active = bpy.data.objects['base']
+    bpy.ops.object.join()
+
+post_into_base(0.45, 0.97)
+post_into_base(0.67, 0.90)
 
 # Rings — concentric engraved brass circles riding around the column.
 ring('ring_0', 0.88, 0.034, 1.26, BRASS,  3.0)
@@ -203,26 +255,43 @@ def arm(name, R, z, m):
         location=((R + 0.42)/2 - 0.24, 0, z))
     rod = bpy.context.object
     rod.data.transform(mathutils_rot(math.radians(90), (0, 1, 0)))
+    rod.data.materials.append(m)
     parts.append(rod)
     # counterweight ball
     bpy.ops.mesh.primitive_uv_sphere_add(segments=24, ring_count=16, radius=0.075,
         location=(-0.30, 0, z))
-    parts.append(bpy.context.object)
+    cw = bpy.context.object
+    cw.data.materials.append(m)
+    parts.append(cw)
     # tip riser: small vertical foot lifting the planet above the ring plane
     bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=0.026, depth=0.10,
         location=(R, 0, z + 0.045))
-    parts.append(bpy.context.object)
+    ri = bpy.context.object
+    ri.data.materials.append(m)
+    parts.append(ri)
     # cradle: tiny cup under the planet
     bpy.ops.mesh.primitive_uv_sphere_add(segments=24, ring_count=12, radius=0.055,
         location=(R, 0, z + 0.105))
     cr = bpy.context.object
     cr.scale = (1.0, 1.0, 0.55)
+    cr.data.materials.append(m)
     parts.append(cr)
     bpy.ops.object.select_all(action='DESELECT')
     for p in parts: p.select_set(True)
+    # jeweled pivot where the rod crosses the column axis
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=20, ring_count=12, radius=0.030,
+        location=(0, 0, z + 0.045))
+    jp = bpy.context.object
+    jp.scale = (1.0, 1.0, 0.55)
+    jp.data.materials.append(RUBY)
+    parts.append(jp)
     bpy.context.view_layer.objects.active = parts[0]
     bpy.ops.object.join()
     ob = bpy.context.object
+    # pivot MUST be the column axis: rotating about local Z (three Y) then orbits
+    # the whole arm around the column, keeping the cradle under the planet.
+    bpy.context.scene.cursor.location = (0, 0, z)
+    bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
     finish(ob, m, bevel=0.008, bevel_seg=2)
     return fxpart(ob, name)
 
@@ -236,7 +305,57 @@ sphere('planet_0', (ARM_R[0], 0, ARM_Z[0] + 0.16), 0.10, MARBLE_A, seg=40, rings
 sphere('planet_1', (ARM_R[1], 0, ARM_Z[1] + 0.18), 0.135, MARBLE_B, seg=48, rings=28)
 sphere('planet_2', (ARM_R[2], 0, ARM_Z[2] + 0.21), 0.175, MARBLE_C, seg=56, rings=32)
 
-# A tiny moon on a thin ring around planet_2? Keep spec parts only.
+# Props — scattered brass instruments resting on the desk (r > base foot 1.66).
+def prop_lens():
+    """Brass loupe lying on the desk: ring + short handle."""
+    parts = []
+    bpy.ops.mesh.primitive_torus_add(major_segments=48, minor_segments=12,
+        major_radius=0.22, minor_radius=0.030, location=(1.95, 0.55, 0.035))
+    ring_ob = bpy.context.object
+    ring_ob.data.materials.append(BRASS_DARK)
+    parts.append(ring_ob)
+    bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=0.024, depth=0.42,
+        location=(1.95 + 0.30, 0.55 + 0.17, 0.030))
+    h = bpy.context.object
+    h.rotation_euler[1] = math.radians(90)
+    h.rotation_euler[2] = math.radians(30)
+    h.data.materials.append(BRASS_DARK)
+    parts.append(h)
+    bpy.ops.object.select_all(action='DESELECT')
+    for p in parts: p.select_set(True)
+    bpy.context.view_layer.objects.active = parts[0]
+    bpy.ops.object.join()
+    ob = bpy.context.object
+    finish(ob, BRASS_DARK, bevel=0.008, bevel_seg=2)
+    return fxpart(ob, 'prop_lens')
+
+prop_lens()
+
+def prop_caliper():
+    """Dividers/caliper lying open on the desk: two legs + hinge jewel."""
+    parts = []
+    for sgn in (-1, 1):
+        bpy.ops.mesh.primitive_cylinder_add(vertices=20, radius=0.018, depth=0.55,
+            location=(-1.85 + sgn * 0.11, -0.55, 0.026))
+        leg = bpy.context.object
+        leg.rotation_euler[1] = math.radians(90)
+        leg.rotation_euler[2] = math.radians(sgn * 12)
+        leg.data.materials.append(STEEL)
+        parts.append(leg)
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=20, ring_count=12, radius=0.045,
+        location=(-1.85, -0.55, 0.05))
+    knob = bpy.context.object
+    knob.data.materials.append(STEEL)
+    parts.append(knob)
+    bpy.ops.object.select_all(action='DESELECT')
+    for p in parts: p.select_set(True)
+    bpy.context.view_layer.objects.active = parts[0]
+    bpy.ops.object.join()
+    ob = bpy.context.object
+    finish(ob, STEEL, bevel=0.006, bevel_seg=2)
+    return fxpart(ob, 'prop_caliper')
+
+prop_caliper()
 
 # ---------------------------------------------------------------- export
 for ob in sc.objects:
