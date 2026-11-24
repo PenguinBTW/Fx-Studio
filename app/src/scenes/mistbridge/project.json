@@ -1,0 +1,41 @@
+{
+  "project": "mistbridge",
+  "meta": { "title": "mistbridge", "aspectRatio": "16:9", "fps": 60, "duration": 24.0 },
+  "entries": [
+    {
+      "scene": "mistbridge/mistbridge",
+      "id": "act-gorge",
+      "start": 0.0,
+      "end": 4.0,
+      "caption": { "fig": "i", "text": "STILL GORGE", "dur": 3.6 }
+    },
+    {
+      "scene": "mistbridge/mistbridge",
+      "id": "act-traveler",
+      "start": 4.0,
+      "end": 10.0,
+      "caption": { "fig": "ii", "text": "A TRAVELER", "dur": 3.6 }
+    },
+    {
+      "scene": "mistbridge/mistbridge",
+      "id": "act-midspan",
+      "start": 10.0,
+      "end": 13.5,
+      "caption": { "fig": "iii", "text": "MID-SPAN", "dur": 3 }
+    },
+    {
+      "scene": "mistbridge/mistbridge",
+      "id": "act-across",
+      "start": 13.5,
+      "end": 18.0,
+      "caption": { "fig": "iv", "text": "ACROSS", "dur": 3.6 }
+    },
+    {
+      "scene": "mistbridge/mistbridge",
+      "id": "act-lookback",
+      "start": 18.0,
+      "end": 24.0,
+      "caption": { "fig": "v", "text": "LOOK BACK", "dur": 4 }
+    }
+  ]
+}
