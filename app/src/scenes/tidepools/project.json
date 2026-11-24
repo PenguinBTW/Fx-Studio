@@ -1,0 +1,39 @@
+{
+  "project": "tidepools",
+  "meta": {
+    "title": "Tidepools: Still Water",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 20.0
+  },
+  "entries": [
+    {
+      "scene": "tidepools/tidepools",
+      "id": "act-mirror",
+      "start": 0.0,
+      "end": 5.0,
+      "caption": { "fig": "01", "text": "THE POOL", "dur": 4.0 }
+    },
+    {
+      "scene": "tidepools/tidepools",
+      "id": "act-ripples",
+      "start": 5.0,
+      "end": 9.0,
+      "caption": { "fig": "02", "text": "RIPPLES", "dur": 3.5 }
+    },
+    {
+      "scene": "tidepools/tidepools",
+      "id": "act-slosh",
+      "start": 9.0,
+      "end": 12.5,
+      "caption": { "fig": "03", "text": "THE SEA ARRIVES", "dur": 3.0 }
+    },
+    {
+      "scene": "tidepools/tidepools",
+      "id": "act-glass",
+      "start": 12.5,
+      "end": 20.0,
+      "caption": { "fig": "04", "text": "GLASS AGAIN", "dur": 4.5 }
+    }
+  ]
+}
