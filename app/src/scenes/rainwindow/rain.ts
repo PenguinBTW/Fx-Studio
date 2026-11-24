@@ -65,7 +65,8 @@ function integrate(
   parent?: Drop,
   boostT = Infinity,
   speedK = 1,
-  yStart?: number
+  yStart?: number,
+  grow = 0.001
 ): Drop {
   const cap = Math.ceil(END / DT) + 2;
   const xs = new Float32Array(cap), ys = new Float32Array(cap), ts = new Float32Array(cap);
@@ -91,12 +92,14 @@ function integrate(
       // circular heads must actually touch — a per-axis box counts a
       // diagonal approach as contact while the discs are still apart
       if (ph) {
-        const dx = x - ph.x, dy = y - ph.y, rr = ph.r + r;
+        // contact disc = the drawn (grown-in) radius, not the full one
+        const rd = r * Math.min(1, (t - t0) / grow);
+        const dx = x - ph.x, dy = y - ph.y, rr = ph.r + rd;
         if (dx * dx + dy * dy < rr * rr) break;
       }
     }
   }
-  return { x0, t0, xs: xs.slice(0, n), ys: ys.slice(0, n), ts: ts.slice(0, n), r, warm: 0, mergedAt: Infinity, mergeR: r, growT: 0.001 };
+  return { x0, t0, xs: xs.slice(0, n), ys: ys.slice(0, n), ts: ts.slice(0, n), r, warm: 0, mergedAt: Infinity, mergeR: r, growT: grow };
 }
 
 function buildDrops(): Drop[] {
@@ -123,11 +126,10 @@ function buildDrops(): Drop[] {
     const ph0 = headAt(p, t0c);
     const x0c = (ph0 ? ph0.x : p.xs[0]) + (hash(i, 31) - 0.5) * 10;
     const y0c = ph0 ? ph0.y - (ph0.r + cr + 40) : undefined;
-    const c = integrate(x0c, cr, t0c, p, Infinity, 1.9, y0c);
     // a mid-pane spawn pops into view — grow its radius in over ~1 s.
     // (mergedAt stays Infinity: setting it to a past time would make
     // headAt report mergeR forever and skip the grow-in.)
-    c.growT = 1.0;
+    const c = integrate(x0c, cr, t0c, p, Infinity, 1.9, y0c, 1.0);
     // merge time ≈ child's last node; parent swells by cubic-volume addition
     const tm = c.ts[c.ts.length - 1];
     // A real merge = the child died on contact: ended early AND still on
