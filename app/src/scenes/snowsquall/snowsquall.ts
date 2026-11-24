@@ -226,9 +226,9 @@ void main() {
 
   // squall veil: wall = 1 inside the swallowed region (x < front edge)
   float wall = 1.0 - smoothstep(uFront - 0.015, uFront + 0.085, uv.x);
-  // trailing clear-edge sweeps left→right so rooftops re-emerge in order
-  float thinEdge = -0.1 + 1.45 * uThin;
-  wall *= smoothstep(thinEdge, thinEdge + 0.18, uv.x);
+  // trailing clear-edge retreats right→left (storyboard: ghost-back R→L)
+  float thinEdge = 1.35 - 1.45 * uThin;
+  wall *= 1.0 - smoothstep(thinEdge - 0.18, thinEdge, uv.x);
   // gust stripes riding the wall, ragged where the front face leads
   float stripes = fbm(vec2(uv.x * 15.0 - uT * 1.4, uv.y * 5.0 + uT * 0.4));
   float edge = 1.0 + 0.7 * (1.0 - smoothstep(0.0, 0.10, abs(uv.x - uFront))) * (1.0 - uThin);
@@ -349,8 +349,10 @@ void main() {
   body *= step(q.y, 0.66) * smoothstep(0.26, 0.30, q.y);   // hem above the boots
   float head = 1.0 - smoothstep(0.10, 0.12, length(q - vec2(0.02, 0.68)));
   float sway = sin(uT * 9.0);
-  float legL = step(abs(q.x + 0.045), 0.030) * step(q.y, 0.30) * step(0.02, q.y) * step(0.0, sway);
-  float legR = step(abs(q.x - 0.045), 0.030) * step(q.y, 0.30) * step(0.02, q.y) * step(sway, 0.0);
+  float legL = step(abs(q.x + 0.045 + sway * 0.012), 0.030)
+             * step(q.y, 0.30) * step(0.02, q.y) * smoothstep(-0.25, 0.25, sway);
+  float legR = step(abs(q.x - 0.045 + sway * 0.012), 0.030)
+             * step(q.y, 0.30) * step(0.02, q.y) * smoothstep(0.25, -0.25, sway);
   float legs = max(legL, legR);
   float shape = max(max(body, head), legs);
   if (shape < 0.05) discard;
@@ -370,7 +372,7 @@ void main() {
   float body = 1.0 - smoothstep(0.14, 0.18, length(q * vec2(0.8, 2.4)));
   float head = 1.0 - smoothstep(0.07, 0.09, length(q - vec2(0.32, 0.10)));
   float tail = 1.0 - smoothstep(0.02, 0.05,
-      length(q - vec2(-0.30, 0.16 + 0.10 * sin(uT * 3.0))));
+      length(q - vec2(-0.22, 0.16 + 0.10 * sin(uT * 3.0))));
   float shape = max(max(body, head), tail);
   if (shape < 0.05) discard;
   fragColor = vec4(vec3(0.09, 0.10, 0.13), shape * 0.95);
