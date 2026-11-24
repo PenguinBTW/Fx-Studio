@@ -18,3 +18,5 @@ Duration 18 s, one continuous golden-hour shot.
    "the evening lets it be".
 
 Stills embedded at t = 1.5, 6.5, 10.4, 14.0, 17.0.
+
+Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
