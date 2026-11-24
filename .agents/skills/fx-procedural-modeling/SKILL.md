@@ -169,6 +169,16 @@ const L = shaftInscatter(shaft, camPos, rayDir, { baseDensity: 0.02, heightFallo
 - Cone–ray intersection exact (sign-analyzed quadratic, handles inside-start/axis cases).
 - Soft radial edge + axial depletion falloff; tint with blackbody colors per §4.2.
 
+### 4.5 Procedural Sky Dome + Sun (`sky.ts`)
+Closed-form Rayleigh/Mie sky — no LUTs, no sampling: exact phase functions
+(Rayleigh 3/16π(1+cos²γ), Henyey–Greenstein Mie) with analytic optical paths:
+```typescript
+import { sunPosition, skyColor, SKY_GLSL } from '../../engine/sky';
+const sun = sunPosition(15.5, 52, 8); // hour, latitude, declination — closed-form solar geometry
+const col = skyColor(viewDir, sun.dir, 2.0); // scattering + extincted disc, linear HDR
+// sun.dir drives godray shaft directions: shaft.dir = sun.dir (negated for travel direction)
+```
+
 ## 5. Twist-Free Dynamic Ribbons via Bishop Frames (`ribbon.ts`)
 
 Standard Three.js `TubeGeometry` suffers from catastrophic axis-flipping (gimbal lock and twisting) when paths loop or turn vertically. f(x) Studio uses **Bishop Rotation-Minimizing Frames (RMF)** to generate completely twist-free ribbons along 3D curves:
