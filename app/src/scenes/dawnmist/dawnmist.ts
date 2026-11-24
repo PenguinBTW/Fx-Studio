@@ -136,7 +136,7 @@ void main() {
     // far-shore treeline: fine dark teeth just above the horizon
     float teeth = 0.003 + max(fbm3(vec3(uv.x * 60.0, 8.0, 0.0), 4), 0.0) * 0.019;
     float treeM = (1.0 - smoothstep(hz, hz + teeth, uv.y))
-                * smoothstep(hz - 0.001, hz + 0.004, uv.y); // soft rise off the waterline
+                * smoothstep(hz - 0.001, hz + min(0.004, teeth * 0.6), uv.y); // soft rise off the waterline
     col = mix(col, vec3(0.09, 0.10, 0.12), treeM * (0.6 + 0.4 * uBurn));
     // high cloud wisps catching first light
     float wisp = max(fbm3(vec3(uv.x * 4.0 + t * 0.01, uv.y * 26.0, 5.0), 4), 0.0);
