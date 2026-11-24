@@ -295,7 +295,7 @@ export default class SandstormScene extends Scene {
     const th = frac(t * rate + u * 9.0);
     const hop = Math.abs(Math.sin(th * Math.PI * 3.0)); // three bounces per crossing
     const dir = i % 2 === 0 ? 1 : -1;
-    const x = 0.27 + frac(u + t * (0.030 + 0.022 * w) * dir * (0.4 + 0.6 * v)) * 0.46;
+    const x = 0.27 + frac(u + t * (0.030 + 0.022 * w) * dir) * 0.46;
     const y = crestFront(x, t, morph) + hop * (0.03 + 0.05 * w) * (0.3 + 0.7 * v);
     uvToWorld(x, y, out);
     out.z += 34.0;
