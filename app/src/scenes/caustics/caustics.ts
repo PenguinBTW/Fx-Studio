@@ -17,10 +17,13 @@ const smooth = (a: number, b: number, x: number) => {
 const gauss = (x: number) => Math.exp(-x * x);
 
 // --- tuneables ---------------------------------------------------------------
-// Swell envelope: broad lift around t≈10 (waves grow, filaments fatten and
-// intensify) with a brief calm notch at its crest, then re-form and settle.
-const ampAt = (t: number) => 1.0 + 1.15 * gauss((t - 10.0) / 2.6) - 0.75 * gauss((t - 10.4) / 0.85);
-const gainAt = (t: number) => smooth(0.3, 1.6, t) * (0.85 + 0.55 * gauss((t - 10.0) / 3.0) - 0.45 * gauss((t - 10.4) / 0.8));
+// Swell envelope: broad lift peaking around t≈10 (waves grow, filaments
+// fatten and intensify) with a brief calm notch at t≈11, then re-form and
+// settle. amp scales the fold displacement itself (true wave amplitude), not
+// time — scaling t would run the fold phase backwards during the notch and
+// the web would visibly retrace patterns it already drew.
+const ampAt = (t: number) => 1.0 + 1.15 * gauss((t - 10.0) / 2.6) - 1.6 * gauss((t - 11.0) / 0.7);
+const gainAt = (t: number) => smooth(0.3, 1.6, t) * (0.85 + 0.55 * gauss((t - 10.0) / 3.0) - 0.9 * gauss((t - 11.0) / 0.9));
 
 // --- shaders -----------------------------------------------------------------
 const FLOOR_VERT = `out vec3 vW;
@@ -30,7 +33,8 @@ void main(){ vW = (modelMatrix * vec4(position,1.0)).xyz;
 // Iterated sine-fold caustics (Hoskins-style): each of 4 folds displaces the
 // sampling point of the next, which is what makes the bright web fold, merge
 // and dissolve instead of drifting like plain noise. uAmp scales the fold
-// strength and uGain the final brightness; uWarm lifts one faint sun tint.
+// displacement — raising it reads as larger swell, lowering it calms the
+// surface — while the phase rate stays fixed, so the pattern never rewinds.
 const FLOOR_FRAG = `${GLSL_COMMON}
 uniform float uT, uAmp, uGain;
 in vec3 vW; out vec4 fragColor;
@@ -43,8 +47,8 @@ float caustic(vec2 p, float t, float amp) {
   float c = 1.0;
   float inten = 0.005;
   for (int n = 0; n < 4; n++) {
-    float ft = t * (1.0 - 3.5 / float(n + 1)) * amp;
-    i = p + vec2(cos(ft - i.x) + sin(ft + i.y), sin(ft - i.y) + cos(ft + i.x));
+    float ft = t * (1.0 - 3.5 / float(n + 1));
+    i = p + amp * vec2(cos(ft - i.x) + sin(ft + i.y), sin(ft - i.y) + cos(ft + i.x));
     c += 1.0 / length(vec2(p.x / (sin(i.x + ft) / inten), p.y / (cos(i.y + ft) / inten)));
   }
   c /= 4.0;
