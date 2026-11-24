@@ -209,7 +209,7 @@ export default defineScene({
     ctx.rig.setPath([
       { t: 0.00, pos: [-0.30, 0.35, 4.70], target: [0.20, 0.20, -2.0] },
       { t: 0.50, pos: [-0.10, 0.33, 4.65], target: [0.40, 0.30, -2.0] },
-      { t: 1.00, pos: [0.10, 0.30, 4.55], target: [0.55, 0.40, -2.0] },
+      { t: 1.00, pos: [0.05, 0.30, 4.55], target: [0.38, 0.40, -2.0] },
     ]);
 
     // --- backdrop ------------------------------------------------------------
@@ -248,10 +248,10 @@ export default defineScene({
 
       // barn — low roofline + gable, far left on the horizon (kept inside the
       // frame at the end-drift waypoint)
-      poly(p, c, [[-2.00, -0.52], [-2.00, -0.30], [-1.70, -0.14], [-1.37, -0.30], [-1.37, -0.52]], dark);
-      poly(p, c, [[-2.07, -0.29], [-1.70, -0.10], [-1.30, -0.29], [-1.30, -0.33], [-1.70, -0.15], [-2.07, -0.33]], dark2);
+      poly(p, c, [[-1.62, -0.52], [-1.62, -0.30], [-1.35, -0.14], [-1.05, -0.30], [-1.05, -0.52]], dark);
+      poly(p, c, [[-1.68, -0.29], [-1.35, -0.10], [-0.97, -0.29], [-0.97, -0.33], [-1.35, -0.15], [-1.68, -0.33]], dark2);
       // tiny hayloft door square in the gable
-      poly(p, c, [[-1.74, -0.30], [-1.66, -0.30], [-1.66, -0.38], [-1.74, -0.38]], [0.06, 0.05, 0.045]);
+      poly(p, c, [[-1.38, -0.30], [-1.30, -0.30], [-1.30, -0.38], [-1.38, -0.38]], [0.06, 0.05, 0.045]);
 
       // bare oak — leaning trunk + clawing branches
       ribbon(p, c, [[2.10, -0.55], [1.98, -0.20], [1.90, 0.15], [1.86, 0.45]], 0.10, 0.045, dark);
@@ -338,10 +338,11 @@ export default defineScene({
       const mkCrow = (mat: THREE.ShaderMaterial, seed: number) => {
         const p: number[] = [], c: number[] = [];
         const cc = [0.02, 0.02, 0.025];
-        // convex pieces only — fan triangulation fills concave notches
-        poly(p, c, [[0, 0.006], [-0.115, 0.018], [-0.035, 0.032]], cc);   // left wing
-        poly(p, c, [[0, 0.006], [0.035, 0.032], [0.115, 0.018]], cc);    // right wing
-        poly(p, c, [[-0.030, -0.008], [0.030, -0.008], [0, -0.020]], cc); // body
+        // convex pieces only — fan triangulation fills concave notches;
+        // wing roots dip below the body top so nothing floats apart
+        poly(p, c, [[-0.02, -0.004], [-0.115, 0.018], [-0.035, 0.032]], cc);  // left wing
+        poly(p, c, [[0.02, -0.004], [0.035, 0.032], [0.115, 0.018]], cc);    // right wing
+        poly(p, c, [[-0.030, -0.002], [0.030, -0.002], [0, -0.022]], cc);    // body
         const g = new THREE.BufferGeometry();
         g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(p), 3));
         g.setAttribute("color", new THREE.BufferAttribute(new Float32Array(c), 3));
