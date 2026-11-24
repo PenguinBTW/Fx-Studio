@@ -16,7 +16,7 @@ import { normalizeText } from './text-analyzer';
 export interface CutItem {
   t: number;
   diff_before_after: number;
-  type: 'hard' | 'soft' | 'flash';
+  type: 'hard' | 'soft' | 'flash' | 'unknown';
   nearest_downbeat_Δms: number;
   inside_word: boolean;
   wordName?: string;

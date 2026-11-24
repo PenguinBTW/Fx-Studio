@@ -755,7 +755,10 @@ async function motion(page: Page) {
         // would compare two pre-cut frames — classifying lead-in motion as the cut.
         const cutIdx = Math.ceil(e.start * fps - 1e-9) - Math.round(from * fps);
         let diff = 0;
-        let cutType: 'hard' | 'soft' | 'flash' = 'soft';
+        // 'unknown' when the straddling pair falls outside the captured frames (cut at the
+        // very edge of --to): recording 'soft' with zero difference would fabricate a
+        // measurement the window never took.
+        let cutType: 'hard' | 'soft' | 'flash' | 'unknown' = 'unknown';
 
         if (cutIdx > 0 && cutIdx < frameCount) {
           const lPrev = lumas[cutIdx - 1]!, lCur = lumas[cutIdx]!;
