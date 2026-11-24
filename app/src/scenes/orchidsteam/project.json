@@ -1,0 +1,46 @@
+{
+  "project": "orchidsteam",
+  "meta": {
+    "title": "Orchidsteam: Night Terrarium",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 20.0
+  },
+  "entries": [
+    {
+      "scene": "orchidsteam/orchidsteam",
+      "id": "act-still",
+      "start": 0.0,
+      "end": 4.0,
+      "caption": { "fig": "01", "text": "STILL MIST", "dur": 3.4 }
+    },
+    {
+      "scene": "orchidsteam/orchidsteam",
+      "id": "act-mister",
+      "start": 7.5,
+      "end": 10.5,
+      "caption": { "fig": "02", "text": "THE MISTER", "dur": 3.0 }
+    },
+    {
+      "scene": "orchidsteam/orchidsteam",
+      "id": "act-bloom",
+      "start": 10.5,
+      "end": 13.5,
+      "caption": { "fig": "03", "text": "FOG BLOOMS", "dur": 2.8 }
+    },
+    {
+      "scene": "orchidsteam/orchidsteam",
+      "id": "act-shelf",
+      "start": 13.5,
+      "end": 16.5,
+      "caption": { "fig": "04", "text": "WARM SHELF", "dur": 3.0 }
+    },
+    {
+      "scene": "orchidsteam/orchidsteam",
+      "id": "act-settle",
+      "start": 16.5,
+      "end": 20.0,
+      "caption": { "fig": "05", "text": "TERRARIUM", "dur": 3.4 }
+    }
+  ]
+}
