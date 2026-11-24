@@ -122,7 +122,7 @@ void main() {
   // dusk sky — deep teal overhead, faint apricot remnant low
   vec3 col = mix(vec3(0.055, 0.085, 0.08), vec3(0.028, 0.05, 0.055), smoothstep(0.6, 3.4, q.y));
   float dusk = clamp(1.0 - uT / 24.0 * 0.55, 0.0, 1.0);       // light fades
-  col += vec3(0.11, 0.055, 0.02) * dusk * smoothstep(1.1, 0.0, q.y) * smoothstep(-0.4, 0.5, q.y);
+  col += vec3(0.11, 0.055, 0.02) * dusk * (1.0 - smoothstep(0.0, 1.1, q.y)) * smoothstep(-0.4, 0.5, q.y);
   // willow canopy mass — dark ragged band filling the top third
   float canTop = 1.35 + 0.28 * sin(q.x * 1.9 + 0.7) + 0.14 * sin(q.x * 4.3 + 2.2) + 0.4 * smoothstep(2.0, 3.5, -q.x);
   float inCan = smoothstep(canTop - 0.12, canTop + 0.18, q.y);
@@ -145,18 +145,22 @@ void main() {
   float streak = sin(q.y * 26.0 + q.x * 3.0 - uT * 0.55 + sin(q.x * 2.0 + uT * 0.2) * 1.5);
   float streakCell = step(0.35, hash21(floor(q * vec2(1.2, 8.0))));
   water += vec3(0.018, 0.026, 0.020) * smoothstep(0.90, 1.0, streak) * streakCell * (0.4 + 0.6 * dusk);
-  // streaked canopy reflection — vertical smear under the canopy edge
-  water += vec3(0.02, 0.05, 0.03) * inCan * (0.5 + 0.5 * sin(q.x * 9.0 + sin(q.y * 30.0) * 2.0));
+  // streaked canopy reflection — vertical smear under the canopy mass,
+  // strongest just below the bankline and weighted toward the canopy side
+  float canRefl = (1.0 - smoothstep(-1.6, -0.05, q.y)) * (0.55 + 0.45 * (1.0 - smoothstep(-0.5, 2.0, q.x)));
+  water += vec3(0.02, 0.05, 0.03) * canRefl * (0.5 + 0.5 * sin(q.x * 9.0 + sin(q.y * 30.0) * 2.0));
   // last-light gold lane on the water, fading with the dusk
-  float lane = smoothstep(1.6, 0.6, abs(q.x - 1.3)) * smoothstep(-2.6, -0.2, q.y);
+  float lane = (1.0 - smoothstep(0.6, 1.6, abs(q.x - 1.3))) * smoothstep(-2.6, -0.2, q.y);
   water += vec3(0.18, 0.11, 0.04) * lane * dusk * (0.30 + 0.15 * sin(q.y * 40.0 + uT * 0.8));
   // ripple rings — splash, drip, fish, leaf (ages clamped, gated)
   for (int i = 0; i < 4; i++) {
     float t0 = i == 0 ? uRing0.x : i == 1 ? uRing1.x : i == 2 ? uRing2.x : uRing3.x;
-    float cxx = i == 0 ? uRing0.y : i == 1 ? uRing1.y : i == 2 ? uRing2.y : uRing3.y;
+    // uniforms carry world-x of the life plane (z=-2); the back plane sits
+    // at z=-4, so q-space = world * (dBack/dLife) * (qSpan/planeSpan)
+    float cxx = (i == 0 ? uRing0.y : i == 1 ? uRing1.y : i == 2 ? uRing2.y : uRing3.y) * 1.049;
     float age = max(0.0, uT - t0);
     float rr = age * (i == 0 ? 0.55 : 0.30);
-    float dd = distance(q, vec2(cxx, -0.10));
+    float dd = distance(q, vec2(cxx, -0.115));
     float wdt = max(0.01, 0.03 + 0.045 * age);
     float ring = 1.0 - smoothstep(0.0, wdt, abs(dd - rr));
     float amp = (i == 0 ? 0.5 : 0.22) * exp(-age * 0.85) * step(0.001, age);
@@ -289,7 +293,7 @@ export default defineScene({
         uT: { value: 0 },
         uRing0: { value: new THREE.Vector2(KING.hit, 1.95) },
         uRing1: { value: new THREE.Vector2(-99, DRIP_X) },
-        uRing2: { value: new THREE.Vector2(FISH_T, 3.55) },
+        uRing2: { value: new THREE.Vector2(FISH_T, 1.7) },
         uRing3: { value: new THREE.Vector2(-99, -0.6) },
       },
       depthWrite: false,
@@ -311,7 +315,7 @@ export default defineScene({
     ribbon(trunkPos, trunkCol, [[-4.9, 2.6], [-4.0, 2.1], [-3.2, 1.65], [-2.6, 1.30]], 0.34, 0.12, trunkC);
     // exposed roots at the right bank where the moorhen pokes
     for (let i = 0; i < 3; i++) {
-      const rx = 2.75 + i * 0.16;
+      const rx = 1.85 + i * 0.16;
       ribbon(trunkPos, trunkCol, [[rx, 0.28], [rx + 0.05, 0.14], [rx + 0.12, 0.02]], 0.06, 0.02, trunkC);
     }
     const trunkGeo = new THREE.BufferGeometry();
@@ -514,7 +518,7 @@ void main() {
       g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(mp), 3));
       g.setAttribute("color", new THREE.BufferAttribute(new Float32Array(mc), 3));
       st.moorhen = new THREE.Mesh(g, st.lifeMat.clone());
-      st.moorhen.position.set(2.85, 0.09, 0.02);
+      st.moorhen.position.set(1.95, 0.09, 0.02);
       st.moorhen.frustumCulled = false;
       ctx.scene3D.add(st.moorhen);
     }
@@ -568,8 +572,9 @@ void main() {
   render: (ctx, f, out) => {
     const st = STATE.get(ctx)!;
     const t = f.t;
+    const drag = sstep(0, DUR, t) * 0.55;
     st.back.uniforms.uT!.value = t;
-    st.back.uniforms.uRing1!.value.set(2.0 + 1.9 * Math.floor(Math.max(0, t - 2.0) / 1.9), DRIP_X);
+    st.back.uniforms.uRing1!.value.set(2.0 + 1.9 * Math.floor(Math.max(0, t - 2.0) / 1.9), DRIP_X + drag);
     // latest leaf landing t0 into ring 3
     let leafT0 = -99, leafX = -0.6;
     for (let i = 0; i < LEAVES.length; i++) {
@@ -583,7 +588,6 @@ void main() {
     (st.wake.material as THREE.ShaderMaterial).uniforms.uT!.value = t;
 
     // dragger strand — sways and slowly drags right; wake follows its tip
-    const drag = sstep(0, DUR, t) * 0.55;
     st.dragger.position.x = drag;
     st.wake.position.x = drag;
     (st.wake.material as THREE.ShaderMaterial).uniforms.uA!.value = 0.35 + 0.2 * Math.sin(t * 0.7);
@@ -604,7 +608,8 @@ void main() {
       const k = kingPos(t);
       st.king.position.set(k.x, k.y, 0.05);
       st.king.rotation.z = k.pitch;
-      st.king.visible = k.x < 8;
+      // hidden while submerged (hit→rise) — the splash ring covers the gap
+      st.king.visible = k.x < 8 && (t < KING.hit || t >= KING.rise);
       const flap = k.flying > 0 ? (0.5 + 0.5 * Math.sin(t * 26)) : 0.12;
       st.kingWing.scale.set(1, flap, 1);
       const gm = st.glint.material as THREE.ShaderMaterial;
@@ -639,10 +644,11 @@ void main() {
       const y0 = leaf.userData.y0 ?? (leaf.userData.y0 = leaf.position.y);
       if (age < 0) { m.uniforms.uA!.value = 0; continue; }
       const fall = Math.min(age, 3.2);
-      leaf.position.x = x0 + Math.sin(age * 2.1 + i) * 0.22 * (age < 3.2 ? 1 : 0);
+      // sway + spin freeze at their landing values — no sideways/orientation snap
+      leaf.position.x = x0 + Math.sin(fall * 2.1 + i) * 0.22;
       leaf.position.y = y0 - (y0 + 0.10) * sCurve(fall / 3.2);
-      leaf.rotation.z = age * 1.7 * (age < 3.2 ? 1 : 0);
-      m.uniforms.uA!.value = age < 8 ? 0.9 : 0.9 * (1 - (age - 8) / 4);
+      leaf.rotation.z = fall * 1.7;
+      m.uniforms.uA!.value = Math.max(0, age < 8 ? 0.9 : 0.9 * (1 - (age - 8) / 4));
     }
 
     // fish — one arc above the far-right water at FISH_T
@@ -651,7 +657,7 @@ void main() {
       const on = age > 0 && age < 0.7;
       st.fish.visible = on;
       if (on) {
-        st.fish.position.set(3.55 + age * 0.9, -0.10 + 0.55 * age - 0.9 * age * age, 0.02);
+        st.fish.position.set(1.7 + age * 0.9, -0.10 + 0.55 * age - 0.9 * age * age, 0.02);
         st.fish.rotation.z = -1.2 * age;
         (st.fishMat as THREE.ShaderMaterial).uniforms.uA!.value = 0.9;
       }
