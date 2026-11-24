@@ -1,0 +1,39 @@
+{
+  "project": "hummingbird",
+  "meta": {
+    "title": "Hummingbird",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 24
+  },
+  "entries": [
+    {
+      "scene": "hummingbird/hummingbird",
+      "id": "act-still",
+      "start": 0,
+      "end": 5,
+      "caption": { "fig": "01", "text": "FIRST LIGHT", "dur": 4 }
+    },
+    {
+      "scene": "hummingbird/hummingbird",
+      "id": "act-feed",
+      "start": 5,
+      "end": 10,
+      "caption": { "fig": "02", "text": "DART \u00b7 HOVER \u00b7 SIP", "dur": 4 }
+    },
+    {
+      "scene": "hummingbird/hummingbird",
+      "id": "act-chain",
+      "start": 10,
+      "end": 17,
+      "caption": { "fig": "03", "text": "CHAIN OF BLOOMS", "dur": 4 }
+    },
+    {
+      "scene": "hummingbird/hummingbird",
+      "id": "act-perch",
+      "start": 17,
+      "end": 24,
+      "caption": { "fig": "04", "text": "PREEN \u00b7 DEPART", "dur": 4 }
+    }
+  ]
+}
