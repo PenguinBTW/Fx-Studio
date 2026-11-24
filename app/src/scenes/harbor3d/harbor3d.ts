@@ -157,6 +157,7 @@ export default class HarborlightScene extends Scene {
   private foamMat!: THREE.ShaderMaterial;
   private foamMeshes: THREE.Mesh[] = [];
   private crest!: THREE.Points;
+  private crestSprite!: THREE.Texture;
   private dust!: THREE.Points;
   private dustSeed!: Float32Array;
   private gulls: { g: THREE.Group; wings: [THREE.Mesh, THREE.Mesh] }[] = [];
@@ -293,9 +294,11 @@ export default class HarborlightScene extends Scene {
     cx.fillStyle = grad;
     cx.fillRect(0, 0, 32, 32);
     const sprite = new THREE.CanvasTexture(cv);
+    this.crestSprite = sprite;
     this.crest = new THREE.Points(crestGeo, new THREE.PointsMaterial({
       size: 0.42, map: sprite, vertexColors: true, transparent: true, opacity: 0.55,
       blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
+      fog: false,   // additive points: fog would lift dark trough sprites to fog colour
     }));
     this.scene3D.add(this.crest);
 
@@ -523,6 +526,7 @@ export default class HarborlightScene extends Scene {
     (this.dust.material as THREE.Material).dispose();
     this.crest.geometry.dispose();
     (this.crest.material as THREE.Material).dispose();
+    this.crestSprite.dispose();
     this.foamMat.dispose();
     this.scene3D.traverse((o) => {
       const m = o as THREE.Mesh;
