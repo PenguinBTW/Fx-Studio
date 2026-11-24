@@ -76,7 +76,8 @@ function dartPos(from: THREE.Vector3, to: THREE.Vector3, p: number, out: THREE.V
 export function birdAt(t: number, sites: THREE.Vector3[], mouths: THREE.Vector3[], st: BirdState) {
   const seg = SEGS.find(s => t >= s.t0 && t < s.t1) ?? SEGS[SEGS.length - 1]!;
   const p = Math.min(1, Math.max(0, (t - seg.t0) / (seg.t1 - seg.t0)));
-  const siteOf = (k: number) => (k === -1 ? PERCH : k === -2 ? EXIT : sites[k]!);
+  // seg.to indexes CHAIN — resolve through it to the actual bloom index
+  const siteOf = (k: number) => (k === -1 ? PERCH : k === -2 ? EXIT : sites[CHAIN[k]!]!);
   const prevSeg = SEGS[SEGS.indexOf(seg) - 1];
   const nextSeg = SEGS[SEGS.indexOf(seg) + 1];
   const from = prevSeg ? siteOf(prevSeg.to ?? 0) : ENTER;
@@ -101,7 +102,7 @@ export function birdAt(t: number, sites: THREE.Vector3[], mouths: THREE.Vector3[
     st.pos.y += 0.025 * Math.sin(t * 11.3 + 1.7);
     st.pos.z += 0.03 * Math.sin(t * 9.4 + 0.9);
     // sip dips: repeated pulses driving the beak toward the corolla
-    const mouth = mouths[seg.to ?? 0];
+    const mouth = mouths[CHAIN[seg.to ?? 0]!];
     let throat = 0;
     if (mouth) {
       const dipDir = new THREE.Vector3().subVectors(mouth, site).normalize();
@@ -554,7 +555,8 @@ export default defineScene({
       sc.add(b);
       blooms.push(b);
       // mouth (lathe tip) in world space
-      const mouth = new THREE.Vector3(0, 1.05, 0).applyEuler(b.rotation).add(b.position);
+      const mouth = new THREE.Vector3(0, 1.05, 0)
+        .multiplyScalar(b.scale.x).applyEuler(b.rotation).add(b.position);
       mouths.push(mouth);
       // hover site: just in front of the mouth, slightly toward camera
       // hover site hangs just below the mouth — the bird reaches up in
@@ -644,10 +646,10 @@ export default defineScene({
     sc.add(bb.g);
 
     // bind the camera anchor sites now that bloom mouths are known
-    ANCH[1]!.p.copy(sites[0]!);
-    ANCH[2]!.p.copy(sites[1]!);
-    ANCH[3]!.p.copy(sites[2]!);
-    ANCH[4]!.p.copy(sites[3]!);
+    ANCH[1]!.p.copy(sites[CHAIN[0]!]!);
+    ANCH[2]!.p.copy(sites[CHAIN[1]!]!);
+    ANCH[3]!.p.copy(sites[CHAIN[2]!]!);
+    ANCH[4]!.p.copy(sites[CHAIN[3]!]!);
 
     // --- camera: macro tracking — arrives at each hover site just ahead
     ctx.rig.setLensMm(62);
