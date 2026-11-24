@@ -90,7 +90,7 @@ uniform float uHeadSide;   // sign of the head's lobe x (-1/+1)
 uniform float uGlow;       // global intensity
 void main() {
   float s = vUv.y;
-  float side = smoothstep(1.0, 0.0, abs(vUv.x - 0.5) * 2.0); // soft ribbon edges
+  float side = 1.0 - smoothstep(0.0, 1.0, abs(vUv.x - 0.5) * 2.0); // soft ribbon edges
   float fade = pow(s, 1.7);                                 // tail → black
   float lobe = smoothstep(2.0, 8.0, vW.x * uHeadSide);      // warm on head's lobe
   vec3 bone = vec3(0.96, 0.94, 0.88);
@@ -141,19 +141,11 @@ export default class LorenzScene extends Scene {
       const headF = this.startIdx + t * (this.anchor.rate / DT);
       // tail pinned at the scene's start index — the trail grows out of one
       // lobe; pre-start attractor history (which already contains hops) is
-      // never shown, so early take reads as a single-lobe spiral.
-      const idx = Math.max(this.startIdx, headF - (1 - s) * WINDOW);
-      const i0 = Math.max(0, Math.floor(idx));
-      const i1 = Math.min(STEPS - 1, i0 + 1);
-      const fr = clamp01(idx - i0);
-      const a: [number, number, number] = [0, 0, 0];
-      const b: [number, number, number] = [0, 0, 0];
-      this.world(i0, a); this.world(i1, b);
-      return [
-        a[0] + (b[0] - a[0]) * fr,
-        a[1] + (b[1] - a[1]) * fr,
-        a[2] + (b[2] - a[2]) * fr,
-      ] as [number, number, number];
+      // never shown, so early take reads as a single-lobe spiral. The
+      // s-domain spans only the filled part of the window so every ribbon
+      // segment maps onto real trajectory instead of piling onto the tail.
+      const used = Math.min(WINDOW, Math.max(0, headF - this.startIdx));
+      return this.sample(headF - (1 - s) * used, [0, 0, 0]);
     };
     // width tapers: thick bright head, hairline tail
     const width = (s: number) => 0.08 + 0.38 * Math.pow(s, 2.0);
@@ -194,19 +186,33 @@ export default class LorenzScene extends Scene {
   private head: THREE.Mesh;
   private tmp: [number, number, number] = [0, 0, 0];
 
+  // interpolated trajectory lookup — shared by the spine and the bead so
+  // both ride the exact same f(t), not whole-sample snaps of it
+  private sample(idx: number, out: [number, number, number]): [number, number, number] {
+    const i0 = Math.max(0, Math.min(STEPS - 1, Math.floor(idx)));
+    const i1 = Math.min(STEPS - 1, i0 + 1);
+    const fr = clamp01(idx - i0);
+    const a: [number, number, number] = [0, 0, 0];
+    const b: [number, number, number] = [0, 0, 0];
+    this.world(i0, a); this.world(i1, b);
+    out[0] = a[0] + (b[0] - a[0]) * fr;
+    out[1] = a[1] + (b[1] - a[1]) * fr;
+    out[2] = a[2] + (b[2] - a[2]) * fr;
+    return out;
+  }
+
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
     const t = f.t;
 
     // head index — pure lookup of f(t)
-    const headF = this.startIdx + t * (this.anchor.rate / DT);
-    const hi = Math.min(STEPS - 1, Math.max(0, Math.round(headF)));
-    const hx = this.traj[hi * 3]; // lobe side for the warm accent
+    const headF = Math.min(STEPS - 1, this.startIdx + t * (this.anchor.rate / DT));
+    const hx = this.traj[Math.max(0, Math.min(STEPS - 1, Math.round(headF))) * 3]; // lobe side for the warm accent
 
     // grow the trail in: during the first ~1.5s the window is still short —
     // spine handles it via clamping (tail pins at trajectory start).
     this.ribbonGeo.updateFromTime(t);
 
-    this.world(hi, this.tmp);
+    this.sample(headF, this.tmp);
     this.head.position.set(this.tmp[0], this.tmp[1], this.tmp[2]);
     const side = hx >= 0 ? 1 : -1;
     this.trailMat.uniforms.uHeadSide!.value = side;
