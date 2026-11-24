@@ -198,7 +198,7 @@ void main() {
     float wob = sin(t * 1.1 + fi * 2.2) * 0.5 + 0.5;
     float sf = star5(lp, a0, wob);
     col = mix(col, vec3(0.55, 0.22, 0.08) * (0.85 + 0.2 * wob), sf * inPool * 0.95);
-    col += vec3(1.0, 0.75, 0.5) * sf * 0.10; // gold rim on the arms
+    col += vec3(1.0, 0.75, 0.5) * sf * inPool * 0.10; // gold rim on the arms
   }
   // anemones — three clusters of swaying tentacles inside the shallow edge
   for (int i = 0; i < 3; i++) {
