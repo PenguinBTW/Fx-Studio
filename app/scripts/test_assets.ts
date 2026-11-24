@@ -160,8 +160,14 @@ ok(near(m2.morphTargetInfluences![0]!, 0.5) && near(m3.morphTargetInfluences![0]
   const matB = iB.meshes[0]!.material as THREE.MeshStandardMaterial;
   ok(matA !== matB && near(matA.envMapIntensity, 0.2) && near(matB.envMapIntensity, 1.5), 'envMapIntensity instances are isolated');
   ok(near(sharedMat.envMapIntensity, 1.0), 'master material untouched by instance overrides');
+  let disposeFired = 0;
+  for (const m of iA.ownedMaterials) {
+    const orig = m.dispose.bind(m);
+    m.dispose = () => { disposeFired++; orig(); };
+  }
+  const ownedBefore = iA.ownedMaterials.length;
   iA.dispose();
-  ok(!matA.isDisposed !== false || true, 'dispose runs'); // disposal must not throw
+  ok(ownedBefore > 0 && disposeFired === ownedBefore && iA.ownedMaterials.length === 0, 'instance clones disposed exactly once');
 }
 
 console.log(failed ? `\n${failed} asset test(s) FAILED` : '\nall asset tests passed');
