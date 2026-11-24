@@ -42,6 +42,7 @@ uniform float uAwake;   // establishing fade-in
 uniform float uGust;    // wind gust envelope
 uniform float uRock;    // rockfall beat envelope
 uniform float uRe;      // shafts re-emerge
+uniform float uGustI;   // integral of uGust over scene time (monotonic drift)
 
 float h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float h1(float n) { return fract(sin(n * 127.1 + 311.7) * 43758.5453); }
@@ -54,7 +55,7 @@ float skyY(vec2 uv) {
 }
 float floorY(vec2 uv) {
   return 0.16 + 0.045 * fbm3(vec3(uv.x * 9.0, 7.0, 0.0), 4) * 0.5
-       + 0.03 * smoothstep(0.35, 0.0, abs(uv.x - 0.52));
+       + 0.03 * (1.0 - smoothstep(0.0, 0.35, abs(uv.x - 0.52)));
 }
 
 vec3 skyCol(vec2 uv) {
@@ -153,14 +154,16 @@ void main() {
   for (int i = 0; i < 4; i++) {
     float s = shaft(uv, i, t, sy);
     shaftSum += s;
-    // light the floor patch where the shaft lands
+    // light the floor patch where the shaft lands (same angle + wobble as the wedge)
     if (uv.y < fy + 0.02) {
       float fi = float(i);
       float h = h1(fi * 7.3 + 0.5);
       float ang = -0.30 + 0.55 * (0.5 + 0.5 * sin(t * (0.06 + 0.03 * h1(fi * 11.7 + 3.0)) + h * 6.28));
+      ang += 0.06 * sin(t * 2.6 + h * 9.0) * uGust;
       float ox = 0.30 + 0.42 * h + 0.05 * sin(t * 0.05 + fi * 2.0);
-      float hitX = ox + sin(ang) * (sy + 0.02 - fy);
-      col += vec3(0.5, 0.35, 0.18) * exp(-pow((uv.x - hitX) / 0.035, 2.0)) * s * 0.5;
+      float hitX = ox + tan(ang) * (sy + 0.02 - fy);
+      float hx = (uv.x - hitX) / 0.035;
+      col += vec3(0.5, 0.35, 0.18) * exp(-hx * hx) * s * 0.5;
     }
   }
   col += vec3(1.0, 0.92, 0.72) * shaftSum * gain * 0.75;
@@ -168,8 +171,10 @@ void main() {
   // ---- dust motes drifting inside the shafts
   {
     vec2 mp = uv * vec2(80.0, 46.0);
-    mp.y += t * (0.6 + 1.8 * uGust);
-    mp.x += t * 0.35 * uGust;
+    // uGustI is the time-integral of the gust envelope — monotonic, so motes
+    // never slide backward as the gust fades.
+    mp.y += 0.6 * t + 1.8 * uGustI;
+    mp.x += 0.35 * uGustI;
     vec2 cell = floor(mp);
     float m = h21(cell);
     vec2 f = fract(mp) - 0.5;
@@ -186,7 +191,8 @@ void main() {
       float yTop = 0.34 + 0.20 * h1(fj * 8.3 + 1.7);
       if (yTop <= fy + 0.02) continue;
       // faint vertical stream line
-      float lineI = exp(-pow((uv.x - x0) / 0.0016, 2.0));
+      float lx = (uv.x - x0) / 0.0016;
+      float lineI = exp(-lx * lx);
       float span = smoothstep(fy, yTop, uv.y) * (1.0 - smoothstep(yTop - 0.01, yTop, uv.y));
       col += vec3(0.95, 0.75, 0.45) * lineI * span * 0.20 * uAwake;
       // grains: seeded fall + bounce
@@ -208,7 +214,9 @@ void main() {
       vec2 pp = vec2(x0, fy);
       vec2 dp = uv - pp;
       dp.x *= 2.0;
-      col += vec3(0.85, 0.62, 0.36) * exp(-pow(dp.x / 0.008, 2.0)) * exp(-pow(dp.y / 0.012, 2.0)) * grow * 0.35 * uAwake;
+      float px2 = dp.x / 0.008;
+      float py2 = dp.y / 0.012;
+      col += vec3(0.85, 0.62, 0.36) * exp(-px2 * px2) * exp(-py2 * py2) * grow * 0.35 * uAwake;
     }
   }
 
@@ -221,9 +229,10 @@ void main() {
       float flap = sin((t - 10.0) * 13.0);
       vec2 b = uv - vec2(rx, ry);
       b.x *= 2.0;
-      // two wing strokes meeting at the body
-      float wingL = abs(b.y - (-b.x * 0.9 - 0.004 * flap)) * (step(b.x, 0.0));
-      float wingR = abs(b.y - (b.x * 0.9 - 0.004 * flap)) * (step(0.0, b.x));
+      // two wing strokes meeting at the body — distance on each wing's side,
+      // a large constant on the other so min() can't zero out the whole frame
+      float wingL = b.x <= 0.0 ? abs(b.y - (-b.x * 0.9 - 0.004 * flap)) : 1e3;
+      float wingR = b.x >= 0.0 ? abs(b.y - (b.x * 0.9 - 0.004 * flap)) : 1e3;
       float body = length(b);
       float bird = (1.0 - smoothstep(0.0018, 0.0035, min(wingL, wingR) * step(abs(b.x), 0.018)))
                  + (1.0 - smoothstep(0.0012, 0.0022, body));
@@ -248,7 +257,8 @@ void main() {
       col += vec3(1.0, 0.9, 0.6) * (1.0 - smoothstep(0.0006, 0.0014, d)) * uRock;
     }
     // dust puff blooming where pebbles land
-    float puffT = clamp((t - 11.6) / 2.2, 0.0, 1.0);
+    // earliest pebble lands at t≈12.3 (fall² from 11.0 over 1.3s)
+    float puffT = clamp((t - 12.3) / 1.9, 0.0, 1.0);
     if (puffT > 0.0) {
       vec2 pp = vec2(0.615, floorY(uv) + 0.01);
       vec2 dp = uv - pp;
@@ -288,7 +298,7 @@ export default class CanyonLightScene extends Scene {
     this.backMat = new THREE.ShaderMaterial({
       uniforms: {
         uT: { value: 0 }, uAwake: { value: 0 },
-        uGust: { value: 0 }, uRock: { value: 0 }, uRe: { value: 0 },
+        uGust: { value: 0 }, uRock: { value: 0 }, uRe: { value: 0 }, uGustI: { value: 0 },
       },
       vertexShader: VERT,
       fragmentShader: FRAG,
@@ -309,12 +319,22 @@ export default class CanyonLightScene extends Scene {
     const gust = ss(7.5, 9.0, t) * (1.0 - ss(10.5, 12.0, t));
     const rock = ss(10.8, 11.3, t) * (1.0 - ss(13.5, 14.5, t));
     const re = ss(13.0, 16.0, t);
+    // integral of the gust envelope — the two ss windows don't overlap, so
+    // iss(rise) - iss(fall) is exact; keeps gust-driven drift monotonic
+    const iss = (a: number, b: number, x: number) => {
+      if (x <= a) return 0;
+      if (x >= b) return (b - a) / 2;
+      const u = (x - a) / (b - a);
+      return (b - a) * (u * u * u - 0.5 * u * u * u * u);
+    };
+    const gustI = iss(7.5, 9.0, t) - iss(10.5, 12.0, t);
 
     this.backMat.uniforms.uT!.value = t;
     this.backMat.uniforms.uAwake!.value = awake;
     this.backMat.uniforms.uGust!.value = gust;
     this.backMat.uniforms.uRock!.value = rock;
     this.backMat.uniforms.uRe!.value = re;
+    this.backMat.uniforms.uGustI!.value = gustI;
 
     // slow tilt up the shaft during the gust, gentle push overall
     const push = ss(0, end, t);
