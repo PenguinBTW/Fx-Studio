@@ -680,7 +680,12 @@ async function motion(page: Page) {
 
   for (let i = 0; i < frameCount; i++) {
     const fBuf = frames480[i]!;
-    const curT = from + i / fps;
+    const meta0 = frameMeta[i];
+    // exact render time: the bridge renders integer frame indices n/fps starting at
+    // round(from*fps) — NOT from+i/fps. When --from is not frame-aligned, attributing
+    // from+i/fps mis-times every frame by up to half a frame, biasing hit-response
+    // windows, cut classification, and every t0/t1 in the report.
+    const curT = typeof meta0?.t === 'number' ? meta0.t : (Math.round(from * fps) + i) / fps;
     const luma = computeLuma(fBuf, 480, 270);
     lumas.push(luma);
 
@@ -744,7 +749,7 @@ async function motion(page: Page) {
   if (tl) {
     for (const e of tl) {
       if (e.start >= from && e.start <= to) {
-        const cutIdx = Math.round((e.start - from) * fps);
+        const cutIdx = Math.round(e.start * fps) - Math.round(from * fps);
         let diff = 0;
         let cutType: 'hard' | 'soft' | 'flash' = 'soft';
 
