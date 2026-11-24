@@ -1,0 +1,46 @@
+{
+  "project": "saltflat",
+  "meta": {
+    "title": "Salt Flat: Dawn Walker with a Kite",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 20.0
+  },
+  "entries": [
+    {
+      "scene": "saltflat/saltflat",
+      "id": "act-still",
+      "start": 0.0,
+      "end": 3.0,
+      "caption": { "fig": "01", "text": "STILL FLAT", "dur": 2.6 }
+    },
+    {
+      "scene": "saltflat/saltflat",
+      "id": "act-walker",
+      "start": 3.0,
+      "end": 9.0,
+      "caption": { "fig": "02", "text": "THE WALKER", "dur": 3.2 }
+    },
+    {
+      "scene": "saltflat/saltflat",
+      "id": "act-flash",
+      "start": 9.0,
+      "end": 12.0,
+      "caption": { "fig": "03", "text": "KITE FLASH", "dur": 2.6 }
+    },
+    {
+      "scene": "saltflat/saltflat",
+      "id": "act-devil",
+      "start": 12.0,
+      "end": 17.0,
+      "caption": { "fig": "04", "text": "SALT-DEVIL", "dur": 2.8 }
+    },
+    {
+      "scene": "saltflat/saltflat",
+      "id": "act-settle",
+      "start": 17.0,
+      "end": 20.0,
+      "caption": { "fig": "05", "text": "SETTLE", "dur": 2.6 }
+    }
+  ]
+}
