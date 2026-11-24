@@ -155,8 +155,14 @@ lily = empty('lily'); lily['fx_part'] = 'lily'; parent(lily, root)
 bpy.ops.mesh.primitive_cylinder_add(vertices=12, radius=0.42, depth=0.025, location=(0, 0, 0.01))
 lp = bpy.context.active_object; lp.name = 'lilypad'
 lp.scale = (1.0, 1.0, 1.0); assign(lp, LILY); smooth(lp); parent(lp, lily)
-# notch wedge
+# notch wedge — boolean a bite out of the pad, then drop the cutter
 notch = box('lilynotch', (0.3, 0.3, 0.1), (0.38, 0, 0.02), None, bev=0.0, seg=1)
+bpy.context.view_layer.objects.active = lp
+mod = lp.modifiers.new('notch', 'BOOLEAN')
+mod.operation = 'DIFFERENCE'
+mod.object = notch
+bpy.ops.object.modifier_apply(modifier='notch')
+bpy.data.objects.remove(notch, do_unlink=True)
 # flower: small cone cluster
 fl = cyl('lilyflow', 0.09, 0.14, (0.12, 0.12, 0.08), LILYF, verts=8, bev=0.03)
 parent(fl, lily)
