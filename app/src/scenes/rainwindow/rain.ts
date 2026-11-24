@@ -24,6 +24,7 @@ const hash = (i: number, k: number) => {
 };
 
 interface Drop {
+  x0: number;          // rivulet anchor x (wiggle/drift applied on top)
   t0: number;          // spawn time
   xs: Float32Array;    // node x (logical px)
   ys: Float32Array;    // node y
@@ -85,7 +86,7 @@ function integrate(x0: number, r: number, t0: number, parent?: Drop, boostT = In
       }
     }
   }
-  return { t0, xs: xs.slice(0, n), ys: ys.slice(0, n), ts: ts.slice(0, n), r, warm: 0, mergedAt: Infinity, mergeR: r };
+  return { x0, t0, xs: xs.slice(0, n), ys: ys.slice(0, n), ts: ts.slice(0, n), r, warm: 0, mergedAt: Infinity, mergeR: r };
 }
 
 function buildDrops(): Drop[] {
@@ -109,7 +110,10 @@ function buildDrops(): Drop[] {
     // merge time ≈ child's last node; parent swells by cubic-volume addition
     c.mergedAt = -1; // marker: this drop is a merging child
     const tm = c.ts[c.ts.length - 1];
-    if (tm < p.mergedAt) {
+    // A real merge = the child died on contact: ended early AND still on
+    // the pane. Children that run to END or off the bottom just vanish.
+    const realMerge = c.ys[c.ys.length - 1] <= H + 20 && tm < END;
+    if (realMerge && tm < p.mergedAt) {
       p.mergedAt = tm;
       p.mergeR = Math.cbrt(p.r * p.r * p.r + cr * cr * cr);
     }
@@ -121,7 +125,7 @@ function buildDrops(): Drop[] {
   // the parent then genuinely accelerates instead of only swelling.
   for (const p of parents) {
     if (p.mergedAt === Infinity) continue;
-    const np = integrate(p.xs[0], p.r, p.t0, undefined, p.mergedAt);
+    const np = integrate(p.x0, p.r, p.t0, undefined, p.mergedAt);
     p.xs = np.xs; p.ys = np.ys; p.ts = np.ts;
   }
   // warm accent on the few largest drops only
