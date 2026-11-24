@@ -274,7 +274,7 @@ const c3Spine = (t: number, s: number): V3 => {
   const rad = 55 - 20 * lift;
   const x = (s - 0.5) * 30 + 14 * Math.sin(t * 0.04) * (1 - lift);
   const y = 20 + rad * Math.sin(ang) + 6 * Math.sin(s * 6.0 + t * 0.1) * (1 - 0.5 * lift);
-  const z = Math.max(-78.5, -60 + rad * Math.cos(ang) * 0.9 + 10 * lift);
+  const z = -56 + rad * Math.cos(ang) * 0.6 + 12 * lift;
   return [x, y, z];
 };
 
