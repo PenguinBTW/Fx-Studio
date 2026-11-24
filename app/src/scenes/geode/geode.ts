@@ -187,7 +187,6 @@ export default class GeodeScene extends Scene {
       const idx = geo.getIndex();
       const triCount = idx ? idx.count / 3 : pos.count / 3;
       const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
-      const nm = new THREE.Matrix3().getNormalMatrix(mesh.matrixWorld);
       for (let tI = 0; tI < triCount; tI += 3) {
         const i0 = idx ? idx.getX(tI * 3) : tI * 3;
         const i1 = idx ? idx.getX(tI * 3 + 1) : tI * 3 + 1;
@@ -196,7 +195,8 @@ export default class GeodeScene extends Scene {
         b.fromBufferAttribute(pos, i1).applyMatrix4(mesh.matrixWorld);
         c.fromBufferAttribute(pos, i2).applyMatrix4(mesh.matrixWorld);
         const n = new THREE.Vector3().subVectors(b, a)
-          .cross(new THREE.Vector3().subVectors(c, a)).normalize().applyMatrix3(nm).normalize();
+          // Verts are already world-space — the normal is too; no extra rotate.
+          .cross(new THREE.Vector3().subVectors(c, a)).normalize();
         const cen = new THREE.Vector3().addVectors(a, b).add(c).multiplyScalar(1 / 3)
           .addScaledVector(n, 0.006);
         this.facets.push({ c: cen, n, band: hash(tI, 11) });
