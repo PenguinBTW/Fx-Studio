@@ -119,7 +119,7 @@ void main() {
   col = mix(col, sand, gravel * 0.94);
 
   // --- koi pond tucked in the near-left corner -----------------------------
-  vec2 pq = (vUv - vec2(0.35, 0.115)) * vec2(2.0, 1.0);
+  vec2 pq = (vUv - vec2(0.35, 0.190)) * vec2(2.0, 1.0);
   float pond = 1.0 - smoothstep(0.10, 0.13, length(pq));
   col = mix(col, vec3(0.048, 0.075, 0.125), pond * 0.95);
   col += vec3(0.40, 0.45, 0.60) * pond * exp(-dot(pq - vec2(0.02, 0.02), pq - vec2(0.02, 0.02)) * 22.0) * 0.5;
@@ -128,7 +128,7 @@ void main() {
     float kph = (t - (2.5 + fk * 4.5)) / 9.0;
     if (kph > 0.0 && kph < 1.0) {
       vec2 kp = vec2(0.315 + 0.08 * kph + 0.012 * sin(t * 0.8 + fk * 2.0),
-                     0.115 + 0.020 * fk + 0.007 * sin(t * 0.9 + fk));
+                     0.200 + 0.020 * fk + 0.007 * sin(t * 0.9 + fk));
       vec2 kd = (vUv - kp) * vec2(2.4, 7.0);
       float koi = 1.0 - smoothstep(0.014, 0.024, length(kd));
       col = mix(col, vec3(0.015, 0.020, 0.040), koi * pond * 0.85);
@@ -280,7 +280,7 @@ const seeds: PetalSeed[] = [];
     // arrive through the gust window and live short, so t=14 reads dense and
     // t=18 thins out as they dissolve mid-air. The caught/settle subsets get
     // a longer life and a faster fall so the closed-form path provably
-    // reaches its surface (lantern ~53 world, gravel ~75, pond ~94) inside
+    // reaches its surface (lantern ~53 world, gravel ~72, pond ~80) inside
     // the lifetime — otherwise they would shrink out mid-air.
     const caught = i % 29 === 0;
     const pondRest = i % 37 === 0;
@@ -389,16 +389,26 @@ export default class PetalfallScene extends Scene {
     // flat until they fade — all keyed off the seed index, still closed-form
     const { caught, settle, pondRest } = s;
     let grounded = false;
+    if (caught && wy < LANTERN.y + 10.0) {
+      // approach blend: drift toward the cap through the last stretch so
+      // the catch reads as a landing, not a horizontal snap
+      const approach = ss(LANTERN.y + 10.0, LANTERN.y + 3.5, wy);
+      wx += (LANTERN.x + 2.0 - wx) * approach;
+    }
     if (caught && wy < LANTERN.y + 4.0) {
       const rel = s.onset + s.life * 0.78;
       if (t < rel) {
         wx = LANTERN.x + 2.0 + 2.0 * Math.sin(t * 1.7 + s.swayP);
         wy = LANTERN.y + 3.5 + 0.8 * Math.sin(t * 2.3 + s.swayP * 2.0);
       } else {
-        wy = LANTERN.y + 3.5 - s.fallV * 0.5 * (t - rel);
+        // dislodged: keep falling from the cap's x with a slight outward
+        // drift instead of snapping back to the un-pinned flight path
+        const dropT = t - rel;
+        wy = LANTERN.y + 3.5 - s.fallV * 0.5 * dropT;
+        wx = LANTERN.x + 2.0 + dropT * 1.5;
       }
     } else if (settle) {
-      const gy = pondRest ? -46.0 : -27.0 - frac(i * 0.318) * 6.0;
+      const gy = pondRest ? -32.5 : -24.0 - frac(i * 0.318) * 6.0;
       if (wy < gy) {
         wy = gy;
         grounded = true;
