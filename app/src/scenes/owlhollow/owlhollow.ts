@@ -39,8 +39,7 @@ uniform float uT;
 out vec4 fragColor;
 
 const float HLINE = 0.40;   // field horizon
-const float ASPECT = 320.0 / 140.0;
-const float SA = 1920.0 / 1080.0; // uv→pixel aspect for round shapes
+const float ASPECT = 320.0 / 140.0; // uv x→world x vs y — /ASPECT for round shapes
 // owl transit beats
 const float OWL_IN = 2.5;    // enters right
 const float OWL_BANK = 6.8;  // banked turn over the mist
@@ -91,8 +90,9 @@ vec2 owlPos(float t) {
   p = mix(p, vec2(0.55, 0.50), sstep(OWL_IN, OWL_BANK, t));
   // dipped pass behind the barn
   p = mix(p, vec2(0.20, 0.415), sstep(OWL_BANK, OWL_DIP, t));
-  // reappear climbing toward the top-left exit
-  p = mix(p, vec2(-0.08, 0.86), sstep(OWL_DIP + 0.6, OWL_OUT, t));
+  // reappear climbing — rises through the visible top band near the left
+  // (frame edge in uv x is ~0.185, so keep the exit x inside it)
+  p = mix(p, vec2(0.18, 0.98), sstep(OWL_DIP + 0.6, OWL_OUT, t));
   return p;
 }
 // bank tilt: rolls into the turn at OWL_BANK, levels on the climb
@@ -102,10 +102,17 @@ float owlTilt(float t) {
 }
 // flap: slow beats on entry, locked glide through the bank, powering
 // beats on the climb-out
+// integral of a smoothstep blend — lets the wingbeat rate ramp without a
+// phase-velocity spike (sin(t*rate) hits ~13Hz mid-ramp otherwise)
+float ssInt(float a, float b, float t) {
+  float u = clamp((t - a) / max(b - a, 0.001), 0.0, 1.0);
+  return (b - a) * (u * u * u - 0.5 * u * u * u * u);
+}
 float owlFlap(float t) {
   float glide = sstep(OWL_BANK - 1.0, OWL_BANK, t) * (1.0 - sstep(OWL_DIP + 0.4, OWL_CLIMB + 0.5, t));
-  float rate = mix(2.4, 3.4, sstep(OWL_DIP, OWL_CLIMB, t));
-  return sin(t * rate * 6.2831) * (1.0 - glide * 0.85);
+  // phase = integral of the rate: 2.4Hz glide-beats ramping to 3.4Hz powered
+  float phase = t * 2.4 + (3.4 - 2.4) * ssInt(OWL_DIP, OWL_CLIMB, t);
+  return sin(phase * 6.2831) * (1.0 - glide * 0.85);
 }
 float owlAlpha(float t) {
   return sstep(OWL_IN, OWL_IN + 0.6, t) * (1.0 - sstep(OWL_OUT - 0.6, OWL_OUT, t));
@@ -131,13 +138,13 @@ vec3 skyAt(vec2 uv, float t) {
 
   // -- moon: disc + layered halo, off-center right-high
   vec2 mc = vec2(0.63, 0.75);
-  float md = sdist(uv, mc, vec2(0.024 / SA, 0.024));
-  float hd = sdist(uv, mc, vec2(0.11 / SA, 0.085));
+  float md = sdist(uv, mc, vec2(0.024 / ASPECT, 0.024));
+  float hd = sdist(uv, mc, vec2(0.11 / ASPECT, 0.085));
   float halo = exp(-hd * hd * 2.4);
   sky += vec3(0.55, 0.62, 0.80) * halo * 0.5;
   sky = mix(sky, vec3(0.88, 0.90, 0.96), sstep(1.0, 0.85, md));
   // faint maria so the disc isn't a flat coin
-  float maria = fbm2((uv - mc) * vec2(SA, 1.0) * 60.0);
+  float maria = fbm2((uv - mc) * vec2(ASPECT, 1.0) * 60.0);
   sky -= vec3(0.10, 0.11, 0.13) * sstep(1.0, 0.85, md) * sstep(0.55, 0.75, maria);
 
   // -- hedgerow: ragged dark band at the horizon
@@ -211,7 +218,7 @@ vec3 scene(vec2 uv, float t) {
     float sx = mix(1.08, -0.08, sstep(SWALLOW, SWALLOW + 0.65, t));
     float sy = 0.58 + 0.05 * sin(t * 9.0);
     col = mix(col, vec3(0.05, 0.05, 0.08),
-              sstep(1.0, 0.4, sdist(uv, vec2(sx, sy), vec2(0.008 / SA, 0.004))) * sw * 0.8);
+              sstep(1.0, 0.4, sdist(uv, vec2(sx, sy), vec2(0.008 / ASPECT, 0.004))) * sw * 0.8);
   }
 
   // -- barn: wall + gable roof + chimney, solid dark silhouette left
@@ -249,7 +256,7 @@ vec3 scene(vec2 uv, float t) {
     col = mix(col, vec3(0.10, 0.12, 0.19), clamp(mist * 0.55, 0.0, 1.0));
 
     // fence post: slim upright mid-frame with a web between post and sky
-    float post = sstep(0.556, 0.554, uv.x) * sstep(0.562, 0.564, uv.x) *
+    float post = sstep(0.554, 0.556, uv.x) * sstep(0.564, 0.562, uv.x) *
                  sstep(0.375, 0.372, uv.y) * sstep(0.29, 0.295, uv.y);
     col = mix(col, vec3(0.014, 0.015, 0.022), post * 0.9);
 
@@ -263,10 +270,10 @@ vec3 scene(vec2 uv, float t) {
       for (int i = 0; i < 5; i++) {
         float ang = -0.4 - float(i) * 0.55;
         vec2 tip = vec2(cos(ang), sin(ang)) * 0.045;
-        web += sstep(0.0016, 0.0004, dseg(uv, wc, wc + vec2(tip.x / SA, tip.y)));
+        web += sstep(0.0016, 0.0004, dseg(uv, wc, wc + vec2(tip.x / ASPECT, tip.y)));
       }
       // one arc across the strands
-      web += sstep(0.0016, 0.0004, abs(length(wv * vec2(SA, 1.0)) - 0.028) ) * sstep(wc.y + 0.004, wc.y, uv.y) * step(0.0, -wv.x);
+      web += sstep(0.0016, 0.0004, abs(length(wv * vec2(ASPECT, 1.0)) - 0.028) ) * sstep(wc.y + 0.004, wc.y, uv.y) * step(0.0, -wv.x);
       float sparkle = sstep(0.006, 0.001, sdist(uv, wc + vec2(-0.018, -0.020), vec2(0.006, 0.006)));
       col += vec3(0.75, 0.82, 1.0) * (web * 0.5 + sparkle * 0.9) * glintT;
     }
@@ -276,7 +283,7 @@ vec3 scene(vec2 uv, float t) {
     if (ms > 0.0) {
       vec2 mt = vec2(0.44 + 0.010 * sin(t * 14.0), 0.295 + 0.006 * sin(t * 18.0));
       col = mix(col, vec3(0.10, 0.09, 0.08),
-                sstep(1.0, 0.3, sdist(uv, mt, vec2(0.006 / SA, 0.004))) * ms * 0.7);
+                sstep(1.0, 0.3, sdist(uv, mt, vec2(0.006 / ASPECT, 0.004))) * ms * 0.7);
     }
   }
 
