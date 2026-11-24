@@ -35,8 +35,8 @@ over the pounce. Probes: `fox` (tracks `foxX/foxY`), `sun band` (tracks `uBand`)
 - t=13.8 — finch burst from the far-right bush, fox trotting on
 - t=17.5 — settle: fox gone, glitter lane on the right, raven circling high
 
-![t=1.5](out/fv/f_0001.50.png)
-![t=9.0](out/fv/f_0009.00.png)
-![t=10.6](out/fv/f_0010.60.png)
-![t=13.8](out/fv/f_0013.80.png)
-![t=17.5](out/fv/f_0017.50.png)
+![t=1.5](f_0001.50.png)
+![t=9.0](f_0009.00.png)
+![t=10.6](f_0010.60.png)
+![t=13.8](f_0013.80.png)
+![t=17.5](f_0017.50.png)

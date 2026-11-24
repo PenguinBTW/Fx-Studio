@@ -73,7 +73,7 @@ float ellip(vec2 p, vec2 r) { return length(p / r) - 1.0; }
 // --- fox silhouette ----------------------------------------------------------
 float foxMask(vec2 uv, float t) {
   vec2 fp = uv - vec2(uFx, uFy);
-  float on = step(0.004, uFx) * step(uFx, 0.995);
+  float on = smoothstep(-0.08, -0.02, uFx) * (1.0 - smoothstep(1.01, 1.07, uFx));
   // body ellipse; slight crouch at pounce peak
   vec2 b = fp - vec2(0.0, 0.016 - 0.007 * uPounce);
   float body = (1.0 - smoothstep(0.0, 0.006, ellip(b, vec2(0.052, 0.020))));
@@ -92,7 +92,7 @@ float foxMask(vec2 uv, float t) {
             + (1.0 - smoothstep(0.0, 0.004, ellip(e2, vec2(0.0045, earH))));
   // tail: sweeps back; tips up during the pounce
   vec2 tp = fp - vec2(-0.050, 0.014 + 0.010 * uPounce);
-  tp.y -= 0.008 * uPounce * (1.0 - smoothstep(-0.10, -0.05, tp.x));  // tip-up
+  tp.y -= 0.010 * uPounce * (1.0 - smoothstep(-0.078, -0.050, tp.x));  // tip-up
   float tail = (1.0 - smoothstep(0.0, 0.005, ellip(tp, vec2(0.028, 0.013))));
   // legs: trot gait — two diagonal pairs alternate while moving; all still
   // during listen, front pair lifted during pounce
@@ -281,15 +281,17 @@ export default class FrostvalleyScene extends Scene {
       if (P?.probe && P.textProbes && P.recordText) {
         const W = P.width || 1920, H = P.height || 1080;
         this.cam.updateMatrixWorld();
-        aToV(fx, fy + 0.03, this.p).project(this.cam);
-        const fpx = (this.p.x * 0.5 + 0.5) * W, fpy = (0.5 - this.p.y * 0.5) * H;
-        P.textProbes.push({
-          frameIdx: P.currentFrameIdx ?? 0, t, text: 'fox',
-          fontFamily: 'Archivo, sans-serif', fontPx: 20,
-          fillStyle: '#c96a3a', globalAlpha: 0.9, layerId: 'frostvalley',
-          bbox: [fpx - 30, fpy - 22, fpx + 30, fpy + 14],
-          w: 60, h: 36, cx: fpx, cy: fpy, hPct: (36 / H) * 100, isStroke: false,
-        });
+        if (fx > -0.05 && fx < 1.05) {
+          aToV(fx, fy + 0.03, this.p).project(this.cam);
+          const fpx = (this.p.x * 0.5 + 0.5) * W, fpy = (0.5 - this.p.y * 0.5) * H;
+          P.textProbes.push({
+            frameIdx: P.currentFrameIdx ?? 0, t, text: 'fox',
+            fontFamily: 'Archivo, sans-serif', fontPx: 20,
+            fillStyle: '#c96a3a', globalAlpha: 0.9, layerId: 'frostvalley',
+            bbox: [fpx - 30, fpy - 22, fpx + 30, fpy + 14],
+            w: 60, h: 36, cx: fpx, cy: fpy, hPct: (36 / H) * 100, isStroke: false,
+          });
+        }
         aToV(Math.min(0.95, bandX(t)), 0.30, this.p).project(this.cam);
         const bx = (this.p.x * 0.5 + 0.5) * W, by = (0.5 - this.p.y * 0.5) * H;
         P.textProbes.push({
