@@ -183,13 +183,20 @@ def watch():
             (0.006, 0.004, 0.014), IRON, rot=(0, ha, 0))
     # inner gears on the face: hub + ring of teeth per gear
     for gi, (gx, gz, gr) in enumerate([(-0.038, -0.030, 0.038), (0.042, 0.018, 0.030), (0.002, 0.052, 0.024)]):
-        cyl(f'gear_{gi}', (cx+gx, cy-0.0345, cz+gz), gr, 0.006, BRASS, rot=(math.pi/2,0,0), v=16)
+        core = cyl(f'gear_{gi}', (cx+gx, cy-0.0345, cz+gz), gr, 0.006, BRASS, rot=(math.pi/2,0,0), v=16)
+        teeth = []
         for ti in range(8):
             ta = ti * math.pi / 4
-            box(f'gt_{gi}_{ti}', (cx+gx+math.sin(ta)*gr*1.06, cy-0.0345, cz+gz+math.cos(ta)*gr*1.06),
-                (0.006, 0.007, 0.010), BRASS, rot=(0, ta, 0))
-    # tick hand + hub
-    box('tick_hand', (cx, cy-0.0358, cz+0.045), (0.007, 0.004, 0.055), IRON)
+            teeth.append(box(f'gt_{gi}_{ti}', (cx+gx+math.sin(ta)*gr*1.06, cy-0.0345, cz+gz+math.cos(ta)*gr*1.06),
+                (0.006, 0.007, 0.010), BRASS, rot=(0, ta, 0)))
+        join_parts(f'gear_{gi}', [core] + teeth)
+    # tick hand + hub (hand origin at the hub so rotation sweeps the dial)
+    hand_ob = box('tick_hand', (cx, cy-0.0358, cz+0.045), (0.007, 0.004, 0.055), IRON)
+    bpy.context.scene.cursor.location = (cx, cy-0.0358, cz)
+    bpy.context.view_layer.objects.active = hand_ob
+    hand_ob.select_set(True)
+    bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
+    hand_ob.select_set(False)
     cyl('tick_hub', (cx, cy-0.0358, cz), 0.012, 0.008, BRASS, rot=(math.pi/2,0,0), v=10)
     # chain: a few links arcing to the right
     for i in range(5):
@@ -272,7 +279,7 @@ import json, os
 manifest = {'parts': {}}
 for o in bpy.data.objects:
     if o.get('fx_part'):
-        manifest['parts'][o.name] = True
+        manifest['parts'][o.name] = o.name
 bpy.ops.object.select_all(action='SELECT')
 out_dir = os.path.dirname(os.path.abspath(__file__))
 bpy.ops.export_scene.gltf(
@@ -280,5 +287,5 @@ bpy.ops.export_scene.gltf(
     export_format='GLB', export_yup=True, export_apply=True,
     export_materials='EXPORT', export_animations=False, export_extras=True)
 with open(os.path.join(out_dir, 'manifest.json'), 'w') as f:
-    json.dump({'parts': sorted(manifest['parts'].keys())}, f, indent=1)
+    json.dump({'parts': manifest['parts']}, f, indent=1, sort_keys=True)
 print('curios: %d parts' % len(manifest['parts']))
