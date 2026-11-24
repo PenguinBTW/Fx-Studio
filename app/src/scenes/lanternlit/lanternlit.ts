@@ -163,9 +163,17 @@ void main() {
     // reflection: mirror about the waterline, wobble-synced to the lantern bob
     vec3 lp = lanternPos(aAux, uT);
     float lift = uT - aAux.x;
-    pos = vec3(lp.x + 0.18 * sin(uT * 1.7 + aSeed * 50.0),
+    // pinned just in front of the river quad (z=-14) so far lanterns' smears
+    // don't depth-test behind it; compensate x for the depth shift so each
+    // reflection still projects directly beneath its lantern
+    float cs = clamp((uT - 1.5) / 19.0, 0.0, 1.0);
+    float camX = -2.4 + 3.4 * cs + 0.2 * sin(uT * 0.09);
+    float camZ = 25.0 - 4.0 * cs;
+    float lx = lp.x + 0.18 * sin(uT * 1.7 + aSeed * 50.0);
+    float xr = camX + (lx - camX) * (camZ + 13.0) / (camZ - lp.z);
+    pos = vec3(xr,
                -4.0 - (lp.y + 4.0) * 0.20 - 0.2,
-               -13.0); // pin to just in front of the river quad — farther lanterns' reflections must not depth-test behind it
+               -13.0);
     alpha = smoothstep(0.0, 0.8, lift) * (1.0 - smoothstep(10.0, 16.0, lift)) * 0.9;
     alpha *= 0.8 + 0.2 * sin(uT * (2.4 + fract(aSeed * 7.0) * 3.0) + aSeed * 80.0);
     size = 1.7 + fract(aSeed * 5.3) * 1.1;
