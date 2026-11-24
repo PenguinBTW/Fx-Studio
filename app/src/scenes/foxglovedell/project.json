@@ -1,0 +1,46 @@
+{
+  "project": "foxglovedell",
+  "meta": {
+    "title": "Foxglove Dell: Noon Clearing",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 20.0
+  },
+  "entries": [
+    {
+      "scene": "foxglovedell/foxglovedell",
+      "id": "act-still",
+      "start": 0.0,
+      "end": 2.5,
+      "caption": { "fig": "01", "text": "STILL CLEARING", "dur": 2.4 }
+    },
+    {
+      "scene": "foxglovedell/foxglovedell",
+      "id": "act-patrol",
+      "start": 2.5,
+      "end": 9.0,
+      "caption": { "fig": "02", "text": "WREN PATROL", "dur": 2.8 }
+    },
+    {
+      "scene": "foxglovedell/foxglovedell",
+      "id": "act-song",
+      "start": 9.0,
+      "end": 12.5,
+      "caption": { "fig": "03", "text": "THE SONG", "dur": 2.8 }
+    },
+    {
+      "scene": "foxglovedell/foxglovedell",
+      "id": "act-bees",
+      "start": 12.5,
+      "end": 18.0,
+      "caption": { "fig": "04", "text": "BEE VISIT", "dur": 3.0 }
+    },
+    {
+      "scene": "foxglovedell/foxglovedell",
+      "id": "act-settle",
+      "start": 18.0,
+      "end": 20.0,
+      "caption": { "fig": "05", "text": "SETTLE", "dur": 2.0 }
+    }
+  ]
+}
