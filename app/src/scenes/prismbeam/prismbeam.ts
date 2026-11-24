@@ -108,6 +108,7 @@ export default class PrismbeamScene extends Scene {
   private caustic: THREE.Sprite;
   private glintMat: THREE.LineBasicMaterial;
   private glintGeo: THREE.BufferGeometry;
+  private floorGeo: THREE.BufferGeometry;
   private floorMat: THREE.MeshBasicMaterial;
 
   private _tmp = { p: new THREE.Vector3(), d: new THREE.Vector3() };
@@ -119,7 +120,7 @@ export default class PrismbeamScene extends Scene {
 
     // ---- floor: near-black slab catching the caustic -----------------------
     const floor = new THREE.Mesh(
-      new THREE.PlaneGeometry(80, 60),
+      (this.floorGeo = new THREE.PlaneGeometry(80, 60)),
       (this.floorMat = new THREE.MeshBasicMaterial({ color: '#04050a' })),
     );
     floor.rotation.x = -Math.PI / 2;
@@ -351,7 +352,7 @@ export default class PrismbeamScene extends Scene {
     this.fanGeo.dispose(); this.fanMat.dispose();
     this.glintGeo.dispose(); this.glintMat.dispose();
     this.causticMat.map?.dispose(); this.causticMat.dispose();
-    this.floorMat.dispose();
+    this.floorGeo.dispose(); this.floorMat.dispose();
     this.inst?.dispose();
   }
 }
