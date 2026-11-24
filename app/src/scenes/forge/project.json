@@ -1,0 +1,7 @@
+{
+  "project": "forge",
+  "trimToTimeline": true,
+  "entries": [
+    { "scene": "forge/forge", "id": "forge", "start": 0.0, "end": 20.0 }
+  ]
+}
