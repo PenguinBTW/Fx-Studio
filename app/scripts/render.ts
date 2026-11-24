@@ -1120,7 +1120,7 @@ try {
     const { runGodView } = await import('./visual/godview');
     await runGodView(page, process.argv.slice(3));
   }
-  if (logs.length) console.error('BROWSER LOG:\n' + logs.slice(0, 40).join('\n'));
+  if (logs.length) console.error('BROWSER LOG:\n' + [...logs.filter((l) => l.startsWith('[pageerror]')), ...logs.filter((l) => !l.startsWith('[pageerror]')).slice(0, 40)].join('\n'));
 } finally {
   await browser.close();
   stop();
