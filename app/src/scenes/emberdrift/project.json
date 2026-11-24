@@ -1,0 +1,39 @@
+{
+  "project": "emberdrift",
+  "meta": {
+    "title": "Ember Drift: The Clearing",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 20.0
+  },
+  "entries": [
+    {
+      "scene": "emberdrift/emberdrift",
+      "id": "act-clearing",
+      "start": 0.0,
+      "end": 6.0,
+      "caption": { "fig": "01", "text": "THE CLEARING", "dur": 4.0 }
+    },
+    {
+      "scene": "emberdrift/emberdrift",
+      "id": "act-swell",
+      "start": 6.0,
+      "end": 9.6,
+      "caption": { "fig": "02", "text": "THE SWELL", "dur": 3.0 }
+    },
+    {
+      "scene": "emberdrift/emberdrift",
+      "id": "act-crack",
+      "start": 9.6,
+      "end": 12.5,
+      "caption": { "fig": "03", "text": "THE CRACK", "dur": 2.6 }
+    },
+    {
+      "scene": "emberdrift/emberdrift",
+      "id": "act-drift",
+      "start": 12.5,
+      "end": 20.0,
+      "caption": { "fig": "04", "text": "THE DRIFT", "dur": 4.0 }
+    }
+  ]
+}
