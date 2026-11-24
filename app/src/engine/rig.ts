@@ -382,17 +382,26 @@ export class CameraRig {
       const hc = this.handheldCfg;
       const ts = t * hc.speed;
       const w = hc.weight;
-      p[0] += CameraRig.hn(ts, hc.seed + 101) * hc.posAmp * w;
-      p[1] += CameraRig.hn(ts, hc.seed + 202) * hc.posAmp * w;
-      p[2] += CameraRig.hn(ts, hc.seed + 303) * hc.posAmp * 0.6 * w;
+      // channels are seed·1024 + axis·128 apart so different seeds never share a
+      // motion curve (plain +101/+202 collided: seed 0's X was seed 101's Y)
+      const sb = hc.seed * 1024;
+      p[0] += CameraRig.hn(ts, sb + 101) * hc.posAmp * w;
+      p[1] += CameraRig.hn(ts, sb + 202) * hc.posAmp * w;
+      p[2] += CameraRig.hn(ts, sb + 303) * hc.posAmp * 0.6 * w;
       const tdx = this.target[0] - p[0], tdy = this.target[1] - p[1], tdz = this.target[2] - p[2];
       const focusDist = Math.hypot(tdx, tdy, tdz) || 1;
+      // overhead damping: near-vertical views degenerate the up-reference cutoff —
+      // undamped rotational noise can push Fw across |Fw.y|=0.99 and flip the basis
+      // between frames. Physically, operator pan/tilt vanishes around a vertical
+      // axis anyway: scale by the horizontal fraction squared.
+      const flatF2 = Math.min(1, (tdx * tdx + tdz * tdz) / (focusDist * focusDist));
+      const rotScale = flatF2 * flatF2;
       this._hhTarget = [
-        this.target[0] + CameraRig.hn(ts, hc.seed + 404) * hc.rotAmp * focusDist * w,
-        this.target[1] + CameraRig.hn(ts, hc.seed + 505) * hc.rotAmp * focusDist * w,
-        this.target[2] + CameraRig.hn(ts, hc.seed + 606) * hc.rotAmp * focusDist * 0.5 * w,
+        this.target[0] + CameraRig.hn(ts, sb + 404) * hc.rotAmp * focusDist * w * rotScale,
+        this.target[1] + CameraRig.hn(ts, sb + 505) * hc.rotAmp * focusDist * w * rotScale,
+        this.target[2] + CameraRig.hn(ts, sb + 606) * hc.rotAmp * focusDist * 0.5 * w * rotScale,
       ];
-      roll += CameraRig.hn(ts, hc.seed + 707) * hc.rollAmp * w;
+      roll += CameraRig.hn(ts, sb + 707) * hc.rollAmp * w;
     } else {
       this._hhTarget = null;
     }
