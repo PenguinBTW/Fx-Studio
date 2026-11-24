@@ -39,7 +39,7 @@ const deckY = (x: number) => 0.10 + 0.26 * (1 - (x / 2.3) * (x / 2.3));
 const archY = (x: number) => -0.06 + 0.24 * (1 - (x / 1.9) * (x / 1.9));
 
 // traveler path — x(t) piecewise: walk → pause → walk → stop → look back
-const TRAV_X0 = -2.4, TRAV_PAUSE = -0.05, TRAV_END = 1.32;
+const TRAV_X0 = -2.4, TRAV_PAUSE = -0.05, TRAV_END = 1.60;
 function travX(t: number) {
   if (t < TRAV.enter) return TRAV_X0;
   if (t < TRAV.pause0) return mix(TRAV_X0, TRAV_PAUSE, sCurve((t - TRAV.enter) / (TRAV.pause0 - TRAV.enter)));
@@ -99,16 +99,16 @@ void main() {
   sky += vec3(0.55, 0.28, 0.10) * (1.0 - smoothstep(-0.3, 1.1, q.y)) * smoothstep(-1.4, -0.2, q.y) * (0.5 + 0.5 * sun);
   vec3 col = sky;
 
-  // distant sun-lit rim band on the far wall tops — appears only late
+  // distant sun-lit rim band on the far wall tops — appears only late;
+  // applied after the composite so it isn't diluted away
   float rimBand = smoothstep(0.75, 0.95, q.y) * (1.0 - smoothstep(1.15, 1.45, q.y));
-  col += vec3(0.35, 0.20, 0.08) * rimBand * sun * (0.4 + 0.6 * hash21(floor(q * vec2(7.0, 4.0))));
 
   // gorge walls — rock masses converging downward, fading into the mist;
   // edges pull inward with depth so the bridge springs out of both walls
   float wallL = 1.0 - smoothstep(-0.05, 0.15, q.x + (1.60 + 0.85 * q.y));
   float wallR = smoothstep(-0.05, 0.15, q.x - (1.72 + 0.78 * q.y));
   float walls = max(wallL, wallR);
-  vec3 rock = mix(vec3(0.13, 0.15, 0.17), vec3(0.05, 0.06, 0.08), smoothstep(0.8, -2.5, q.y));
+  vec3 rock = mix(vec3(0.13, 0.15, 0.17), vec3(0.05, 0.06, 0.08), 1.0 - smoothstep(-2.5, 0.8, q.y));
   rock *= 0.7 + 0.6 * hash21(floor(q * vec2(5.0, 6.0)));
   // sun catches only the top rock band
   rock += vec3(0.30, 0.16, 0.05) * sun * smoothstep(0.5, 1.1, q.y) * walls;
@@ -127,6 +127,8 @@ void main() {
   vec3 behind = mix(mix(sky, gapRock, walls * (1.0 - mist)), mistCol, mist);
   behind = mix(behind, gapRock, farLedge * 0.5);
   col = behind;
+  // the rim band survives the composite — sun catches the wall tops
+  col += vec3(0.35, 0.20, 0.08) * rimBand * sun * walls * (0.4 + 0.6 * hash21(floor(q * vec2(7.0, 4.0))));
 
   // wisps curling up around the parapet line — thin drifting streaks
   float wisp = sin(q.x * 7.0 + uT * 0.5 + sin(q.y * 22.0) * 2.0) *
