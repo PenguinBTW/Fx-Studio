@@ -34,7 +34,7 @@ built to be seen against a low sun with a shadow; 3D is the honest medium.
   is a displaced plane with vertex-color variation.
 - The flock is not a V-formation stamp: it is a curled ribbon whose density and
   centroid move with time — a murmuration, not an arrow.
-- The mill is not a sprite: it is a GLB with 6.5k tris, named parts (`sails`,
+- The mill is not a sprite: it is a GLB with 19k tris, named parts (`sails`,
   `body`, `cap`), and its sails actually rotate about their hub axis.
 
 ## Focal hierarchy
