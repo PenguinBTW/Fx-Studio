@@ -1,0 +1,6 @@
+{
+  "project": "meteorrain",
+  "entries": [
+    { "scene": "meteorrain/meteorrain", "id": "perseids", "start": 0, "end": 20 }
+  ]
+}
