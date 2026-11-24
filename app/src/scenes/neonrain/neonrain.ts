@@ -114,16 +114,16 @@ void main() {
   c = mix(c, vec3(0.015, 0.016, 0.022) * (0.8 + 0.4 * fbm3(vec3(su * 6.0, 1.0), 3)), wall);
 
   // doorway: warm slit of light that opens and closes once
-  vec2 dd = uv - vec2(0.5, 0.16);
-  float door = (1.0 - smoothstep(0.012, 0.028, abs(dd.x))) * (1.0 - smoothstep(0.03, 0.075, abs(dd.y)));
-  c += vec3(1.0, 0.80, 0.45) * door * (0.25 + 1.8 * uDoor);
-  c += vec3(1.0, 0.80, 0.45) * exp(-dd.x * dd.x * 900.0) * exp(-dd.y * dd.y * 160.0) * uDoor * 0.8;
+  vec2 dd = uv - vec2(0.5, 0.275);
+  float door = (1.0 - smoothstep(0.006, 0.013, abs(dd.x))) * (1.0 - smoothstep(0.012, 0.030, abs(dd.y)));
+  c += vec3(1.0, 0.80, 0.45) * door * (0.10 + 0.75 * uDoor);
+  c += vec3(1.0, 0.80, 0.45) * exp(-dd.x * dd.x * 4000.0) * exp(-dd.y * dd.y * 700.0) * uDoor * 0.5;
 
   // overhead cables: 3 sagging dark curves crossing the frame
   for (int i = 0; i < 3; i++) {
     float fi = float(i);
-    float y0 = 0.86 - fi * 0.07 + 0.02 * sin(su.x * 4.0 + fi);
-    float sag = y0 - 0.06 * sin(su.x * 3.14159);
+    float y0 = 0.56 - fi * 0.06 + 0.015 * sin(su.x * 4.0 + fi);
+    float sag = y0 - 0.045 * sin(su.x * 3.14159);
     float line = 1.0 - smoothstep(0.0, 0.006, abs(uv.y - sag));
     c *= 1.0 - 0.75 * line;
   }
@@ -189,7 +189,7 @@ void main() {
   c += vec3(0.08, 0.10, 0.12) * curb;
 
   // far fade into darkness
-  c = mix(c, vec3(0.006, 0.007, 0.012), smoothstep(-30.0, -58.0, p.y));
+  c = mix(c, vec3(0.006, 0.007, 0.012), (1.0 - smoothstep(-58.0, -30.0, p.y)));
   fragColor = vec4(c, 1.0);
 }`;
 
@@ -234,8 +234,8 @@ void main() {
   float t = uT;
   // uv.x 0..1 across the quad maps to world x -26..26; figure walks across once
   float dir = uSeed < 0.5 ? 1.0 : -1.0;
-  float speed = 0.055 + uSeed * 0.02;
-  float cyc = fract(t * speed + uSeed * 0.6);
+  float speed = 0.075 + uSeed * 0.02;
+  float cyc = fract((t - 11.5) * speed + uSeed * 0.6);
   float wx = mix(-0.15, 1.15, uSeed < 0.5 ? cyc : 1.0 - cyc);   // figure center uv.x
   vec2 p = vUv;
   p.x = (p.x - wx) * 8.0;   // figure-local space
@@ -245,17 +245,17 @@ void main() {
   float a = 0.0;
   // umbrella canopy: arc
   vec2 uc = vec2(p.x + dir * 0.02, p.y - (0.78 + bob));
-  float canopy = smoothstep(0.20, 0.16, length(vec2(uc.x / 1.9, uc.y))) * step(uc.y, 0.02);
+  float canopy = (1.0 - smoothstep(0.16, 0.20, length(vec2(uc.x / 1.9, uc.y)))) * step(uc.y, 0.02);
   a = max(a, canopy);
   // head + body capsule
-  float head = smoothstep(0.055, 0.04, length(vec2(p.x, p.y - (0.60 + bob))));
-  float body = smoothstep(0.10, 0.07, abs(p.x)) * step(0.18 + bob, p.y) * step(p.y, 0.60 + bob);
+  float head = (1.0 - smoothstep(0.04, 0.055, length(vec2(p.x, p.y - (0.60 + bob)))));
+  float body = (1.0 - smoothstep(0.07, 0.10, abs(p.x))) * step(0.18 + bob, p.y) * step(p.y, 0.60 + bob);
   a = max(a, max(head, body));
   // legs: two strobing strides
-  float leg = smoothstep(0.05, 0.035, abs(p.x - sin(t * 3.4) * 0.05)) * step(0.0, p.y) * step(p.y, 0.20 + bob);
-  float leg2 = smoothstep(0.05, 0.035, abs(p.x + sin(t * 3.4) * 0.05)) * step(0.0, p.y) * step(p.y, 0.20 + bob);
+  float leg = (1.0 - smoothstep(0.035, 0.05, abs(p.x - sin(t * 3.4) * 0.05))) * step(0.0, p.y) * step(p.y, 0.20 + bob);
+  float leg2 = (1.0 - smoothstep(0.035, 0.05, abs(p.x + sin(t * 3.4) * 0.05))) * step(0.0, p.y) * step(p.y, 0.20 + bob);
   a = max(a, max(leg, leg2) * 0.9);
-  a *= uFade * (1.0 - smoothstep(0.85, 1.0, cyc) * smoothstep(0.15, 0.0, cyc));
+  a *= uFade * (1.0 - smoothstep(0.85, 1.0, cyc) * (1.0 - smoothstep(0.0, 0.15, cyc)));
   if (a < 0.01) discard;
   fragColor = vec4(vec3(0.004, 0.005, 0.010), a);
 }`;
@@ -426,9 +426,11 @@ export default class NeonRainScene extends Scene {
     const g = this.layer.ctx;
     this.layer.clear();
     const duck = overlayTextDuck(f.tin, f.tout);
+    let anyVis = false;
     for (const c of CAPTIONS) {
       const a = ss(c.at, c.at + 0.5, t) * (1 - ss(c.end - 0.5, c.end, t)) * duck;
       if (a <= 0) continue;
+      anyVis = true;
       g.save();
       g.globalAlpha = a;
       const text = c.s.toUpperCase();
@@ -453,7 +455,7 @@ export default class NeonRainScene extends Scene {
       g.fillText(text, this.ctx.W / 2, this.ctx.H - 120);
       g.restore();
     }
-    this.ctx.comp.draw(r, this.layer.upload(), out, { mode: 'normal', opacity: 1 });
+    if (anyVis) this.ctx.comp.draw(r, this.layer.upload(), out, { mode: 'normal', opacity: 1 });
     r.resetState();
 
     return {
