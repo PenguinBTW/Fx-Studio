@@ -348,6 +348,7 @@ export default defineScene({
       const grp = new THREE.Group();
       const p: number[] = [], c: number[] = [];
       const blades = 6 + Math.floor(rng() * 3);
+      const tips: number[][] = [];
       for (let i = 0; i < blades; i++) {
         const bx = (rng() - 0.5) * 0.30;
         const h = 0.28 + rng() * 0.26;
@@ -355,6 +356,7 @@ export default defineScene({
         const shade = 0.55 + rng() * 0.45;
         ribbon(p, c, [[bx, 0], [bx + lean * 0.4, h * 0.55], [bx + lean, h]], 0.014, 0.004,
           [0.035 * shade, 0.045 * shade, 0.032 * shade]);
+        tips.push([bx + lean * 0.62, h * 0.72], [bx + lean, h]);
       }
       const g = new THREE.BufferGeometry();
       g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(p), 3));
@@ -367,22 +369,19 @@ export default defineScene({
       ctx.scene3D.add(grp);
       st.clumps.push(grp);
 
-      // lit tips — same blade tops redrawn warm, gated on the beam
+      // lit tips — the actual blade tops redrawn warm inside the same group,
+      // so the highlight sways with the blade and is gated on the beam
       const tp: number[] = [], tc: number[] = [];
-      for (let i = 0; i < blades; i++) {
-        const bx = cx + (Math.sin(i * 3.7 + ci) * 0.15);
-        const h = 0.20 + (i % 3) * 0.08;
-        ribbon(tp, tc, [[cx + bx * 0.9, grp.position.y + h * 0.62], [cx + bx, grp.position.y + h]], 0.012, 0.004,
-          [0.55, 0.50, 0.30]);
-      }
+      for (let i = 0; i < tips.length; i += 2)
+        ribbon(tp, tc, [tips[i]!, tips[i + 1]!], 0.012, 0.004, [0.55, 0.50, 0.30]);
       const tg = new THREE.BufferGeometry();
       tg.setAttribute("position", new THREE.BufferAttribute(new Float32Array(tp), 3));
       tg.setAttribute("color", new THREE.BufferAttribute(new Float32Array(tc), 3));
       const tmat = st.lifeMat.clone(); tmat.uniforms.uA!.value = 0;
       const tm = new THREE.Mesh(tg, tmat);
-      tm.position.z = 0.06;
+      tm.position.z = 0.004;
       tm.frustumCulled = false;
-      ctx.scene3D.add(tm);
+      grp.add(tm);
       st.grassTips.push({ mat: tmat, x: cx, y: grp.position.y + 0.25 });
     }
 
