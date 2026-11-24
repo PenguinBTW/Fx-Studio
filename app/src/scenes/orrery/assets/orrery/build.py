@@ -110,7 +110,7 @@ def gear(name, teeth, R, thick, z, m, tooth_w=0.10, tooth_h=0.09, center=(0, 0))
     parts = []
     # rim sits on the root circle, below the pitch radius R — opposing teeth
     # bottom out in the gap instead of clipping solid rim (dedendum clearance)
-    bpy.ops.mesh.primitive_cylinder_add(vertices=64, radius=R - tooth_h * 0.75,
+    bpy.ops.mesh.primitive_cylinder_add(vertices=64, radius=R - tooth_h * 0.55,
         depth=thick, location=(cx, cy, z))
     core = bpy.context.object
     core.data.materials.append(m)
