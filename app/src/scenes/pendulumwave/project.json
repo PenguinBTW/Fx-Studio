@@ -1,0 +1,6 @@
+{
+  "project": "pendulumwave",
+  "entries": [
+    { "scene": "pendulumwave/pendulumwave", "id": "pendulum_wave", "start": 0.0, "end": 20.0 }
+  ]
+}
