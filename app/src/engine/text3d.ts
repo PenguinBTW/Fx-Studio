@@ -50,6 +50,7 @@ export class ExtrudedText {
 
     const group = new THREE.Group();
     let currentX = 0;
+    let inkX = 0; // advance edge after the last non-space glyph — spaces aren't ink
     let wordIdx = 0;
     let prevSpace = false;
 
@@ -97,10 +98,13 @@ export class ExtrudedText {
       }
 
       currentX += size * (adv + letterSpacing);
+      if (info) inkX = currentX - size * letterSpacing;
     }
 
-    // Center child meshes horizontally around origin
-    const totalWidth = currentX - size * letterSpacing;
+    // Center child meshes horizontally around origin — measure to the last INK
+    // glyph's advance edge: trailing spaces are not ink, and counting them
+    // visibly shifts centered text off-center
+    const totalWidth = inkX;
     for (const child of group.children) {
       child.position.x -= totalWidth / 2;
       child.userData.glyph.base = [child.position.x, child.position.y, child.position.z];
@@ -156,12 +160,17 @@ export class ExtrudedText {
       if (motion === 'fade' || motion === 'slide-up') {
         if (!m.userData.fadeMat) {
           const src = Array.isArray(m.material) ? m.material[0]! : m.material;
+          m.userData.opaqueMat = src;
           const mat = src.clone();
           mat.transparent = true;
           m.userData.fadeMat = mat;
-          m.material = mat;
         }
-        (m.material as THREE.Material).opacity = p;
+        // fully-revealed glyphs rejoin the opaque pass: staying transparent=true
+        // forever keeps them out of depth-sorted opaque rendering for the rest
+        // of the shot (sorting/halos against the scene behind them)
+        const fullyIn = p >= 1;
+        m.material = fullyIn ? m.userData.opaqueMat : m.userData.fadeMat;
+        if (!fullyIn) (m.material as THREE.Material).opacity = p;
       }
     });
   }
