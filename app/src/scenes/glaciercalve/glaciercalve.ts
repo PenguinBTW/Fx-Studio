@@ -159,9 +159,13 @@ void main() {
   q.y += drop;
 
   bool inSlabOrig = x >= SLAB_X0 && x <= SLAB_X1 && y >= WATERLINE;
-  bool movedCovers = uSlump > 0.001
-    && q.x >= SLAB_X0 && q.x <= SLAB_X1
-    && q.y >= WATERLINE && q.y <= wallTop(q.x) + 0.005;
+  // soft coverage (anti-aliased slab outline) + hard gate for uv decisions
+  float movedCov = uSlump
+    * smoothstep(SLAB_X0 - 0.004, SLAB_X0 + 0.004, q.x)
+    * (1.0 - smoothstep(SLAB_X1 - 0.004, SLAB_X1 + 0.004, q.x))
+    * smoothstep(WATERLINE - 0.004, WATERLINE + 0.004, q.y)
+    * (1.0 - smoothstep(wallTop(q.x) - 0.006, wallTop(q.x) + 0.006, q.y));
+  bool movedCovers = movedCov > 0.5;
 
   float wt = wallTop(x);
   float inWall = 1.0 - smoothstep(wt - 0.004, wt + 0.004, y);
@@ -179,13 +183,8 @@ void main() {
     // gap the slab left: darker torn face across the vacated footprint
     col = mix(col, vec3(0.20, 0.32, 0.46), inWall * uSlump * 0.8);
   }
-  // moved slab on top of wall/sea
-  if (movedCovers) {
-    vec3 slab = wallColor(q);
-    slab *= 1.0 - 0.25 * uSlump;                 // shadowing as it tips
-    slab = mix(slab, vec3(0.30, 0.42, 0.56), smoothstep(0.25, 0.42, drop) * 0.5); // spray-dark underside
-    col = slab;
-  }
+  // moved slab is composited after the sea pass below — pixels under the
+  // waterline belong to the block while it plunges, not the sea.
 
   // glowing blue fracture — measured in pre-drop uv so it rides the slab down
   vec2 cuv = movedCovers ? q : vec2(x, y);
@@ -204,8 +203,10 @@ void main() {
   float crackHalo = exp(-crackD2 * crackD2 * 90000.0) * 0.35;
   vec3 crackCol = vec3(0.30, 0.58, 1.0);
   float crackFlicker = 0.85 + 0.15 * sin(t * 37.0 + crackD2 * 4000.0);
+  float crackMask = movedCov > 0.001 ? 0.8 * movedCov
+                  : inWall * (inSlabOrig && uSlump > 0.001 ? 0.0 : 1.0);
   col += crackCol * (crackGlow * 1.15 + crackHalo) * crackFlicker
-       * (movedCovers ? 0.8 * (1.0 - uSlump) : inWall * (1.0 - uSlump));
+       * crackMask * (1.0 - uSlump);
 
   // --- sea ---------------------------------------------------------------
   if (y < WATERLINE) {
@@ -246,6 +247,15 @@ void main() {
     float wash = (1.0 - smoothstep(0.0, 0.10, sw)) * uAfter * (0.4 + 0.3 * foam);
     sea = mix(sea, vec3(0.55, 0.68, 0.78), wash * 0.45);
     col = sea;
+  }
+
+  // moved slab over everything: a plunging block stays visible at the surface
+  if (movedCov > 0.001) {
+    vec3 slab = wallColor(q);
+    slab *= 1.0 - 0.25 * uSlump;
+    slab = mix(slab, vec3(0.30, 0.42, 0.56), smoothstep(0.25, 0.42, drop) * 0.5);
+    slab *= y < WATERLINE ? 0.75 : 1.0;          // dim the submerged part
+    col = mix(col, slab, movedCov);
   }
 
   // --- mist + glitter over the splash -------------------------------------
