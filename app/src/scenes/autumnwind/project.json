@@ -1,0 +1,32 @@
+{
+  "project": "autumnwind",
+  "meta": {
+    "title": "autumnwind",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 24
+  },
+  "entries": [
+    {
+      "scene": "autumnwind/autumnwind",
+      "id": "act-air",
+      "start": 0,
+      "end": 8,
+      "caption": { "fig": "01", "text": "STILL AIR", "dur": 4 }
+    },
+    {
+      "scene": "autumnwind/autumnwind",
+      "id": "act-gust",
+      "start": 8,
+      "end": 16,
+      "caption": { "fig": "02", "text": "THE GUST", "dur": 4 }
+    },
+    {
+      "scene": "autumnwind/autumnwind",
+      "id": "act-settle",
+      "start": 16,
+      "end": 24,
+      "caption": { "fig": "03", "text": "SETTLED", "dur": 4 }
+    }
+  ]
+}
