@@ -77,7 +77,8 @@ void main() {
                  smoothstep(0.1, 0.9, uv.y));
   // broad rock shading so the walls aren't a flat gradient
   col += vec3(0.014, 0.016, 0.022) * fbm3(vec3(uv.x * 7.0, uv.y * 3.0, 0.0), 3, 2.0, 0.5);
-  float mouth = exp(-pow((uv.x - 1.04) * 6.0, 2.0) - pow((uv.y - 1.06) * 4.5, 2.0));
+  float mx = (uv.x - 1.04) * 6.0, my = (uv.y - 1.06) * 4.5;
+  float mouth = exp(-(mx * mx) - (my * my));
   col += vec3(0.42, 0.44, 0.40) * mouth * 0.7;
 
   // light shaft: diagonal beam from upper-right, soft-edged band
@@ -127,7 +128,8 @@ void main() {
   col += vec3(0.10, 0.11, 0.10) * sheen * (0.25 + 2.2 * beam);
 
   // faint mist band hanging over the floor
-  float mist = exp(-pow((uv.y - 0.10) * 9.0, 2.0))
+  float mst = (uv.y - 0.10) * 9.0;
+  float mist = exp(-(mst * mst))
              * (0.5 + 0.5 * fbm3(vec3(uv.x * 6.0 - uT * 0.03, 2.0, 0.0), 2, 2.0, 0.5));
   col += vec3(0.05, 0.06, 0.07) * mist * 0.3;
 
@@ -157,7 +159,8 @@ void main() {
   float wx = uCam.x + sM * (${SHAFT_X.toFixed(1)} - uCam.x);
   float cx = 0.5 + wx / ${QUAD_W.toFixed(1)};
   float wob = fbm3(vec3(vUv.y * 30.0 + uT * 0.8, 3.0, 0.0), 2, 2.0, 0.5) * 0.006;
-  float streak = exp(-pow((vUv.x - cx - wob) * 16.0, 2.0));
+  float scol = (vUv.x - cx - wob) * 16.0;
+  float streak = exp(-(scol * scol));
   float streakN = 0.5 + 0.5 * fbm3(vec3(vUv.y * 55.0 - uT * 0.7, 5.0, 0.0), 2, 2.0, 0.5);
   streak *= 0.55 + 0.45 * streakN * streakN;
   streak *= smoothstep(0.0, 0.25, vUv.y);
@@ -244,7 +247,8 @@ void main() {
     // shaft dust: slow drift along the beam direction + seeded wobble
     float drift = mod(uT * rate + ph * 10.0, 14.0);
     pos = position + vec3(-0.38, -0.925, 0.0) * drift
-        + vec3(0.2 * sin(uT * 0.3 + ph), 0.1 * sin(uT * 0.5 + ph * 2.0), 0.0);
+        + vec3(0.2 * sin(uT * 0.3 + ph), 0.1 * sin(uT * 0.5 + ph * 2.0), 0.0)
+        + vec3(0.05 * sin(uT * 2.9 + ph * 11.0), 0.04 * sin(uT * 3.4 + ph * 13.0), 0.0);
     alpha = 0.16 + 0.10 * sin(uT * 0.6 + ph * 3.0);
     size = 0.10 + fract(aSeed * 3.3) * 0.14;
   } else if (aKind < 1.5) {
@@ -256,7 +260,8 @@ void main() {
     float off = t0;
     float pc = mod(uT - off, cyc);
     float cs = uT - pc;              // cycle start
-    float open = step(fract(aSeed * 7.0), chorusEnv(cs));
+    // gate on the plop time so impact cadence follows the chorus envelope
+    float open = step(fract(aSeed * 7.0), chorusEnv(cs + gather + fall));
     float dropH = position.y - (${POOL_Y.toFixed(2)});
     if (pc < gather) {
       // bead swells at the tip
@@ -281,17 +286,17 @@ void main() {
   } else if (aKind < 2.5) {
     // bat: crosses the shaft once, wing-beat envelope
     float ot = uT - t0;
-    pos = vec3(position.x - ot * rate,
-               position.y + 0.35 * sin(ot * 1.1 + ph) - 0.15 * ot,
+    pos = vec3(position.x - ot * rate + 0.15 * sin(ot * 2.9 + ph),
+               position.y + 0.35 * sin(ot * 1.1 + ph) - 0.15 * ot + 0.08 * sin(ot * 4.7 + ph * 3.0),
                position.z);
     vFlap = sin(ot * 9.0 + ph);
     alpha = smoothstep(0.0, 0.8, ot) * (1.0 - smoothstep(3.4, 4.4, ot));
-    size = 4.2;
+    size = 4.6;
   } else {
     // salamander shade: scuttles along the floor band during the quiet beat
     float ot = uT - t0;
     float scut = ot + 0.10 * sin(ot * 9.0) * step(0.5, fract(ot * 3.0));
-    pos = vec3(position.x + scut * rate,
+    pos = vec3(position.x + scut * rate + 0.04 * sin(ot * 15.0),
                position.y + 0.06 * abs(sin(ot * 9.0)),
                position.z);
     alpha = smoothstep(0.0, 0.7, ot) * (1.0 - smoothstep(2.6, 3.6, ot));
@@ -463,7 +468,7 @@ export default defineScene({
     // silhouettes on their own material: the bat and the salamander
     const sil = [
       // bat: starts off-frame right of the shaft, crosses left at BAT_T
-      { x: 16.0, y: 4.6, z: -20, k: 2, s: rng() * 100, t0: BAT_T, v: 5.2, amp: 0, ph: rng() * 6.28 },
+      { x: 17.0, y: 4.6, z: -20, k: 2, s: rng() * 100, t0: BAT_T, v: 3.0, amp: 0, ph: rng() * 6.28 },
       // salamander: floor band, scuttles during the quiet beat
       { x: -4.0, y: -4.15, z: -12.5, k: 3, s: rng() * 100, t0: SAL_T, v: 1.9, amp: 0, ph: 0 },
     ];
@@ -524,10 +529,10 @@ export default defineScene({
       const cyc = d.gather + d.fall + d.rest;
       const bucket = ((d.seed * 7.0) % 1 + 1) % 1;
       const k = Math.floor((t - d.off) / cyc);
-      for (let m = Math.max(0, k - 1); m <= k; m++) {
+      for (let m = Math.max(0, k - 2); m <= k; m++) {
         const cs = d.off + m * cyc;
-        if (cs < 0) continue;
-        if (bucket >= chorus(cs)) continue;
+        // gate on plop time — mirrors chorusEnv(cs + gather + fall) in the shader
+        if (bucket >= chorus(cs + d.gather + d.fall)) continue;
         const plopT = cs + d.gather + d.fall;
         const age = t - plopT;
         if (age > 0 && age <= 4.0) act.push({ x: d.tipX, z: d.tipZ, t0: plopT });
