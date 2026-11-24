@@ -257,7 +257,8 @@ void main() {
   for (int i = 0; i < 2; i++) {
     float fi = float(i);
     float lane = (i == 0 ? uLane.x : uLane.y) + q.y * 0.55;
-    col += vec3(0.55, 0.62, 0.42) * uShaft * exp(-pow((q.x - lane) * 1.4, 2.0)) * (0.5 - fi * 0.18);
+    float dShaft = (q.x - lane) * 1.4;
+    col += vec3(0.55, 0.62, 0.42) * uShaft * exp(-dShaft * dShaft) * (0.5 - fi * 0.18);
   }
   // mound silhouette — lumpy rim
   float rim = -0.86 + 0.06 * sin(q.x * 2.1) + 0.03 * sin(q.x * 5.3 + 1.7);
@@ -299,7 +300,8 @@ varying vec3 vC;
 varying float vU;
 void main() {
   vC = color;
-  float u = clamp((uU - aOff) / 0.45, 0.0, 1.0);
+  // window shrinks for late offsets so every vertex finishes at uU = 1
+  float u = clamp((uU - aOff) / max(0.001, min(0.45, 1.0 - aOff)), 0.0, 1.0);
   u = u * u * (3.0 - 2.0 * u);
   vU = u;
   vec3 p = mix(position, aOpen, u);
@@ -387,13 +389,14 @@ void main() {
     // with the last quarter accelerating into free fall.
     float grow = smoothstep(aTo.x, aTo.y, uT);
     float u = smoothstep(aTo.y, aTo.z, uT);
-    p.x = position.x - 0.05 * u + 0.03 * u * u;
-    p.y = position.y - 0.30 * u * u - 9.0 * pow(max(0.0, u - 0.72), 2.0);
+    p.x = position.x + 0.07 * u * u;
+    p.y = position.y - 0.08 * u * u - 9.0 * pow(max(0.0, u - 0.72), 2.0);
     a = grow * (0.9 - 0.3 * u) * (1.0 - smoothstep(0.93, 1.0, u));
     sz = 5.0 + 6.0 * grow;
   } else if (aKind < 5.5) {
     // spider dot at the thread's lower end
-    float u = smoothstep(aT0, aT1 - 0.3, uT);
+    // same window as the thread's sstep(t0, t1 - 0.4) so the spider rides the tip
+    float u = smoothstep(aT0, aT1 - 0.4, uT);
     p.y = 1.62 - 1.9 * u;
     a = step(aT0, uT) * (1.0 - smoothstep(aT1 - 0.15, aT1, uT)) * 0.8;
     sz = 3.5;
@@ -524,10 +527,11 @@ const scene = defineScene({
       addPt(1, i * 3.7 + 1, FLIES_T[i], 23.5, [0, 0, -1.95], [HERO.x, FLY_LAND[i], 0]);
       addPt(2, i * 3.7 + 1, FLIES_T[i], 23.5, [0, 0, -1.95], [HERO.x, FLY_LAND[i], 0]);
     }
-    for (let i = 0; i < 8; i++)    // millipede — aSeed = segment index
-      addPt(3, i, 5.2, 7.5, [-1.55, -0.84, -2.6], [0, 0, 0]);
-    // dew droplet — aTo = [growStart, slideStart, fallEnd]
-    addPt(4, 3.1, 0, DUR, [HERO.x + 0.30, HERO.y - 0.06, -1.9], [DROP.grow0, DROP.grow1, DROP.fall1]);
+    for (let i = 0; i < 14; i++)   // millipede — aSeed = segment index
+      addPt(3, i, 0.8, 3.4, [-1.55, -0.84, -2.6], [0, 0, 0]);
+    // dew droplet — aTo = [growStart, slideStart, fallEnd];
+    // seeds on the lower-right petal's open midrib, slides to the tip
+    addPt(4, 3.1, 0, DUR, [0.29, 0.37, -1.9], [DROP.grow0, DROP.grow1, DROP.fall1]);
     addPt(5, 7.7, THREAD.t0, THREAD.t1, [0.95, 0, -2.9], [0, 0, 0]);   // spider
     addPt(6, 9.9, GLINT.t0, GLINT.t1, [HERO.x + 0.05, HERO.y - 0.18, -1.9], [0, 0, 0]); // lip glint
 
