@@ -1,0 +1,13 @@
+{
+  "project": "diffraction",
+  "entries": [
+    {
+      "scene": "diffraction/diffraction",
+      "id": "diffraction",
+      "start": 0.0,
+      "end": 20.0,
+      "caption": { "fig": "01", "text": "DIFFRACTION", "dur": 3.5 }
+    }
+  ],
+  "transitions": []
+}
