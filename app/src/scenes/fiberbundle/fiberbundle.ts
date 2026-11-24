@@ -193,7 +193,7 @@ export default class FiberBundleScene extends Scene {
     this.camera.position.set(
       Math.sin(lt * 0.07) * 2.1,          // slow lateral drift
       0.7 + Math.sin(lt * 0.05) * 0.45,
-      dist * (1.03 - 0.12 * u),            // very slow push-in
+      dist * (1.1 - 0.1 * u),              // very slow push-in — stays wide enough to keep the strand ends on screen
     );
     this.camera.lookAt(0, -1, 0);
     const far = Math.max(300, dist + 60);
@@ -237,6 +237,11 @@ export default class FiberBundleScene extends Scene {
     }
     hp.needsUpdate = true;
     ec.needsUpdate = true;
+
+    // Frame tremor: deterministic high-frequency flicker on the pulse
+    // heads so transits don't read as single-curve motion.
+    const frameIdx = Math.floor(lt * 60);
+    this.headMat.size = 0.22 * (1 + 0.14 * (hash(frameIdx, 7) - 0.5));
 
     const r = this.ctx.renderer;
     r.setRenderTarget(out);
