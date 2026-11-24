@@ -100,22 +100,22 @@ void main() {
   vec2 uv = vUv;
   float x = uv.x, t = uT;
 
-  // --- tilt to the surf: pool space compresses downward, surf+sky fill top
-  float yy = (uv.y - 0.34 * uTilt) / (1.0 - 0.34 * uTilt);
-  vec2 w = vec2(x, yy);          // pool-space coordinate (clamps below 0)
-  float inPool = smoothstep(-0.06, 0.02, yy);
+  // --- tilt to the surf: pool compresses to the bottom, surf+sky reveal
+  // beyond the far rim (yy > ~1.06) as the camera pitches up
+  float yy = uv.y / (1.0 - 0.34 * uTilt);
+  vec2 w = vec2(x, yy);          // pool-space coordinate
+  float inPool = 1.0 - smoothstep(1.015, 1.06, yy);
 
   vec3 col = vec3(0.0);
 
-  // --- surf + sky band (revealed by the tilt) ------------------------------
-  float sea = clamp(-yy * 8.0 + 0.5, 0.0, 1.0);       // closer to horizon line
-  vec3 sky = mix(vec3(0.93, 0.62, 0.36), vec3(0.45, 0.55, 0.72), clamp(-yy * 3.0, 0.0, 1.0));
+  // --- surf + sky beyond the far rim (revealed by the tilt) ----------------
+  float surfD = yy - 1.055;      // height above the far waterline
+  vec3 sky = mix(vec3(0.93, 0.62, 0.36), vec3(0.45, 0.55, 0.72), clamp(surfD * 2.2, 0.0, 1.0));
   float swBand = vnoise(vec2(x * 14.0 - t * 1.2, yy * 60.0)) * 0.5 + 0.5;
-  vec3 seaCol = mix(vec3(0.16, 0.38, 0.46), vec3(0.30, 0.55, 0.60), clamp(-yy * 5.0, 0.0, 1.0));
+  vec3 seaCol = mix(vec3(0.30, 0.55, 0.60), vec3(0.16, 0.38, 0.46), clamp(surfD * 4.0, 0.0, 1.0));
   seaCol += vec3(0.95, 0.88, 0.72) * smoothstep(0.72, 0.95, swBand) * 0.35; // foam lace
-  float horizon = -0.055;
-  vec3 bandCol = yy > horizon ? sky : mix(sky, seaCol, smoothstep(horizon + 0.02, horizon - 0.03, yy));
-  bandCol += vec3(1.0, 0.78, 0.45) * exp(-pow((yy - horizon) * 18.0, 2.0)) * 0.35; // sun sheen on the line
+  vec3 bandCol = mix(seaCol, sky, smoothstep(0.02, 0.42, surfD));
+  bandCol += vec3(1.0, 0.78, 0.45) * exp(-surfD * surfD * 324.0) * 0.35; // sun sheen on the line
   col = bandCol;
 
   // --- the pool (top-down view) -------------------------------------------
@@ -128,7 +128,8 @@ void main() {
   // water surface = sky reflection gradient + cloud shadows + caustics
   vec2 wuv = w + vec2(0.015 * sin(t * 0.5 + w.y * 24.0), 0.008 * sin(t * 0.4 + w.x * 31.0)) * (0.3 + uEnergy);
   vec3 refl = mix(vec3(0.78, 0.48, 0.28), vec3(0.13, 0.37, 0.42), smoothstep(0.05, 0.95, wuv.y));
-  refl += vec3(1.0, 0.82, 0.55) * exp(-pow((wuv.x - 0.62) * 4.0, 2.0)) * exp(-pow((wuv.y - 0.75) * 4.0, 2.0)) * 0.5; // sun glitter pool
+  float gx = (wuv.x - 0.62) * 4.0, gy = (wuv.y - 0.75) * 4.0;
+  refl += vec3(1.0, 0.82, 0.55) * exp(-gx * gx) * exp(-gy * gy) * 0.5; // sun glitter pool
   float clouds = fbm2(wuv * vec2(2.4, 3.0) + vec2(t * 0.05, t * 0.013));
   refl *= 0.78 + 0.28 * clouds; // drifting cloud shadows
   // caustic webbing on the pool floor — two counter-scrolling sine lattices
@@ -145,19 +146,23 @@ void main() {
     float cyc = floor((t - 5.0) / 3.0 + fi * 0.37);
     float t0 = 5.0 + (cyc - fi * 0.37) * 3.0 + 0.4;
     vec2 c = vec2(0.30 + 0.42 * hash12(vec2(fi, cyc)), 0.38 + 0.30 * hash12(vec2(cyc, fi + 9.0)));
-    float rg = ring(pc * vec2(1.0, 1.35), c - vec2(0.5, 0.52), t0, 0.22, t);
+    // rings only live in the ripple beat — births gated so the opening
+    // mirror stays glass and the settled pool can go still again
+    float born = smoothstep(4.6, 5.2, t0) * (1.0 - smoothstep(11.5, 12.5, t0));
+    float rg = ring(pc * vec2(1.0, 1.35), c - vec2(0.5, 0.52), t0, 0.22, t) * born;
     rippleLight += rg;
     ripplePush += normalize(pc - (c - vec2(0.5, 0.52)) + vec2(1e-4)) * rg * 0.012;
   }
   // surf wavelets crossing — travelling stripes from the top rim
   float wv = sin((wuv.y * 34.0 - t * 2.1) + sin(wuv.x * 9.0 + t * 0.6) * 1.4);
-  float wavelets = smoothstep(0.75, 0.95, wv) * uRipple * (0.5 + 0.5 * uEnergy);
+  float wavelets = smoothstep(0.75, 0.95, wv) * uRipple * (1.0 - uSettle) * (0.5 + 0.5 * uEnergy);
   water += vec3(0.9, 0.95, 1.0) * wavelets * 0.10;
   water = mix(water, refl + vec3(1.0, 0.9, 0.7) * 0.55, clamp(rippleLight, 0.0, 1.0) * 0.55);
 
   // slosh surge — bright band sweeping the pool + foam trails
   float sr = (t - 9.0) / 3.2;
-  float surge = exp(-pow((w.y - (1.05 - sr * 1.15)) * 7.0, 2.0)) * uSlosh;
+  float sd = (w.y - (1.05 - sr * 1.15)) * 7.0;
+  float surge = exp(-sd * sd) * uSlosh;
   water += vec3(0.95, 0.93, 0.82) * surge * 0.9;
   float foamFleck = step(0.93, hash12(floor(wuv * vec2(90.0, 140.0)) + floor(t * 7.0)));
   water += vec3(1.0) * foamFleck * surge * 0.7;
@@ -285,12 +290,13 @@ export default class TidepoolsScene extends Scene {
   }
 
   // mote pose: drift on the water band (uv y 0.30–0.75), twinkle, sink on slosh
-  private motePose(i: number, t: number, out: THREE.Vector3) {
+  private motePose(i: number, t: number, tilt: number, out: THREE.Vector3) {
     const u = frac(i * 0.6180339887);
     const w = frac(i * 0.7548776662);
     const drift = t * (0.008 + 0.014 * w);
     const x = 0.32 + frac(u + drift) * 0.40;
-    const y = 0.32 + w * 0.40 + Math.sin(t * (0.4 + u) + i) * 0.012;
+    // compress with the tilt warp so the glitter stays on the water
+    const y = (0.32 + w * 0.40 + Math.sin(t * (0.4 + u) + i) * 0.012) * (1 - 0.34 * tilt);
     const tw = Math.sin(t * (2.0 + w * 3.0) + u * 40.0) * 0.5 + 0.5;
     uvToWorld(x, y, out);
     out.z += 0.8;
@@ -309,7 +315,7 @@ export default class TidepoolsScene extends Scene {
     this.u.uEnergy.value = energyT(t);
 
     for (let i = 0; i < MOTES; i++) {
-      const b = this.motePose(i, t, this.p);
+      const b = this.motePose(i, t, tiltT(t), this.p);
       if (b <= 0.02) { this.m.makeScale(0, 0, 0); this.motes.setMatrixAt(i, this.m); continue; }
       this.sv.setScalar(b);
       this.m.compose(this.p, this.q.identity(), this.sv);
