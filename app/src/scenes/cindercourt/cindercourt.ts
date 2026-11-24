@@ -105,7 +105,7 @@ float sentryX(float t) {
   float u = s < 0.42 ? s / 0.42 * 0.5
                    : s < 0.58 ? 0.5
                               : 0.5 + (s - 0.58) / 0.42 * 0.5;
-  return mix(0.20, 0.78, u);
+  return mix(0.20, 0.80, u); // ends at the doorway's x
 }
 
 vec3 skyAt(vec2 uv, float t) {
@@ -141,7 +141,7 @@ vec3 floorAt(vec2 uv, float t, float flick) {
   // flagstones with perspective — rows squeeze toward the wall base
   vec2 q = vec2(uv.x, uv.y);
   float row = floor(q.y * 18.0);
-  float px = q.x * (14.5 - row * 0.45); // stones widen toward the camera
+  float px = q.x * (10.5 + row * 0.5); // stones narrow into the distance
   float py = q.y * 18.0;
   vec2 f = abs(fract(vec2(px + mod(row, 2.0) * 0.5, py)) - 0.5);
   float joint = sstep(0.42, 0.50, max(f.x, f.y));
@@ -345,23 +345,24 @@ void main() {
     float u = (t - (RAVEN_IN - 0.7)) / 0.85;
     vec2 fp = mix(vec2(0.80, PARAPET + 0.06), vec2(WELL.x - 0.015, WELL.y + 0.14),
                   u + 0.15 * sin(u * 3.14));
-    float wings = sstep(0.010, 0.004, sdist(uv, fp + vec2(0.0, abs(sin(u * 18.0)) * 0.006),
+    float wings = sstep(1.0, 0.55, sdist(uv, fp + vec2(0.0, abs(sin(u * 18.0)) * 0.006),
                     vec2(0.012 / ASPECT, 0.006)));
     col = mix(col, vec3(0.012, 0.010, 0.014), wings);
   }
 
   // ---- sentry + his torch ----
   float sent = sentryAt(uv, t);
-  if (sent > 0.0) {
-    col = mix(col, vec3(0.012, 0.010, 0.012), sent);
-    // the torch he carries: a bright dot above and ahead of him
+  col = mix(col, vec3(0.012, 0.010, 0.012), sent);
+  // the torch he carries: a bright dot above and ahead of him — drawn outside
+  // the silhouette gate so the flame shows against the sky band
+  if (t > WALK_IN && t < WALK_OUT) {
     float s = sentryX(t);
     vec2 tp = vec2(s + 0.012, PARAPET + 0.052 + 0.002 * sin(t * 9.0));
     float dot2 = sdist(uv, tp, vec2(0.009 / ASPECT, 0.011));
-    float sglow = sstep(1.0, 0.4, dot2) * sstep(WALK_IN, WALK_IN + 0.4, t)
-                  * sstep(WALK_OUT, WALK_OUT - 0.3, t);
+    float flameOn = sstep(WALK_IN, WALK_IN + 0.4, t) * sstep(WALK_OUT, WALK_OUT - 0.3, t);
+    float sglow = sstep(1.0, 0.4, dot2) * flameOn;
     col = mix(col, vec3(1.0, 0.72, 0.30), sglow);
-    col += vec3(0.95, 0.55, 0.20) * exp(-dot2 * 0.9) * 0.45;
+    col += vec3(0.95, 0.55, 0.20) * exp(-dot2 * 0.9) * 0.45 * flameOn;
   }
 
   // ---- cat crossing the gallery shadow ----
@@ -383,7 +384,7 @@ void main() {
       float land = PIGEONS + fi * 0.9;
       float u = clamp((t - land) / 1.2, 0.0, 1.0);
       vec2 from = vec2(0.90 - fi * 0.06, PARAPET + 0.16);
-      vec2 to = vec2(0.66 + fi * 0.07, PARAPET + 0.045);
+      vec2 to = vec2(0.66 + fi * 0.07, PARAPET + 0.023); // perch on the merlon tops
       vec2 pp = mix(from, to, u + 0.12 * sin(u * 3.14));
       float puff = u < 1.0 ? abs(sin(t * 14.0)) * 0.5 + 0.5 : 1.0;
       float b = sdist(uv, pp, vec2(0.006 / ASPECT, 0.007) * puff);
