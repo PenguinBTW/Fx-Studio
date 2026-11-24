@@ -110,8 +110,9 @@ float ssInt(float a, float b, float t) {
 }
 float owlFlap(float t) {
   float glide = sstep(OWL_BANK - 1.0, OWL_BANK, t) * (1.0 - sstep(OWL_DIP + 0.4, OWL_CLIMB + 0.5, t));
-  // phase = integral of the rate: 2.4Hz glide-beats ramping to 3.4Hz powered
-  float phase = t * 2.4 + (3.4 - 2.4) * ssInt(OWL_DIP, OWL_CLIMB, t);
+  // phase = integral of the rate: 2.4Hz glide-beats ramping to 3.4Hz powered,
+  // then holding 3.4Hz through the exit (linear tail keeps the fast cadence)
+  float phase = t * 2.4 + (3.4 - 2.4) * (ssInt(OWL_DIP, OWL_CLIMB, t) + max(t - OWL_CLIMB, 0.0));
   return sin(phase * 6.2831) * (1.0 - glide * 0.85);
 }
 float owlAlpha(float t) {
