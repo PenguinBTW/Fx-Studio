@@ -8,3 +8,5 @@ Concept: a lensed accretion disk — light made to fall around a dark sphere.
 - **Beat 2 — THE DISK BRIGHTENS (t 8–16)**: `uBright` ramps; streaks, doppler asymmetry and the over-top arc become legible.
 - **Beat 3 — THE WARP REVEALS (t 16–24)**: camera dips toward the disk plane (parallax on approach), revealing the upper arc / under-arc ghost geometry.
 - All motion closed-form `f(t)`; per-ctx state via WeakMap; star field bends inward near the limb (cheap lens distortion).
+
+Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL

@@ -59,6 +59,7 @@ uniform float uBright;
 uniform float uGhost;   // dimmer factor for the under-arc
 uniform float uInnerR;  // ring inner radius (world units)
 uniform float uOuterR;
+uniform float uArc;     // 1 = lensed arc band: fade out where the bend fades
 
 void main() {
   float r = mix(uInnerR, uOuterR, vRad);
@@ -77,7 +78,7 @@ void main() {
 
   // doppler beaming: +x side approaches (blue-white, brighter), −x recedes
   float dop = vX / max(0.001, vExt);
-  float boost = 1.0 + 1.4 * dop;
+  float boost = max(0.0, 1.0 + 1.4 * dop); // receding side dims to zero, never negative
 
   vec3 hot = vec3(0.62, 0.78, 1.0);   // blue-white
   vec3 mid = vec3(1.0, 0.55, 0.18);   // amber
@@ -87,6 +88,9 @@ void main() {
   col += vec3(1.0, 0.93, 0.8) * pow(temp, 2.5) * 0.55;
 
   float a = edge * sat(d * 1.6) * (0.3 + temp) * boost * uBright * uGhost;
+  // lensed arcs only emit where the geometry is actually bent over/under
+  float farMask = exp(-pow((sin(vAng) + 1.0) / 0.42, 2.0));
+  a *= mix(1.0, sat(farMask * 2.2), uArc);
   gl_FragColor = vec4(col * a, a);
 }
 `;
@@ -159,8 +163,8 @@ function buildArc(
   let k = 0;
   for (let i = 0; i <= segs; i++) {
     const ang = (i / segs) * Math.PI * 2;
-    // far side is the −z half (camera at +z): bend there
-    const far = Math.exp(-Math.pow((Math.cos(ang) + 1.0) / 0.42, 2)); // tight around ang=π (−z)
+    // far side = −z (sin(ang) = −1 → ang = 3π/2), the half behind the sphere
+    const far = Math.exp(-Math.pow((Math.sin(ang) + 1.0) / 0.42, 2));
     for (let j = 0; j < rows; j++) {
       const t = j / (rows - 1);
       const r = innerR + (outerR - innerR) * t;
@@ -202,6 +206,7 @@ function diskMat(uniforms: Record<string, number>): THREE.ShaderMaterial {
       uGhost: { value: uniforms.uGhost ?? 1 },
       uInnerR: { value: uniforms.uInnerR },
       uOuterR: { value: uniforms.uOuterR },
+      uArc: { value: uniforms.uArc ?? 0 },
     },
   });
 }
@@ -245,7 +250,7 @@ export default defineScene({
 
     // upper arc: far side bent over the top of the sphere
     const upGeo = buildArc(3.9, 10.5, 220, 5.0);
-    const uMat = diskMat({ uInnerR: 3.9, uOuterR: 10.5, uGhost: 1.0 });
+    const uMat = diskMat({ uInnerR: 3.9, uOuterR: 10.5, uGhost: 1.0, uArc: 1 });
     const upArc = new THREE.Mesh(upGeo, uMat);
     upArc.rotation.x = 0.21;
     upArc.renderOrder = 6;
@@ -254,7 +259,7 @@ export default defineScene({
 
     // under-arc ghost: dimmer arc beneath the sphere
     const loGeo = buildArc(3.8, 9.0, 200, -3.2);
-    const lMat = diskMat({ uInnerR: 3.8, uOuterR: 9.0, uGhost: 0.4 });
+    const lMat = diskMat({ uInnerR: 3.8, uOuterR: 9.0, uGhost: 0.4, uArc: 1 });
     const loArc = new THREE.Mesh(loGeo, lMat);
     loArc.rotation.x = 0.21;
     loArc.renderOrder = 2;
@@ -288,7 +293,10 @@ export default defineScene({
     sc.add(stars);
 
     ctx.rig.setLensMm(48);
-    // seed the rig so non-rendering samplers see the path
+    // register the flight path so God-View's non-rendering sampler sees it
+    const wps = [];
+    for (let i = 0; i <= 8; i++) wps.push({ t: i / 8, pos: camPos(i / 8 * 24), target: camTarget(i / 8 * 24) });
+    ctx.rig.setPath(wps);
     ctx.rig.position = camPos(0);
     ctx.rig.target = camTarget(0);
     ctx.updateCamera(0, 0);
