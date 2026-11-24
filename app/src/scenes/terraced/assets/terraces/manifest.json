@@ -1,0 +1,15 @@
+{
+  "id": "terraces",
+  "version": 1,
+  "source": "build.py",
+  "parts": {
+    "terraces": "terraces",
+    "walls": "walls",
+    "barn": "barn",
+    "path": "path",
+    "cypress": "cypress",
+    "olive": "olive",
+    "figure": "figure"
+  },
+  "budgets": { "tris": 20000, "textureMB": 1 }
+}
