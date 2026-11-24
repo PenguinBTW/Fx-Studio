@@ -1,0 +1,6 @@
+{
+  "project": "inkpool",
+  "entries": [
+    { "scene": "inkpool/ink", "id": "inkpool", "start": 0.0, "end": 20.0 }
+  ]
+}
