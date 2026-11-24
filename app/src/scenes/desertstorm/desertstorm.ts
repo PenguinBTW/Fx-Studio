@@ -91,6 +91,13 @@ float gustEnv(float t) {
   return 0.25 + 0.55 * sstep(4.5, 8.5, t) * (1.0 - sstep(14.0, 18.5, t))
        + 0.20 * sin(t * 1.7) * sstep(4.5, 7.0, t) * (1.0 - sstep(14.0, 18.0, t));
 }
+// ∫gustEnv dt (fixed-sum quadrature): positions must integrate the gust,
+// not multiply by it — t*g reverses direction when g falls.
+float gustInt(float t) {
+  float s = 0.0;
+  for (int i = 0; i < 32; i++) { s += gustEnv(t * float(i) / 32.0); }
+  return s * t / 32.0;
+}
 
 vec3 skyCol(vec2 uv, float t) {
   // late afternoon: amber horizon warming toward the off-frame sun (right),
@@ -158,6 +165,20 @@ float crow(vec2 uv, vec2 c, float flap, float s) {
 }
 
 vec3 sceneCol(vec2 uv, float t) {
+  float g = gustEnv(t);
+  // crow: fights the headwind from the right, gives up, lands on the fence
+  // (computed before the sky/ground split so the flying silhouette — which
+  // lives above HZ — actually reaches pixels; the perch sits below HZ)
+  float ct = sstep(4.5, 9.0, t);
+  float land = sstep(9.0, 10.0, t);
+  // perches on the second fence post (z=7.1, tilt of loop index 1)
+  vec2 perch = fenceTop(7.1, (h1(10.1) - 0.5) * 0.9) + vec2(0.0, 0.004);
+  vec2 fly = vec2(1.06 - 0.62 * ct + 0.05 * sin(t * 6.0) * g,
+                  0.62 + 0.08 * sin(t * 4.2) * g - 0.05 * ct);
+  vec2 cp = mix(fly, perch, land);
+  float flap = sin(t * mix(13.0, 2.0, land)) * 0.55 * (1.0 - land * 0.9);
+  float cm = crow(uv, cp, flap, 0.012);
+
   if (uv.y >= HZ) {
     vec3 c = skyCol(uv, t);
     // mesa rim: flat-topped silhouette band right of centre, plus a faint
@@ -173,6 +194,7 @@ vec3 sceneCol(vec2 uv, float t) {
     float lm = sstep(leftRim, leftRim - 0.003, uv.y) * sstep(0.5, 0.2, uv.x);
     vec3 mesaC = mix(vec3(0.36, 0.24, 0.20), vec3(0.45, 0.30, 0.24), sstep(0.0, 0.03, uv.y - HZ));
     c = mix(c, mesaC, clamp(mesa + lm, 0.0, 1.0) * 0.9);
+    c = mix(c, vec3(0.06, 0.05, 0.06), cm * 0.95);      // crow vs the sky
     return c;
   }
 
@@ -203,7 +225,6 @@ vec3 sceneCol(vec2 uv, float t) {
   c = mix(c, skyCol(vec2(uv.x, HZ + 0.02), t), pool * 0.30);
 
   // telephone poles + sagging wires, LEFT side, receding
-  float g = gustEnv(t);
   for (int i = 0; i < 6; i++) {
     float zz = 4.5 + float(i) * 5.8;
     float p = pole(uv, zz);
@@ -244,9 +265,10 @@ vec3 sceneCol(vec2 uv, float t) {
     }
   }
 
-  // plastic bag snagged on the nearest fence post — whipping with the gust
+  // plastic bag snagged on the nearest fence post (z=3.5, tilt of loop
+  // index 0 — sstep(12,4,3.5)=1 so the envelope is at full weight)
   {
-    vec2 post = fenceTop(4.0, 0.15);
+    vec2 post = fenceTop(3.5, (h1(7.0) - 0.5) * 0.9);
     float whip = (0.6 + 0.4 * g);
     vec2 bp = post + vec2(0.012 * sin(t * 7.3) * whip + 0.006 * sin(t * 12.7) * g,
                           0.006 * sin(t * 9.1) * whip - 0.004 * g);
@@ -275,18 +297,8 @@ vec3 sceneCol(vec2 uv, float t) {
     c = mix(c, weedC, wmk.x * 0.95 * sstep(11.5, 9.5, zz) * sstep(2.8, 3.2, zz));
   }
 
-  // crow: fights the headwind from the right, gives up, lands on the fence
-  {
-    float ct = sstep(4.5, 9.0, t);
-    float land = sstep(9.0, 10.0, t);
-    vec2 perch = fenceTop(4.4, 0.2) + vec2(0.0, 0.004);
-    vec2 fly = vec2(1.06 - 0.62 * ct + 0.05 * sin(t * 6.0) * g,
-                    0.62 + 0.08 * sin(t * 4.2) * g - 0.05 * ct);
-    vec2 cp = mix(fly, perch, land);
-    float flap = sin(t * mix(13.0, 2.0, land)) * 0.55 * (1.0 - land * 0.9);
-    float cm = crow(uv, cp, flap, 0.012);
-    c = mix(c, vec3(0.06, 0.05, 0.06), cm * 0.95);
-  }
+  // crow vs the ground (perched side of its arc; flight side painted above HZ)
+  c = mix(c, vec3(0.06, 0.05, 0.06), cm * 0.95);
 
   // truck headlights: two glows inside the advancing haze, growing then cut
   {
@@ -314,6 +326,7 @@ void main() {
   vec2 uv = vUv;
   float t = uT;
   float g = gustEnv(t);
+  float gi = gustInt(t);
 
   // mild shimmer wobble in the road band only (front-lit, subtle)
   float band = sstep(HZ, HZ - 0.10, uv.y) * sstep(HZ - 0.30, HZ - 0.06, uv.y);
@@ -334,8 +347,9 @@ void main() {
             + 0.04 * sin(uv.y * 21.0 - t * 1.1);
   float edge = f + 0.09 * (uv.y - HZ) + rag;
   float inWall = sstep(edge, edge - 0.03, uv.x);
-  // ragged top: wall fades to wisps above topEdge
-  float topEdge = 0.80 + 0.13 * fbm2(vec2(uv.x * 4.0 + t * 0.12, 7.7));
+  // ragged top: wall fades to wisps above topEdge (kept under the frame's
+  // ~0.79 visible ceiling so the crest + god-ray band stay in shot)
+  float topEdge = 0.70 + 0.11 * fbm2(vec2(uv.x * 4.0 + t * 0.12, 7.7));
   float topFade = 1.0 - sstep(topEdge - 0.02, topEdge + 0.10, uv.y);
   // stratified bands: darker churned base, mid ochre, brighter top
   float strata = fbm2(vec2(uv.y * 26.0, uv.x * 3.0 + t * 0.4));
@@ -379,7 +393,7 @@ void main() {
       if (i >= n) break;
       float sd = h1(i * 7.13 + kk * 31.7);
       float yy = 0.04 + 0.80 * h1(i * 3.3 + kk * 13.0 + 0.4);
-      float xx = fract(h1(i * 11.7 + kk * 5.0) + t * spd * (0.35 + 0.35 * g) * (1.0 + sd));
+      float xx = fract(h1(i * 11.7 + kk * 5.0) + spd * (0.35 * t + 0.35 * gi) * (1.0 + sd));
       float len = 0.015 + 0.030 * sd + 0.02 * kk;
       float d = abs(uv.y - yy);
       float dx = abs(uv.x - xx);
@@ -463,7 +477,9 @@ export default class DesertstormScene extends Scene {
         const ndc = this.v.set(awx, awy, PZ + 0.4).project(this.cam);
         if (ndc.z > 1) continue;
         const cx0 = (ndc.x * 0.5 + 0.5) * W;
-        const cy = (0.5 - ndc.y * 0.5) * H + H * 0.18;
+        // ground-anchored captions can project below the canvas — clamp cy
+        // like cx so the caption always lands inside the frame
+        const cy = Math.min(Math.max((0.5 - ndc.y * 0.5) * H + H * 0.18, 44), H - 44);
         c.save();
         c.globalAlpha = a;
         c.font = `46px "${F.archivo(112, 500)}", sans-serif`;
