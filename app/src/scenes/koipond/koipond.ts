@@ -66,7 +66,7 @@ void main() {
   float taper = mix(0.16, 0.42, sin(clamp(q.x, 0.0, 1.0) * 3.14159));
   float body = 1.0 - smoothstep(taper * 0.85, taper, abs(q.y));
   // tail fin: forked lobes at the far end
-  float tailZone = smoothstep(0.12, 0.0, q.x);
+  float tailZone = 1.0 - smoothstep(0.0, 0.12, q.x);
   float tailLobe = 1.0 - smoothstep(0.20, 0.30, abs(abs(q.y) - 0.16 * tailZone - 0.05));
   float fin = tailZone * tailLobe * 0.8;
   // dorsal/pectoral fins — soft lobes off the flank
@@ -180,8 +180,8 @@ void main() {
   vec2 q = (vUv - 0.5) * 2.0;
   // body: thin capsule along x; wings: two streaks
   float body = 1.0 - smoothstep(0.05, 0.10, abs(q.y) + abs(q.x) * 0.12);
-  float wing1 = (1.0 - smoothstep(0.05, 0.16, abs(q.y - 0.18 - q.x * 0.10))) * smoothstep(0.8, 0.2, abs(q.x));
-  float wing2 = (1.0 - smoothstep(0.05, 0.16, abs(q.y + 0.18 + q.x * 0.10))) * smoothstep(0.8, 0.2, abs(q.x));
+  float wing1 = (1.0 - smoothstep(0.05, 0.16, abs(q.y - 0.18 - q.x * 0.10))) * (1.0 - smoothstep(0.2, 0.8, abs(q.x)));
+  float wing2 = (1.0 - smoothstep(0.05, 0.16, abs(q.y + 0.18 + q.x * 0.10))) * (1.0 - smoothstep(0.2, 0.8, abs(q.x)));
   float shape = max(body, max(wing1, wing2) * 0.55);
   if (shape < 0.06) discard;
   vec3 col = mix(vec3(0.25, 0.55, 0.60), vec3(0.85, 0.95, 1.0), max(wing1, wing2));
@@ -227,6 +227,8 @@ uniform float uDusk;   // gold deepening
 uniform float uKiss;   // kiss-ring window
 uniform float uLeap;   // hero leap arc 0→1 (shadow fades while airborne)
 uniform vec3 uKoi[5];  // xy = uv pos on the pond, z = body scale
+uniform vec3 uRing[6]; // frozen ring origins: xy = uv centre, z = birth t (5 = hero splash)
+uniform float uLand;   // hero landed — shadow restores to full depth
 uniform float uHop;    // frog launch 0→1
 out vec4 fragColor;
 
@@ -254,14 +256,15 @@ float ring(vec2 p, vec2 c, float t0, float spd, float t) {
   float band = 1.0 - smoothstep(0.0, w, abs(length(p - c) - rr));
   return band * exp(-dt * 0.5) * exp(-rr * 1.8);
 }
+// uv → pond space: every ring/shadow centre goes through the same x-stretch
+vec2 pcOf(vec2 u) { vec2 p = u - vec2(0.5, 0.52); p.x *= 1.45; return p; }
 
 void main() {
   vec2 uv = vUv;
   float t = uT;
 
   // --- water: deep teal centre → warm sky reflection at the edges
-  vec2 pc = uv - vec2(0.5, 0.52);
-  pc.x *= 1.45;
+  vec2 pc = pcOf(uv);
   float r = length(pc);
   vec3 deepTeal = vec3(0.035, 0.16, 0.19);
   vec3 warmSky = mix(vec3(0.58, 0.35, 0.20), vec3(0.85, 0.52, 0.25), uDusk * 0.8);
@@ -288,33 +291,30 @@ void main() {
     float t0 = (cyc - fi * 0.37) * 4.5 + 0.6 + hash12(vec2(fi, cyc)) * 1.5;
     // drops fall inward from the willow border
     vec2 c = mix(vec2(0.5), vec2(0.15 + 0.7 * hash12(vec2(fi * 3.0, cyc)), 0.2 + 0.6 * hash12(vec2(cyc, fi * 7.0))), 0.86);
-    float rg = ring(pc, c - vec2(0.5, 0.52), t0, 0.16, t);
+    float rg = ring(pc, pcOf(c), t0, 0.16, t);
     dropLight += rg;
-    dropPush += normalize(pc - (c - vec2(0.5, 0.52)) + vec2(1e-4)) * rg * 0.008;
+    dropPush += normalize(pc - pcOf(c) + vec2(1e-4)) * rg * 0.008;
   }
   // --- surface-kiss rings: each fish kisses once on a seeded time in-window
+  // kiss rings expand from where each fish touched the surface, not where it is now
   for (int i = 0; i < 5; i++) {
-    float fi = float(i);
-    float t0 = 6.2 + hash12(vec2(fi, 3.0)) * 5.5;
-    vec2 c = uKoi[i].xy;
-    float rg = ring(pc, c - vec2(0.5, 0.52), t0, 0.07, t) * uKiss;
+    float rg = ring(pc, pcOf(uRing[i].xy), uRing[i].z, 0.07, t) * uKiss;
     dropLight += rg * 0.6;
   }
   // --- frog plop ring at ~11.55 where its pad was
-  vec2 frogPad = vec2(0.68, 0.40) - vec2(0.5, 0.52);
-  dropLight += ring(pc, frogPad, 11.55, 0.13, t) * 2.2;
-  // --- hero splash ring when the leap lands ~15.9
-  dropLight += ring(pc, uKoi[0].xy - vec2(0.5, 0.52), 15.9, 0.15, t) * 2.0;
+  dropLight += ring(pc, pcOf(vec2(0.68, 0.40)), 11.55, 0.13, t) * 2.2;
+  // --- hero splash ring at the landing point, frozen at t=15.9
+  dropLight += ring(pc, pcOf(uRing[5].xy), uRing[5].z, 0.15, t) * 2.0;
 
   water = mix(water, water + vec3(1.0, 0.9, 0.7) * 0.55, clamp(dropLight, 0.0, 1.0) * 0.35);
 
   // --- submerged koi shadows — soft blobs under each fish, fade on leap
   for (int i = 0; i < 5; i++) {
-    vec2 kc = uKoi[i].xy - vec2(0.5, 0.52);
+    vec2 kc = pcOf(uKoi[i].xy);
     float ks = uKoi[i].z;
     float d = length((pc - kc) * vec2(1.0, 1.9) / max(ks, 0.01));
     float shad = 1.0 - smoothstep(0.015, 0.06, d);
-    float leapDim = i == 0 ? 1.0 - uLeap * 0.85 : 1.0;
+    float leapDim = i == 0 ? 1.0 - uLeap * (1.0 - uLand) * 0.85 : 1.0;
     water = mix(water, water * 0.55, shad * leapDim * (0.35 + 0.4 * (1.0 - uSurf)));
   }
 
@@ -365,6 +365,8 @@ export default class KoipondScene extends Scene {
     uT: { value: 0 }, uSurf: { value: 0 }, uDusk: { value: 0 },
     uKiss: { value: 0 }, uLeap: { value: 0 }, uHop: { value: 0 },
     uKoi: { value: [0, 0, 0, 0, 0].map(() => new THREE.Vector3()) },
+    uRing: { value: [0, 0, 0, 0, 0, 0].map(() => new THREE.Vector3()) },
+    uLand: { value: 0 },
   };
   private koiU = { uT: { value: 0 }, uFade: { value: 0 }, uDepth: { value: 1 } };
   private blossomU = { uT: { value: 0 }, uSeed: { value: 0.37 } };
@@ -410,7 +412,8 @@ export default class KoipondScene extends Scene {
     this.three.add(this.blossoms);
 
     // koi
-    const koiGeo = new THREE.PlaneGeometry(8.0, 2.6);
+    // segmented quad — the vertex S-curve needs interior verts to bend, not shear
+    const koiGeo = new THREE.PlaneGeometry(8.0, 2.6, 24, 6);
     const seeds = new Float32Array(KOI_N);
     for (let i = 0; i < KOI_N; i++) seeds[i] = hash(i * 3 + 11);
     koiGeo.setAttribute('aSeed', new THREE.InstancedBufferAttribute(seeds, 1));
@@ -444,6 +447,17 @@ export default class KoipondScene extends Scene {
     );
     this.three.add(this.frog);
 
+    // frozen ring origins: each fish kisses at its seeded time (ring stays
+    // where the touch happened), slot 5 = hero splash landing point
+    const ku = new THREE.Vector2();
+    for (let i = 0; i < 5; i++) {
+      const t0 = 6.2 + hash(i * 3 + 7) * 5.5;
+      this.koiUv(i, t0, ku);
+      this.bu.uRing.value[i].set(ku.x, ku.y, t0);
+    }
+    this.koiUv(0, 15.9, ku);
+    this.bu.uRing.value[5].set(ku.x, ku.y, 15.9);
+
     this.cam.position.set(0, 6, 25);
     this.cam.lookAt(0, 8, PZ + 20);
   }
@@ -453,7 +467,8 @@ export default class KoipondScene extends Scene {
     const s = hash(i * 7 + 2), w = hash(i * 13 + 5);
     const speed = 0.020 + 0.012 * w;
     const a = t * speed + s * 6.283;
-    const cx = 0.5 + Math.sin(a) * (0.24 + w * 0.10) + Math.sin(a * 2.3 + s * 9.0) * 0.07;
+    // wander bounded to the lit pond ellipse so every fish enters the pull-back reveal
+    const cx = 0.5 + Math.sin(a) * (0.16 + w * 0.06) + Math.sin(a * 2.3 + s * 9.0) * 0.045;
     const cy = 0.50 + Math.cos(a * 0.8 + s * 4.0) * (0.16 + s * 0.08) + Math.sin(a * 1.7) * 0.05;
     return out.set(cx, cy);
   }
@@ -479,6 +494,7 @@ export default class KoipondScene extends Scene {
     this.bu.uDusk.value = dusk;
     this.bu.uKiss.value = kissT(t);
     this.bu.uLeap.value = leap;
+    this.bu.uLand.value = ss(16.6, 17.8, t); // shadow restores after the splash settles
     this.bu.uHop.value = hop;
 
     // --- koi: wander paths, headings, surfacing fade, hero leap
@@ -491,9 +507,10 @@ export default class KoipondScene extends Scene {
       const sc = (1.5 + hash(i * 5) * 0.7) * heroBoost;
       let lift = 0, plunge = 1;
       if (i === 0 && leap > 0) {
-        // leap parabola in screen space: rises out, comes down at ~15.9
+        // leap parabola in screen space: rises out, comes down at ~15.9 —
+        // amplitude kept under the camera's top edge so the apex stays on screen
         const arc = Math.sin(leap * Math.PI);
-        lift = arc * 10;
+        lift = arc * 2.8;
         plunge = 1 - arc * 0.3;
       }
       uvToWorld(ku.x, ku.y, this.p);
@@ -608,7 +625,7 @@ export default class KoipondScene extends Scene {
     this.cam.position.set(
       targetX * 0.7 + Math.sin(t * 0.05) * 0.5,
       6.0 - pull * 1.0 + Math.sin(t * 0.07) * 0.2,
-      25.0 + pull * 14.0,
+      25.0 + pull * 26.0, // pull back far enough to frame the whole lit pond
     );
     this.cam.lookAt(
       targetX,
@@ -622,7 +639,9 @@ export default class KoipondScene extends Scene {
       if (P?.probe && P.textProbes && P.recordText) {
         this.koiUv(0, t, ku);
         uvToWorld(ku.x, ku.y, this.p);
-        this.p.z += 2.0;
+        const arcL = Math.sin(leap * Math.PI) * 2.8;
+        this.p.z += 2.0 + arcL * 0.4;
+        this.p.y += arcL * 8.0;
         this.p.project(this.cam);
         const W = P.width || 1920, H = P.height || 1080;
         const cx = (this.p.x * 0.5 + 0.5) * W, cy = (0.5 - this.p.y * 0.5) * H;
@@ -664,6 +683,7 @@ export default class KoipondScene extends Scene {
   override dispose() {
     this.three.traverse((o) => {
       const m = o as THREE.Mesh;
+      if ((m as THREE.InstancedMesh).isInstancedMesh) (m as THREE.InstancedMesh).dispose();
       if (m.geometry) m.geometry.dispose();
       const mat = m.material as THREE.Material | THREE.Material[] | undefined;
       if (Array.isArray(mat)) mat.forEach((x) => x.dispose());
