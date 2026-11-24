@@ -541,7 +541,7 @@ export default class TerracedScene extends Scene {
         const v = -0.18 * z + wander(x);
         const f = ((v / LEVEL) % 1 + 1) % 1;
         if (flatOnly && f > 0.78) continue;
-        if (f > 0.92) continue; // never plant on a wall face — mesh-vs-analytic interp diverges most there
+        if (f > 0.80) continue; // never plant on a wall face — mesh-vs-analytic interp diverges most there
         if (Math.abs(x - pathX(z)) < 1.6) continue; // keep the path clear
         this.dummy.position.set(x, groundH(x, z) - 0.06, z);
         this.dummy.rotation.set((hash(seed + placed * 7.3) - 0.5) * 0.3, hash(seed + placed * 3.9) * Math.PI * 2, 0);
