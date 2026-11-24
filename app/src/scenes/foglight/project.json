@@ -1,0 +1,11 @@
+{
+  "project": "foglight",
+  "entries": [
+    {
+      "scene": "foglight/foglight",
+      "id": "foglight",
+      "start": 0.0,
+      "end": 20.0
+    }
+  ]
+}
