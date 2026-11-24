@@ -1,0 +1,39 @@
+{
+  "project": "fenrunner",
+  "meta": {
+    "title": "Fen Runner: Dusk Drain",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 20.0
+  },
+  "entries": [
+    {
+      "scene": "fenrunner/fenrunner",
+      "id": "act-dusk",
+      "start": 0.0,
+      "end": 3.0,
+      "caption": { "fig": "01", "text": "AFTERGLOW ON THE DRAIN", "dur": 2.4 }
+    },
+    {
+      "scene": "fenrunner/fenrunner",
+      "id": "act-trot",
+      "start": 3.0,
+      "end": 9.5,
+      "caption": { "fig": "02", "text": "THE BANK RUNNER", "dur": 2.6 }
+    },
+    {
+      "scene": "fenrunner/fenrunner",
+      "id": "act-look",
+      "start": 9.5,
+      "end": 13.0,
+      "caption": { "fig": "03", "text": "A LOOK AT THE WATER", "dur": 2.6 }
+    },
+    {
+      "scene": "fenrunner/fenrunner",
+      "id": "act-exit",
+      "start": 13.0,
+      "end": 20.0,
+      "caption": { "fig": "04", "text": "GONE BEHIND THE WILLOW", "dur": 2.6 }
+    }
+  ]
+}
