@@ -185,7 +185,9 @@ void main() {
     float yF = (uCam.y + sF * (${WATER_Y.toFixed(2)} - uCam.y) - (${WATER_Y.toFixed(2)} - ${WATER_H.toFixed(1)})) / ${WATER_H.toFixed(1)};
     float sP = (uCam.z - (${WATER_Z.toFixed(1)})) / (uCam.z - (${PLOP.z.toFixed(1)}));
     vec2 pc = vec2(0.5 + (uCam.x + sP * (${PLOP.x.toFixed(1)} - uCam.x)) / ${QUAD_W.toFixed(1)}, 0.5 * (yN + yF));
-    vec2 rr = vec2(sP * rw / ${QUAD_W.toFixed(1)}, max(1e-4, 0.5 * (yN - yF)));
+    // the near edge lands lower on screen, so yN < yF — take the half-span
+    // either way around
+    vec2 rr = vec2(sP * rw / ${QUAD_W.toFixed(1)}, max(1e-4, 0.5 * abs(yF - yN)));
     float pd = length((vUv - pc) / rr);
     float rd = (pd - 1.0) / 0.10;
     float ring = exp(-rd * rd);
