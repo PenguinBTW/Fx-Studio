@@ -1,0 +1,6 @@
+{
+  "project": "fiberbundle",
+  "entries": [
+    { "scene": "fiberbundle/fiberbundle", "id": "fiber_bundle", "start": 0.0, "end": 20.0 }
+  ]
+}
