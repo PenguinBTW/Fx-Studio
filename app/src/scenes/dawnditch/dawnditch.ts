@@ -273,7 +273,8 @@ export default class DawnditchScene extends Scene {
         const W = P.width || 1920, H = P.height || 1080;
         this.cam.updateMatrixWorld();
         if (vgone > -0.5 && vx > -0.02 && vx < 0.99) {
-          aToV(vx, vmode > 0.9 ? 0.472 : 0.515, this.p).project(this.cam);
+          const vy = (vmode > 0.9 ? 0.468 : 0.508 - Math.max(0, vmode - 0.5) * 0.10) + 0.008;
+          aToV(vx, vy, this.p).project(this.cam);
           const px = (this.p.x * 0.5 + 0.5) * W, py = (0.5 - this.p.y * 0.5) * H;
           P.textProbes.push({
             frameIdx: P.currentFrameIdx ?? 0, t, text: 'vole',
