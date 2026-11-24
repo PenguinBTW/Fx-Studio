@@ -90,14 +90,14 @@ float boxm(vec2 p, vec2 c, vec2 r, float soft) {
 
 // ---- the incoming tide: a waterline creeping right→left across the flat ----
 float wlX(float t) {
-  return mix(1.18, 0.56, sstep(WATER_IN, COVER, t));
+  return mix(0.93, 0.56, sstep(WATER_IN, COVER, t));
 }
 // coverage 0..1 — water sits right of the front; channels wet early
 float waterAt(vec2 uv, float t, float chan) {
   float wl = wlX(t) + 0.045 * sin(uv.y * 9.0 + 1.3) + 0.02 * sin(uv.y * 23.0);
   float cov = sstep(wl - 0.006, wl + 0.010, uv.x);
-  // channels fill first — their interior turns wet well ahead of the front
-  cov = max(cov, chan * sstep(CHANNEL_FILL, CHANNEL_FILL + 4.0, t));
+  // channels fill first — their interior wets just ahead of the front where it crosses
+  cov = max(cov, chan * sstep(CHANNEL_FILL, CHANNEL_FILL + 4.0, t) * sstep(wl - 0.07, wl - 0.005, uv.x));
   // by the settle beat the whole flat is a shallow mirror
   cov = max(cov, sstep(COVER, SETTLE + 1.5, t));
   return cov * sstep(FLAT_TOP + 0.01, FLAT_TOP - 0.01, uv.y);
@@ -184,7 +184,7 @@ vec3 seaAt(vec2 uv, float t, vec3 col) {
   float crest = sstep(0.0035, 0.001, abs(uv.y - (SEABASE + 0.012 + 0.004 * sin(uv.x * 90.0 + t * 0.5))))
               + 0.6 * sstep(0.0030, 0.0008, abs(uv.y - (SEABASE + 0.032 + 0.004 * sin(uv.x * 70.0 - t * 0.4))));
   sea += vec3(0.55, 0.60, 0.60) * crest * 0.5;
-  return mix(col, sea, sstep(SEABASE + 0.004, SEABASE - 0.004, uv.y));
+  return mix(col, sea, sstep(SKYBASE - 0.006, SKYBASE - 0.016, uv.y));
 }
 
 vec3 sandAt(vec2 uv, float t, float chan, float cov) {
@@ -229,13 +229,12 @@ void main() {
   float front = sstep(0.006, 0.001, abs(uv.x - wl));
   col += vec3(0.45, 0.42, 0.30) * front * 0.7 * sstep(WATER_IN, WATER_IN + 1.0, t)
          * sstep(FLAT_TOP, FLAT_TOP - 0.06, uv.y);
-  // foam flecks riding just behind the front
+  // covering water over the sand first, then the ruin, then its reflection
+  col = mix(col, waterColAt(uv, t), cov * sstep(FLAT_TOP, FLAT_TOP - 0.02, uv.y));
+  // foam flecks riding just behind the front — on top of the sheet
   float fleck = sstep(0.96, 0.995, h2(floor(uv * vec2(900.0, 400.0)) + floor(t * 2.0)));
   col += vec3(0.40, 0.44, 0.42) * fleck * sstep(wl - 0.002, wl + 0.05, uv.x) * sstep(wl + 0.09, wl + 0.02, uv.x)
          * sstep(WATER_IN, WATER_IN + 1.0, t) * sstep(FLAT_TOP, FLAT_TOP - 0.05, uv.y) * 0.5;
-
-  // covering water over the sand first, then the ruin, then its reflection
-  col = mix(col, waterColAt(uv, t), cov * sstep(FLAT_TOP, FLAT_TOP - 0.02, uv.y));
   float rm = ruinMask(uv);
   vec3 rcol = ruinColAt(uv, rm);
   // covered ruin bases read darker through the water
@@ -252,7 +251,7 @@ void main() {
 
   // ---- gull perched on the arch top — a still speck until the settle ----
   {
-    vec2 gp = vec2(RUIN.x - 0.020, RUIN_BASE + 0.134);
+    vec2 gp = vec2(RUIN.x - 0.010, RUIN_BASE + 0.126);
     float gull = sstep(1.0, 0.7, sdist(uv, gp, vec2(0.005 / ASPECT, 0.006)));
     gull = max(gull, sstep(1.0, 0.7, sdist(uv, gp + vec2(0.004, 0.005), vec2(0.003 / ASPECT, 0.0035))));
     col = mix(col, vec3(0.75, 0.78, 0.78), gull * 0.9);
@@ -261,7 +260,7 @@ void main() {
   // ---- crow hopping on a fallen block, once ----
   if (t > CROW && t < CROW + 2.6) {
     float u = (t - CROW) / 2.6;
-    vec2 bp = vec2(RUIN.x + 0.085, RUIN_BASE + 0.035);
+    vec2 bp = vec2(RUIN.x + 0.075, RUIN_BASE + 0.018);
     float hop = abs(sin(u * 6.28)) * 0.012 * sstep(0.2, 0.4, u) * sstep(1.0, 0.8, u);
     vec2 cp = bp + vec2(0.006 * floor(u * 3.0), hop);
     float crow = sstep(1.0, 0.7, sdist(uv, cp, vec2(0.006 / ASPECT, 0.007)));
@@ -277,15 +276,16 @@ void main() {
     fig = max(fig, sstep(1.0, 0.7, sdist(uv, fp + vec2(0.0, 0.044), vec2(0.004 / ASPECT, 0.005))));
     float line = dseg(uv, fp + vec2(0.0, 0.012), fp + vec2(-0.045, -0.004));
     col = mix(col, vec3(0.05, 0.055, 0.055), max(fig, sstep(0.0018, 0.0006, line)));
-    // a second speck — his shadowed reflection on the wet sand
-    col = mix(col, vec3(0.09, 0.095, 0.09), fig * sstep(fp.y, fp.y - 0.03, uv.y) * 0.4);
+    // his reflection in the sheen — the figure mirrored about his feet
+    float figR = boxm(uv, fp + vec2(0.0, -0.020), vec2(0.0035, 0.020), 0.002);
+    col = mix(col, vec3(0.09, 0.095, 0.09), figR * (0.12 + 0.45 * cov));
   }
 
   // ---- heron walking the channel, freezes, stabs ----
   if (t > HERON && t < HERON + 4.5) {
     float u = (t - HERON) / 4.5;
     float walkU = u < 0.35 ? u / 0.35 : u < 0.75 ? 1.0 : 1.0 + (u - 0.75) / 0.25 * 0.15;
-    vec2 hp = vec2(0.585 + 0.030 * walkU, 0.470 - 0.006 * walkU);
+    vec2 hp = vec2(0.395 + 0.050 * walkU, 0.470 - 0.012 * walkU);
     float stab = sstep(0.72, 0.80, u) * sstep(1.0, 0.88, u);
     vec2 neck = hp + vec2(0.006 + 0.020 * stab, 0.030 - 0.018 * stab);
     float heron = boxm(uv, hp + vec2(0.0, 0.012), vec2(0.005, 0.012), 0.002);
