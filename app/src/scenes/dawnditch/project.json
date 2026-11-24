@@ -1,0 +1,39 @@
+{
+  "project": "dawnditch",
+  "meta": {
+    "title": "Dawn Ditch: First Light on the Water",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 20.0
+  },
+  "entries": [
+    {
+      "scene": "dawnditch/dawnditch",
+      "id": "act-still",
+      "start": 0.0,
+      "end": 2.0,
+      "caption": { "fig": "01", "text": "A DITCH AT FIRST LIGHT", "dur": 2.0 }
+    },
+    {
+      "scene": "dawnditch/dawnditch",
+      "id": "act-sun",
+      "start": 2.0,
+      "end": 9.0,
+      "caption": { "fig": "02", "text": "THE SUN STRIP CROSSES", "dur": 2.4 }
+    },
+    {
+      "scene": "dawnditch/dawnditch",
+      "id": "act-vole",
+      "start": 9.0,
+      "end": 14.0,
+      "caption": { "fig": "03", "text": "A VOLE WORKS THE BANK", "dur": 2.4 }
+    },
+    {
+      "scene": "dawnditch/dawnditch",
+      "id": "act-settle",
+      "start": 14.0,
+      "end": 20.0,
+      "caption": { "fig": "04", "text": "SKYLARK OVER THE STUBBLE", "dur": 2.6 }
+    }
+  ]
+}
