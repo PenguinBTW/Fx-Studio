@@ -188,8 +188,10 @@ float ratAt(vec2 uv, float t) {
   vec2 d = uv - p; d.x *= ASPECT;
   float body = 1.0 - sstep(0.0, 0.007, length(d / vec2(2.0, 0.9)));
   // vee wake trailing behind
-  float wake = sstep(0.003, 0.0, abs((uv.y - p.y) + 0.35 * (uv.x - p.x)) - 0.001)
-    * sstep(0.0, -0.06, uv.x - p.x) * 0.4;
+  float bx = p.x - uv.x; // distance behind the rat (it swims +x)
+  float wake = sstep(0.003, 0.0, abs((uv.y - p.y) - 0.35 * bx) - 0.001)
+    * sstep(0.0, 0.002, bx) * (1.0 - sstep(0.05, 0.09, bx))
+    * sstep(WATER + 0.001, WATER - 0.001, uv.y) * 0.4;
   return clamp(body + wake, 0.0, 1.0) * sstep(0.0, 0.08, u) * (1.0 - sstep(0.9, 1.0, u));
 }
 
