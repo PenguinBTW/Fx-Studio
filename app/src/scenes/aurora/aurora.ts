@@ -11,6 +11,7 @@ import * as THREE from 'three';
 import { Scene, type Frame, type SceneCtx, type PostOverrides } from '../../engine/scene';
 import { RibbonGeometry } from '../../engine/ribbon';
 import { ease, prog } from '../../engine/util';
+import { SCALE } from '../../engine/scale';
 
 const TAU = Math.PI * 2;
 
@@ -123,10 +124,10 @@ const RIBBON_FRAG = /* glsl */ `
     // magenta fringe bleeding into the lowest band — muted, not neon.
     vec3 green   = vec3(0.30, 0.86, 0.48);
     vec3 bone    = vec3(0.82, 0.92, 0.72);
-    vec3 magenta = vec3(0.80, 0.36, 0.50);
+    vec3 magenta = vec3(0.84, 0.30, 0.55);
     vec3 col = mix(green, bone, smoothstep(0.05, 0.55, u) * 0.55);
     float fringe = smoothstep(0.80, 0.97, u);
-    col = mix(col, magenta, fringe * 0.5);
+    col = mix(col, magenta, fringe * 0.72);
 
     // Brightness breathes along the curtain length as well as globally.
     float pulse = 0.82 + 0.18 * sin(v * 9.0 - uTime * 0.45 + uPhase);
@@ -166,7 +167,9 @@ export default class AuroraScene extends Scene {
     starGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     const starMat = new THREE.PointsMaterial({
       color: 0xd8d9cf,
-      size: 1.5,
+      // PointsMaterial fixed sizes are in framebuffer px: multiply by the
+      // export scale so stars keep their logical size on high-DPI renders.
+      size: 1.5 * SCALE,
       sizeAttenuation: false,
       transparent: true,
       opacity: 0.8,
@@ -245,6 +248,7 @@ export default class AuroraScene extends Scene {
     renderer.setClearColor(0x020409, 1.0);
     renderer.clear(true, true, true);
     renderer.render(this.threeScene, this.camera);
+    renderer.resetState();
 
     return {
       bloom: 0.22 + 0.10 * (breath - 0.9),
