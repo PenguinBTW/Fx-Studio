@@ -1,0 +1,39 @@
+{
+  "project": "brookside",
+  "meta": {
+    "title": "Brookside: What the Current Carries",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 20.0
+  },
+  "entries": [
+    {
+      "scene": "brookside/brookside",
+      "id": "act-brook",
+      "start": 0.0,
+      "end": 5.0,
+      "caption": { "fig": "01", "text": "THE BROOK REMEMBERS RAIN", "dur": 2.6 }
+    },
+    {
+      "scene": "brookside/brookside",
+      "id": "act-dapple",
+      "start": 5.0,
+      "end": 10.0,
+      "caption": { "fig": "02", "text": "LIGHT THROUGH THE CANOPY", "dur": 2.6 }
+    },
+    {
+      "scene": "brookside/brookside",
+      "id": "act-carry",
+      "start": 10.0,
+      "end": 15.0,
+      "caption": { "fig": "03", "text": "WHAT THE CURRENT CARRIES", "dur": 2.6 }
+    },
+    {
+      "scene": "brookside/brookside",
+      "id": "act-settle",
+      "start": 15.0,
+      "end": 20.0,
+      "caption": { "fig": "04", "text": "STONE AND STILL WATER", "dur": 2.6 }
+    }
+  ]
+}
