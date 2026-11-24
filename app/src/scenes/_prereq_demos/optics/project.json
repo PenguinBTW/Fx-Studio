@@ -1,0 +1,7 @@
+{
+  "project": "optics",
+  "entries": [
+    { "scene": "_prereq_demos/optics/sheet", "id": "optics_sheet", "start": 0.0, "end": 10.0 }
+  ],
+  "transitions": []
+}
