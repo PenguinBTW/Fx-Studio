@@ -305,25 +305,27 @@ export default class GeodeScene extends Scene {
         const cm = this.crystalMesh.matrixWorld;
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
         const bb = this.crystalBox;
-        // Corners behind the camera invert through project() and inflate the
-        // box to ~99 frame heights — clip them in view space first.
-        let valid = 0;
+        // Corners at/behind the near plane invert through projection and blow
+        // the box up to ~99 frame heights. Clamp them onto the near plane
+        // (continuous as a corner crosses, no trail jump); a box straddling
+        // the camera genuinely covers the frame, so report full-frame bounds.
+        let clipped = 0;
         for (let cc = 0; cc < 8; cc++) {
           _v.set(
             cc & 1 ? bb.max.x : bb.min.x,
             cc & 2 ? bb.max.y : bb.min.y,
             cc & 4 ? bb.max.z : bb.min.z,
           ).applyMatrix4(cm).applyMatrix4(this.camera.matrixWorldInverse);
-          if (_v.z > -this.camera.near - 0.01) continue;
-          _v.project(this.camera);
+          if (_v.z > -this.camera.near) { clipped++; continue; }
+          _v.applyMatrix4(this.camera.projectionMatrix);
           const px = (_v.x * 0.5 + 0.5) * this.ctx.W;
           const py = (-_v.y * 0.5 + 0.5) * this.ctx.H;
           if (px < minX) minX = px; if (px > maxX) maxX = px;
           if (py < minY) minY = py; if (py > maxY) maxY = py;
-          valid++;
         }
+        if (clipped > 0) { minX = 0; minY = 0; maxX = this.ctx.W; maxY = this.ctx.H; }
         const w = maxX - minX, h = maxY - minY;
-        if (valid >= 2) P.textProbes.push({
+        if (clipped < 8) P.textProbes.push({
           frameIdx: P.currentFrameIdx ?? 0,
           t: lt,
           text: 'crystals',
