@@ -60,7 +60,8 @@ function ribbon(pos: number[], col: number[], pts: number[][], w0: number, w1: n
       [ax + nx * wa, ay + ny * wa], [ax - nx * wa, ay - ny * wa],
       [bx + nx * wb, by + ny * wb], [bx - nx * wb, by - ny * wb]
     ];
-    poly(pos, col, [A[0], A[1], A[2], A[3]], c);
+    // perimeter order (side1@a → side2@a → side2@b → side1@b) — avoids a bowtie
+    poly(pos, col, [A[0], A[1], A[3], A[2]], c);
   }
 }
 
@@ -120,18 +121,19 @@ void main() {
   vec2 g = q * vec2(7.0, 10.0);
   vec2 cell = floor(g), f = fract(g);
   float h = hash21(cell + floor(uT * 3.0) * 0.13);
-  float spark = smoothstep(0.94, 1.0, h) * smoothstep(0.30, 0.05, length(f - 0.5));
+  float spark = smoothstep(0.94, 1.0, h) * (1.0 - smoothstep(0.05, 0.30, length(f - 0.5)));
   water += vec3(1.0, 0.95, 0.72) * spark * 0.8;
   // ring ripples — expanding thin annuli, two event rings + one ambient
   for (int i = 0; i < 3; i++) {
     float t0 = i == 0 ? uRing0.x : i == 1 ? uRing1.x : 5.0;
     float cxx = i == 0 ? uRing0.y : i == 1 ? uRing1.y : 0.4;
     float cyy = i == 2 ? -0.30 : -0.30;
-    float age = uT - t0;
+    float age = max(0.0, uT - t0);
     float rr = age * (i == 2 ? 0.22 : 0.45);
     float dd = distance(q, vec2(cxx, cyy));
-    float ring = 1.0 - smoothstep(0.0, 0.035 + 0.05 * age, abs(dd - rr));
-    float amp = (i == 2 ? 0.10 * (0.5 + 0.5 * sin(uT * 0.5)) : 0.35) * exp(-age * 0.9) * step(0.0, age);
+    float wdt = max(0.01, 0.035 + 0.05 * age);
+    float ring = 1.0 - smoothstep(0.0, wdt, abs(dd - rr));
+    float amp = (i == 2 ? 0.10 * (0.5 + 0.5 * sin(uT * 0.5)) : 0.35) * exp(-age * 0.9) * step(0.001, age);
     water += vec3(0.55, 0.65, 0.55) * ring * amp;
   }
   col = mix(col, water, inPool);
@@ -181,7 +183,7 @@ interface St {
   back: THREE.ShaderMaterial; ribMat: THREE.ShaderMaterial; ptMat: THREE.ShaderMaterial;
   crab: THREE.Group; crabClaw: THREE.Mesh; goby: THREE.Mesh; snail: THREE.Mesh;
   slime: THREE.Mesh; limpet: THREE.Mesh; heron: THREE.Mesh;
-  barnMats: THREE.ShaderMaterial[]; aneMats: THREE.ShaderMaterial[];
+  barnMats: THREE.ShaderMaterial[]; barnFil: THREE.Mesh[]; aneMats: THREE.ShaderMaterial[];
 }
 
 export default defineScene({
@@ -268,24 +270,36 @@ export default defineScene({
       st.aneMats.push(m);
     }
 
-    // --- barnacle tufts — filament fans, scale 0→1 on the bloom beat ---------
+    // --- barnacle tufts — shells sit on the rim face; filament fans open on
+    // the bloom beat (scale + alpha), swaying once out ------------------------
     st.barnMats = [];
-    const barnSpots: [number, number][] = [[1.55, 0.32], [1.95, 0.42], [1.72, 0.18]];
+    st.barnFil = [];
+    const barnSpots: [number, number][] = [[0.82, 0.40], [1.14, 0.44], [0.98, 0.33]];
     for (const [bx, by] of barnSpots) {
-      const bp: number[] = [], bc: number[] = [];
-      // shell bump
-      poly(bp, bc, [[-0.05, 0], [0.05, 0], [0.04, 0.04], [-0.04, 0.04]], [0.30, 0.30, 0.28]);
-      // filament fan above
-      fan(bp, bc, 0, 0.04, Math.PI * 0.15, Math.PI * 0.85, 6, 0.10, 0.008, [0.75, 0.72, 0.62], rng);
-      const g = new THREE.BufferGeometry();
-      g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(bp), 3));
-      g.setAttribute("color", new THREE.BufferAttribute(new Float32Array(bc), 3));
+      // shell bump — always visible on the rock face
+      const shp: number[] = [], shc: number[] = [];
+      poly(shp, shc, [[-0.05, 0], [0.05, 0], [0.04, 0.04], [-0.04, 0.04]], [0.30, 0.30, 0.28]);
+      const sg = new THREE.BufferGeometry();
+      sg.setAttribute("position", new THREE.BufferAttribute(new Float32Array(shp), 3));
+      sg.setAttribute("color", new THREE.BufferAttribute(new Float32Array(shc), 3));
+      const shell = new THREE.Mesh(sg, ribMat.clone());
+      (shell.material as THREE.ShaderMaterial).uniforms.uA!.value = 0.9;
+      shell.position.set(bx, by, 0.03);
+      shell.frustumCulled = false;
+      ctx.scene3D.add(shell);
+      // filament fan — hidden until the bloom beat, then opens outward
+      const fp: number[] = [], fc: number[] = [];
+      fan(fp, fc, 0, 0, Math.PI * 0.15, Math.PI * 0.85, 6, 0.10, 0.008, [0.75, 0.72, 0.62], rng);
+      const fg = new THREE.BufferGeometry();
+      fg.setAttribute("position", new THREE.BufferAttribute(new Float32Array(fp), 3));
+      fg.setAttribute("color", new THREE.BufferAttribute(new Float32Array(fc), 3));
       const m = ribMat.clone();
-      const mesh = new THREE.Mesh(g, m);
-      mesh.position.set(bx, by, 0.03);
-      mesh.frustumCulled = false;
-      ctx.scene3D.add(mesh);
+      const fil = new THREE.Mesh(fg, m);
+      fil.position.set(bx, by + 0.04, 0.04);
+      fil.frustumCulled = false;
+      ctx.scene3D.add(fil);
       st.barnMats.push(m);
+      st.barnFil.push(fil);
     }
 
     // --- crab — rust silhouette: body + 4 leg ribbons + claw ------------------
@@ -454,10 +468,13 @@ export default defineScene({
     // anemone sway + barnacle bloom
     for (const m of st.aneMats) { m.uniforms.uT!.value = t; m.uniforms.uSway!.value = 0.9; }
     const bloom = sstep(BARN.t0, BARN.t1, t);
-    for (const m of st.barnMats) {
+    for (let i = 0; i < st.barnMats.length; i++) {
+      const m = st.barnMats[i]!;
       m.uniforms.uT!.value = t;
       m.uniforms.uSway!.value = 1.2 * bloom;
       m.uniforms.uA!.value = bloom;
+      // filaments open outward from the shell — a bloom, not a fade
+      st.barnFil[i]!.scale.setScalar(0.15 + 0.85 * bloom);
     }
 
     // crab — walk the rim, two pauses, claw wave, slip in
