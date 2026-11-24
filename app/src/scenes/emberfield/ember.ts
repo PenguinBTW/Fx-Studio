@@ -129,7 +129,9 @@ void main() {
     float u = age / life;
 
     float x0 = 0.06 + 0.88 * hash11(seed + 2.0);
-    float baseY = ridgeY(x0) + 0.004;
+    // cheap spawn height: 2-octave fbm tracks the ridge's broad shape without
+    // the char-detail term — full ridgeY() is reserved for the seam pass
+    float baseY = RIDGE + fbm(vec2(x0 * 2.0, 3.7), 2) * 0.05 + 0.004;
 
     // closed-form rise: decelerating climb + growing wander + gust shear
     float v0 = (burst ? 0.16 : 0.085) + (burst ? 0.14 : 0.10) * hash11(seed + 3.0);
