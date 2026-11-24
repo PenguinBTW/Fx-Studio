@@ -52,7 +52,7 @@ float heightAt(vec2 p) {
   // amplitude envelopes
   float env = smoothstep(0.0, 1.5 * LAMB, xb) * pow(1.0 + xb / (30.0 * LAMB), -0.8);
   float cuspBoost = 0.8 + 0.9 * smoothstep(0.55, 0.97, q);
-  float edge = smoothstep(1.0, 0.93, q);          // fade out just inside the locus
+  float edge = 1.0 - smoothstep(0.93, 1.0, q);    // fade out just inside the locus
 
   float w1 = env * (1.0 - 0.40 * q * q) * edge;
   float h1 = w1 * cos(psi1);
@@ -88,7 +88,7 @@ float crestAt(vec2 p) {
   float psi1 = -K0 * xb / (c1 * (2.0 - c1 * c1));
   float env = smoothstep(0.0, 1.5 * LAMB, xb) * pow(1.0 + xb / (30.0 * LAMB), -0.8);
   float cuspBoost = 0.8 + 0.9 * smoothstep(0.55, 0.97, q);
-  float edge = smoothstep(1.0, 0.93, q);
+  float edge = 1.0 - smoothstep(0.93, 1.0, q);
   float c = (1.0 - 0.40 * q * q) * max(cos(psi1), 0.0);
   float absm = abs(m);
   if (absm > 0.015) {
@@ -191,7 +191,9 @@ export default class KelvinWake extends Scene {
     const h = 46 - 16 * p;
     const zoff = 52 - 5 * p; // camera sits +z looking back -z so screen-right is +x
     const ro = new THREE.Vector3(srcX - 8, h, zoff);
-    const target = new THREE.Vector3(srcX - 10, 0, -4);
+    // look-at drifts further astern of the source over the shot, so the vessel
+    // visibly crosses the frame left -> right while the camera still tracks it.
+    const target = new THREE.Vector3(srcX - (8 + 18 * p), 0, -4);
     const fw = target.clone().sub(ro).normalize();
     const rt = new THREE.Vector3().crossVectors(fw, new THREE.Vector3(0, 1, 0)).normalize();
     const up = new THREE.Vector3().crossVectors(rt, fw).normalize();
@@ -227,7 +229,6 @@ export default class KelvinWake extends Scene {
   }
 
   override dispose() {
-    this.pass.dispose();
-    this.pass.mesh.geometry.dispose();
+    this.pass.dispose(); // fsGeom is a shared singleton — never dispose it here
   }
 }
