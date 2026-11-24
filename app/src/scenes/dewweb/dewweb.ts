@@ -13,7 +13,6 @@ import { Scene, type Frame, type SceneCtx, type PostOverrides } from '../../engi
 
 const TAKE = 20;
 const SPOKES = 14;
-const BOKEH_N = 14;
 
 const BONE = new THREE.Color('#e2e7ee');
 const VOID = new THREE.Color('#030507');
@@ -93,21 +92,22 @@ export default class DewwebScene extends Scene {
     b2d.fillStyle = bg;
     b2d.fillRect(0, 0, 128, 128);
     this.bokehTex = new THREE.CanvasTexture(bc);
-    for (let i = 0; i < BOKEH_N; i++) {
+    // Sprites are built from the SAME `blobs` field the dew drops sample via
+    // bgTint — what a bead refracts is the backdrop the camera actually sees.
+    for (let i = 0; i < blobs.length; i++) {
+      const b = blobs[i];
       const m = new THREE.SpriteMaterial({
         map: this.bokehTex, transparent: true, depthWrite: false,
-        color: [GREEN_MID, GREEN_SOFT, GREEN_DEEP, GREEN_DEEP][i % 4],
-        opacity: 0.35,
+        color: b.c, opacity: 0.35,
       });
       const sp = new THREE.Sprite(m);
-      const s = 3 + 6 * hash(i, 23);
+      const s = b.r * 2.2;
       sp.scale.set(s, s, 1);
-      const bx = -11 + 22 * hash(i, 29), by = -6 + 12 * hash(i, 31);
-      sp.position.set(bx, by, -8);
+      sp.position.set(b.x, b.y, -8);
       this.threeScene.add(sp);
       this.bokehMats.push(m);
       this.bokehSprites.push(sp);
-      this.bokehBase.push({ x: bx, y: by, s });
+      this.bokehBase.push({ x: b.x, y: b.y, s });
     }
     // Sun-crest glow, rides the top edge and peaks mid-take.
     this.crestMat = new THREE.SpriteMaterial({
@@ -146,7 +146,10 @@ export default class DewwebScene extends Scene {
     let segCount = 0;
 
     const vPush = (x: number, y: number, z: number, w: number, a: number, ph: number) => {
-      pos.push(x, y, z); swayW.push(w); swayP.push(hash(segCount * 2 + w, 53) * 6.28);
+      pos.push(x, y, z); swayW.push(w);
+      // sway phase from REST POSITION so the two copies of a shared joint
+      // vertex get identical phases — different phases open gaps in the silk.
+      swayP.push(((x * 7.13 + y * 3.71) % 6.28 + 6.28) % 6.28);
       baseA.push(a); glintP.push(ph);
     };
     const strand = (x0: number, y0: number, x1: number, y1: number, u0: number, u1: number, steps: number, bright: number) => {
@@ -175,8 +178,12 @@ export default class DewwebScene extends Scene {
       const r = radii[ri];
       for (let i = 0; i < SPOKES; i++) {
         const j = (i + 1) % SPOKES;
-        const x0 = CX + dirX[i] * r, y0 = CY + dirY[i] * r;
-        const x1 = CX + dirX[j] * r, y1 = CY + dirY[j] * r;
+        // Clamp to each spoke's length: beyond it the ring floats free of the
+        // frame (portrait layouts have short spokes). The outer ring then hugs
+        // the spoke tips like a real frame thread.
+        const r0 = Math.min(r, dirL[i] * 0.985), r1 = Math.min(r, dirL[j] * 0.985);
+        const x0 = CX + dirX[i] * r0, y0 = CY + dirY[i] * r0;
+        const x1 = CX + dirX[j] * r1, y1 = CY + dirY[j] * r1;
         // sag: midpoint pulled outward & down
         const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
         const ox = mx - CX, oy = my - CY;
@@ -189,11 +196,15 @@ export default class DewwebScene extends Scene {
         // dew beads seated along capture threads (sparser near hub)
         if (ri > 1 && hash(ri * SPOKES + i, 67) < 0.62) {
           const t = 0.25 + 0.5 * hash(ri * SPOKES + i, 71);
-          const dx = x0 + (x1 - x0) * t + (sx - mx) * 0.8;
-          const dy = y0 + (y1 - y0) * t + (sy - my) * 0.8;
+          // Seat the bead ON the sagged thread (x0→sx→x1 polyline), not the
+          // straight chord, so sway carries it with the silk.
+          const s0x = x0, s0y = y0, s1x = sx, s1y = sy, s2x = x1, s2y = y1;
+          const half = t < 0.5 ? t * 2 : (t - 0.5) * 2;
+          const dx = t < 0.5 ? s0x + (s1x - s0x) * half : s1x + (s2x - s1x) * half;
+          const dy = t < 0.5 ? s0y + (s1y - s0y) * half : s1y + (s2y - s1y) * half;
           dropPos.push(dx, dy, 0.12);
-          dropSway.push(Math.sin(Math.PI * 0.55));
-          dropPh.push(hash(ri * SPOKES + i, 73) * 6.28);
+          dropSway.push(Math.sin(Math.PI * t)); // same field as strand vertices
+          dropPh.push(((dx * 7.13 + dy * 3.71) % 6.28 + 6.28) % 6.28);
           dropSz.push(0.55 + 0.45 * hash(ri * SPOKES + i, 79)); // reserved for per-drop size
         }
       }
@@ -285,7 +296,7 @@ export default class DewwebScene extends Scene {
 
     // Bokeh rack: sprite scale/opacity breathe with the defocus plane.
     const focus = 0.5 + 0.5 * Math.sin(lt * 0.32);
-    for (let i = 0; i < BOKEH_N; i++) {
+    for (let i = 0; i < this.bokehBase.length; i++) {
       const bb = this.bokehBase[i];
       const s = bb.s * (0.85 + 0.4 * focus + 0.06 * Math.sin(lt * 0.5 + i * 2.2));
       this.bokehSprites[i].scale.set(s, s, 1);
