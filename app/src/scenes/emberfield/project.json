@@ -1,0 +1,11 @@
+{
+  "project": "emberfield",
+  "entries": [
+    {
+      "scene": "emberfield/ember",
+      "id": "emberfield",
+      "start": 0.0,
+      "end": 20.0
+    }
+  ]
+}
