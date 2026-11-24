@@ -61,9 +61,10 @@ function crestGlow(c: Crest, t: number): number {
   return c.amp * 0.22 * Math.exp(-((tau / 0.9) ** 2)) + 0.05;
 }
 // Foam trail: after the break the streak drains back seaward (toward the
-// horizon, increasing y) while it fades.
+// horizon, increasing y), parking just inside the spawn band while it fades —
+// it must never cross into the sky.
 function foamY(c: Crest, t: number): number {
-  return BREAK_Y + c.ws * Math.max(0, t - c.tc);
+  return Math.min(SPAWN_Y - 0.35, BREAK_Y + c.ws * Math.max(0, t - c.tc));
 }
 function foamGlow(c: Crest, t: number): number {
   const tau = t - c.tc;
