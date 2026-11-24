@@ -87,15 +87,16 @@ uniform vec3 uSky;
 uniform vec3 uStone[4];
 
 float streak(vec2 p, float f, float sp) {
-  return sin(p.x * f + sin(p.y * 2.0 + uT * sp * 0.35) * 2.2 - uT * sp);
+  // pattern axis along p.y (world -z): +uT slides the field down-brook
+  return sin(p.y * f + sin(p.x * 2.0 + uT * sp * 0.35) * 2.2 + uT * sp);
 }
 
 void main() {
   // world-plane coords; flow toward -z (down-brook, toward camera)
-  vec2 p = vec2(vWp.x * 1.7, vWp.z * 0.35);
+  vec2 p = vec2(vWp.x * 0.35, vWp.z * 1.7);
   float s1 = streak(p, 6.0, 1.15);
   float s2 = streak(p + vec2(3.7, 9.2), 11.0, 1.8);
-  float s3 = sin(p.x * 2.2 - uT * 0.5 + sin(p.y * 5.0) ) * 0.5;
+  float s3 = sin(p.y * 2.2 + uT * 0.5 + sin(p.x * 5.0) ) * 0.5;
   // pseudo-normal from the streak field: tilt the surface normal
   vec2 g = vec2(s1 * 0.35 + s2 * 0.22, s1 * 0.12 + s3 * 0.3);
   vec3 n = normalize(vec3(g.x, 1.0, g.y));
@@ -114,13 +115,13 @@ void main() {
   float foam = 0.0;
   for (int i = 0; i < 4; i++) {
     float d = distance(vWp.xz, uStone[i].xz);
-    float ring = smoothstep(0.85, 0.55, d) * (1.0 - smoothstep(0.45, 0.18, d));
+    float ring = (1.0 - smoothstep(0.55, 0.85, d)) * smoothstep(0.18, 0.45, d);
     // stretch the ring downstream — wake reads flow
-    ring *= 0.6 + 0.4 * sin(vWp.z * 14.0 - uT * 2.2 + float(i) * 2.0);
+    ring *= 0.6 + 0.4 * sin(vWp.z * 14.0 + uT * 2.2 + float(i) * 2.0);
     foam += ring;
   }
   float lace = (1.0 - smoothstep(0.0, 0.7, abs(abs(vWp.x) - 3.55)))
-             * (0.5 + 0.5 * sin(vWp.z * 9.0 - uT * 1.6 + vWp.x * 5.0));
+             * (0.5 + 0.5 * sin(vWp.z * 9.0 + uT * 1.6 + vWp.x * 5.0));
   foam += lace * 0.35;
   foam = clamp(foam, 0.0, 1.0);
   col = mix(col, vec3(0.75, 0.78, 0.72), foam * 0.55);
@@ -166,6 +167,7 @@ export default class BrooksideScene extends Scene {
   private moteSeed!: Float32Array;
   private moteSprite!: THREE.Texture;
   private mistMats: THREE.ShaderMaterial[] = [];
+  private mistMeshes: THREE.Mesh[] = [];
   private skyGlow!: THREE.Mesh;
   private p = new THREE.Vector3();
 
@@ -353,6 +355,8 @@ export default class BrooksideScene extends Scene {
     });
     this.leaves = new THREE.InstancedMesh(leafGeo, leafMat, leafN);
     this.leaves.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    // instanceMatrix updates every frame — cached bounds would go stale
+    this.leaves.frustumCulled = false;
     for (let i = 0; i < leafN; i++) {
       const hue = this.leafSeed[i * 4 + 3];
       const c = new THREE.Color().setHSL(0.06 + hue * 0.05, 0.75, 0.32 + hue * 0.15);
@@ -368,6 +372,7 @@ export default class BrooksideScene extends Scene {
     });
     this.leafShadows = new THREE.InstancedMesh(shGeo, shMat, leafN);
     this.leafShadows.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.leafShadows.frustumCulled = false;
     this.scene3D.add(this.leafShadows);
 
     // --- sun-lit motes inside the shafts
@@ -396,6 +401,7 @@ export default class BrooksideScene extends Scene {
       color: new THREE.Color(0xffe6b0),
     });
     this.motes = new THREE.Points(moteGeo, moteMat);
+    this.motes.frustumCulled = false;
     this.scene3D.add(this.motes);
 
     // --- mist ribbons hugging the water downstream
@@ -428,6 +434,7 @@ export default class BrooksideScene extends Scene {
       mist.position.set(i - 1, 0.7 + i * 0.25, 8 + i * 6);
       this.scene3D.add(mist);
       this.mistMats.push(mat);
+      this.mistMeshes.push(mist);
     }
 
     // --- warm sky glow behind the far canopy
@@ -535,9 +542,11 @@ export default class BrooksideScene extends Scene {
     }
     dp.needsUpdate = true;
 
-    // mist breathing + slow slide downstream
+    // mist breathing + slow slide downstream (-z, with the current)
     for (let i = 0; i < this.mistMats.length; i++) {
       this.mistMats[i].uniforms.uT.value = t;
+      this.mistMeshes[i].position.z =
+        (8 + i * 6) + Math.sin(t * 0.12 + i * 2.1) * 1.8 - (t * 0.05 % 2.0);
     }
 
     renderer.setRenderTarget(out);
@@ -595,8 +604,11 @@ export default class BrooksideScene extends Scene {
     this.motes.geometry.dispose();
     (this.motes.material as THREE.Material).dispose();
     this.moteSprite.dispose();
+    // InstancedMesh.dispose() frees the instanceMatrix/instanceColor buffers
+    this.leaves.dispose();
     this.leaves.geometry.dispose();
     (this.leaves.material as THREE.Material).dispose();
+    this.leafShadows.dispose();
     this.leafShadows.geometry.dispose();
     (this.leafShadows.material as THREE.Material).dispose();
     this.leafTex.dispose();
