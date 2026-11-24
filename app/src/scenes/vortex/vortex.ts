@@ -312,8 +312,10 @@ export default class VortexScene extends Scene {
         x = AX + r * Math.cos(th);
         y = Y_BASE + h * (Y_TOP - Y_BASE);
         z = AZ + r * Math.sin(th);
-        // fade the respawn in so the wrap from mid-air to the base doesn't pop
-        fadeMul = ss(0.0, 0.05, cyc);
+        // fade the respawn in so the wrap from mid-air to the base doesn't pop,
+        // and apply the same backdrop fade as the ballistic branch so a
+        // far-side launch doesn't pop to a smaller size at ejection
+        fadeMul = ss(0.0, 0.05, cyc) * ss(PZ + 1.5, PZ + 9.0, z);
       } else {
         // ejection happened when cyc crossed 0.78 — pin the launch frame to
         // that instant so the debris doesn't pivot around the funnel midflight
