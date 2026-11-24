@@ -52,11 +52,11 @@ void main() {
 
   // faint blue moon-haze in the top-left corner — the cold accent
   // (uv must stay inside the camera's ~0.29–0.71 x window on the backdrop)
-  vec2 md = vec2((x - 0.33) * 2.2, y - 0.82);
+  vec2 md = vec2((x - 0.33) * 2.2, y - 0.78);
   float moonHaze = exp(-dot(md, md) * 3.0);
   col += vec3(0.30, 0.38, 0.62) * moonHaze * 0.55;
   // thin bright moon sliver inside the haze
-  vec2 ms = vec2((x - 0.335) * 2.2, y - 0.825);
+  vec2 ms = vec2((x - 0.335) * 2.2, y - 0.785);
   float sliver = (1.0 - smoothstep(0.016, 0.026, length(ms))) * 0.7;
   sliver *= 1.0 - smoothstep(0.014, 0.028, length(ms - vec2(0.010, 0.006)));
   col += vec3(0.75, 0.80, 0.95) * sliver;
@@ -64,11 +64,12 @@ void main() {
   // --- warm lantern glow low in frame -------------------------------------
   // swells gently through the dense beat (t ~ 12–16)
   float lant = 0.75 + 0.25 * smoothstep(10.0, 13.0, t) * (1.0 - smoothstep(16.0, 19.0, t));
-  vec2 ld = vec2((x - 0.63) * 2.2, y - 0.30);
+  vec2 ld = vec2((x - 0.63) * 2.2, y - 0.38);
   float lg = exp(-dot(ld, ld) * 4.5);
   col += vec3(0.95, 0.45, 0.12) * lg * 0.55 * lant;
-  // lantern body — a small glowing paper diamond
-  vec2 lb = vec2((x - 0.63) * 30.0, (y - 0.30) * 30.0);
+  // lantern body — a small glowing paper diamond (above the tree bank
+  // edge ~0.35 uv so the silhouettes don't overwrite it)
+  vec2 lb = vec2((x - 0.63) * 30.0, (y - 0.38) * 30.0);
   float lbody = 1.0 - smoothstep(0.55, 0.75, abs(lb.x) + abs(lb.y) * 1.6);
   col += vec3(1.0, 0.62, 0.22) * lbody * (0.85 + 0.15 * sin(t * 7.0)) * lant;
   // faint halo ring
@@ -135,8 +136,8 @@ const PETALS = 220;
 // Backdrop plane mapping (must match the mesh below): uv → world.
 const PW = 320, PH = 140, PY = 8, PZ = -80;
 
-// Lantern world position (must match the shader's 0.63/0.30 uv).
-const LANTERN = { x: (0.63 - 0.5) * PW, y: PY + (0.30 - 0.5) * PH };
+// Lantern world position (must match the shader's 0.63/0.38 uv).
+const LANTERN = { x: (0.63 - 0.5) * PW, y: PY + (0.38 - 0.5) * PH };
 
 // Breeze gust envelope: light baseline breathing + the mid-take swell at
 // ~t 6–13 that lifts drift speed and sway amplitude, settling by 18.
@@ -146,7 +147,9 @@ const gust = (t: number) =>
 
 // Precomputed integral of the fall-speed factor (0.8 + 0.4·gust) so the
 // fall distance stays a pure lookup of t — sampled once at setup.
-const GUST_DT = 0.02, GUST_T0 = -2, GUST_N = Math.ceil(26 / GUST_DT);
+// T0 must precede the earliest onset (-7.2) or early petals get a zero
+// fall distance and hover at the top edge until playback starts.
+const GUST_DT = 0.02, GUST_T0 = -16, GUST_N = Math.ceil(42 / GUST_DT);
 const gustTable = new Float32Array(GUST_N + 1);
 {
   for (let i = 1; i <= GUST_N; i++) {
