@@ -13,7 +13,7 @@ import { Scene, type Frame, type SceneCtx, type PostOverrides } from '../../engi
 
 // Impact choreography — all times/places fixed so the whole take is f(t).
 const IMPACT_1 = { x: 0.0, z: -2.0, t0: 3.0, amp: 1.0 };
-const IMPACT_2 = { x: 9.5, z: 5.0, t0: 12.0, amp: 0.72 };
+const IMPACT_2 = { x: 6.5, z: 3.5, t0: 12.0, amp: 0.72 };
 // Each drop is visible only while falling.
 const FALL_START = 0.75; // seconds before impact the droplet appears overhead
 const FALL_HEIGHT = 8.0;
@@ -58,7 +58,8 @@ float surfHeight(vec2 p) {
 vec3 envColor(vec3 dir) {
   float up = clamp(dir.y, 0.0, 1.0);
   vec3 sky = mix(vec3(0.028, 0.034, 0.045), vec3(0.10, 0.12, 0.14), pow(up, 0.7));
-  float band = exp(-pow((dir.y - 0.10) * 6.5, 2.0));
+  float bandD = (dir.y - 0.10) * 6.5;
+  float band = exp(-bandD * bandD);
   sky += vec3(0.030, 0.036, 0.045) * band;
   return sky;
 }
@@ -87,10 +88,14 @@ void main() {
   // One thin warm glint riding the main drop's crests — gated by the crest
   // factor so a flat surface stays cold.
   float lead = max(7.5 * (uTime - uT0_1), 0.0);
-  float leadBand = exp(-pow(length(p - uImpact1) - lead, 2.0) / 1.6) * step(0.0, uTime - uT0_1);
+  float leadD = length(p - uImpact1) - lead;
+  float leadBand = exp(-leadD * leadD / 1.6) * step(0.0, uTime - uT0_1);
+  // Glint rides the MAIN drop's crests only — gate on train 1 alone.
+  float h1 = waveTrain(p, uImpact1, uT0_1, uAmp1, 2.1, 7.5, 0.055);
+  float crest1 = smoothstep(0.14, 0.42, h1);
   vec3 warmDir = normalize(vec3(-0.42, 0.55, 0.72));
   float spec = pow(max(dot(refl, warmDir), 0.0), 160.0);
-  col += vec3(0.95, 0.55, 0.30) * spec * crest * (0.5 + 1.1 * leadBand);
+  col += vec3(0.95, 0.55, 0.30) * spec * crest1 * (0.5 + 1.1 * leadBand);
 
   // Trough shading keeps the field dimensional between crests.
   col *= 1.0 - 0.28 * smoothstep(0.10, 0.34, -h);
@@ -135,7 +140,9 @@ export default class RippleScene extends Scene {
         uAmp2: { value: IMPACT_2.amp },
       },
     });
-    this.water = new THREE.Mesh(new THREE.PlaneGeometry(90, 60), this.waterMat);
+    // Large enough that the low-tilt widescreen/portrait frame never sees past
+    // the plane's edge — the near-horizontal top-of-frame ray travels far.
+    this.water = new THREE.Mesh(new THREE.PlaneGeometry(240, 170), this.waterMat);
     this.water.rotation.x = -Math.PI / 2;
     this.threeScene.add(this.water);
 
