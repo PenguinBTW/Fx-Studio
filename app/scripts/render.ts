@@ -865,6 +865,18 @@ async function motion(page: Page) {
     }
   }
 
+  // Scene-authored waivers: <scene dir>/findings.json { waivers: { "<id|rule>": reason } }
+  const { dir: sceneDir } = await loadProject();
+  const sceneFindingsPath = path.join(sceneDir, 'findings.json');
+  if (existsSync(sceneFindingsPath)) {
+    try {
+      const sceneFindings = JSON.parse(await Bun.file(sceneFindingsPath).text());
+      for (const [k, v] of Object.entries(sceneFindings?.waivers ?? {})) {
+        if (typeof v === 'string' && v.trim()) waivers[k] = waivers[k] ?? v;
+      }
+    } catch {}
+  }
+
   const priorFindingsPath = path.join(outDir, 'findings.json');
   if (existsSync(priorFindingsPath)) {
     try {

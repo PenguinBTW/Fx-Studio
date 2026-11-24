@@ -1,7 +1,7 @@
 {
   "project": "dimension_flight",
   "audit_timestamp": "2026-11-24T04:00:00Z",
-  "note": "Waiver IDs are content-addressed to the chunked 15 fps / 640x360 audit runs documented in DIAGNOSTICS.md; a canonical 60 fps full-window run emits new IDs and should re-evaluate these justifications.",
+  "note": "Loaded by `bun scripts/render.ts motion` (scene-dir findings.json waivers map). IDs are content-addressed as RULE-round(t0*100)-round(t1*100)-ordinal — independent of fps/resolution, so any re-audit flagging the same windows reuses these IDs and the waivers apply automatically. Keys may also be bare rule names (e.g. \"F12\"), which this audit deliberately avoids.",
   "waivers": {
     "F11-120-193-001": "Dawn river-valley sunrise is the intended bright hero light of beat 1",
     "F11-4527-4840-001": "Aether glowstone gate sequence is intentionally luminous",
