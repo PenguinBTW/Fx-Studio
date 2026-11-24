@@ -80,6 +80,17 @@ float seg(vec2 p, vec2 a, vec2 b) {
   return length(pa - ba * t);
 }
 
+// willow canopy blobs at both banks (kept inside the camera band)
+float willowMask(vec2 uv) {
+  float w = 0.0;
+  for (int i = 0; i < 6; i++) {
+    float fi = float(i);
+    vec2 c = vec2((i < 3) ? 0.20 + fi * 0.05 : 0.70 + (fi - 3.0) * 0.045,
+                  0.58 + 0.05 * h1(fi * 3.7));
+    w += 1.0 - sstep(0.4, 1.0, sdist(uv, c, vec2(0.030 / ASPECT, 0.038)));
+  }
+  return w;
+}
 // ---------- building ----------
 // roofline height (for the gable mask + the last-light rim)
 float roofEdge(vec2 uv) {
@@ -206,13 +217,7 @@ void main() {
   // bank silhouette behind the pond (y just over the waterline)
   float bank = sstep(0.50, 0.505, uv.y);
   // willow canopy + hanging fronds at both banks
-  float willow = 0.0;
-  for (int i = 0; i < 6; i++) {
-    float fi = float(i);
-    vec2 c = vec2((i < 3) ? 0.20 + fi * 0.05 : 0.70 + (fi - 3.0) * 0.045,
-                  0.58 + 0.05 * h1(fi * 3.7));
-    willow += 1.0 - sstep(0.4, 1.0, sdist(uv, c, vec2(0.030 / ASPECT, 0.038)));
-  }
+  float willow = willowMask(uv);
   float fronds = 0.0;
   for (int i = 0; i < 8; i++) {
     float fi = float(i);
@@ -229,7 +234,7 @@ void main() {
   col = mix(col, water, below);
   // mill + willow reflections: mirrored, damped, quivering slightly
   vec2 ruv = vec2(uv.x + 0.003 * sin(t * 0.7 + uv.y * 60.0), 2.0 * WATER - uv.y);
-  float refl = below * (millMask(ruv) * 0.35 + clamp(willow, 0.0, 1.0) * 0.2);
+  float refl = below * (millMask(ruv) * 0.35 + clamp(willowMask(ruv), 0.0, 1.0) * 0.2);
   col = mix(col, vec3(0.085, 0.095, 0.125), refl * (0.75 + 0.25 * vn(vec2(uv.x * 80.0, t * 0.5))));
 
   // thin mist hovering over the pond, drifting left
