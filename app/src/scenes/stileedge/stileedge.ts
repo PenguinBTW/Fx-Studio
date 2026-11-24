@@ -294,7 +294,7 @@ export default class StileedgeScene extends Scene {
           const tp = Math.min(y0, y1), bt = Math.max(y0, y1);
           return { bbox: [l, tp, r2, bt] as number[], w: r2 - l, h: bt - tp, cx: (l + r2) / 2, cy: (tp + bt) / 2 };
         };
-        const crowB = boxFor(0.455, 0.655, 0.545, 0.745);
+        const crowB = boxFor(0.445, 0.645, 0.555, 0.785); // covers the wing-flare tip (~0.76)
         P.textProbes.push({
           frameIdx: P.currentFrameIdx ?? 0, t, text: 'crow',
           fontFamily: 'Archivo, sans-serif', fontPx: 20,
