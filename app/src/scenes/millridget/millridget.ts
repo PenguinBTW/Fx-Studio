@@ -64,6 +64,11 @@ const SKY_FRAG = /* glsl */ `
   uniform float uT;
   uniform float uDusk;
   float h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  float vn(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(h21(i), h21(i + vec2(1, 0)), f.x), mix(h21(i + vec2(0, 1)), h21(i + vec2(1, 1)), f.x), f.y);
+  }
   void main() {
     vec3 d = normalize(vDir);
     float h = clamp(d.y, -0.1, 1.0);
@@ -73,6 +78,20 @@ const SKY_FRAG = /* glsl */ `
     // sun-side warmth: band tightens toward azimuth of the set sun (-x, slightly -z)
     float sunAmt = smoothstep(0.55, 1.0, dot(normalize(d.xz), normalize(vec2(-1.0, -0.35))));
     col += vec3(0.65, 0.24, 0.05) * sunAmt * exp(-h * 4.0) * (1.6 - 0.9 * uDusk);
+    // drifting dusk clouds: fbm shapes on a mid-altitude band, warm-lit edges
+    // on the sun side, cool grey above
+    if (d.y > 0.02) {
+      vec2 cp = d.xz / (d.y + 0.22);
+      float cn = 0.0, amp = 0.55;
+      vec2 pp = cp * 2.3 + vec2(uT * 0.012, uT * 0.004);
+      for (int o = 0; o < 4; o++) { cn += amp * vn(pp); pp = pp * 2.07 + 13.1; amp *= 0.5; }
+      float band = smoothstep(0.02, 0.10, d.y) * (1.0 - smoothstep(0.55, 0.9, d.y));
+      float cov = smoothstep(0.40, 0.60, cn) * band;
+      vec3 shade = mix(vec3(0.10, 0.085, 0.13), vec3(0.05, 0.046, 0.08), uDusk);
+      vec3 lit = vec3(0.80, 0.38, 0.14) * (1.0 - 0.7 * uDusk);
+      vec3 ccol = mix(shade, lit, sunAmt * 0.9 + 0.08);
+      col = mix(col, ccol, cov * 0.85);
+    }
     // faint stars high up, twinkling, brighter as dusk deepens
     vec2 sp = vec2(atan(d.x, d.z) * 30.0, d.y * 60.0);
     float star = step(0.996, h21(floor(sp))) * smoothstep(0.4, 0.8, d.y)
@@ -125,10 +144,10 @@ function tuftGeometry(): THREE.BufferGeometry {
     // blade = 2 stacked quads bending outward
     const bx = lean * dx, bz = lean * dz;
     const px = -dz * wid, pz = dx * wid;
-    const quad = (y0: number, y1: number, w0: number, w1: number, lx: number, lz: number, shade: number) => {
+    const quad = (y0: number, y1: number, w0: number, w1: number, lx0: number, lz0: number, lx1: number, lz1: number, shade: number) => {
       const p = [
-        [px * w0, y0, pz * w0], [-px * w0, y0, -pz * w0],
-        [px * w1 + lx, y1, pz * w1 + lz], [-px * w1 + lx, y1, -pz * w1 + lz],
+        [px * w0 + lx0, y0, pz * w0 + lz0], [-px * w0 + lx0, y0, -pz * w0 + lz0],
+        [px * w1 + lx1, y1, pz * w1 + lz1], [-px * w1 + lx1, y1, -pz * w1 + lz1],
       ];
       pos.push(
         p[0][0], p[0][1], p[0][2], p[1][0], p[1][1], p[1][2], p[2][0], p[2][1], p[2][2],
@@ -137,9 +156,69 @@ function tuftGeometry(): THREE.BufferGeometry {
       for (let k = 0; k < 6; k++) col.push(shade, shade, shade);
       for (let k = 0; k < 6; k++) nrm.push(0, 0.8, 0.6);
     };
-    quad(0, hgt * 0.55, 1.0, 0.7, bx * 0.5, bz * 0.5, 0.62);
-    quad(hgt * 0.55, hgt, 0.7, 0.12, bx, bz, 1.35);
+    // the upper segment starts exactly where the lower ended — no seam at the bend
+    quad(0, hgt * 0.55, 1.0, 0.7, 0, 0, bx * 0.5, bz * 0.5, 0.62);
+    quad(hgt * 0.55, hgt, 0.7, 0.12, bx * 0.5, bz * 0.5, bx, bz, 1.35);
   }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3));
+  g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(col), 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(nrm), 3));
+  g.computeVertexNormals();
+  return g;
+}
+
+// seed-head stems: thin stalks topped with a grain diamond — they catch the
+// raking light as pale straw specks scattered over the field
+function seedGeometry(): THREE.BufferGeometry {
+  const pos: number[] = [];
+  const col: number[] = [];
+  const nrm: number[] = [];
+  const tri = (a: number[], b: number[], c: number[], shade: number) => {
+    pos.push(...a, ...b, ...c);
+    for (let k = 0; k < 3; k++) col.push(shade, shade, shade);
+    for (let k = 0; k < 3; k++) nrm.push(0, 0.8, 0.6);
+  };
+  for (let s = 0; s < 4; s++) {
+    const a = (s / 4) * Math.PI * 2 + 0.5;
+    const lean = 0.05 + 0.1 * hash(s * 7.7);
+    const h = 0.55 + 0.25 * hash(s * 3.1);
+    const dx = Math.cos(a) * lean, dz = Math.sin(a) * lean;
+    const w = 0.012;
+    const px = -Math.sin(a) * w, pz = Math.cos(a) * w;
+    tri([px, 0, pz], [-px, 0, -pz], [dx + px * 0.4, h, dz + pz * 0.4], 0.85);
+    tri([-px, 0, -pz], [dx - px * 0.4, h, dz - pz * 0.4], [dx + px * 0.4, h, dz + pz * 0.4], 0.85);
+    const hw = 0.035;
+    tri([dx - hw, h, dz], [dx + hw, h, dz], [dx, h + 0.16, dz], 1.5);
+    tri([dx + hw, h, dz], [dx - hw, h, dz], [dx, h - 0.05, dz], 1.2);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3));
+  g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(col), 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(nrm), 3));
+  g.computeVertexNormals();
+  return g;
+}
+
+// wildflowers: a crossed-quad stem with a small blossom cluster on top,
+// vertex-colored (warm cream / pale lavender variants)
+function flowerGeometry(lavender: boolean): THREE.BufferGeometry {
+  const pos: number[] = [];
+  const col: number[] = [];
+  const nrm: number[] = [];
+  const petal: [number, number, number] = lavender ? [0.66, 0.52, 0.85] : [0.95, 0.86, 0.58];
+  const quad = (pts: number[][], c: [number, number, number]) => {
+    pos.push(...pts[0], ...pts[1], ...pts[2], ...pts[1], ...pts[3], ...pts[2]);
+    for (let k = 0; k < 6; k++) col.push(...c);
+    for (let k = 0; k < 6; k++) nrm.push(0, 1, 0);
+  };
+  const h = 0.30;
+  const w = 0.055;
+  quad([[-w * 0.15, 0, 0], [w * 0.15, 0, 0], [0, h, 0.02], [0, h, -0.02]], [0.24, 0.34, 0.13]);
+  quad([[0, 0, -w * 0.15], [0, 0, w * 0.15], [-0.02, h, 0], [0.02, h, 0]], [0.24, 0.34, 0.13]);
+  // blossom: small dome of 4 fanned petals
+  quad([[-w, h, 0], [0, h, -w], [0, h + 0.07, 0], [w, h, 0]], petal);
+  quad([[-w, h, 0], [w, h, 0], [0, h + 0.07, 0], [0, h, w]], petal);
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3));
   g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(col), 3));
@@ -201,7 +280,13 @@ export default class MillridgetScene extends Scene {
   private birdMat!: THREE.MeshBasicMaterial;
   private grass!: THREE.InstancedMesh;
   private grass2!: THREE.InstancedMesh;
+  private seeds!: THREE.InstancedMesh;
+  private flowers!: THREE.InstancedMesh;
+  private flowers2!: THREE.InstancedMesh;
   private rocks!: THREE.InstancedMesh;
+  private sunBase = new THREE.Color();
+  private sunDusk = new THREE.Color();
+  private spill!: THREE.Sprite;
   private swayU = { value: 0 };
   private flapU = { value: 0 };
   private glow!: THREE.Sprite;
@@ -214,7 +299,10 @@ export default class MillridgetScene extends Scene {
 
     // ---- lighting: 2600K raking key, cool hemisphere fill, blue rim ----
     const [kr, kg, kb] = blackbodyToLinearSRGB(2600);
-    this.sun = new THREE.DirectionalLight(new THREE.Color(kr, kg, kb), 3.2);
+    this.sunBase.setRGB(kr, kg, kb);
+    const [dr, dg, db] = blackbodyToLinearSRGB(1950);
+    this.sunDusk.setRGB(dr, dg, db);
+    this.sun = new THREE.DirectionalLight(this.sunBase.clone(), 3.2);
     this.sun.position.set(-30, 9, -12);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
@@ -333,6 +421,13 @@ export default class MillridgetScene extends Scene {
     };
     scatter(this.grass, 2400, 2.4, 44, 11);
     scatter(this.grass2, 1600, 2.0, 34, 733);
+    // seed heads catching the light, plus two wildflower colours
+    this.seeds = new THREE.InstancedMesh(seedGeometry(), mkGrassMat(0xc9ae62), 750);
+    scatter(this.seeds, 750, 3.0, 40, 421);
+    this.flowers = new THREE.InstancedMesh(flowerGeometry(false), mkGrassMat(0xffffff), 240);
+    scatter(this.flowers, 240, 3.0, 32, 919);
+    this.flowers2 = new THREE.InstancedMesh(flowerGeometry(true), mkGrassMat(0xffffff), 150);
+    scatter(this.flowers2, 150, 4.0, 30, 1409);
 
     // ---- scattered rocks ----
     const rockGeo = new THREE.DodecahedronGeometry(0.4, 0);
@@ -429,14 +524,48 @@ export default class MillridgetScene extends Scene {
         mm.map = this.noiseTex;
         mm.roughnessMap = this.noiseTex;
         mm.bumpMap = this.noiseTex;
-        mm.bumpScale = 0.4;
+        mm.bumpScale = 0.7;
       }
     });
     scene.add(this.mill.root);
     const sails = this.mill.part('sails');
     this.sails = sails ?? this.mill.root;
-    this.windowLight.position.set(0, MILL_Y + 3.55, -2.6);
+    // window sits at local (0,3.55,-1.78) rotated by the mill's 0.45 yaw —
+    // put the light just off the pane so it spills onto the wall and sill
+    this.windowLight.position.set(-1.30, MILL_Y + 3.4, -2.72);
+    this.windowLight.distance = 13;
     scene.add(this.windowLight);
+    // faint warm spill patch on the wall under the window
+    const spillCv = document.createElement('canvas');
+    spillCv.width = spillCv.height = 64;
+    const sc = spillCv.getContext('2d')!;
+    const sg = sc.createRadialGradient(32, 32, 2, 32, 32, 32);
+    sg.addColorStop(0, 'rgba(255,170,80,0.55)');
+    sg.addColorStop(1, 'rgba(255,140,60,0)');
+    sc.fillStyle = sg;
+    sc.fillRect(0, 0, 64, 64);
+    this.spill = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: new THREE.CanvasTexture(spillCv),
+      transparent: true,
+      opacity: 0.0,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }));
+    this.spill.position.set(-0.95, MILL_Y + 3.35, -1.85);
+    this.spill.scale.set(3.2, 2.2, 1);
+    scene.add(this.spill);
+    // rocky outcrop on the crest behind the mill — silhouette breakup
+    for (let i = 0; i < 9; i++) {
+      const x = -13 + i * 3.4 + (hash(i * 5.3) - 0.5) * 2;
+      const z = -9 - hash(i * 7.7) * 6;
+      const rk = new THREE.Mesh(rockGeo, rockMat);
+      rk.position.set(x, ridgeH(x, z) - 0.15, z);
+      rk.rotation.set(hash(i * 3.1) * 3, hash(i * 5.9) * 3, hash(i * 9.7) * 3);
+      const s = 1.2 + hash(i * 11.3) * 1.4;
+      rk.scale.set(s * 1.4, s * 0.7, s);
+      rk.castShadow = true;
+      scene.add(rk);
+    }
 
     // ---- starlings: flapping swallow silhouettes on a murmuration ribbon ----
     const birdGeo = birdGeometry();
@@ -482,9 +611,9 @@ export default class MillridgetScene extends Scene {
     const s = i / 170;
     const ribbon = Math.sin(u * Math.PI * 3 + s * 9.0);
     out.set(
-      cx + (ph - 0.5) * 10 + Math.sin(w + t * 2.1 + u * 14.0) * (1.4 + 2.4 * Math.sin(u * Math.PI)),
-      cy + Math.sin(w * 2.0 + t * 2.7) * 1.3 + ribbon * 2.4 * (ph - 0.3),
-      cz + (hash(i * 3.3) - 0.5) * 5 + Math.cos(w + t * 1.9) * 1.6,
+      cx + (ph - 0.5) * 6.5 + Math.sin(w + t * 2.1 + u * 14.0) * (1.1 + 1.9 * Math.sin(u * Math.PI)),
+      cy + Math.sin(w * 2.0 + t * 2.7) * 1.1 + ribbon * 3.1 * (ph - 0.3),
+      cz + (hash(i * 3.3) - 0.5) * 3.4 + Math.cos(w + t * 1.9) * 1.3,
     );
   }
 
@@ -504,13 +633,15 @@ export default class MillridgetScene extends Scene {
     const gust = ss(GUST, GUST + 1.3, t);
     this.sails.rotation.z = t * 0.42 + 1.5 * gust;
 
-    // dusk cooling: key sun drops and reddens, fill dims, window warms up
+    // dusk cooling: key sun drops and slides 2600K -> 1950K, fill dims,
+    // window warms up and spills onto the wall
     const sun0 = 3.2;
     this.sun.intensity = sun0 * (1 - 0.55 * settle);
-    this.sun.color.setRGB(1.0, 0.62 - 0.18 * settle, 0.38 - 0.14 * settle);
+    this.sun.color.copy(this.sunBase).lerp(this.sunDusk, settle);
     this.hemi.intensity = 0.45 * (1 - 0.4 * settle);
     this.rim.intensity = 0.7 + 0.25 * settle;
-    this.windowLight.intensity = 0.8 + 0.15 * Math.sin(t * 5.0) + 0.5 * settle;
+    this.windowLight.intensity = 1.1 + 0.18 * Math.sin(t * 5.0) + 0.6 * settle;
+    this.spill.material.opacity = (0.18 + 0.04 * Math.sin(t * 5.0 + 1.0)) * (1 + 0.6 * settle);
     (this.three.fog as THREE.FogExp2).density = 0.0105 + 0.004 * settle;
     this.glow.material.opacity = 1 - 0.45 * settle;
 
@@ -597,10 +728,16 @@ export default class MillridgetScene extends Scene {
     this.noiseTex?.dispose();
     this.glow?.material.map?.dispose();
     this.glow?.material.dispose();
+    this.sun?.shadow.map?.dispose();
     this.starlings?.dispose();
     this.grass?.dispose();
     this.grass2?.dispose();
+    this.seeds?.dispose();
+    this.flowers?.dispose();
+    this.flowers2?.dispose();
     this.rocks?.dispose();
+    this.spill?.material.map?.dispose();
+    this.spill?.material.dispose();
     this.three.traverse((o) => {
       const m = o as THREE.Mesh;
       m.geometry?.dispose();

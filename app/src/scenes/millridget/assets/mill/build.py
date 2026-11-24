@@ -26,7 +26,7 @@ SLATE    = mat('SlateCap',    (0.13, 0.15, 0.19), rough=0.5, metal=0.25)
 IRON     = mat('Iron',        (0.09, 0.08, 0.08), rough=0.45, metal=0.8)
 SAIL_WOOD= mat('SailWood',    (0.28, 0.21, 0.12), rough=0.75)
 CANVAS   = mat('SailCanvas',  (0.72, 0.66, 0.52), rough=0.92)
-GLASS    = mat('WindowGlass', (0.95, 0.60, 0.22), rough=0.3, emit=(1.0, 0.52, 0.16), strength=4.0)
+GLASS    = mat('WindowGlass', (0.95, 0.60, 0.22), rough=0.3, emit=(1.0, 0.52, 0.16), strength=1.25)
 
 root = empty('mill'); root['fx_part'] = 'mill'
 
@@ -100,10 +100,20 @@ step2 = box('step2', (0.8, 0.30, 0.16), (0, -2.30, 0.24), STONE, bev=0.03)
 for st in (step1, step2):
     st['fx_part'] = 'door'; parent(st, root)
 
-# ---------- window: frame + mullions + warm glass ----------
-wframe = box('winFrame', (0.62, 0.14, 0.72), (0, -1.70, 3.55), TIMBER_D, bev=0.03)
-wframe['fx_part'] = 'win'; parent(wframe, body)
-glass = box('glass', (0.48, 0.06, 0.58), (0, -1.74, 3.55), GLASS, bev=0.015)
+# ---------- window: surround frame + mullions + warm glass ----------
+# frame = 4 members around the opening (a solid slab would cover the pane)
+for nm, (sx, sz, px, pz) in {
+    'winTop':    (0.62, 0.07, 0.0,  0.365),
+    'winBot':    (0.62, 0.07, 0.0, -0.365),
+    'winL':      (0.07, 0.58, -0.275, 0.0),
+    'winR':      (0.07, 0.58,  0.275, 0.0),
+}.items():
+    wbar = box(nm, (sx, 0.14, sz), (px, -1.70, 3.55 + pz), TIMBER_D, bev=0.025)
+    wbar['fx_part'] = 'win'; parent(wbar, body)
+# sill under the opening
+wsill = box('winSill', (0.72, 0.18, 0.07), (0, -1.74, 3.55 - 0.42), TIMBER_D, bev=0.025)
+wsill['fx_part'] = 'win'; parent(wsill, body)
+glass = box('glass', (0.48, 0.06, 0.58), (0, -1.78, 3.55), GLASS, bev=0.015)
 glass['fx_part'] = 'win'; parent(glass, body)
 mullv = box('mullV', (0.04, 0.05, 0.58), (0, -1.76, 3.55), TIMBER_D)
 mullh = box('mullH', (0.48, 0.05, 0.04), (0, -1.76, 3.55), TIMBER_D)
@@ -133,6 +143,10 @@ def sailparts(k):
         p = box(f'cloth{k}_{j}', (0.86, 0.02, 0.40), (0.52, -2.02, 4.25 + 2.55 + j * 0.44), CANVAS)
         p.rotation_euler[2] = math.radians(1.2 if j % 2 else -1.2)
         grp.append(p)
+    # diagonal braces across the lattice (tilt in the sail's x-z plane = rot.y)
+    brace_ang = math.atan(0.98 / 3.0)
+    grp.append(box(f'brace{k}u', (0.045, 0.05, 3.3), (0.5, -2.04, 4.25 + 2.9), SAIL_WOOD, bev=0.012, rot=(0, brace_ang, 0)))
+    grp.append(box(f'brace{k}l', (0.045, 0.05, 3.3), (0.5, -2.04, 4.25 + 2.9), SAIL_WOOD, bev=0.012, rot=(0, -brace_ang, 0)))
     return grp, ang
 
 for k in range(4):
