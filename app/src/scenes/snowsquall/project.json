@@ -1,0 +1,46 @@
+{
+  "project": "snowsquall",
+  "meta": {
+    "title": "Snowsquall: The Front",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 20.0
+  },
+  "entries": [
+    {
+      "scene": "snowsquall/snowsquall",
+      "id": "act-calm",
+      "start": 0.0,
+      "end": 4.0,
+      "caption": { "fig": "01", "text": "CALM WINDOWS", "dur": 3.4 }
+    },
+    {
+      "scene": "snowsquall/snowsquall",
+      "id": "act-front",
+      "start": 4.0,
+      "end": 10.0,
+      "caption": { "fig": "02", "text": "THE FRONT", "dur": 4.0 }
+    },
+    {
+      "scene": "snowsquall/snowsquall",
+      "id": "act-whiteout",
+      "start": 10.0,
+      "end": 13.0,
+      "caption": { "fig": "03", "text": "WHITEOUT", "dur": 2.8 }
+    },
+    {
+      "scene": "snowsquall/snowsquall",
+      "id": "act-thin",
+      "start": 13.0,
+      "end": 16.0,
+      "caption": { "fig": "04", "text": "THE GAP", "dur": 3.0 }
+    },
+    {
+      "scene": "snowsquall/snowsquall",
+      "id": "act-settle",
+      "start": 16.0,
+      "end": 20.0,
+      "caption": { "fig": "05", "text": "SETTLED SNOW", "dur": 3.8 }
+    }
+  ]
+}
