@@ -57,8 +57,9 @@ export default class BurnThrough implements Transition {
 
         // B emerges FROM the white in the same luminance order — the burn front is
         // continuous: where A finished bleaching first, B appears first
-        float emerge = clamp(cover * 1.6 - (1.0 - order) * 0.6 - 0.45, 0.0, 1.0);
-        float maskB = smoothstep(0.0, 0.5, emerge);
+        // reveal keyed to the SAME burn ramp: B becomes opaque only as this pixel
+        // finishes bleaching — shadows always pass through white first, any luminance
+        float maskB = smoothstep(0.55, 1.0, burn);
 
         vec3 col = mix(bleach, b.rgb, maskB);
         // hard coverage guarantee: past completion the frame is exactly B
@@ -93,6 +94,9 @@ export default class BurnThrough implements Transition {
 
     // bloom rides the burn: peaks at seam centre (the white bleach maximum) and
     // dies with coverage completion — no snap-off at the seam end
+    // past coverage completion the transition must not hold overrides — releasing
+    // them lets scene B's own bloom/exposure apply, no one-frame snap at window end
+    if (u >= 0.85) return;
     const x = Math.min(1, Math.max(0, (u - 0.7) / 0.15));
     const tail = x * x * (3 - 2 * x);
     const peak = Math.sin(u * Math.PI) * (1 - tail);
