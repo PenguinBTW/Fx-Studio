@@ -101,7 +101,7 @@ export default class MooriseScene extends Scene {
     // Moon disc + halo.
     this.moonMat = new THREE.MeshBasicMaterial({ color: BONE.clone() });
     this.moonMesh = new THREE.Mesh(new THREE.CircleGeometry(2.6, 72), this.moonMat);
-    this.moonMesh.position.set(2.5, 0.9, -7);
+    this.moonMesh.position.set(2.5, 0.9, -9.5); // behind the sea plane: waterline clips the disc
     this.threeScene.add(this.moonMesh);
     // Halo: radial-gradient sprite — soft falloff, no hard ring edge.
     const hc = document.createElement('canvas');
@@ -122,7 +122,7 @@ export default class MooriseScene extends Scene {
     });
     this.haloMesh = new THREE.Sprite(this.haloMat);
     this.haloMesh.scale.set(9, 9, 1);
-    this.haloMesh.position.set(2.5, 0.9, -7.05);
+    this.haloMesh.position.set(2.5, 0.9, -9.55);
     this.threeScene.add(this.haloMesh);
 
     // Reflection streak column on the water.
@@ -180,10 +180,10 @@ export default class MooriseScene extends Scene {
     sp.needsUpdate = true;
     sc2.needsUpdate = true;
 
-    // Slow push-in; slight downward tilt as the moon climbs.
+    // Slow push-in; gaze rises to track the climbing moon.
     const dist = 26 * (1.06 - 0.10 * u);
     this.camera.position.set(Math.sin(lt * 0.04) * 0.6, 2.6 - 0.5 * alt, dist);
-    this.camera.lookAt(1.8, 1.6 + 1.2 * alt, -7);
+    this.camera.lookAt(1.8, 1.6 + 1.2 * alt, -9);
     this.camera.updateMatrixWorld();
 
     const r = this.ctx.renderer;
