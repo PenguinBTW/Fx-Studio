@@ -1,0 +1,32 @@
+{
+  "project": "fireflymarsh",
+  "meta": {
+    "title": "Firefly Marsh",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 24
+  },
+  "entries": [
+    {
+      "scene": "fireflymarsh/fireflymarsh",
+      "id": "act-light",
+      "start": 0,
+      "end": 8,
+      "caption": { "fig": "01", "text": "LAST LIGHT", "dur": 4 }
+    },
+    {
+      "scene": "fireflymarsh/fireflymarsh",
+      "id": "act-chorus",
+      "start": 8,
+      "end": 16,
+      "caption": { "fig": "02", "text": "THE CHORUS", "dur": 4 }
+    },
+    {
+      "scene": "fireflymarsh/fireflymarsh",
+      "id": "act-rekindle",
+      "start": 16,
+      "end": 24,
+      "caption": { "fig": "03", "text": "REKINDLE", "dur": 4 }
+    }
+  ]
+}
