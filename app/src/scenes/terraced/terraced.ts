@@ -48,8 +48,9 @@ const terrH = (x: number, z: number): number => {
 const wallZ = (x: number, k: number) => (wander(x) - (k + 0.9) * LEVEL) / 0.18;
 // z of the flat mid-band of terrace level k — where trees + scatter sit
 const bandZ = (x: number, k: number) => (wander(x) - (k + 0.45) * LEVEL) / 0.18;
-// the path: a descending diagonal — same curve as build.py
-const pathX = (z: number) => 7.0 + 9.0 * Math.sin(z * 0.115 + 0.6);
+// the path: a descending diagonal — same curve as build.py, which samples
+// Blender Y; glTF z = -Y, so the scene-side path is the mirrored curve
+const pathX = (z: number) => 7.0 + 9.0 * Math.sin(-z * 0.115 + 0.6);
 
 const CAPTIONS: Array<[number, number, string, [number, number, number]]> = [
   [0.8, 3.0, 'generations cut this hill into steps', [-11, terrH(-11, 23.5) + 4.0, 23.5]],
@@ -759,7 +760,7 @@ export default class TerracedScene extends Scene {
     const yFig = terrH(xFig, zFig);
     this.figure.position.set(xFig, yFig - 0.04, zFig);
     // face along the path's descent direction
-    const dxdz = 9.0 * 0.115 * Math.cos(zFig * 0.115 + 0.6);
+    const dxdz = -9.0 * 0.115 * Math.cos(-zFig * 0.115 + 0.6);
     this.figure.rotation.y = Math.atan2(dxdz, 1.0) * 0.9;
     this.figure.rotation.z = 0.02 * Math.sin(t * 2.2); // gentle walk sway
     // lantern rides the arm at ~(0.62, 0.55, 0.36) in figure space
