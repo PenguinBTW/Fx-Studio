@@ -93,7 +93,7 @@ void main() {
   vec3 seamCol = mix(vec3(0.35, 0.10, 0.02), vec3(1.0, 0.55, 0.18), sg);
   ground += seamCol * warmBand * (0.25 + 0.75 * sg);
   // hot pinpricks right on the ridge crest
-  float prick = smoothstep(0.90, 1.0, fbm(vec2(p.x * 160.0, ry * 40.0), 3))
+  float prick = smoothstep(0.62, 0.80, fbm(vec2(p.x * 160.0, ry * 40.0), 3))
               * (1.0 - smoothstep(0.0, 0.012, abs(p.y - ry)));
   ground += vec3(1.0, 0.72, 0.30) * prick * 1.6;
   c = mix(c, ground, below);
