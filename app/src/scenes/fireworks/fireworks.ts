@@ -240,8 +240,8 @@ in float vA;
 out vec4 fragColor;
 void main() {
   float d = length(vUv);
-  float m = smoothstep(1.0, 0.15, d);                 // soft round spark
-  fragColor = vec4(vCol * vA * m * 2.2, 1.0);         // additive: alpha=1
+  float m = 1.0 - smoothstep(0.15, 1.0, d);           // soft round spark
+  fragColor = vec4(vCol * vA * m * 2.2, vA * m);      // additive: coverage alpha
 }`;
 
 // Backdrop plane mapping (must match the mesh below): uv → world.
@@ -410,32 +410,6 @@ export default class FireworksScene extends Scene {
       g.fillStyle = 'rgba(255,244,225,0.95)';
       g.fillText(text, tx, ty);
       g.restore();
-
-      type Probe = {
-        textProbes?: unknown[]; recordText?: boolean; probe?: boolean; currentFrameIdx?: number;
-      };
-      const P = (globalThis as { __motion?: Probe }).__motion
-        ?? (globalThis as { __pdoom?: Probe }).__pdoom;
-      if (P && P.probe && P.textProbes && P.recordText) {
-        const bh = fs * 1.2;
-        P.textProbes.push({
-          frameIdx: P.currentFrameIdx ?? 0,
-          t: f.t,
-          text,
-          fontFamily: F.archivo(112, 500),
-          fontPx: fs,
-          fillStyle: 'rgba(255,244,225,0.95)',
-          globalAlpha: a,
-          layerId: 'fireworks-captions',
-          bbox: [tx - tw / 2, ty - fs, tx + tw / 2, ty - fs + bh],
-          w: tw,
-          h: bh,
-          cx: tx,
-          cy: ty - fs + bh / 2,
-          hPct: (bh / 1080) * 100,
-          isStroke: false,
-        });
-      }
     }
     this.ctx.comp.draw(r, this.layer.upload(), out, { mode: 'normal', opacity: 1 });
     r.resetState();
