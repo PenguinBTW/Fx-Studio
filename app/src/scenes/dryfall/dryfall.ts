@@ -32,7 +32,7 @@ const HIKER = { in: 3.6, step: 4.2, stumble0: 6.0, stumble1: 6.8, far: 8.8, gone
 const RAVEN_LAND = { down: 10.2, sit: 10.9, up: 12.2 };          // raven 2 visits the log end
 const LIZARD = { t0: 13.0, t1: 14.1 };
 const TUMBLE = { t0: 13.6, t1: 15.6 };
-const DUST = { t0: 15.0, t1: 18.0 };
+const DUST = { t0: 14.4, t1: 16.8 };
 
 // ledge/log geometry
 const LOG_Y = 0.32, LOG_X0 = -0.85, LOG_X1 = 1.05;
@@ -119,7 +119,7 @@ void main() {
   // the dry waterfall — dark mineral stain from the rim notch to the floor
   float stainX = 0.30 + 0.12 * sin(q.y * 1.55 + 0.4) + 0.05 * sin(q.y * 4.2);
   float stain = 1.0 - smoothstep(0.10, 0.55, abs(q.x - stainX));
-  stain *= smoothstep(rim + 0.15, rim - 0.35, q.y) * smoothstep(floorY - 0.4, floorY + 0.6, q.y);
+  stain *= (1.0 - smoothstep(rim - 0.35, rim + 0.15, q.y)) * smoothstep(floorY - 0.4, floorY + 0.6, q.y);
   float mottle = 0.6 + 0.4 * hash21(floor(q * vec2(9.0, 13.0)));
   rock = mix(rock, vec3(0.115, 0.095, 0.075), stain * mottle * 0.85);
   // wet-look sheen strip dead centre of the stain
@@ -136,7 +136,7 @@ void main() {
   rock = mix(rock, rock * 0.42, lip * smoothstep(ledgeY - 0.55, ledgeY - 0.16, q.y));
 
   // canyon floor — pale gravel, heat shimmer wobble in the lowest strip
-  vec3 floor0 = mix(vec3(0.36, 0.30, 0.22), vec3(0.30, 0.245, 0.18), smoothstep(floorY + 0.2, -2.5, q.y));
+  vec3 floor0 = mix(vec3(0.36, 0.30, 0.22), vec3(0.30, 0.245, 0.18), 1.0 - smoothstep(-2.5, floorY + 0.2, q.y));
   floor0 += vec3(0.025, 0.02, 0.012) * (hash21(floor(q * vec2(34.0, 18.0))) - 0.5);
   float belowFloor = 1.0 - smoothstep(floorY - 0.02, floorY + 0.02, q.y);
   vec3 col = mix(rock, floor0, belowFloor);
@@ -439,7 +439,7 @@ export default defineScene({
       st.pigHead.position.set(0.048, 0.045, 0.001);
       st.pigHead.frustumCulled = false;
       st.pigeon.add(st.pigHead);
-      st.pigeon.position.set(2.1, RIM_Y + 0.02, 0.05);
+      st.pigeon.position.set(2.1, RIM_Y - 0.24, 0.05);
       ctx.scene3D.add(st.pigeon);
     }
   },
@@ -463,7 +463,7 @@ export default defineScene({
         hx = mix(-1.9, LOG_X0 + 0.06, u);
         a = 0.95;
         legSwing = 0.5 * Math.sin(u * Math.PI * 5);
-      } else if (t < HIKER.stumble0) {                             // on the log, careful steps
+      } else if (t >= HIKER.step && t < HIKER.stumble0) {          // on the log, careful steps
         const u = (t - HIKER.step) / (HIKER.stumble0 - HIKER.step);
         hx = mix(LOG_X0 + 0.06, mid - 0.06, sCurve(u));
         hy = LOG_Y + 0.10 - 0.05 * Math.sin(Math.PI * (hx - LOG_X0) / (LOG_X1 - LOG_X0));
@@ -542,7 +542,7 @@ export default defineScene({
       const on = u > 0 && u < 1;
       const x = mix(-4.3, 4.4, u);
       const hop = Math.abs(Math.sin(u * Math.PI * 5)) * 0.09;
-      st.tumble.position.set(x, FLOOR_Y + 0.16 + hop, 0.05);
+      st.tumble.position.set(x, FLOOR_Y + 0.44 + hop, 0.05);
       st.tumble.rotation.z = -u * 16;
       st.tumMat.uniforms.uA!.value = on ? 0.8 * sstep(TUMBLE.t0, TUMBLE.t0 + 0.4, t) * (1 - sstep(TUMBLE.t1 - 0.4, TUMBLE.t1, t)) : 0;
     }
@@ -552,7 +552,7 @@ export default defineScene({
       const u = clamp01((t - DUST.t0) / (DUST.t1 - DUST.t0));
       const on = u > 0 && u < 1;
       const x = mix(-3.6, 3.8, u);
-      st.dust.position.set(x, FLOOR_Y + 0.6 + 0.04 * Math.sin(t * 1.3), 0.05);
+      st.dust.position.set(x, FLOOR_Y + 0.85 + 0.04 * Math.sin(t * 1.3), 0.05);
       st.dustMat.uniforms.uA!.value = on ? 0.55 * sstep(DUST.t0, DUST.t0 + 0.8, t) * (1 - sstep(DUST.t1 - 0.9, DUST.t1, t)) : 0;
     }
 
@@ -561,7 +561,7 @@ export default defineScene({
       const bobT = t * 2.2;
       const step = Math.floor(bobT) % 4 < 2 ? 1 : 0;
       const px = 2.1 + 0.05 * Math.sin(t * 0.4) + (step ? 0.0 : 0.0);
-      st.pigeon.position.set(px, RIM_Y + 0.02, 0.05);
+      st.pigeon.position.set(px, RIM_Y - 0.24, 0.05);
       st.pigHead.rotation.z = -0.5 * Math.max(0, Math.sin(bobT * Math.PI));
       st.pigHead.position.y = 0.045 - 0.006 * Math.max(0, Math.sin(bobT * Math.PI));
     }
