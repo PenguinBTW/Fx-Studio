@@ -1,0 +1,6 @@
+{
+  "project": "fireworks",
+  "entries": [
+    { "scene": "fireworks/fireworks", "id": "fireworks", "start": 0, "end": 20 }
+  ]
+}
