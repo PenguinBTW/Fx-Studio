@@ -32,13 +32,16 @@ const wrenAPos = (u: number): [number, number, number] => {
   return [x, top + 0.012 + hop - Math.max(0, u - 0.75) * 0.08, vis];
 };
 // wren B: climbs out higher at x .62, flicks, then darts off right
-const wrenBPos = (u: number): [number, number, number] => {
+const wrenBPos = (u: number, aspect = 16 / 9): [number, number, number] => {
   const top = 0.60 + 0.05 * Math.sin(0.62 * 7) + 0.03 * Math.sin(0.62 * 17 + 2);
   if (u < 0.3) return [0.62, top - 0.04 + u / 0.3 * 0.06, Math.min(1, u / 0.3)];
   const d = ss(0.7, 1.0, u);
   const x = 0.62 + d * 0.55;
-  // visibility drops once fully off-frame so probes stop recording it
-  return [x, top + 0.02 + d * 0.06 + Math.abs(Math.sin(d * 9)) * 0.03, x > 1.06 ? 0 : 1];
+  // the world plane is height-fitted, so the visible authored-x range tracks
+  // aspect: frame right edge sits at 0.5 + (PH/2)/PW*aspect; hide once the
+  // wren's body clears it so probes stop recording off-frame
+  const edge = 0.5 + (PH / 2 / PW) * aspect + 0.03;
+  return [x, top + 0.02 + d * 0.06 + Math.abs(Math.sin(d * 9)) * 0.03, x > edge ? 0 : 1];
 };
 
 const PW = 300, PH = 114, PY = 8, PZ = -80;
@@ -290,7 +293,7 @@ export default class HedgelightScene extends Scene {
 
     const ua = wrenAU(t), ub = wrenBU(t);
     const [ax, ay, av] = wrenAPos(ua);
-    const [bx, by, bv] = wrenBPos(ub);
+    const [bx, by, bv] = wrenBPos(ub, this.cam.aspect);
     this.bu.uT.value = t;
     this.bu.uWrenA.value = ua;
     this.bu.uWrenB.value = ub;
