@@ -263,7 +263,7 @@ void main() {
     // headlight lamp dot + pre-entry glow at the left edge
     vec2 dh = (uv - vec2(front, 0.514)) * vec2(2.0, 1.0);
     col += vec3(1.0, 0.78, 0.40) * exp(-pow2(length(dh)) / 0.00005) * vis * 1.2;
-    col += vec3(0.9, 0.55, 0.22) * exp(-pow2(uv.x) / 0.002) * smoothstep(0.42, 0.55, uv.y)
+    col += vec3(0.9, 0.55, 0.22) * exp(-pow2(uv.x - 0.035) / 0.002) * smoothstep(0.42, 0.55, uv.y)
          * ssx(3.8, 5.2, t) * (1.0 - ssx(6.0, 8.0, t)) * 0.6;
 
     // loco silhouette
@@ -277,10 +277,14 @@ void main() {
     // cars
     float body = loco;
     for (int k = 1; k <= 3; k++) {
+      float cx = bx - 0.030 - (float(k) - 1.0) * 0.048;
+      body = max(body, boxm(uv, vec2(cx, TR + 0.015 + bob), vec2(0.037, 0.019)));
+    }
+    col = mix(col, vec3(0.045, 0.045, 0.065), clamp(body, 0.0, 1.0) * vis * 0.96);
+    // warm flickering windows sit ON the bodies, not under them
+    for (int k = 1; k <= 3; k++) {
       float fk = float(k);
       float cx = bx - 0.030 - (fk - 1.0) * 0.048;
-      body = max(body, boxm(uv, vec2(cx, TR + 0.015 + bob), vec2(0.037, 0.019)));
-      // warm flickering windows
       for (int j = 0; j < 4; j++) {
         float fj = float(j);
         float wx = cx - 0.013 + fj * 0.0095;
@@ -289,12 +293,10 @@ void main() {
         col = mix(col, vec3(1.0, 0.70, 0.30) * fl, win * vis * 0.95);
       }
     }
-    col = mix(col, vec3(0.045, 0.045, 0.065), clamp(body, 0.0, 1.0) * vis * 0.96);
-    // tail lamp on the last car — the receding beat
+    // tail lamp on the last car — visible as it exits, the receding beat
     vec2 dt2 = (uv - vec2(bx - 0.172, TR + 0.012 + bob)) * vec2(2.0, 1.0);
     float tail = exp(-pow2(length(dt2)) / 0.00004);
-    // the lamp only reads as the receding beat — don't show red mid-crossing
-    col += vec3(0.9, 0.10, 0.08) * tail * vis * ssx(14.5, 16.5, t);
+    col += vec3(0.9, 0.10, 0.08) * tail * vis * ssx(13.8, 14.6, t);
   }
 
   col *= uAwake;
@@ -396,8 +398,10 @@ export default class NightTrainScene extends Scene {
         setFont();
       }
       g.textAlign = 'center';
-      g.shadowColor = 'rgba(0,0,0,0.9)';
-      g.shadowBlur = 14;
+      g.lineJoin = 'round';
+      g.strokeStyle = 'rgba(5,6,10,0.9)';
+      g.lineWidth = 6;
+      g.strokeText(text, this.ctx.W / 2, this.ctx.H - 120);
       g.fillStyle = 'rgba(235,235,240,0.95)';
       g.fillText(text, this.ctx.W / 2, this.ctx.H - 120);
       g.restore();
