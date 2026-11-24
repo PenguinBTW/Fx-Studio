@@ -25,11 +25,11 @@ const int MOTES = 9;
 const int ANEM = 6;
 
 // drip i's j-th event time: a steady cadence per drip, staggered by seed;
-// bursts cluster near t=2 (first ring) and t=14 (drip cascade), calm at 18
+// first ring lands at/just before t=2; last start ~17.9 so t=18 stays calm
 float dripTime(int i, int j) {
   float fj = float(j);
-  float seed = hash11(float(i) * 7.13 + 0.37) * 1.7;
-  return 1.6 + fj * 2.1 + seed + (float(i) * 0.9);
+  float seed = hash11(float(i) * 7.13 + 0.37) * 1.2;
+  return 1.4 + fj * 2.2 + seed + (float(i) * 0.7);
 }
 
 vec2 dripPos(int i) {
@@ -44,7 +44,7 @@ float rippleH(vec2 p, float t) {
   for (int i = 0; i < DRIPS; i++) {
     vec2 c = dripPos(i);
     float d = length(p - c);
-    for (int j = 0; j < 8; j++) {
+    for (int j = 0; j < 7; j++) {
       float t0 = dripTime(i, j);
       float age = t - t0;
       if (age <= 0.0 || age > 3.2) continue;
@@ -63,7 +63,7 @@ float caustic(vec2 p, float t) {
   float a = cos(p.x * 22.0 + t * 0.9 + sin(p.y * 14.0 - t * 0.5) * 1.6);
   float b = cos((p.x * 0.7 + p.y) * 19.0 - t * 0.65 + sin(p.x * 11.0 + t * 0.4));
   float c = max(a * b, 0.0);
-  return c * c * c * fbm(p * 14.0 + t * 0.15, 2); // fbm mask breaks up streaks
+  return c * c * c * max(fbm(p * 14.0 + t * 0.15, 2), 0.0); // fbm mask breaks up streaks
 }
 
 void main() {
@@ -81,17 +81,19 @@ void main() {
   float basin = length(e);                    // <1 water, >1 rock
   float rockMask = smoothstep(0.96, 1.04, basin);
 
-  // ---- dusk sky reflection (flipped v — looking down at a mirror) --------
-  vec3 skyRef = mix(vec3(0.42, 0.20, 0.15),   // warm band at the horizon
-                    vec3(0.035, 0.05, 0.10),  // deep zenith blue
-                    smoothstep(0.1, 0.95, 1.0 - p.y));
-  skyRef += vec3(0.30, 0.12, 0.02) * exp(-abs(1.0 - p.y - 0.72) * 9.0) * 0.6;
-
   // ---- water surface ------------------------------------------------------
   float rh = rippleH(q, t);
-  // ripple slope distorts the reflection lookup -> wavering sky image
   vec2 grad = vec2(rippleH(q + vec2(0.004, 0.0), t) - rh,
                    rippleH(q + vec2(0.0, 0.004), t) - rh);
+
+  // ---- dusk sky reflection (flipped v — looking down at a mirror) --------
+  // the ripple slope warps the lookup, so rings bend the reflected sky
+  float skyY = 1.0 - p.y + grad.y * 14.0 + grad.x * 4.0;
+  vec3 skyRef = mix(vec3(0.42, 0.20, 0.15),   // warm band at the horizon
+                    vec3(0.035, 0.05, 0.10),  // deep zenith blue
+                    smoothstep(0.1, 0.95, skyY));
+  skyRef += vec3(0.30, 0.12, 0.02) * exp(-abs(skyY - 0.72) * 9.0) * 0.6;
+
   vec3 water = mix(skyRef, vec3(0.02, 0.045, 0.065), 0.72);  // deeper pool water
   water += vec3(0.9, 0.75, 0.55) * max(rh, 0.0) * 0.9;         // crest glints
   water -= vec3(0.02, 0.03, 0.04) * max(-rh, 0.0) * 1.4;       // trough shade
@@ -146,7 +148,7 @@ void main() {
   }
 
   // vignette + dusk grade
-  float vig = smoothstep(1.15, 0.45, length(p - 0.5) * 1.35);
+  float vig = 1.0 - smoothstep(0.45, 1.15, length(p - 0.5) * 1.35);
   c *= 0.55 + 0.45 * vig;
   c *= uFade;
 
