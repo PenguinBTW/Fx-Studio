@@ -1,0 +1,6 @@
+{
+  "project": "cindercourt",
+  "entries": [
+    { "scene": "cindercourt/cindercourt", "id": "cindercourt", "start": 0, "end": 18 }
+  ]
+}
