@@ -60,9 +60,10 @@ function crestGlow(c: Crest, t: number): number {
   if (tau >= 0) return c.amp * Math.exp(-tau / 1.1);
   return c.amp * 0.22 * Math.exp(-((tau / 0.9) ** 2)) + 0.05;
 }
-// Foam trail: after the break the streak drifts back seaward and fades.
+// Foam trail: after the break the streak drains back seaward (toward the
+// horizon, increasing y) while it fades.
 function foamY(c: Crest, t: number): number {
-  return BREAK_Y - c.ws * Math.max(0, t - c.tc);
+  return BREAK_Y + c.ws * Math.max(0, t - c.tc);
 }
 function foamGlow(c: Crest, t: number): number {
   const tau = t - c.tc;
@@ -82,6 +83,8 @@ export default class BiolumScene extends Scene {
   private crestMats: THREE.LineBasicMaterial[] = [];
   private foamGeos: THREE.BufferGeometry[] = [];
   private foamMats: THREE.LineBasicMaterial[] = [];
+  private ownedGeos: THREE.BufferGeometry[] = [];
+  private ownedMats: THREE.Material[] = [];
   private starsGeo: THREE.BufferGeometry;
   private moonMat: THREE.SpriteMaterial;
   private streakMat: THREE.SpriteMaterial;
@@ -105,16 +108,21 @@ export default class BiolumScene extends Scene {
     this.glowTex = new THREE.CanvasTexture(bc);
 
     // ---- Backdrop: sky / sea / sand as three near-black planes -------------
+    // Tall spans keep the backdrop covering the frame at any aspect; the sand
+    // edge sits below BREAK_Y so every crest flash lands on the sea, not the
+    // beach.
     const quad = (y0: number, y1: number, color: THREE.Color, z: number) => {
       const g = new THREE.PlaneGeometry(40, y1 - y0);
       const m = new THREE.MeshBasicMaterial({ color });
       const q = new THREE.Mesh(g, m);
       q.position.set(0, (y0 + y1) / 2, z);
       this.threeScene.add(q);
+      this.ownedGeos.push(g);
+      this.ownedMats.push(m);
     };
-    quad(HORIZON, 14, SKY, -12);
+    quad(HORIZON, 30, SKY, -12);
     quad(BREAK_Y - 0.4, HORIZON, SEA, -11);
-    quad(-14, BREAK_Y + 0.25, SAND, -10);
+    quad(-30, BREAK_Y - 0.3, SAND, -10);
 
     // ---- Warm accent: low moon + its thin glint column on the water --------
     this.moonMat = new THREE.SpriteMaterial({
@@ -148,9 +156,11 @@ export default class BiolumScene extends Scene {
     this.starsGeo = new THREE.BufferGeometry();
     this.starsGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(sp), 3));
     this.starsGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(sc), 3));
-    const stars = new THREE.Points(this.starsGeo, new THREE.PointsMaterial({
+    const starsMat = new THREE.PointsMaterial({
       size: 0.05, vertexColors: true, transparent: true, depthWrite: false,
-    }));
+    });
+    const stars = new THREE.Points(this.starsGeo, starsMat);
+    this.ownedMats.push(starsMat);
     stars.frustumCulled = false;
     this.threeScene.add(stars);
 
@@ -162,7 +172,12 @@ export default class BiolumScene extends Scene {
       const geo = new THREE.BufferGeometry();
       geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
       geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
-      const mat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true });
+      // Additive: a zero-glow line adds black = invisible, so inactive fronts
+      // never draw dark streaks or occlude the additive motes behind them.
+      const mat = new THREE.LineBasicMaterial({
+        vertexColors: true, transparent: true,
+        blending: THREE.AdditiveBlending, depthWrite: false,
+      });
       const line = new THREE.Line(geo, mat);
       line.frustumCulled = false;
       this.threeScene.add(line);
@@ -175,7 +190,10 @@ export default class BiolumScene extends Scene {
       const fgeo = new THREE.BufferGeometry();
       fgeo.setAttribute('position', new THREE.BufferAttribute(fpos, 3));
       fgeo.setAttribute('color', new THREE.BufferAttribute(fcol, 3));
-      const fmat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true });
+      const fmat = new THREE.LineBasicMaterial({
+        vertexColors: true, transparent: true,
+        blending: THREE.AdditiveBlending, depthWrite: false,
+      });
       const foam = new THREE.Line(fgeo, fmat);
       foam.frustumCulled = false;
       this.threeScene.add(foam);
@@ -196,8 +214,8 @@ export default class BiolumScene extends Scene {
       this.moteSand[i] = sand ? 1 : 0;
       this.moteX[i] = -11 + 22 * hash(i, 211);
       this.moteY[i] = sand
-        ? -4.2 + 3.7 * hash(i, 213)                      // wet sand band
-        : BREAK_Y - 0.1 + (SPAWN_Y - BREAK_Y + 0.2) * hash(i, 213);
+        ? -4.2 + 3.3 * hash(i, 213)                      // wet sand band (below the sand edge at -0.85)
+        : BREAK_Y - 0.05 + (SPAWN_Y - BREAK_Y + 0.15) * hash(i, 213);
       this.moteSeed[i] = hash(i, 217);
       mp[i * 3] = this.moteX[i];
       mp[i * 3 + 1] = this.moteY[i];
@@ -206,11 +224,13 @@ export default class BiolumScene extends Scene {
     this.motesGeo = new THREE.BufferGeometry();
     this.motesGeo.setAttribute('position', new THREE.BufferAttribute(mp, 3));
     this.motesGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(N * 3), 3));
-    const motes = new THREE.Points(this.motesGeo, new THREE.PointsMaterial({
+    const motesMat = new THREE.PointsMaterial({
       size: 0.15, vertexColors: true, transparent: true,
       map: this.glowTex, alphaTest: 0.02,
       blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
-    }));
+    });
+    const motes = new THREE.Points(this.motesGeo, motesMat);
+    this.ownedMats.push(motesMat);
     motes.frustumCulled = false;
     this.threeScene.add(motes);
   }
@@ -287,11 +307,11 @@ export default class BiolumScene extends Scene {
           const d = Math.abs(my - cy[ci]!);
           if (d < c.w) glow = Math.max(glow, cg[ci]! * Math.exp(-((d / c.w) * (d / c.w))));
         }
-        // trailing wash zone — the receding foam leaves a fading cyan wash
-        // that reaches the wet sand, not just the water line
+        // trailing wash zone — the wave's run-up leaves a fading cyan wash
+        // on the wet sand below the break line while the foam drains back
         const tau = lt - c.tc;
-        if (tau > 0 && my < BREAK_Y + 0.15 && my > fy[ci]! - 0.5) {
-          const edge = clamp01((my - (fy[ci]! - 0.5)) / 0.9);
+        if (tau > 0 && my < BREAK_Y + 0.15 && my > BREAK_Y - 1.4) {
+          const edge = clamp01(1 - (BREAK_Y + 0.15 - my) / 1.55);
           glow = Math.max(glow, fg[ci]! * 0.9 * edge);
         }
       }
@@ -341,5 +361,7 @@ export default class BiolumScene extends Scene {
     for (const m of this.crestMats) m.dispose();
     for (const g of this.foamGeos) g.dispose();
     for (const m of this.foamMats) m.dispose();
+    for (const g of this.ownedGeos) g.dispose();
+    for (const m of this.ownedMats) m.dispose();
   }
 }
