@@ -21,18 +21,21 @@ const beamYaw = (t: number) => (t / BEAM_PERIOD) * TAU;
 // camera: low slow orbit, drifting in and rising a touch
 const camAt = (t: number) => {
   const yaw = -0.65 + t * 0.055;
-  const radius = 37 - t * 0.30;
-  const y = 2.4 + t * 0.07 + Math.sin(t * 0.21) * 0.35;
-  const target = new THREE.Vector3(0, 5.4 + t * 0.05, 0);
+  const radius = 30 - t * 0.28;
+  const y = 2.6 + t * 0.07 + Math.sin(t * 0.21) * 0.35;
+  // look past the tower so it holds the left third and the beam sweeps open sea
+  const target = new THREE.Vector3(5.5, 5.0 + t * 0.05, 0);
   return { pos: new THREE.Vector3(Math.cos(yaw) * radius, y, Math.sin(yaw) * radius), target, fov: 38 };
 };
 
 // swell: closed-form sum of three directional waves + a chop term — no sim
 const waveY = (x: number, z: number, t: number) =>
-  0.32 * Math.sin(x * 0.10 + t * 0.9)
-  + 0.22 * Math.sin(z * 0.14 - t * 0.7 + 1.7)
-  + 0.14 * Math.sin((x + z) * 0.21 + t * 1.3)
-  + 0.05 * Math.sin(x * 0.9 - z * 0.7 + t * 2.6);
+  0.55 * Math.sin(x * 0.10 + t * 0.9)
+  + 0.38 * Math.sin(z * 0.14 - t * 0.7 + 1.7)
+  + 0.24 * Math.sin((x + z) * 0.21 + t * 1.3)
+  + 0.13 * Math.sin(x * 0.46 - t * 1.9)
+  + 0.10 * Math.sin(z * 0.53 + x * 0.21 + t * 1.55)
+  + 0.08 * Math.sin(x * 0.9 - z * 0.7 + t * 2.6);
 
 const SKY_VERT = /* glsl */ `
 varying vec3 vDir;
@@ -141,7 +144,7 @@ export default class HarborlightScene extends Scene {
 
   override async init(): Promise<void> {
     await document.fonts.ready;
-    this.scene3D.fog = new THREE.FogExp2(new THREE.Color(0x060a12), 0.0105);
+    this.scene3D.fog = new THREE.FogExp2(new THREE.Color(0x060a12), 0.0125);
 
     // --- Blender-built lighthouse (assets/lighthouse)
     this.house = await GLTFManager.instantiate(resolveAsset('lighthouse', 'harbor3d').url, {});
@@ -182,8 +185,8 @@ export default class HarborlightScene extends Scene {
     wg.rotateX(-Math.PI / 2);
     this.waterPos = wg.attributes.position as THREE.BufferAttribute;
     this.water = new THREE.Mesh(wg, new THREE.MeshStandardMaterial({
-      color: new THREE.Color(0x16303f),
-      roughness: 0.18,
+      color: new THREE.Color(0x1a3547),
+      roughness: 0.2,
       metalness: 0.0,
       envMapIntensity: 0,
     }));
@@ -191,29 +194,42 @@ export default class HarborlightScene extends Scene {
     this.scene3D.add(this.water);
 
     // --- lighting: cold ambient + moon fill + the lamp's warm spot
-    this.scene3D.add(new THREE.AmbientLight(new THREE.Color(0x24344a), 0.7));
-    const moon = new THREE.DirectionalLight(new THREE.Color(0x50688c), 0.55);
+    this.scene3D.add(new THREE.AmbientLight(new THREE.Color(0x24344a), 0.85));
+    const moon = new THREE.DirectionalLight(new THREE.Color(0x50688c), 0.7);
     moon.position.set(-60, 50, -40);
     this.scene3D.add(moon);
     // low sea-light kick so the swell picks up silhouettes and faint glints
-    const seaKick = new THREE.DirectionalLight(new THREE.Color(0x2e4460), 0.35);
+    const seaKick = new THREE.DirectionalLight(new THREE.Color(0x2e4460), 0.45);
     seaKick.position.set(40, 6, 60);
     this.scene3D.add(seaKick);
+    // cool rim from behind-left to separate the tower from the sky
+    const rim = new THREE.DirectionalLight(new THREE.Color(0x4a5f80), 0.4);
+    rim.position.set(-30, 20, -55);
+    this.scene3D.add(rim);
+    // grazing horizon sheen so the swell catches specular crests
+    const sheen = new THREE.DirectionalLight(new THREE.Color(0x3a5570), 0.3);
+    sheen.position.set(25, 3, -60);
+    this.scene3D.add(sheen);
+    // soft camera-side fill so the whitewash reads instead of clipping to black
+    const fill = new THREE.DirectionalLight(new THREE.Color(0x3a4a60), 0.55);
+    fill.position.set(45, 8, 30);
+    this.scene3D.add(fill);
     const [br, bg, bb] = blackbodyToLinearSRGB(3000);
-    const lampGlow = new THREE.PointLight(new THREE.Color(br, bg, bb), 120, 42, 1.5);
+    const lampGlow = new THREE.PointLight(new THREE.Color(br, bg, bb), 45, 26, 1.6);
     lampGlow.position.copy(LAMP);
     this.scene3D.add(lampGlow);
 
-    this.spot = new THREE.SpotLight(new THREE.Color(br, bg, bb), 9000, 320, 0.135, 0.5, 1.2);
+    this.spot = new THREE.SpotLight(new THREE.Color(br, bg, bb), 12000, 320, 0.14, 0.5, 1.2);
     this.spot.position.copy(LAMP);
     this.scene3D.add(this.spot, this.spot.target);
 
     // --- the beam: faint additive cone inside the spot cone
     const cone = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.14, 5.5, 66, 24, 1, true),
+      // narrow end at the lamp, spreading offshore — radiusTop is the far end
+      new THREE.CylinderGeometry(5.5, 0.14, 66, 24, 1, true),
       new THREE.ShaderMaterial({
         glslVersion: THREE.GLSL3,
-        uniforms: { uI: { value: 0.42 } },
+        uniforms: { uI: { value: 0.5 } },
         vertexShader: BEAM_VERT2,
         fragmentShader: BEAM_FRAG,
         transparent: true,
@@ -265,16 +281,16 @@ export default class HarborlightScene extends Scene {
     // beam sweep + its real spotlight
     const yaw = beamYaw(t);
     this.beamGroup.rotation.y = -yaw;
-    this.beamGroup.rotation.z = 0.03;           // slight downward rake to graze the swell
-    const bd = new THREE.Vector3(Math.cos(yaw), -0.10, Math.sin(yaw)).normalize();
+    this.beamGroup.rotation.z = -0.16;          // same downward tilt as the spot target
+    const bd = new THREE.Vector3(Math.cos(yaw), -0.16, Math.sin(yaw)).normalize();
     this.spot.target.position.copy(LAMP).addScaledVector(bd, 90);
     // the lamp breathes faintly — the Fresnel shutter wobble
     const flick = 0.9 + 0.1 * Math.sin(t * 13.0) * Math.sin(t * 3.7);
 
     this.skyMat.uniforms.uT.value = t;
     const beamMat = (this.beamGroup.children[0] as THREE.Mesh).material as THREE.ShaderMaterial;
-    beamMat.uniforms.uI.value = 0.42 * flick;
-    this.spot.intensity = 9000 * flick;
+    beamMat.uniforms.uI.value = 0.5 * flick;
+    this.spot.intensity = 12000 * flick;
 
     // gulls: circular orbits around the lamp, banking into the turn, flapping
     for (let i = 0; i < this.gulls.length; i++) {
@@ -286,7 +302,7 @@ export default class HarborlightScene extends Scene {
       const gy = LAMP.y + 0.6 + Math.sin(t * 0.6 + ph) * 0.9 + i * 0.35;
       gu.g.position.set(Math.cos(a) * r, gy, Math.sin(a) * r);
       // face along the orbit tangent; bank into the turn
-      gu.g.rotation.y = -a + (sp > 0 ? Math.PI / 2 : -Math.PI / 2);
+      gu.g.rotation.y = -a + (sp > 0 ? -Math.PI / 2 : Math.PI / 2);
       gu.g.rotation.z = -0.25 * Math.sign(sp);
       const flap = Math.sin(t * 9.0 + ph) * 0.55 + 0.25;
       gu.wings[0].rotation.x = flap;

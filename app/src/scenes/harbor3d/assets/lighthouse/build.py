@@ -13,6 +13,9 @@ sc = bpy.context.scene
 TAU = math.tau
 random.seed(7)
 
+# NOTE: glTF export can't carry procedural node chains (Noise->Ramp->Base
+# Color exports as factor=None -> renders white). Surface breakup therefore
+# goes into vertex colors (COLOR_0 exports and multiplies correctly).
 def mat(name, col, rough, metal=0.0, emit=None, es=0.0, alpha=1.0):
     m = bpy.data.materials.new(name); m.use_nodes = True
     b = m.node_tree.nodes['Principled BSDF']
@@ -30,6 +33,7 @@ def mat(name, col, rough, metal=0.0, emit=None, es=0.0, alpha=1.0):
 STONE_W  = mat('StoneWhite',  (0.66, 0.63, 0.58), 0.82, 0.0)
 STONE_B  = mat('BandSlate',   (0.10, 0.11, 0.14), 0.78, 0.0)
 ROCK     = mat('RockWet',     (0.055, 0.058, 0.068), 0.92, 0.0)
+ROCKDRY  = mat('RockDry',     (0.050, 0.050, 0.058), 0.9, 0.0)
 IRON     = mat('IronDark',    (0.045, 0.048, 0.055), 0.45, 0.9)
 BRASS    = mat('BrassTrim',   (0.38, 0.26, 0.10), 0.30, 1.0)
 GLASS    = mat('LensGlass',   (0.55, 0.62, 0.66), 0.08, 0.0, alpha=0.30)
@@ -121,28 +125,54 @@ def lathe(name, profile, loc, rot=(0,0,0), matl=None, segs=48):
 
 # ---------- rock stack (origin sits on its top) ----------
 begin('rock')
-# displaced ico sphere squashed into a sea stack: wide below the waterline
-# (y<0 reads as submerged skirt), shoulders above
-bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=4, radius=3.4, location=P(0, -1.1, 0))
-rock = bpy.context.object
-rock.scale = (1.15, 1.0, 1.0)
-bpy.ops.object.transform_apply(scale=True)
-for v in rock.data.vertices:
-    c = v.co
-    n = math.sin(c.x * 2.1 + c.z * 1.7) * 0.5 + math.sin(c.y * 3.3 + c.x * 1.1) * 0.3 \
-        + math.sin(c.z * 4.1 - c.y * 1.9) * 0.2
-    v.co += c.normalized() * n * 0.22
-rock.data.materials.append(ROCK)
-for p in rock.data.polygons: p.use_smooth = False  # craggy flat shading
-add('rock', rock)
+
+def displace(obj, amp, seed=0.0):
+    for v in obj.data.vertices:
+        c = v.co
+        n = math.sin(c.x * 1.6 + c.z * 1.3 + seed) * 0.5 + math.sin(c.y * 2.9 + c.x * 1.1) * 0.26 \
+            + math.sin(c.z * 4.6 - c.y * 2.2) * 0.15 \
+            + math.sin(c.x * 7.3 + c.z * 6.1 - c.y * 5.4 + seed) * 0.13 \
+            + math.sin(c.x * 13.1 - c.z * 11.3 + c.y * 9.7) * 0.05
+        v.co += c.normalized() * n * amp
+
+def vcolor_noise(obj, seed, lo=0.45):
+    """mottled vertex colours multiplying the base colour — exported as COLOR_0"""
+    ca = obj.data.color_attributes.new('Col', 'FLOAT_COLOR', 'POINT')
+    for i, v in enumerate(obj.data.vertices):
+        c = v.co
+        n = lo + (1.0 - lo) * (0.5 + 0.5 * math.sin(c.x * 3.1 + c.y * 2.3 + c.z * 4.7 + seed))
+        ca.data[i].color = (n, n, n, 1)
+
+def rock_blob(loc, radius, squash, seed):
+    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=5, radius=radius, location=P(*loc))
+    o = bpy.context.object
+    o.scale = (squash[0], squash[2], squash[1])
+    bpy.ops.object.transform_apply(scale=True)
+    displace(o, 0.16 * radius, seed)
+    vcolor_noise(o, seed)
+    o.data.materials.append(ROCK)
+    o.data.materials.append(ROCKDRY)
+    # wet below the waterline (authored y < -0.9), dry above — face split
+    for p in o.data.polygons:
+        p.use_smooth = True
+        # Blender z = authored y; wet/dark below the waterline (authored y < -0.9)
+        p.material_index = 1 if (p.center.z + o.location.z) > -0.9 else 0
+    add('rock', o)
+    return o
+
+# main stack: wide below the waterline (authored y<0 reads as submerged skirt)
+rock = rock_blob((0, -1.1, 0), 3.4, (1.15, 1.0, 1.0), 0.0)
 # a cap stone the tower sits on
-prim('rock', 'cyl', (0, -0.25, 0), (2.6, 0.5), matl=ROCK, verts=24, bevel=0.08)
+prim('rock', 'cyl', (0, -0.25, 0), (2.6, 0.5), matl=ROCKDRY, verts=24, bevel=0.08)
 # scattered ledge stones
 for i in range(6):
     a = i / 6 * TAU + 0.3
     r = 3.0 + random.uniform(-0.2, 0.4)
     prim('rock', 'sphere', (math.cos(a) * r, -0.9 + random.uniform(-0.6, 0.3), math.sin(a) * r),
          (random.uniform(0.5, 1.0),), matl=ROCK, verts=12)
+# two offshore skerries for layered depth (part of the rock part, static)
+rock_blob((-13.5, -2.0, 11.0), 1.15, (1.0, 0.8, 0.9), 3.1)
+rock_blob((11.0, -1.8, -9.5), 0.9, (1.0, 0.85, 1.1), 5.7)
 
 # ---------- stone tower: white drum with two slate bands ----------
 begin('tower')
@@ -155,16 +185,17 @@ lathe('tower', [(1.58, 0.0), (1.50, 0.8)], (0, 6.3, 0), matl=STONE_B, segs=48)  
 lathe('tower', [(1.50, 0.0), (1.42, 1.4)], (0, 7.1, 0), matl=STONE_W, segs=48)                          # crown to gallery
 lathe('tower', [(1.42, 0.0), (1.75, 0.28)], (0, 8.5, 0), matl=STONE_B, segs=48)                         # cornice flare
 # stone coursing hint: thin recessed rings every ~0.9 on the white sections
+# (torus already lies flat — Blender torus axis is z = authored up; no rotation)
 for hy in (1.5, 2.4, 4.8, 5.7, 7.6):
     rad = {1.5: 1.83, 2.4: 1.80, 4.8: 1.67, 5.7: 1.63, 7.6: 1.47}[hy]
-    prim('tower', 'torus', (0, hy, 0), (rad, 0.02), rot=(math.pi/2, 0, 0), matl=STONE_B, verts=48)
-# door: arched recess at the front (+z)
-prim('tower', 'box', (0, 0.85, 2.42), (0.85, 1.7, 0.12), matl=DOOR_M, verts=16, bevel=0.04)
-prim('tower', 'sphere', (0, 1.72, 2.42), (0.43,), matl=DOOR_M, verts=20)
-prim('tower', 'cyl', (0.28, 0.9, 2.50), (0.035, 0.06), rot=(math.pi/2, 0, 0), matl=BRASS, verts=12)
-# window slots climbing the drum (two, offset)
-for (wy, wz, wx) in ((2.2, 2.05, 0.55), (5.3, -1.55, -0.9)):
-    prim('tower', 'box', (wx, wy, wz), (0.30, 0.55, 0.10), rot=(0, math.atan2(wx, wz) if abs(wz) > 0.1 else 0, 0),
+    prim('tower', 'torus', (0, hy, 0), (rad, 0.02), matl=STONE_B, verts=48)
+# door: arched recess at the front (+z), flush with the drum face at r≈1.9
+prim('tower', 'box', (0, 0.85, 1.86), (0.85, 1.7, 0.12), matl=DOOR_M, verts=16, bevel=0.04)
+prim('tower', 'sphere', (0, 1.72, 1.86), (0.43,), matl=DOOR_M, verts=20)
+prim('tower', 'cyl', (0.28, 0.9, 1.94), (0.035, 0.06), rot=(math.pi/2, 0, 0), matl=BRASS, verts=12)
+# window slots climbing the drum (two, offset) — centred on the local radius
+for (wy, wx, wz) in ((2.2, 0.42, 1.72), (5.3, -0.65, -1.38)):
+    prim('tower', 'box', (wx, wy, wz), (0.30, 0.55, 0.10), rot=(0, math.atan2(wx, wz), 0),
          matl=WINDOW_M, verts=12, bevel=0.02)
 
 # ---------- gallery deck + iron rail ----------
@@ -176,8 +207,8 @@ for i in range(18):
     a = i / 18 * TAU
     px, pz = math.cos(a) * 1.95, math.sin(a) * 1.95
     prim('rail', 'cyl', (px, 9.35, pz), (0.025, 0.85), matl=IRON, verts=10)
-prim('rail', 'torus', (0, 9.78, 0), (1.95, 0.035), rot=(math.pi/2, 0, 0), matl=IRON, verts=48)
-prim('rail', 'torus', (0, 9.35, 0), (1.95, 0.022), rot=(math.pi/2, 0, 0), matl=IRON, verts=48)
+prim('rail', 'torus', (0, 9.78, 0), (1.95, 0.035), matl=IRON, verts=48)
+prim('rail', 'torus', (0, 9.35, 0), (1.95, 0.022), matl=IRON, verts=48)
 
 # ---------- lantern room ----------
 begin('lantern')
@@ -193,7 +224,7 @@ for i in range(8):
 # the lamp: brass pedestal + glowing lens drum + reflector cap
 prim('lantern', 'cyl', (0, 9.25, 0), (0.42, 0.5), matl=BRASS, verts=24, bevel=0.03)
 prim('lantern', 'cyl', (0, 9.85, 0), (0.34, 0.55), matl=LAMP, verts=24)
-prim('lantern', 'torus', (0, 9.85, 0), (0.36, 0.05), rot=(math.pi/2, 0, 0), matl=BRASS, verts=24)
+prim('lantern', 'torus', (0, 9.85, 0), (0.36, 0.05), matl=BRASS, verts=24)
 # domed cap + vent ball + finial spike
 lathe('lantern', [(1.30, 0.0), (1.28, 0.15), (0.95, 0.55), (0.30, 0.85), (0.0, 0.9)],
       (0, 10.39, 0), matl=IRON, segs=40)
