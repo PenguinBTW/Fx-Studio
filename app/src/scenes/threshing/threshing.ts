@@ -12,38 +12,38 @@ const ss = (a: number, b: number, x: number) => {
 
 // beat envelopes
 const moteU = (t: number) => ss(3.5, 5, t) * (1 - ss(17.5, 19.5, t));
-const spInU = (t: number) => ss(8.2, 8.9, t) * (1 - ss(9.1, 9.6, t));
-const spOutU = (t: number) => ss(9.8, 10.3, t) * (1 - ss(10.5, 11.1, t));
-const spIn2U = (t: number) => ss(10.8, 11.3, t) * (1 - ss(11.5, 12.0, t));
-const perchU = (t: number) => ss(12.6, 13.1, t) * (1 - ss(15.2, 15.8, t));
 const owlU = (t: number) => ss(13.8, 14.4, t) * (1 - ss(15.6, 16.4, t));
 const mouseU = (t: number) => ss(11.3, 11.6, t) * (1 - ss(12.1, 12.5, t));
 
-// sparrow positions (closed form) — dart-in: right jamb -> left inside; dart
-// out: left -> right through the shaft; second in: low crossing to perch base.
+// sparrow timeline — strictly sequential, time-driven progress inside each
+// beat so motion never reverses when the visibility envelope falls:
+// in 8.2–9.4 · out 9.6–10.5 · low-in 10.8–11.6 · lintel perch 12.4–15.2 · dart off 15.2–16.1
 const sparrowPos = (t: number): [number, number, number] => {
-  const i1 = spInU(t), o1 = spOutU(t), i2 = spIn2U(t), p = perchU(t);
-  if (p > 0.02 && i1 < 0.02 && o1 < 0.02 && i2 < 0.02) {
-    // perched on the lintel, tail flick, then darts off at the end of perchU
-    const off = ss(0.86, 1.0, p);
-    const x = 0.52 + off * 0.9;
-    const y = 0.765 - off * 0.4;
-    return [x, y, off > 0.99 ? 0 : 1];
+  if (t >= 15.2 && t < 16.1) {
+    const off = ss(15.2, 16.1, t);
+    return [0.52 + off * 0.95, 0.765 - off * 0.42, off > 0.98 ? 0 : 1];
   }
-  if (i2 > 0.02) {
-    const d = i2;
+  if (t >= 12.4 && t < 15.2) {
+    // perched on the lintel: tiny tail-flick bob, still a silhouette
+    return [0.52, 0.765 + Math.abs(Math.sin(t * 5.0)) * 0.004, 1];
+  }
+  if (t >= 10.8 && t < 11.6) {
+    const d = ss(10.8, 11.5, t);
     // low crossing that finishes under the lintel, inside the shaft band
-    return [0.68 - d * 0.16, 0.32 + Math.abs(Math.sin(d * Math.PI)) * 0.09, 1];
+    const fade = 1 - ss(11.4, 11.6, t);
+    return [0.68 - d * 0.16, 0.32 + Math.abs(Math.sin(d * Math.PI)) * 0.09, fade];
   }
-  if (o1 > 0.02) {
-    const d = o1;
-    // out through the beam: left-mid -> right jamb, staying lit
-    return [0.50 + d * 0.24, 0.50 + Math.abs(Math.sin(d * Math.PI * 1.4)) * 0.10, 1];
+  if (t >= 9.6 && t < 10.5) {
+    const d = ss(9.6, 10.4, t);
+    const fade = 1 - ss(10.3, 10.5, t);
+    // out through the beam: mid-shaft -> right jamb, staying lit
+    return [0.50 + d * 0.24, 0.50 + Math.abs(Math.sin(d * Math.PI * 1.4)) * 0.10, fade];
   }
-  if (i1 > 0.02) {
-    const d = i1;
+  if (t >= 8.2 && t < 9.4) {
+    const d = ss(8.2, 9.2, t);
+    const fade = 1 - ss(9.2, 9.4, t);
     // in through the beam: right jamb -> mid-shaft
-    return [0.68 - d * 0.16, 0.55 - Math.abs(Math.sin(d * Math.PI)) * 0.13, 1];
+    return [0.68 - d * 0.16, 0.55 - Math.abs(Math.sin(d * Math.PI)) * 0.13, fade];
   }
   return [0, 0, 0];
 };
@@ -140,8 +140,8 @@ void main() {
   float lintel = smoothstep(0.72, 0.722, uv.y) * (1.0 - smoothstep(0.742, 0.744, uv.y))
                * smoothstep(0.36, 0.365, uv.x) * (1.0 - smoothstep(0.69, 0.695, uv.x));
   col = mix(col, vec3(0.16, 0.11, 0.08), lintel);
-  // warm rim on the lintel's sun edge
-  col += vec3(0.9, 0.55, 0.25) * lintel * 0.5 * smoothstep(0.70, 0.72, uv.x)
+  // warm rim on the lintel's sun edge — grows toward its right (lit) end
+  col += vec3(0.9, 0.55, 0.25) * lintel * 0.5 * smoothstep(0.58, 0.68, uv.x)
        * (1.0 - smoothstep(0.738, 0.742, uv.y));
 
   // ---- wheat stubble foreground band
@@ -167,7 +167,7 @@ void main() {
     // hanging rope from the top of the opening, slight sway
     float rx = 0.47 + 0.006 * sin(t * 0.6) * (0.74 - uv.y);
     float rope = (1.0 - smoothstep(0.0015, 0.004, abs(uv.x - rx)))
-               * (1.0 - smoothstep(0.70, 0.72, uv.y)) * (1.0 - smoothstep(0.28, 0.30, uv.y));
+               * (1.0 - smoothstep(0.735, 0.745, uv.y)) * (1.0 - smoothstep(0.28, 0.30, uv.y));
     inner = mix(inner, vec3(0.16, 0.12, 0.09), rope * 0.8);
     // pitchfork leaning on the left jamb
     float fork = 1.0 - smoothstep(0.0015, 0.005,
@@ -216,11 +216,12 @@ void main() {
       float seed = h1(fk * 13.37);
       // mote drifts down-left along the shaft dir, loops within its band
       float fall = fract(seed + t * (0.02 + 0.03 * h1(fk * 5.1)));
-      vec2 mp = vec2(0.40 + 0.24 * h1(fk * 9.7) + fall * -0.10,
-                     0.16 + fall * 0.55);
+      // motes sink down-left along the beam: y falls with fall, x tracks the
+      // shaft centerline so drift follows the light instead of crossing it
+      float fy = 0.16 + (1.0 - fall) * 0.55;
       float wob = 0.004 * sin(t * (1.5 + seed) + fk);
-      mp.x += wob;
-      float dens = (0.35 + 0.65 * h1(fk * 3.3)) * (1.0 - (mp.y - 0.16) / 0.55);
+      vec2 mp = vec2(0.44 + (fy - 0.12) / 0.62 * 0.19 + (h1(fk * 9.7) - 0.5) * 0.05 + wob, fy);
+      float dens = (0.35 + 0.65 * h1(fk * 3.3)) * clamp((mp.y - 0.16) / 0.55, 0.0, 1.0);
       float tw = 0.6 + 0.4 * sin(t * 3.0 + fk * 11.0);
       float m = 1.0 - smoothstep(0.0012, 0.0032, length(uv - mp));
       col += vec3(1.0, 0.8, 0.5) * m * dens * tw * uMote
@@ -229,11 +230,11 @@ void main() {
   }
 
   // ---- grain sack + cat silhouette, grounded at the wall base
-  float sack = smoothstep(0.0, -0.02, ellipse(uv, vec2(0.73, 0.085), vec2(0.045, 0.028)));
+  float sack = 1.0 - smoothstep(-0.02, 0.0, ellipse(uv, vec2(0.73, 0.085), vec2(0.045, 0.028)));
   col = mix(col, vec3(0.12, 0.09, 0.07), sack * 0.9);
   // cat body: upright sitting silhouette on the sack
-  float catB = smoothstep(0.0, -0.008, ellipse(uv, vec2(0.725, 0.135), vec2(0.026, 0.042)));
-  float catH = smoothstep(0.0, -0.008, ellipse(uv, vec2(0.722, 0.180), vec2(0.016, 0.015)));
+  float catB = 1.0 - smoothstep(-0.008, 0.0, ellipse(uv, vec2(0.725, 0.135), vec2(0.026, 0.042)));
+  float catH = 1.0 - smoothstep(-0.008, 0.0, ellipse(uv, vec2(0.722, 0.180), vec2(0.016, 0.015)));
   float ear = (1.0 - smoothstep(0.001, 0.005, sdSeg(uv, vec2(0.712, 0.191), vec2(0.714, 0.203))))
             + (1.0 - smoothstep(0.001, 0.005, sdSeg(uv, vec2(0.730, 0.191), vec2(0.732, 0.203))));
   float flick = 0.5 + 0.5 * sin(t * 1.9) * sin(t * 0.43);
@@ -243,19 +244,21 @@ void main() {
   float cat = clamp(catB + catH + ear + tail, 0.0, 1.0);
   col = mix(col, vec3(0.06, 0.05, 0.05), cat * 0.95);
 
-  // ---- mouse dart along the threshold
+  // ---- mouse dart along the threshold (progress is time-monotone)
   if (uMouse > 0.01) {
-    float mx = 0.40 + uMouse * 0.22;
-    float mrun = abs(sin(uMouse * 30.0)) * 0.004;
-    float mm = smoothstep(0.0, -0.004, ellipse(uv, vec2(mx, 0.125 + mrun), vec2(0.011, 0.006)));
+    float md = smoothstep(11.3, 12.3, t);
+    float mx = 0.40 + md * 0.22;
+    float mrun = abs(sin(md * 30.0)) * 0.004;
+    float mm = 1.0 - smoothstep(-0.004, 0.0, ellipse(uv, vec2(mx, 0.125 + mrun), vec2(0.011, 0.006)));
     mm += 1.0 - smoothstep(0.001, 0.003, sdSeg(uv, vec2(mx - 0.010, 0.124), vec2(mx - 0.017, 0.130)));
     col = mix(col, vec3(0.05, 0.04, 0.04), clamp(mm, 0.0, 1.0) * uMouse);
   }
 
-  // ---- owl glide above the roofline (backlit, slow)
+  // ---- owl glide above the roofline (backlit, monotone left->right)
   if (uOwl > 0.01) {
-    vec2 op = vec2(0.12 + uOwl * 0.78, 0.86 + 0.02 * sin(uOwl * 6.0));
-    float ow = smoothstep(0.0, -0.006, ellipse(uv, op, vec2(0.016, 0.012)));
+    float od = smoothstep(13.8, 16.4, t);
+    vec2 op = vec2(0.12 + od * 0.82, 0.86 + 0.02 * sin(od * 6.0));
+    float ow = 1.0 - smoothstep(-0.006, 0.0, ellipse(uv, op, vec2(0.016, 0.012)));
     float wing = 1.0 - smoothstep(0.002, 0.008,
       sdSeg(uv, op + vec2(-0.055, 0.012), op + vec2(0.055, 0.012)));
     ow += wing;
@@ -265,7 +268,7 @@ void main() {
   // ---- sparrow silhouette (cut-out in the shaft)
   if (uSpv > 0.01) {
     vec2 sp = vec2(uSpx, uSpy);
-    float body = smoothstep(0.0, -0.004, ellipse(uv, sp, vec2(0.014, 0.008)));
+    float body = 1.0 - smoothstep(-0.004, 0.0, ellipse(uv, sp, vec2(0.014, 0.008)));
     float wflap = sin(t * 55.0);
     vec2 wt = sp + vec2(0.012 * sign(wflap + 0.001) * (abs(wflap) > 0.3 ? 1.0 : 0.4),
                         0.010 + 0.012 * abs(wflap));
