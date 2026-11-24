@@ -1,0 +1,11 @@
+{
+  "project": "rainwindow",
+  "entries": [
+    {
+      "scene": "rainwindow/rain",
+      "id": "rainwindow",
+      "start": 0.0,
+      "end": 20.0
+    }
+  ]
+}
