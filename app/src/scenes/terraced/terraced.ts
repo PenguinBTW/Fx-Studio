@@ -541,8 +541,9 @@ export default class TerracedScene extends Scene {
         const v = -0.18 * z + wander(x);
         const f = ((v / LEVEL) % 1 + 1) % 1;
         if (flatOnly && f > 0.78) continue;
+        if (f > 0.92) continue; // never plant on a wall face — mesh-vs-analytic interp diverges most there
         if (Math.abs(x - pathX(z)) < 1.6) continue; // keep the path clear
-        this.dummy.position.set(x, groundH(x, z) - 0.04, z);
+        this.dummy.position.set(x, groundH(x, z) - 0.06, z);
         this.dummy.rotation.set((hash(seed + placed * 7.3) - 0.5) * 0.3, hash(seed + placed * 3.9) * Math.PI * 2, 0);
         const s = 0.45 + hash(seed + placed * 13.3) * 0.85;
         this.dummy.scale.set(s * 1.25, s * (0.6 + hash(seed + placed * 17.1) * 0.8), s);
@@ -775,7 +776,13 @@ export default class TerracedScene extends Scene {
     const zFig = 7.5 + 1.05 * t;
     const xFig = pathX(zFig);
     const yFig = groundH(xFig, zFig);
-    this.figure.position.set(xFig, yFig - 0.04, zFig);
+    // step up onto stile treads where the path crosses a wall band
+    let lift = 0;
+    for (let k = -1; k >= -8; k--) {
+      const d = Math.abs(zFig - wallZ(xFig, k));
+      if (d < 1.4) lift = Math.max(lift, 0.5 * ss(1.4, 0.3, d));
+    }
+    this.figure.position.set(xFig, yFig - 0.04 + lift, zFig);
     // face along the path's descent direction
     const dxdz = -9.0 * 0.115 * Math.cos(-zFig * 0.115 + 0.6);
     this.figure.rotation.y = Math.atan2(dxdz, 1.0) * 0.9;
