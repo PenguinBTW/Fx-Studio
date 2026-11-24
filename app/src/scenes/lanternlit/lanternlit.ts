@@ -25,11 +25,11 @@ const WATER_Y = -4.0;
 // camera: slow pan following the cluster's ascent, gentle rise + push
 function camPos(t: number): [number, number, number] {
   const s = Math.min(1, Math.max(0, (t - 1.5) / 19));
-  return [-2.4 + 3.4 * s + 0.2 * Math.sin(t * 0.09), -1.3 + 1.0 * s, 25 - 4.0 * s];
+  return [-2.4 + 3.4 * s + 0.2 * Math.sin(t * 0.09), -1.5 + 0.7 * s, 25 - 4.0 * s];
 }
 function camTarget(t: number): [number, number, number] {
   const s = Math.min(1, Math.max(0, (t - 1.5) / 19));
-  return [-0.4 + 1.6 * s, 0.6 + 2.4 * s, -6];
+  return [-0.4 + 1.6 * s, 0.2 + 1.6 * s, -6];
 }
 
 const QUAD_VERT = /* glsl */ `
@@ -49,7 +49,8 @@ void main() {
   vec3 hor = vec3(0.34, 0.13, 0.17);
   vec3 col = mix(hor, top, smoothstep(0.30, 0.78, vUv.y));
   // faint dusk band glow along the horizon
-  col += vec3(0.10, 0.05, 0.03) * exp(-pow((vUv.y - 0.42) / 0.09, 2.0));
+  float band = (vUv.y - 0.42) / 0.09;
+  col += vec3(0.10, 0.05, 0.03) * exp(-band * band);
 
   // far ridge silhouette (fbm hills)
   float ridge = 0.335 + 0.065 * fbm3(vec3(vUv.x * 5.0, 0.0, 1.3), 3, 2.0, 0.5)
@@ -103,7 +104,8 @@ void main() {
   float glint = pow(sat(rip - 0.52) * 2.4, 2.0);
   col += vec3(0.06, 0.07, 0.10) * glint * (0.35 + 0.65 * vUv.y);
   // warm residue where lantern light pools near the waterline
-  col += vec3(0.10, 0.05, 0.02) * exp(-pow((vUv.y - 0.97) / 0.10, 2.0)) * (0.5 + 0.5 * rip);
+  float res = (vUv.y - 0.97) / 0.10;
+  col += vec3(0.10, 0.05, 0.02) * exp(-res * res) * (0.5 + 0.5 * rip);
   gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -163,7 +165,7 @@ void main() {
     float lift = uT - aAux.x;
     pos = vec3(lp.x + 0.18 * sin(uT * 1.7 + aSeed * 50.0),
                -4.0 - (lp.y + 4.0) * 0.20 - 0.2,
-               position.z + 0.5);
+               -13.0); // pin to just in front of the river quad — farther lanterns' reflections must not depth-test behind it
     alpha = smoothstep(0.0, 0.8, lift) * (1.0 - smoothstep(10.0, 16.0, lift)) * 0.9;
     alpha *= 0.8 + 0.2 * sin(uT * (2.4 + fract(aSeed * 7.0) * 3.0) + aSeed * 80.0);
     size = 1.7 + fract(aSeed * 5.3) * 1.1;
