@@ -72,8 +72,8 @@ float meteor(vec2 uv, float t, float seed) {
   vec2 rel = uv - head;
   float along = dot(rel, dir);
   float perp = abs(dot(rel, vec2(-dir.y, dir.x)));
-  float body = smoothstep(trail, 0.0, -along) * step(along, 0.0);
-  float core = smoothstep(0.0022, 0.0, perp);
+  float body = (1.0 - smoothstep(0.0, trail, -along)) * step(along, 0.0);
+  float core = 1.0 - smoothstep(0.0, 0.0022, perp);
   float fade = sin(lt * 3.14159);
   return body * core * fade * (0.4 + 1.6 * exp(along * 60.0));
 }
@@ -87,7 +87,8 @@ void main() {
   c += vec3(0.008, 0.05, 0.055) * (1.0 - smoothstep(0.15, 0.55, uv.y)) * (0.35 + 0.65 * uGlow); // horizon lift
   c += vec3(0.02, 0.012, 0.05) * smoothstep(0.6, 1.0, uv.y) * 0.5;                         // violet crown
   // horizon aurora pre-glow: a soft green band that breathes before curtains
-  float band = exp(-pow((uv.y - 0.50) * 11.0, 2.0));
+  float bandD = (uv.y - 0.50) * 11.0;
+  float band = exp(-bandD * bandD);
   float bandN = 0.6 + 0.4 * fbm3(vec3(uv.x * 5.0, t * 0.13, 1.0), 3);
   c += vec3(0.06, 0.5, 0.32) * band * bandN * uGlow * 0.4;
   // corona spill high in frame once the sky opens overhead
@@ -103,7 +104,7 @@ void main() {
       vec2 off = vec2(h21(id + 11.0), h21(id + 23.0)) - 0.5;
       float d = length(f - off * 0.8);
       float tw = 0.55 + 0.45 * sin(t * (1.5 + 3.0 * h21(id + 5.0)) + h * 40.0);
-      c += vec3(0.9, 0.95, 1.0) * smoothstep(0.09, 0.0, d) * tw * smoothstep(0.32, 0.7, uv.y) * 0.85;
+      c += vec3(0.9, 0.95, 1.0) * (1.0 - smoothstep(0.0, 0.09, d)) * tw * smoothstep(0.32, 0.7, uv.y) * 0.85;
     }
     // a few brighter stars
     vec2 g2 = uv * vec2(60.0, 40.0);
@@ -114,7 +115,7 @@ void main() {
       vec2 off2 = vec2(h21(id2 + 3.0), h21(id2 + 9.0)) - 0.5;
       float d2 = length(f2 - off2 * 0.7);
       float tw2 = 0.6 + 0.4 * sin(t * 2.0 + h2 * 60.0);
-      c += vec3(1.0) * smoothstep(0.045, 0.0, d2) * tw2 * 1.4;
+      c += vec3(1.0) * (1.0 - smoothstep(0.0, 0.045, d2)) * tw2 * 1.4;
     }
     // slow meteors (hashed schedules)
     c += vec3(0.9, 0.97, 1.0) * meteor(uv, t, 7.0) * 0.9;
@@ -155,8 +156,8 @@ void main() {
     water += uTint * (0.05 + 0.18 * uGlow) * (0.55 + 0.45 * smear) * (1.0 - d * 0.85);
     water += vec3(0.012, 0.02, 0.03) * smear * 0.5;
     // shore edge line
-    water += vec3(0.02, 0.028, 0.04) * smoothstep(0.012, 0.0, 0.15 - uv.y);
-    c = mix(c, water, smoothstep(0.0, 0.012, 0.15 - uv.y) * 0.96);
+    water += vec3(0.02, 0.028, 0.04) * (1.0 - smoothstep(0.0, 0.012, 0.15 - uv.y));
+    c = mix(c, water, (1.0 - smoothstep(0.0, 0.012, 0.15 - uv.y)) * 0.96);
   }
 
   fragColor = vec4(c, 1.0);
@@ -219,7 +220,8 @@ void main() {
 
   // curtain body: bright lower fringe (nitrogen edge), rarefying aloft
   float body = exp(-alt * 2.1);
-  float lowerEdge = exp(-pow((alt - 0.06) * 14.0, 2.0)) * 0.9;
+  float leD = (alt - 0.06) * 14.0;
+  float lowerEdge = exp(-leD * leD) * 0.9;
 
   // folds: slow fbm curtain billow along the path
   float fold = 0.65 + 0.35 * fbm3(vec3(path * 5.0, alt * 2.0, uT * 0.07 + uSeed.x * 5.0), 3);
