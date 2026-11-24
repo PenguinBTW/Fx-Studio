@@ -91,16 +91,18 @@ attribute vec3 aVel;     // launch velocity
 attribute float aSeed;
 uniform float uT;
 uniform float uG;
+uniform float uSwell;
 varying float vHot;
 void main() {
+  float live = step(aT0, uT);              // dead before launch — no hotspot
   float tau = uT - aT0;
   // loop the ballistic flight: respawn every cycle
   float cyc = 3.0 + fract(aSeed * 5.0) * 2.0;
   tau = mod(max(tau, 0.0), cyc);
-  vec3 pos = vec3(aVel.x * tau, aVel.y * tau - 0.5 * uG * tau * tau, aVel.z * tau);
-  vHot = exp(-tau * 0.9); // cools as it flies
+  vec3 pos = position + vec3(aVel.x * tau, aVel.y * tau - 0.5 * uG * tau * tau, aVel.z * tau);
+  vHot = exp(-tau * 0.9) * live * uSwell; // cools as it flies
   vec4 mv = modelViewMatrix * vec4(pos, 1.0);
-  gl_PointSize = min(mix(2.5, 9.0, fract(aSeed * 3.0)) * 240.0 / max(1.0, -mv.z), 26.0);
+  gl_PointSize = min(mix(2.5, 9.0, fract(aSeed * 3.0)) * 240.0 / max(1.0, -mv.z), 26.0) * live;
   gl_Position = projectionMatrix * mv;
 }
 `;
@@ -124,15 +126,17 @@ attribute float aSeed;
 attribute float aBack;   // 0 = head, 1 = tail sample behind in time
 uniform float uT;
 uniform float uG;
+uniform float uSwell;
 varying float vHot;
 varying float vBack;
 void main() {
+  float live = step(aT0, uT);
   float tau = uT - aT0;
   float cyc = 3.0 + fract(aSeed * 5.0) * 2.0;
   tau = mod(max(tau, 0.0), cyc);
   float tb = max(tau - aBack * 0.22, 0.0);
-  vec3 pos = vec3(aVel.x * tb, aVel.y * tb - 0.5 * uG * tb * tb, aVel.z * tb);
-  vHot = exp(-tb * 0.9);
+  vec3 pos = position + vec3(aVel.x * tb, aVel.y * tb - 0.5 * uG * tb * tb, aVel.z * tb);
+  vHot = exp(-tb * 0.9) * live * uSwell;
   vBack = aBack;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
 }
@@ -312,7 +316,7 @@ export default defineScene({
       transparent: true,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
-      uniforms: { uT: { value: 0 }, uG: { value: 9.8 * 0.55 } },
+      uniforms: { uT: { value: 0 }, uG: { value: 9.8 * 0.55 }, uSwell: { value: 0 } },
     });
     const bombs = new THREE.Points(bGeo, bombMat);
     bombs.frustumCulled = false;
@@ -350,7 +354,7 @@ export default defineScene({
       transparent: true,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
-      uniforms: { uT: { value: 0 }, uG: { value: 9.8 * 0.55 } },
+      uniforms: { uT: { value: 0 }, uG: { value: 9.8 * 0.55 }, uSwell: { value: 0 } },
     });
     const trails = new THREE.LineSegments(ltGeo, trailMat);
     trails.frustumCulled = false;
@@ -435,7 +439,9 @@ export default defineScene({
       m.uniforms.uGlow.value = 0.35 + 0.45 * pulse * swell;
     }
     S.bombMat.uniforms.uT.value = t;
+    S.bombMat.uniforms.uSwell.value = 0.15 + 0.85 * swell;
     S.trailMat.uniforms.uT.value = t;
+    S.trailMat.uniforms.uSwell.value = 0.15 + 0.85 * swell;
     S.emberMat.uniforms.uT.value = t;
     S.emberMat.uniforms.uRain.value = rain;
     S.starMat.uniforms.uT.value = t;
