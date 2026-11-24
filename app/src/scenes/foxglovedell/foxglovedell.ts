@@ -226,11 +226,12 @@ vec3 dell(vec2 uv, float t) {
     wren = max(wren, tail);
     // beak: during the song it tilts up and opens (two diverging slivers)
     vec2 bk = wp - vec2(0.011, 0.010 + 0.004 * uSong);
-    // slivers rotate AWAY from each other: y = ±x·(0.2 + 0.9·uSong) — ~23°
-    // apart at rest, ~95° wide open at full song
-    float open = 0.2 + 0.9 * uSong;
-    float beakUp = 1.0 - smoothstep(0.0012, 0.0020, abs(bk.y - bk.x * open));
-    float beakDn = 1.0 - smoothstep(0.0012, 0.0020, abs(bk.y + bk.x * open));
+    // slivers open AND tilt upward for the song: the upper slope steepens
+    // more than the lower (~+13° centerline at full song)
+    float openUp = 0.2 + 1.3 * uSong;
+    float openDn = 0.2 + 0.5 * uSong;
+    float beakUp = 1.0 - smoothstep(0.0012, 0.0020, abs(bk.y - bk.x * openUp));
+    float beakDn = 1.0 - smoothstep(0.0012, 0.0020, abs(bk.y + bk.x * openDn));
     float beak = max(beakUp, beakDn) * step(abs(bk.x), 0.008) * step(abs(bk.y), 0.006);
     wren = max(wren, beak);
     // throat feathers puff during song
