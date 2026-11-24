@@ -215,8 +215,7 @@ export function spatializeSource(
     occlusionSmoother.setTarget(targetOcclusion);
     velGainSmoother.setTarget(targetVelGain);
 
-    // Filter coefficients update at block rate from the smoother's current
-    // value — the smoother itself advances per-sample inside the loop.
+    // Update filter cutoff
     svfL.setCutoffAndQ(cutoffSmoother.getValue(), 0.7071);
     svfR.setCutoffAndQ(cutoffSmoother.getValue(), 0.7071);
 
@@ -226,16 +225,12 @@ export function spatializeSource(
       const inL = sourcePcm[inIdx] ?? 0;
       const inR = sourcePcm[inIdx + 1] ?? 0;
 
-      // Advance smoothers — including the cutoff smoother, which previously
-      // was never advanced inside the sample loop: its value stayed frozen at
-      // the initial 20 kHz forever, so distance-based air absorption filtering
-      // silently never engaged no matter how far the source moved.
+      // Advance smoothers
       const gPanL = panSmootherL.next();
       const gPanR = panSmootherR.next();
       const gDist = distGainSmoother.next();
       const gOcc = occlusionSmoother.next();
       const gVel = velGainSmoother.next();
-      cutoffSmoother.next();
 
       // Overall master modulation & distance gain
       const totalGain = gDist * gVel;
