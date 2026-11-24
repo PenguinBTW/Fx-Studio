@@ -36,6 +36,17 @@ const gustT = (t: number) =>
     ss(13.0, 14.0, t) * (1 - ss(16.5, 18.0, t)) * 0.7,
   );
 
+// analytic ∫smoothstep(a,b,τ)dτ — keeps gust-driven drift monotonic
+const issT = (a: number, b: number, t: number) => {
+  const u = Math.min(1, Math.max(0, (t - a) / (b - a)));
+  return (b - a) * (u * u * u * (1 - 0.5 * u)) + (t > b ? t - b : 0);
+};
+// ∫ of a rise-window followed by a fall-window (rise ends before fall starts)
+const ienv = (r0: number, r1: number, f0: number, f1: number, t: number) =>
+  issT(r0, r1, Math.min(t, f0)) + (t > f0 ? (t - f0) - issT(f0, f1, t) : 0);
+const gustInt = (t: number) =>
+  0.35 * t + 0.65 * (ienv(5.0, 6.5, 9.5, 11.0, t) + 0.7 * ienv(13.0, 14.0, 16.5, 18.0, t));
+
 const FLAKES = 900;
 const STREAKS = 60;
 
@@ -199,7 +210,7 @@ vec3 village(vec2 uv, float t, float gust, float smokeSig) {
   }
   if (uv.x > 0.115 && uv.x < 0.560) {
     float d = (uv.x - 0.115) / 0.445;
-    float lineY = 0.335 - 0.028 * (1.0 - pow(2.0 * d - 1.0, 2.0));
+    float lineY = 0.335 - 0.028 * (1.0 - (2.0 * d - 1.0) * (2.0 * d - 1.0));
     float wire = 1.0 - smoothstep(0.0012, 0.0028, abs(uv.y - lineY));
     col = mix(col, vec3(0.15, 0.17, 0.21), wire);
   }
@@ -215,14 +226,13 @@ void main() {
 
   // squall veil: wall = 1 inside the swallowed region (x < front edge)
   float wall = 1.0 - smoothstep(uFront - 0.015, uFront + 0.085, uv.x);
-  // trailing haze thins with distance behind the front once uThin rises
-  float behind = uFront - uv.x;
-  wall *= 1.0 - uThin * smoothstep(0.12, 0.45, behind);
-  wall *= 1.0 - uThin * 0.45;
+  // trailing clear-edge sweeps left→right so rooftops re-emerge in order
+  float thinEdge = -0.1 + 1.45 * uThin;
+  wall *= smoothstep(thinEdge, thinEdge + 0.18, uv.x);
   // gust stripes riding the wall, ragged where the front face leads
   float stripes = fbm(vec2(uv.x * 15.0 - uT * 1.4, uv.y * 5.0 + uT * 0.4));
   float edge = 1.0 + 0.7 * (1.0 - smoothstep(0.0, 0.10, abs(uv.x - uFront))) * (1.0 - uThin);
-  float veil = wall * (0.62 + 0.38 * stripes * edge);
+  float veil = wall * (0.86 + 0.24 * stripes * edge);
   vec3 squallCol = mix(vec3(0.88, 0.91, 0.94), vec3(0.70, 0.76, 0.83),
                        smoothstep(0.0, 0.5, uv.y) * 0.6 + stripes * 0.15);
   col = mix(col, squallCol, clamp(veil, 0.0, 1.0));
@@ -239,6 +249,7 @@ out vec2 vUv;
 out vec3 vKind;   // band, twinkle, alpha
 uniform float uT;
 uniform float uGust;
+uniform float uGustI;   // time-integral of the gust envelope (monotone)
 uniform float uFront;
 uniform float uThin;
 float h1(float p) { return fract(sin(p * 91.7) * 43758.5); }
@@ -248,8 +259,9 @@ void main() {
   float s1 = h1(aSeed * 311.0), s2 = h1(aSeed * 977.0), s3 = h1(aSeed * 131.0);
   float spd = mix(0.16, 0.05, band * 0.5);               // fall speed (uv/s)
   float drift = mix(0.030, 0.012, band * 0.5);           // wind drift
-  float gustPush = uGust * (0.05 + 0.10 * s3) * (1.0 + band * 0.4);
-  float fx = fract(s1 + uT * (drift + gustPush) + sin(uT * (0.6 + s3) + aSeed * 40.0) * 0.012);
+  // uGustI = ∫gustT — drift accumulates monotonically, never walks backward
+  float fx = fract(s1 + uT * drift + uGustI * (0.05 + 0.10 * s3) * (1.0 + band * 0.4)
+               + sin(uT * (0.6 + s3) + aSeed * 40.0) * 0.012);
   float fy = fract(s2 - uT * spd * (0.7 + 0.6 * s3) + uGust * 0.02);
   float size = mix(0.0026, 0.0065, band * 0.5) * (0.6 + 0.8 * s3);
   vec3 p = position * vec3(size * ${PW}.0, size * ${PH}.0, 1.0);
@@ -260,7 +272,7 @@ void main() {
   float tw = 0.55 + 0.45 * sin(uT * (2.0 + s3 * 4.0) + aSeed * 80.0);
   // flakes thin out where the veil is already white, brighten after
   float hidden = (1.0 - step(uFront - 0.03, fx)) * (1.0 - uThin * 0.85);
-  vKind = vec3(band, tw, 1.0 - hidden * 0.75);
+  vKind = vec3(band, tw, 1.0 - hidden * 0.95);
   gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
 }`;
 
@@ -334,9 +346,12 @@ void main() {
   // hooded figure: body capsule + head bump, lean into the wind
   q.x += (1.0 - vUv.y) * 0.06;
   float body = 1.0 - smoothstep(0.13, 0.16, abs(q.x) + max(0.0, 0.30 - q.y) * 0.10);
-  body *= step(q.y, 0.66);
+  body *= step(q.y, 0.66) * smoothstep(0.26, 0.30, q.y);   // hem above the boots
   float head = 1.0 - smoothstep(0.10, 0.12, length(q - vec2(0.02, 0.68)));
-  float legs = step(abs(q.x), 0.09) * step(0.30, q.y + 0.15 * sin(uT * 9.0));
+  float sway = sin(uT * 9.0);
+  float legL = step(abs(q.x + 0.045), 0.030) * step(q.y, 0.30) * step(0.02, q.y) * step(0.0, sway);
+  float legR = step(abs(q.x - 0.045), 0.030) * step(q.y, 0.30) * step(0.02, q.y) * step(sway, 0.0);
+  float legs = max(legL, legR);
   float shape = max(max(body, head), legs);
   if (shape < 0.05) discard;
   // dark coat, faint warm rim from the lamp side (left)
@@ -351,7 +366,7 @@ in vec2 vUv;
 uniform float uT;
 out vec4 fragColor;
 void main() {
-  vec2 q = vec2(vUv.x, vUv.y - 0.35);
+  vec2 q = vec2(vUv.x - 0.35, vUv.y - 0.35);
   float body = 1.0 - smoothstep(0.14, 0.18, length(q * vec2(0.8, 2.4)));
   float head = 1.0 - smoothstep(0.07, 0.09, length(q - vec2(0.32, 0.10)));
   float tail = 1.0 - smoothstep(0.02, 0.05,
@@ -373,7 +388,7 @@ export default class SnowsquallScene extends Scene {
     uGust: { value: 0.3 }, uSmoke: { value: 0 }, uDusk: { value: 0 },
   };
   private flU = {
-    uT: { value: 0 }, uGust: { value: 0.3 }, uFront: { value: -0.2 }, uThin: { value: 0 },
+    uT: { value: 0 }, uGust: { value: 0.3 }, uGustI: { value: 0 }, uFront: { value: -0.2 }, uThin: { value: 0 },
   };
   private stU = {
     uT: { value: 0 }, uGust: { value: 0.3 }, uFront: { value: -0.2 }, uThin: { value: 0 },
@@ -450,7 +465,7 @@ export default class SnowsquallScene extends Scene {
     this.bu.uGust.value = gust;
     this.bu.uSmoke.value = sig;
     this.bu.uDusk.value = dusk;
-    this.flU.uT.value = t; this.flU.uGust.value = gust;
+    this.flU.uT.value = t; this.flU.uGust.value = gust; this.flU.uGustI.value = gustInt(t);
     this.flU.uFront.value = front; this.flU.uThin.value = thin;
     this.stU.uT.value = t; this.stU.uGust.value = gust;
     this.stU.uFront.value = front; this.stU.uThin.value = thin;
