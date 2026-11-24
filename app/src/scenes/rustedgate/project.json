@@ -1,0 +1,6 @@
+{
+  "project": "rustedgate",
+  "entries": [
+    { "scene": "rustedgate/rustedgate", "id": "rustedgate", "start": 0, "end": 18 }
+  ]
+}
