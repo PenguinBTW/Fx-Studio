@@ -130,8 +130,10 @@ void main() {
 
     float x0 = 0.06 + 0.88 * hash11(seed + 2.0);
     // cheap spawn height: 2-octave fbm tracks the ridge's broad shape without
-    // the char-detail term — full ridgeY() is reserved for the seam pass
-    float baseY = RIDGE + fbm(vec2(x0 * 2.0, 3.7), 2) * 0.05 + 0.004;
+    // the char-detail term — full ridgeY() is reserved for the seam pass.
+    // The +0.014 margin covers most of the char-term height (≤0.022) so
+    // embers surface on the seam instead of spawning inside the coal bed.
+    float baseY = RIDGE + fbm(vec2(x0 * 2.0, 3.7), 2) * 0.05 + 0.014;
 
     // closed-form rise: decelerating climb + growing wander + gust shear
     float v0 = (burst ? 0.16 : 0.085) + (burst ? 0.14 : 0.10) * hash11(seed + 3.0);
