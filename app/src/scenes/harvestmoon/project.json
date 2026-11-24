@@ -1,0 +1,11 @@
+{
+  "project": "harvestmoon",
+  "meta": { "title": "Harvest Moon", "aspectRatio": "16:9", "fps": 60, "duration": 22 },
+  "entries": [
+    { "scene": "harvestmoon/harvestmoon", "id": "act-rise", "start": 0, "end": 4, "caption": { "fig": "i", "text": "MOONRISE", "dur": 3.6 } },
+    { "scene": "harvestmoon/harvestmoon", "id": "act-hare", "start": 4, "end": 8.5, "caption": { "fig": "ii", "text": "A HARE", "dur": 3.6 } },
+    { "scene": "harvestmoon/harvestmoon", "id": "act-crows1", "start": 8.5, "end": 12, "caption": { "fig": "iii", "text": "CROWS", "dur": 3.2 } },
+    { "scene": "harvestmoon/harvestmoon", "id": "act-cab", "start": 12, "end": 16, "caption": { "fig": "iv", "text": "CAB LIGHT", "dur": 3.4 } },
+    { "scene": "harvestmoon/harvestmoon", "id": "act-crows2", "start": 16, "end": 22, "caption": { "fig": "v", "text": "SECOND CROSS", "dur": 4 } }
+  ]
+}
