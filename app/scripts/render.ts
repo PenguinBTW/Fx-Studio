@@ -749,7 +749,11 @@ async function motion(page: Page) {
   if (tl) {
     for (const e of tl) {
       if (e.start >= from && e.start <= to) {
-        const cutIdx = Math.round(e.start * fps) - Math.round(from * fps);
+        // first frame showing post-cut content: frames render at n/fps and content
+        // switches at exactly e.start, so the straddling pair is [idx-1, idx] where
+        // idx = ceil(cutT·fps). Nearest-frame rounding can land BEFORE the cut and
+        // would compare two pre-cut frames — classifying lead-in motion as the cut.
+        const cutIdx = Math.ceil(e.start * fps - 1e-9) - Math.round(from * fps);
         let diff = 0;
         let cutType: 'hard' | 'soft' | 'flash' = 'soft';
 
@@ -944,7 +948,7 @@ async function motion(page: Page) {
       whenToOpen: `Detailed sub-second visual evolution around ${ev.label}`,
     });
 
-    const evIdx = Math.max(0, Math.min(frameCount - 1, Math.round((ev.t - from) * fps)));
+    const evIdx = Math.max(0, Math.min(frameCount - 1, Math.round(ev.t * fps) - Math.round(from * fps)));
     const i0 = Math.max(0, evIdx - 2), i1 = evIdx, i2 = Math.min(frameCount - 1, evIdx + 2);
     const rgbDataUrl = await renderRgbTimeComposite(page, lumas[i0]!, lumas[i1]!, lumas[i2]!);
     const rgbName = `rgbtime_${ev.label}.png`;
