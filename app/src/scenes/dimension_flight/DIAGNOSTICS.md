@@ -41,12 +41,15 @@ frame; telemetry on 32.5–35.5 s reports **0 blocking flags** after the change.
 - **F12 off-palette** (~95–100% in most windows): graded against the default
   ink/bone/signal swatches; this film deliberately uses per-world palettes
   (overworld dawn, nether crimson, End violet, aether pastel, sift salmon).
-  Re-grade with `--palette` when canonical swatches are defined, or waive.
+  Waived in [`findings.json`](findings.json); re-grade with `--palette` when
+  canonical swatches are defined.
 - **F15 edge shimmer** (scattered clusters, e.g. 17–33 s nether run, 51–68 s):
-  thin distant geometry + 640×360 downsampling amplifies temporal chatter;
-  spot-checks of 1080p stills show no objectionable flicker.
+  thin distant geometry + 640×360 downsampling amplifies temporal chatter.
+  Not waived — F15 is temporal and stills cannot verify it; 1080p flicker
+  remains unverified on this headless CPU box (no motion render possible).
 - **F11 bright non-signal** (45.3–48.4 s aether, 56.6–58.1 s, 77.7–81.1 s sift):
-  intentional luminous worlds (glowstone gate, soul-tide finale).
+  intentional luminous worlds (glowstone gate, soul-tide finale) — waived in
+  [`findings.json`](findings.json).
 
 ## Verdict
 
