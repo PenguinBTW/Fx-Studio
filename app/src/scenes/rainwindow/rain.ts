@@ -57,7 +57,15 @@ function headAt(d: Drop, t: number): { x: number; y: number; r: number } | null 
 // Rivulet dynamics: gravity pulls, surface tension stalls; bigger drops run
 // faster. x wiggles around a slowly-drifting rivulet line. boostT speeds the
 // drop up after a merge (post-merge vmax ×1.55).
-function integrate(x0: number, r: number, t0: number, parent?: Drop, boostT = Infinity): Drop {
+function integrate(
+  x0: number,
+  r: number,
+  t0: number,
+  parent?: Drop,
+  boostT = Infinity,
+  speedK = 1,
+  yStart?: number
+): Drop {
   const cap = Math.ceil(END / DT) + 2;
   const xs = new Float32Array(cap), ys = new Float32Array(cap), ts = new Float32Array(cap);
   const wf = 0.012 + 0.02 * hash(t0 * 91, r);          // wiggle freq per unit y
@@ -65,11 +73,12 @@ function integrate(x0: number, r: number, t0: number, parent?: Drop, boostT = In
   const wAmp = 1.5 + 6 * hash(x0, t0);                 // wiggle amplitude px
   const drift = (hash(t0 * 13, x0 * 7) - 0.5) * 8;     // slow x drift over path
   const vmax = 60 + 110 * (r / 12);                    // terminal speed px/s
-  let y = -r - 4, v = 20, n = 0;
+  let y = yStart ?? -r - 4, v = 20, n = 0;
   for (let t = t0; t <= END + DT && n < cap; t += DT) {
     // stick-slip: short deterministic stalls seeded on y-bands
     const stall = hash(Math.floor(y / 37), t0 * 7.7) < 0.16 ? 0.25 : 1;
-    const vm = t > boostT ? vmax * 1.55 : vmax;        // merged drops run faster
+    // merged drops run faster (boostT); children get a catch-up speedK
+    const vm = vmax * speedK * (t > boostT ? 1.55 : 1);
     v += (vm * (0.72 + 0.4 * Math.sin(y * 0.05 + wp)) - v) * 3.2 * DT;
     y += Math.max(4, v * stall) * DT;
     const x = x0 + drift * (y / H) + wAmp * Math.sin(y * wf * 6.2831853 + wp);
@@ -106,7 +115,14 @@ function buildDrops(): Drop[] {
     const p = parents[i % parents.length]; // spread merges across the pane
     const delay = 1.5 + 3 * hash(i, 23);
     const cr = 2 + 3.5 * hash(i, 29);
-    const c = integrate(p.xs[0] + (hash(i, 31) - 0.5) * 14, cr, p.t0 + delay, p);
+    const t0c = p.t0 + delay;
+    // Spawn the child just behind the parent's live head with a speed
+    // advantage — it catches up within ~1-3 s, so merges land early
+    // (a slower small child could only merge via lucky stalls).
+    const ph0 = headAt(p, t0c);
+    const x0c = (ph0 ? ph0.x : p.xs[0]) + (hash(i, 31) - 0.5) * 10;
+    const y0c = ph0 ? ph0.y - (ph0.r + cr + 40) : undefined;
+    const c = integrate(x0c, cr, t0c, p, Infinity, 1.9, y0c);
     // merge time ≈ child's last node; parent swells by cubic-volume addition
     c.mergedAt = -1; // marker: this drop is a merging child
     const tm = c.ts[c.ts.length - 1];
