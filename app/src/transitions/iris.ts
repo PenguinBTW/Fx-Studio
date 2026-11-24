@@ -21,9 +21,12 @@ export default class Iris implements Transition {
         vec2 uvCenter = (vUv - 0.5) * aspect;
         float dist = length(uvCenter);
 
-        // Max radius to cover corners of 16:9 frame is ~0.8
+        // Radius must reach the CORNER distance at u=1 or the corners keep showing
+        // scene A through the whole window and then pop to B when the seam ends.
+        // Derived from the actual aspect (not hardcoded) so vertical projects close too.
+        float maxR = length(0.5 * aspect) + 0.03; // small margin so the AA rim also clears
         float smoothU = progress * progress * (3.0 - 2.0 * progress);
-        float radius = smoothU * 0.85;
+        float radius = smoothU * maxR;
 
         // Anti-aliased boundary
         float edge = fwidth(dist) * 2.0;
@@ -50,7 +53,7 @@ export default class Iris implements Transition {
       texA: { value: null },
       texB: { value: null },
       progress: { value: 0 },
-      aspect: { value: new THREE.Vector2(16.0 / 9.0, 1.0) },
+      aspect: { value: new THREE.Vector2(ctx.W / ctx.H, 1.0) },
     });
   }
 
