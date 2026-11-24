@@ -312,7 +312,10 @@ export default class HeatwaveScene extends Scene {
           h: bh,
           cx: tx,
           cy: ty - fs + bh / 2,
-          hPct: (fs / 1080) * 100,
+          // report the measured bbox height, not the nominal font size —
+          // downstream picks the larger of estimated vs measured hPct, so
+          // an inflated estimate would plot the wrong caption center.
+          hPct: (bh / 1080) * 100,
           isStroke: false,
         });
       }
