@@ -1,0 +1,6 @@
+{
+  "project": "moorise",
+  "entries": [
+    { "scene": "moorise/moorise", "id": "moon_rise", "start": 0.0, "end": 20.0 }
+  ]
+}
