@@ -17,7 +17,7 @@ const ss = (a: number, b: number, x: number) => {
 
 // --- envelopes (beat times from storyboard.md) -------------------------------
 const surfP = (t: number) => ss(4.0, 6.5, t) * (1 - ss(10.0, 13.0, t));   // lace edge advance/hold/ebb
-const laneX = (t: number) => -0.15 + 1.35 * ss(7.0, 12.0, t);             // glint lane sweeps left
+const laneX = (t: number) => 1.15 - 1.35 * ss(7.0, 12.0, t);              // glint lane sweeps left
 const heroF = (t: number) => ss(8.6, 9.4, t) * (1 - ss(9.8, 11.0, t));    // hero flare
 const gullX = (t: number) => -0.25 + 1.5 * ss(13.5, 15.0, t);             // gull shadow
 const shellA = (t: number) => ss(11.0, 11.8, t);                          // shell deposit
@@ -108,7 +108,7 @@ vec3 beach(vec2 uv, float t) {
   vec3 col = mix(vec3(0.30, 0.22, 0.18), vec3(0.55, 0.40, 0.32),
                  smoothstep(0.0, 0.55, uv.y));
   col = mix(col, vec3(0.75, 0.52, 0.35), smoothstep(0.45, 0.80, uv.y));   // peach band far
-  col = mix(col, vec3(0.28, 0.45, 0.50), smoothstep(0.05, 0.0, uv.y));    // teal pool near
+  col = mix(col, vec3(0.28, 0.45, 0.50), 1.0 - smoothstep(0.0, 0.05, uv.y)); // teal pool near
 
   // ripple grain + fine sand noise
   float rip = n2(vec2(uv.x * 60.0, uv.y * 140.0 - t * 0.15));
@@ -138,7 +138,7 @@ vec3 beach(vec2 uv, float t) {
               * smoothstep(0.75, 0.95, n2(uv * 210.0 + t * 0.3)) * uSurf * 0.35;
   col = mix(col, vec3(0.88, 0.91, 0.90), clamp(fleck, 0.0, 1.0));
   // wet-dark band just ahead of the lace
-  col *= 1.0 - 0.18 * smoothstep(edgeY + 0.10, edgeY + 0.02, uv.y) * (1.0 - smoothstep(edgeY, edgeY - 0.01, uv.y));
+  col *= 1.0 - 0.18 * (1.0 - smoothstep(edgeY + 0.02, edgeY + 0.10, uv.y)) * smoothstep(edgeY - 0.01, edgeY, uv.y);
 
   // sea-glass shards — seeded placement across the mid band
   for (int i = 0; i < 9; i++) {
@@ -150,7 +150,8 @@ vec3 beach(vec2 uv, float t) {
     float ci = h1(fi * 71.0 + 5.0);
     float sh = shardShape(uv, vec2(sx, sy), r, rot, fi);
     // glow when the lane crosses this shard
-    float glow = exp(-pow((sx - uLane) * 5.0, 2.0));
+    float gd = (sx - uLane) * 5.0;
+    float glow = exp(-gd * gd);
     vec3 scol = shardCol(ci) * (0.30 + 0.70 * glow);
     // half-bedded: darker at the sand line, brighter top facet
     scol *= 0.85 + 0.35 * smoothstep(sy - r, sy + r, uv.y);
@@ -166,7 +167,8 @@ vec3 beach(vec2 uv, float t) {
   // hero frosted bottle-glass piece
   vec2 hc = vec2(0.62, 0.42);
   float hh = shardShape(uv, hc, 0.055, 0.5, 9.0);
-  float heroGlow = exp(-pow((hc.x - uLane) * 5.0, 2.0)) + uHero * 1.6;
+  float hd = (hc.x - uLane) * 5.0;
+  float heroGlow = exp(-hd * hd) + uHero * 1.6;
   vec3 hcol = mix(vec3(0.42, 0.50, 0.46), vec3(0.62, 0.72, 0.66), n2(uv * 24.0)); // frosted
   hcol += vec3(0.85, 0.85, 0.75) * heroGlow * (0.3 + 0.7 * n2(uv * 120.0));
   col = mix(col, hcol, hh * 0.96);
@@ -284,6 +286,7 @@ export default class BeachglassScene extends Scene {
       const P = (window as any).__motion || (window as any).__pdoom;
       if (P?.probe && P.textProbes && P.recordText) {
         const W = P.width || 1920, H = P.height || 1080;
+        this.cam.updateMatrixWorld();
         aToV(0.62, 0.42, this.p).project(this.cam);
         const hx = (this.p.x * 0.5 + 0.5) * W, hy = (0.5 - this.p.y * 0.5) * H;
         P.textProbes.push({
