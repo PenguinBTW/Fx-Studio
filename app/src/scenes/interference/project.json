@@ -1,0 +1,11 @@
+{
+  "project": "interference",
+  "entries": [
+    {
+      "scene": "interference/interference",
+      "id": "interference_field",
+      "start": 0.0,
+      "end": 20.0
+    }
+  ]
+}
