@@ -118,13 +118,13 @@ void main() {
   vec2 pp = advect(s, t0, tc);
   vec3 wp = toWorld(pp);
 
-  // ribbon: offset perpendicular to the view-projected direction
-  vec2 pRef = advect(s, t0, head ? max(t0, uT - 0.22) : min(uT, tc + 0.22));
+  // ribbon: offset perpendicular to the view-projected flow direction.
+  // The exact local velocity is both cheaper than a second long advect
+  // march and a truer tangent than a 0.22s chord — one march per vertex.
+  vec2 vv = vel(pp, tc);
   vec4 vPos = modelViewMatrix * vec4(wp, 1.0);
-  vec4 vRef = modelViewMatrix * vec4(toWorld(pRef), 1.0);
-  // forward direction at BOTH endpoints: head looks back at a reference
-  // behind it, the tail looks forward at one ahead — same winding, no twist
-  vec2 dir = head ? (vPos.xy - vRef.xy) : (vRef.xy - vPos.xy);
+  vec4 vDir4 = modelViewMatrix * vec4(vv.x * uW, 0.0, vv.y * uD, 0.0);
+  vec2 dir = vDir4.xy;
   float dl = length(dir);
   dir = dl > 1e-5 ? dir / dl : vec2(1.0, 0.0);
   float width = uSize * iA.z * mix(0.35, 1.0, head ? 1.0 : 0.0);
