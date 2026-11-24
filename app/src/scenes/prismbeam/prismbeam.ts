@@ -306,15 +306,15 @@ export default class PrismbeamScene extends Scene {
       p.needsUpdate = true;
       this.fanMat.opacity = 0.62 * fanOn * fanGone * (live / BANDS);
 
-      // caustic pool tracks the mean exit direction onto the floor
+      // caustic pool sits where the mean exit ray meets the floor
       if (live > 0) {
         const mid = disperse(560, phi, this._tmp);
         if (mid) {
-          const s = (BEAM_Y - 0.05) / Math.max(0.05, -this._tmp.d.y * 4);
+          const s = Math.min(12, Math.max(0, (this._tmp.p.y - 0.05) / Math.max(0.02, -this._tmp.d.y)));
           this.caustic.position.set(
-            this._tmp.p.x + this._tmp.d.x * Math.min(s, 9),
+            this._tmp.p.x + this._tmp.d.x * s,
             0.06,
-            this._tmp.p.z + this._tmp.d.z * Math.min(s, 9) + 0.3,
+            this._tmp.p.z + this._tmp.d.z * s,
           );
         }
       }
