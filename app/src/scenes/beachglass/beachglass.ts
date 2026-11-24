@@ -125,6 +125,7 @@ vec3 beach(vec2 uv, float t) {
   // specular glint lane sweeping the sand (low sun, right to left)
   float lane = exp(-pow(abs(uv.x - uLane) * 9.0, 2.0)) * smoothstep(0.05, 0.3, uv.y) * 0.45;
   lane += exp(-pow(abs(uv.x - uLane) * 3.5, 2.0)) * 0.18;
+  lane *= 1.0 - smoothstep(12.0, 14.0, t);   // stripe exits with the sweep
   col += vec3(1.0, 0.78, 0.42) * lane * (0.75 + 0.25 * n2(vec2(uv.x * 80.0, uv.y * 200.0)));
 
   // surf lace edge — thin foam band riding the edge, not a flood
@@ -275,11 +276,11 @@ export default class BeachglassScene extends Scene {
     // low macro drift tracking the glint lane; settle as the ebb ends
     const track = ss(7.0, 12.0, t) * (1 - ss(16.0, 19.0, t));
     this.cam.position.set(
-      -8 + (lane - 1.15) * 30 * track + Math.sin(t * 0.12) * 0.8,
+      -8 + Math.max(lane - 1.15, -0.85) * 30 * track + Math.sin(t * 0.12) * 0.8,
       3.5 - track * 0.8,
       26 - track * 4.0,
     );
-    this.cam.lookAt(-6 + (lane - 1.15) * 26 * track, 6.5, PZ + 10);
+    this.cam.lookAt(-6 + Math.max(lane - 1.15, -0.85) * 26 * track, 6.5, PZ + 10);
 
     // diagnostics: hero glass + surf line probes
     if (typeof window !== 'undefined') {
