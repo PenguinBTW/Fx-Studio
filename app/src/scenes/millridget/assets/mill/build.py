@@ -158,7 +158,6 @@ for j in range(6):
 # ---------- ladder to the door landing ----------
 for sx in (-0.22, 0.22):
     rail = box(f'ladderRail{sx}', (0.06, 0.06, 1.9), (sx, -2.35, 0.95), TIMBER_D, bev=0.015)
-    rail.rotation_euler[0] = math.radians(-12)
     rail['fx_part'] = 'door'; parent(rail, root)
 for j in range(5):
     t = j / 4
