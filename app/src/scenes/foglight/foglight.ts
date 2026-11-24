@@ -124,7 +124,9 @@ void main() {
     // faint phosphor sheen along the waterline (cold accent companion)
     sea += vec3(0.03, 0.09, 0.12) * exp(-abs(p.y - SEA) * 26.0)
          * (0.45 + 0.55 * fbm(vec2(p.x * 18.0, t * 0.2), 3));
-    c = mix(c, sea, 1.0 - smoothstep(SEA - 0.004, SEA + 0.004, p.y));
+    // reach full sea colour right at the waterline so no half-blended band
+    // survives between the sky and surface shading
+    c = mix(c, sea, 1.0 - smoothstep(SEA - 0.008, SEA, p.y));
   }
 
   // ---- rocky point + lighthouse silhouette ----
