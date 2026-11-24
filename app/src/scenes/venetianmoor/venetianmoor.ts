@@ -131,7 +131,8 @@ vec3 canalScene(vec2 uv, float t) {
     figure += 1.0 - smoothstep(0.0035, 0.0060, length(gp - vec2(0.0, 0.017)));
     // oar pole angled forward from the figure's shoulder
     float pole = (1.0 - smoothstep(0.0012, 0.0025, abs(gp.x - 0.004 - gp.y * 0.9))) * step(0.004, gp.y) * (1.0 - smoothstep(0.020, 0.026, gp.y));
-    col = mix(col, vec3(0.02, 0.015, 0.03), clamp(figure + pole, 0.0, 1.0) * 0.95);
+    float crossing = step(0.004, uCross) * step(uCross, 0.995);
+    col = mix(col, vec3(0.02, 0.015, 0.03), clamp(figure + pole, 0.0, 1.0) * crossing * 0.95);
   }
 
   // --- marble steps descending into the water, near-left
@@ -174,7 +175,10 @@ vec3 canalScene(vec2 uv, float t) {
     // floating debris drifting past the gondola
     for (int i = 0; i < 3; i++) {
       float fi = float(i);
-      float dx = fract(h2(vec2(fi, 7.0)) + t * 0.016 * uDrift * (0.6 + 0.4 * fi));
+      // decelerating drift: speed eases off during the settle act (integral of 1-0.45*ss(16,19))
+      float du = clamp((t - 16.0) / 3.0, 0.0, 1.0);
+      float iss = du * du * du * (3.0 - 1.5 * du) + max(t - 19.0, 0.0);
+      float dx = fract(h2(vec2(fi, 7.0)) + 0.016 * (t - 0.45 * iss) * (0.6 + 0.4 * fi));
       vec2 dp = uv - vec2(0.30 + dx * 0.35, 0.30 + 0.045 * fi + 0.004 * sin(t * 2.0 + fi * 3.0));
       float deb = 1.0 - smoothstep(0.0025, 0.0045, length(dp * vec2(1.0, 1.8)));
       col = mix(col, vec3(0.10, 0.10, 0.08), deb * water * 0.8);
@@ -225,7 +229,9 @@ vec3 canalScene(vec2 uv, float t) {
 
   // --- rat scuttling the steps once (dart-pause-dart profile)
   {
-    float rx = 0.04 + 0.24 * (uRat + 0.12 * sin(uRat * 21.0) * uRat * (1.0 - uRat));
+    // dart - pause - dart: progress plateaus mid-run before the second dart
+    float rr = uRat < 0.42 ? uRat * 1.2 : (uRat < 0.58 ? 0.504 : 0.504 + (uRat - 0.58) * 1.2);
+    float rx = 0.04 + 0.24 * (rr + 0.04 * sin(uRat * 21.0) * uRat * (1.0 - uRat));
     vec2 rpp = uv - vec2(rx, 0.235);
     float rat = 1.0 - smoothstep(0.005, 0.008, length(rpp * vec2(1.0, 1.9)));
     rat += 1.0 - smoothstep(0.003, 0.004, length(rpp - vec2(-0.009, 0.004) * vec2(1.0, 1.9)));
@@ -237,7 +243,7 @@ vec3 canalScene(vec2 uv, float t) {
   {
     vec2 cp = uv - vec2(0.652 - 0.03 * uCat, 0.300 - 0.07 * uCat);
     float tail = (1.0 - smoothstep(0.0025, 0.0045, abs(cp.x - cp.y * 0.5))) * (1.0 - smoothstep(0.016, 0.022, cp.y)) * step(0.0, cp.y);
-    col = mix(col, vec3(0.03, 0.02, 0.04), tail * (1.0 - uCat) * 0.9);
+    col = mix(col, vec3(0.03, 0.02, 0.04), tail * (1.0 - uCat) * step(0.004, uCat) * 0.9);
   }
 
   // vignette + cool air at the edges
@@ -307,7 +313,7 @@ export default class VenetianmoorScene extends Scene {
           bbox: [gx - 40, gy - 24, gx + 40, gy + 16],
           w: 80, h: 40, cx: gx, cy: gy, hPct: (40 / H) * 100, isStroke: false,
         });
-        aToV(0.697, 0.517, this.p).project(this.cam);
+        aToV(0.674, 0.517, this.p).project(this.cam);
         const lx = (this.p.x * 0.5 + 0.5) * W, ly = (0.5 - this.p.y * 0.5) * H;
         P.textProbes.push({
           frameIdx: P.currentFrameIdx ?? 0, t, text: 'lamp',
