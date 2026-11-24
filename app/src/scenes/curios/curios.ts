@@ -281,6 +281,7 @@ export default defineScene({
 
     // ---- camera
     ctx.rig.setLensMm(58);
+    ctx.rig.pathTiming = 'keyed';
     ctx.rig.setPath(Array.from({ length: Math.ceil(DUR) + 1 }, (_, i) => {
       const tt = Math.min(DUR, i);
       const p = camPose(tt);
