@@ -51,11 +51,12 @@ void main() {
   col = mix(col, indigo, smoothstep(0.66, 1.00, y));
 
   // faint blue moon-haze in the top-left corner — the cold accent
-  vec2 md = vec2((x - 0.14) * 2.2, y - 0.88);
+  // (uv must stay inside the camera's ~0.29–0.71 x window on the backdrop)
+  vec2 md = vec2((x - 0.33) * 2.2, y - 0.82);
   float moonHaze = exp(-dot(md, md) * 3.0);
   col += vec3(0.30, 0.38, 0.62) * moonHaze * 0.55;
   // thin bright moon sliver inside the haze
-  vec2 ms = vec2((x - 0.145) * 2.2, y - 0.885);
+  vec2 ms = vec2((x - 0.335) * 2.2, y - 0.825);
   float sliver = (1.0 - smoothstep(0.016, 0.026, length(ms))) * 0.7;
   sliver *= 1.0 - smoothstep(0.014, 0.028, length(ms - vec2(0.010, 0.006)));
   col += vec3(0.75, 0.80, 0.95) * sliver;
@@ -63,11 +64,11 @@ void main() {
   // --- warm lantern glow low in frame -------------------------------------
   // swells gently through the dense beat (t ~ 12–16)
   float lant = 0.75 + 0.25 * smoothstep(10.0, 13.0, t) * (1.0 - smoothstep(16.0, 19.0, t));
-  vec2 ld = vec2((x - 0.80) * 2.2, y - 0.13);
+  vec2 ld = vec2((x - 0.63) * 2.2, y - 0.30);
   float lg = exp(-dot(ld, ld) * 4.5);
   col += vec3(0.95, 0.45, 0.12) * lg * 0.55 * lant;
   // lantern body — a small glowing paper diamond
-  vec2 lb = vec2((x - 0.80) * 30.0, (y - 0.13) * 30.0);
+  vec2 lb = vec2((x - 0.63) * 30.0, (y - 0.30) * 30.0);
   float lbody = 1.0 - smoothstep(0.55, 0.75, abs(lb.x) + abs(lb.y) * 1.6);
   col += vec3(1.0, 0.62, 0.22) * lbody * (0.85 + 0.15 * sin(t * 7.0)) * lant;
   // faint halo ring
@@ -116,7 +117,7 @@ void main() {
   // petal: tall ellipse, slightly pinched at the base, cleft tip on top
   float d = length(vec2(p.x * 1.18, (p.y + 0.06) * 1.42));
   float body = 1.0 - smoothstep(0.80, 0.88, d);
-  float notch = 1.0 - smoothstep(0.08, 0.22, length(p - vec2(0.0, 0.82)));
+  float notch = 1.0 - smoothstep(0.08, 0.22, length(p - vec2(0.0, 0.60)));
   float shape = body * (1.0 - notch);
   if (shape < 0.01) discard;
   // petal vein shading — a soft central crease
@@ -134,14 +135,30 @@ const PETALS = 220;
 // Backdrop plane mapping (must match the mesh below): uv → world.
 const PW = 320, PH = 140, PY = 8, PZ = -80;
 
-// Lantern world position (must match the shader's 0.80/0.13 uv).
-const LANTERN = { x: (0.80 - 0.5) * PW, y: PY + (0.13 - 0.5) * PH };
+// Lantern world position (must match the shader's 0.63/0.30 uv).
+const LANTERN = { x: (0.63 - 0.5) * PW, y: PY + (0.30 - 0.5) * PH };
 
 // Breeze gust envelope: light baseline breathing + the mid-take swell at
 // ~t 6–13 that lifts drift speed and sway amplitude, settling by 18.
 const gust = (t: number) =>
   0.30 + 0.09 * Math.sin(t * 0.8) + 0.07 * Math.sin(t * 0.47 + 1.2)
   + 0.70 * ss(5.5, 8.0, t) * (1 - ss(12.5, 15.5, t));
+
+// Precomputed integral of the fall-speed factor (0.8 + 0.4·gust) so the
+// fall distance stays a pure lookup of t — sampled once at setup.
+const GUST_DT = 0.02, GUST_T0 = -2, GUST_N = Math.ceil(26 / GUST_DT);
+const gustTable = new Float32Array(GUST_N + 1);
+{
+  for (let i = 1; i <= GUST_N; i++) {
+    const tt = GUST_T0 + i * GUST_DT;
+    gustTable[i] = gustTable[i - 1]! + (0.8 + 0.4 * gust(tt)) * GUST_DT;
+  }
+}
+const gustInt = (t: number): number => {
+  const u = Math.min(GUST_N - 0.001, Math.max(0, (t - GUST_T0) / GUST_DT));
+  const i = Math.floor(u), f = u - i;
+  return gustTable[i]! * (1 - f) + gustTable[i + 1]! * f;
+};
 
 interface PetalSeed {
   x0: number;     // base horizontal anchor (uv-ish -0.55..0.55 world fraction)
@@ -256,10 +273,12 @@ export default class PetalfallScene extends Scene {
     }
     // falling + swaying + a slow gust-driven lateral drift
     const u0 = s.x0 + g * 0.06 * life * (s.swayP > Math.PI ? 1 : -1);
-    // keep the field inside the frustum: the plane is far wider/taller
-    // than what the camera sees (~±55 x, -25…+45 y at petal depths)
-    const wx = (frac(u0 + 0.5) - 0.5) * PW * 0.35;
-    const wy = 48.0 - s.fallV * life * (0.8 + 0.4 * g);
+    // wrap span must exceed the widest view slice (~±62 world at z=-72)
+    // so a wrapping petal is never teleported inside the frame
+    const wx = (frac(u0 + 0.5) - 0.5) * PW * 0.55;
+    // fall distance integrates the gust factor over the petal's own window
+    // — applying the fading gust to the whole life would lift petals back up
+    const wy = 48.0 - s.fallV * (gustInt(t) - gustInt(s.onset));
     const x = wx + s.swayA * (0.6 + 0.7 * g) * Math.sin(life * s.swayF + s.swayP);
     const y = wy + s.swayA * 0.18 * Math.sin(life * s.swayF * 1.7 + s.swayP * 2.0);
 
