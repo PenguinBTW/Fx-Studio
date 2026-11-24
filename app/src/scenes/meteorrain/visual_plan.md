@@ -21,9 +21,31 @@ streak that fragments into 3-4 secondary streaks with a color breakup.
 A handful of lingering smoke trails drift sideways where earlier meteors
 burned out — faint fbm streak bands fading on slow envelopes.
 
+## Metaphor → mechanism mapping
+| Story element | Implementation |
+|---|---|
+| Perseid radiant | shared `ang = -0.42 - 0.65*h` cone, all 40 meteors |
+| ionized trail | per-point arrival time + `exp(-(t-arrive)/1.6)` decay |
+| fireball fragmentation | 4 rotated secondary streaks from the break point |
+| smoke memory | fbm-modulated columns drifting +x on 7–9s envelopes |
+| observatory watching | dome slit sweeps on `sin(t*0.35)`, glint on `pow(...,12)` |
+
+## Cliché audit
+- No purple/green "aurora sky" — the palette stays desaturated blue-black.
+- No lens flare or comet tails with motion-blur smear; streaks are thin cores with exponential falloff, plus a fading trail.
+- The fireball fragments *down-range* (real bolides shear forward), not into a radial starburst.
+
+## Focal hierarchy
+1. Meteors / the fireball (brightest, highest-contrast elements)
+2. Milky Way band + starfield (slow-moving backdrop interest)
+3. Ridgeline detail: dome slit glint, red beacon (small focal accents)
+4. Airglow, wisps, smoke (atmospheric bed, lowest contrast)
+
 ## Camera & beats
-CameraRig holds a slow push and tilts skyward through the fireball event.
-Beats: quiet sky → first meteors → fireball → lingering glow fade.
-Captions ride Layer2D; textProbes sample sky brightness at the beats.
+CameraRig holds a slow push (z 26→14) and tilts skyward through the
+fireball event. Beats: quiet sky → first meteors → fireball → lingering
+glow fade. Captions ride Layer2D; the engine's textProbes emit caption
+bounds + style at each beat, and sky luminance is verified in the render
+stills at t=2/7/11.4/17.
 
 Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL

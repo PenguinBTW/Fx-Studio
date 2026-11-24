@@ -62,7 +62,7 @@ vec3 meteor(vec2 uv, vec2 o, vec2 d, float len, float t0, float dur,
   vec2 closest = o + d * proj;
   float d2 = length(uv - closest);
   float headS = len * min(p, 1.0);
-  float tailS = len * max(p - 0.55, 0.0);
+  float tailS = len * min(max(p - 0.55, 0.0), 0.45); // freeze once head lands so the ionized trail lingers
   float mask = smoothstep(tailS - 0.015, tailS + 0.01, proj)
              * (1.0 - smoothstep(headS - 0.01, headS + 0.03, proj));
   float core = exp(-d2 * d2 / (wid * wid)) * mask;
@@ -160,11 +160,13 @@ void main() {
   // high-altitude smoke trails left by earlier meteors
   for (int j = 0; j < 6; j++) {
     float sj = float(j);
-    float st0 = 4.0 + 10.0 * h1(sj * 41.3 + 8.0);
-    vec2 so = vec2(0.15 + 0.65 * h1(sj * 43.7 + 3.0), 0.60 + 0.30 * h1(sj * 47.9 + 1.0));
-    float sang = -0.42 - 0.65 * h1(sj * 51.3 + 6.0);
+    // reuse the shower meteor's own seed family so smoke traces earlier paths
+    float sk = sj * 7.0;
+    float st0 = -(2.0 + 6.0 * h1(sj * 41.3 + 8.0));
+    vec2 so = vec2(0.10 + 0.72 * h1(sk * 11.3 + 5.0), 0.62 + 0.34 * h1(sk * 13.9 + 2.0));
+    float sang = -0.42 - 0.65 * h1(sk * 17.7 + 7.0);
     vec2 sd2 = vec2(cos(sang), sin(sang));
-    float slen = 0.08 + 0.10 * h1(sj * 53.7 + 4.0);
+    float slen = 0.10 + 0.14 * h1(sk * 19.3 + 1.0);
     float arrive = st0 + 0.5;
     vec2 rel = uv - so - vec2(0.010 * (t - arrive), 0.0);
     float proj = clamp(dot(rel, sd2), 0.0, slen);
@@ -182,14 +184,14 @@ void main() {
 
   // slow cloud wisps crossing the ridge top
   float wisps = max(fbm3(vec3(uv * vec2(3.0, 9.0) + vec2(t * 0.010, 0.0), 31.0), 3), 0.0) * 2.0
-              * smoothstep(ridge + 0.10, ridge + 0.02, uv.y);
+              * (1.0 - smoothstep(ridge + 0.02, ridge + 0.10, uv.y));
   sky = mix(sky, vec3(0.020, 0.028, 0.045), clamp(wisps * 0.5, 0.0, 0.4));
 
   /* ---------- observatory dome + radio mast ---------- */
-  vec2 dome = vec2(0.22, ridge + 0.010);
+  vec2 dome = vec2(0.44, ridge + 0.006);
   vec2 dp = uv - dome;
   dp.x *= 2.0; // uv-x spans twice the world units
-  float domeR = 0.058;
+  float domeR = 0.034;
   float domeM = 1.0 - smoothstep(domeR - 0.002, domeR + 0.002, length(dp));
   // rotating slit: narrow angular wedge sweeping the dome, occasional glint
   float slitAng = 0.9 + 0.55 * sin(t * 0.35);
@@ -201,11 +203,11 @@ void main() {
   sky += vec3(0.9, 0.9, 1.0) * slit * (0.25 + 2.4 * glint);
 
   // radio mast: thin silhouette + blinking red beacon
-  float mast = step(abs(uv.x - 0.80), 0.0016) * step(ridge - 0.005, uv.y)
+  float mast = step(abs(uv.x - 0.68), 0.0016) * step(ridge - 0.005, uv.y)
              * step(uv.y, ridge + 0.09);
   sky = mix(sky, vec3(0.010, 0.011, 0.014), mast);
   float blink = smoothstep(0.75, 0.95, sin(t * 3.9));
-  float beacon = exp(-sq2((uv.x - 0.80) * 320.0) - sq2((uv.y - (ridge + 0.095)) * 320.0));
+  float beacon = exp(-sq2((uv.x - 0.68) * 320.0) - sq2((uv.y - (ridge + 0.095)) * 320.0));
   sky += vec3(1.0, 0.10, 0.08) * beacon * blink * 2.2;
 
   /* ---------- compose ---------- */
