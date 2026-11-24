@@ -1,0 +1,11 @@
+{
+  "project": "prismbeam",
+  "entries": [
+    {
+      "scene": "prismbeam/prismbeam",
+      "id": "prism_beam",
+      "start": 0.0,
+      "end": 20.0
+    }
+  ]
+}

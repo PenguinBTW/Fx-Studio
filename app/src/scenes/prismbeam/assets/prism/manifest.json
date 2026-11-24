@@ -1,0 +1,3 @@
+{ "id": "prism", "version": 1, "source": "build.py",
+  "parts": { "crystal": "crystal" },
+  "budgets": { "tris": 4000, "textureMB": 1 } }
