@@ -140,6 +140,7 @@ export default class SunPillar extends Scene {
     const t = f.lt;
     const u = this.pass.u;
     u.uT!.value = t;
+    (u.uRes!.value as THREE.Vector2).set(out.width, out.height);
 
     // two-phase fades keep the near-black run under F16's 0.3 s threshold
     const fadeIn = 0.8 * Math.min(1, t / 0.3) + 0.2 * Math.min(1, Math.max(0, t - 0.3) / 1.5);
