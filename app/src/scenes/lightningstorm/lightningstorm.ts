@@ -54,7 +54,7 @@ uniform float uSeed;
 uniform float uAmp;
 void main() {
   // narrow vertical streaks scrolling downward
-  float n = fbm3(vec3(vUv.x * 24.0 + uSeed * 17.0, vUv.y * 1.5 - uT * 0.7, uSeed), 3, 2.0, 0.5);
+  float n = fbm3(vec3(vUv.x * 24.0 + uSeed * 17.0, vUv.y * 1.5 + uT * 0.7, uSeed), 3, 2.0, 0.5);
   float d = sat(n * 0.9 + 0.15);
   float a = d * 0.3 * uAmp
           * smoothstep(0.0, 0.25, vUv.y)
