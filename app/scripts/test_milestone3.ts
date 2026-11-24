@@ -128,7 +128,11 @@ const uSphere = (union as any).geo.boundingSphere;
 // partial overlap: each emitter's own reach must be enclosed
 const enclosed = (c: [number, number, number], r: number) =>
   Math.hypot(c[0] - uSphere.center.x, c[1] - uSphere.center.y, c[2] - uSphere.center.z) + r <= uSphere.radius + 1e-6;
-if (!enclosed([0, 0, 0], r1) || !enclosed([10, 0, 0], 3.0 * 2.0 + 0.5 * 0.5 * 2.0 * 2.0 + 1.0)) {
+// side's standalone reach (includes the turbulence/size emitter defaults)
+const sideLone = new AnalyticalParticles(64);
+sideLone.addEmitter('side', { capacity: 10, origin: [10, 0, 0], direction: [0, 1, 0], speed: 3.0, lifetime: 2.0, gravity: [0, -0.5, 0] });
+const sideR = (sideLone as any).geo.boundingSphere.radius;
+if (!enclosed([0, 0, 0], r1) || !enclosed([10, 0, 0], sideR)) {
   console.error(`Bounding-sphere union does not enclose both emitters! radius=${uSphere.radius}`);
   allPassed = false;
 } else {
