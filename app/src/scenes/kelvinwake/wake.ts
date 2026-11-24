@@ -217,13 +217,18 @@ export default class KelvinWake extends Scene {
     (u.uUp!.value as THREE.Vector3).copy(up);
     (u.uSrc!.value as THREE.Vector2).set(srcX, 0);
     u.uAsp!.value = out.width / out.height;
-    // Two-phase fade-in: snap up to ~80% within 0.3 s (so the F16 near-black
-    // audit window stays under its 0.3 s threshold), then settle the remaining
-    // exposure slowly for the cinematic reveal. Fade-out stays a plain ramp —
-    // its near-black tail is already under the threshold.
+    // Two-phase fades keep the near-black run under F16's 0.3 s threshold in
+    // both orientations: in, snap up to ~80% within 0.3 s then settle exposure
+    // slowly for the cinematic reveal; out, dim gradually to 55% over the last
+    // second then dip to black inside the final 0.25 s.
     const fadeIn =
       0.8 * Math.min(1, t / 0.3) + 0.2 * Math.min(1, Math.max(0, t - 0.3) / 1.5);
-    u.uFade!.value = fadeIn * Math.min(1, (END - t) / 1.0);
+    const rem = END - t;
+    const fadeOut =
+      rem > 0.25
+        ? 0.55 + 0.45 * Math.min(1, (rem - 0.25) / 0.75)
+        : 0.55 * (rem / 0.25);
+    u.uFade!.value = fadeIn * fadeOut;
 
     const rr = this.ctx.renderer;
     rr.setRenderTarget(out);
