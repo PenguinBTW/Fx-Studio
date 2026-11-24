@@ -26,7 +26,7 @@ const moorU = (t: number) => Math.min(1, Math.max(0, (t - 12.0) / 4.0));   // mo
 const gustW = (t: number) => ss(5.8, 6.4, t) * (1 - ss(7.4, 8.0, t));      // reed gust beat
 const starU = (t: number) => ss(10.0, 18.0, t);                            // star pricks through
 
-const deerX = (t: number) => 1.06 - 0.64 * deerWalk(t);                    // 1.06 → 0.42
+const deerX = (t: number) => 1.06 - 0.66 * deerWalk(t);                    // 1.06 → 0.40 (clump center)
 const deerY = (t: number) =>
   0.285 - 0.030 * deerWalk(t) + (deerWalk(t) > 0 && deerWalk(t) < 1 && lookW(t) < 0.5 ? 0.004 * Math.abs(Math.sin(t * 9.0)) : 0);
 
@@ -209,8 +209,8 @@ void main() {
     vec3 d = deer(uv, uDeer, uWalk, uLook, t);
     col = mix(col, vec3(0.07, 0.06, 0.06), d.x * 0.92);
     // willow clump it slips behind
-    vec2 wc = vec2(0.40, 0.285);
-    float wl = 1.0 - smoothstep(0.018, 0.028, length((uv - wc) / vec2(1.0, 1.35)));
+    vec2 wc = vec2(0.40, 0.272);
+    float wl = 1.0 - smoothstep(0.018, 0.028, length((uv - wc) / vec2(1.35, 1.6)));
     col = mix(col, vec3(0.07, 0.08, 0.07), wl * 0.95);
   }
   // near willow trunk line along the bank (foreground silhouettes)
