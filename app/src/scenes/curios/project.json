@@ -1,0 +1,7 @@
+{
+  "project": "curios",
+  "trimToTimeline": true,
+  "entries": [
+    { "scene": "curios/curios", "id": "curios", "start": 0.0, "end": 20.0 }
+  ]
+}
