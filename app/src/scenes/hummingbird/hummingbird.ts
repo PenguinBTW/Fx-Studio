@@ -194,19 +194,20 @@ void main() {
     col += bc * m * (0.16 + 0.22 * hashg(vec2(fi, 5.5)));
   }
 
-  // dawn shafts slanting from upper-right; open with uDawn
-  vec2 sc = q - vec2(0.86, 0.95);
+  // dawn shafts slanting down-left across the framed area; open with uDawn
+  vec2 sc = q - vec2(0.80, 0.98);
   float ang = atan(sc.y, sc.x);
   float rr = length(sc);
   float shaft = 0.0;
   for (int k = 0; k < 3; k++) {
     float fk = float(k);
-    float c0 = 0.65 - fk * 0.28 + 0.03 * sin(uT * 0.07 + fk * 2.0);
-    float bw = 0.045 + 0.02 * fk;
+    // angles past PI fan the rays down-left over the vine
+    float c0 = 3.14159 + 0.30 + fk * 0.24 + 0.03 * sin(uT * 0.07 + fk * 2.0);
+    float bw = 0.05 + 0.02 * fk;
     shaft += (1.0 - smoothstep(0.0, bw, abs(ang - c0)))
            * (0.55 + 0.45 * sin(uT * 0.12 + fk * 1.9));
   }
-  shaft *= (1.0 - smoothstep(0.0, 0.85, rr));
+  shaft *= (1.0 - smoothstep(0.0, 1.15, rr));
   col += vec3(0.95, 0.72, 0.35) * shaft * (0.10 + 0.38 * uDawn);
 
   // dust motes twinkling inside the shaft band
@@ -366,6 +367,27 @@ interface HbState {
 }
 const hbStates = new WeakMap<SceneContext, HbState>();
 
+// one shared bloom material — module singleton so hot reloads never leak
+// the canvas texture (teardown disposes materials but not their maps)
+let bloomMat: THREE.MeshStandardMaterial | null = null;
+function bloomMaterial(): THREE.MeshStandardMaterial {
+  if (bloomMat) return bloomMat;
+  const canvas = document.createElement('canvas');
+  canvas.width = 1; canvas.height = 64;
+  const c2 = canvas.getContext('2d')!;
+  const grad = c2.createLinearGradient(0, 64, 0, 0);
+  grad.addColorStop(0, '#5e1626');
+  grad.addColorStop(0.6, '#a52a41');
+  grad.addColorStop(1, '#ff8468');
+  c2.fillStyle = grad; c2.fillRect(0, 0, 1, 64);
+  const tex = new THREE.CanvasTexture(canvas);
+  bloomMat = new THREE.MeshStandardMaterial({
+    map: tex, roughness: 0.55, metalness: 0.0, side: THREE.DoubleSide,
+    emissive: 0x30060c, emissiveIntensity: 0.35,
+  });
+  return bloomMat;
+}
+
 // trumpet bloom: lathe tube flaring at the lip, coral gradient via uv.y
 function buildBloom(): THREE.Group {
   const prof: THREE.Vector2[] = [];
@@ -376,21 +398,8 @@ function buildBloom(): THREE.Group {
     prof.push(new THREE.Vector2(r, u * 1.05));
   }
   const geo = new THREE.LatheGeometry(prof, 14);
-  const canvas = document.createElement('canvas');
-  canvas.width = 1; canvas.height = 64;
-  const c2 = canvas.getContext('2d')!;
-  const grad = c2.createLinearGradient(0, 64, 0, 0);
-  grad.addColorStop(0, '#5e1626');
-  grad.addColorStop(0.6, '#a52a41');
-  grad.addColorStop(1, '#ff8468');
-  c2.fillStyle = grad; c2.fillRect(0, 0, 1, 64);
-  const tex = new THREE.CanvasTexture(canvas);
-  const mat = new THREE.MeshStandardMaterial({
-    map: tex, roughness: 0.55, metalness: 0.0, side: THREE.DoubleSide,
-    emissive: 0x30060c, emissiveIntensity: 0.35,
-  });
   const g = new THREE.Group();
-  g.add(new THREE.Mesh(geo, mat));
+  g.add(new THREE.Mesh(geo, bloomMaterial()));
   return g;
 }
 
@@ -431,7 +440,7 @@ function buildBird() {
   const beak = new THREE.Mesh(
     new THREE.ConeGeometry(0.022, 0.55, 8),
     new THREE.MeshStandardMaterial({ color: 0x14100e, roughness: 0.4 }));
-  beak.rotation.x = Math.PI / 2;            // cone +y → -z
+  beak.rotation.x = -Math.PI / 2;           // cone +y → -z (tip forward)
   beak.position.set(0, 0.0, -0.34);
   head.add(beak);
   g.add(head);
