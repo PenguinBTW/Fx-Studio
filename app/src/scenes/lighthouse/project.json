@@ -1,0 +1,6 @@
+{
+  "project": "lighthouse",
+  "entries": [
+    { "scene": "lighthouse/lighthouse", "id": "headland", "start": 0, "end": 20 }
+  ]
+}
