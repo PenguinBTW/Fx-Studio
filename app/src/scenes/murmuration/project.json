@@ -1,0 +1,12 @@
+{
+  "project": "murmuration",
+  "entries": [
+    {
+      "scene": "murmuration/murmuration",
+      "id": "murmuration",
+      "start": 0,
+      "end": 20,
+      "caption": { "fig": "01", "text": "MURMURATION", "dur": 3.5 }
+    }
+  ]
+}
