@@ -1,0 +1,46 @@
+{
+  "project": "beachglass",
+  "meta": {
+    "title": "Beachglass: Wet Sand at Golden Hour",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 20.0
+  },
+  "entries": [
+    {
+      "scene": "beachglass/beachglass",
+      "id": "act-still",
+      "start": 0.0,
+      "end": 4.0,
+      "caption": { "fig": "01", "text": "STILL SHARDS", "dur": 3.4 }
+    },
+    {
+      "scene": "beachglass/beachglass",
+      "id": "act-surf",
+      "start": 4.0,
+      "end": 8.0,
+      "caption": { "fig": "02", "text": "THE SAND BREATHES", "dur": 3.2 }
+    },
+    {
+      "scene": "beachglass/beachglass",
+      "id": "act-glint",
+      "start": 8.0,
+      "end": 12.0,
+      "caption": { "fig": "03", "text": "GLINT LANE", "dur": 3.2 }
+    },
+    {
+      "scene": "beachglass/beachglass",
+      "id": "act-crabs",
+      "start": 12.0,
+      "end": 15.0,
+      "caption": { "fig": "04", "text": "SKITTERS", "dur": 2.8 }
+    },
+    {
+      "scene": "beachglass/beachglass",
+      "id": "act-ebb",
+      "start": 15.0,
+      "end": 20.0,
+      "caption": { "fig": "05", "text": "EBB", "dur": 3.4 }
+    }
+  ]
+}
