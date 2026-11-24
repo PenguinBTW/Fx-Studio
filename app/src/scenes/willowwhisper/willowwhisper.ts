@@ -147,7 +147,7 @@ void main() {
   water += vec3(0.018, 0.026, 0.020) * smoothstep(0.90, 1.0, streak) * streakCell * (0.4 + 0.6 * dusk);
   // streaked canopy reflection — vertical smear under the canopy mass,
   // strongest just below the bankline and weighted toward the canopy side
-  float canRefl = (1.0 - smoothstep(-1.6, -0.05, q.y)) * (0.55 + 0.45 * (1.0 - smoothstep(-0.5, 2.0, q.x)));
+  float canRefl = smoothstep(-1.6, -0.05, q.y) * (0.55 + 0.45 * (1.0 - smoothstep(-0.5, 2.0, q.x)));
   water += vec3(0.02, 0.05, 0.03) * canRefl * (0.5 + 0.5 * sin(q.x * 9.0 + sin(q.y * 30.0) * 2.0));
   // last-light gold lane on the water, fading with the dusk
   float lane = (1.0 - smoothstep(0.6, 1.6, abs(q.x - 1.3))) * smoothstep(-2.6, -0.2, q.y);
@@ -579,7 +579,13 @@ void main() {
     let leafT0 = -99, leafX = -0.6;
     for (let i = 0; i < LEAVES.length; i++) {
       const land = LEAVES[i]! + 3.2;
-      if (t >= land && land > leafT0) { leafT0 = land; leafX = st.leaves[i]!.position.x; }
+      if (t >= land && land > leafT0) {
+        leafT0 = land;
+        // landing x in closed form — reading position.x here picks up whatever
+        // the still frame left behind, so the ring could sit beside the leaf
+        const leaf = st.leaves[i]!;
+        leafX = (leaf.userData.x0 ?? leaf.position.x) + Math.sin(3.2 * 2.1 + i) * 0.22;
+      }
     }
     st.back.uniforms.uRing3!.value.set(leafT0, leafX);
     st.strandMat.uniforms.uT!.value = t;
