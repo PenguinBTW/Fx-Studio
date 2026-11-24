@@ -1,0 +1,46 @@
+{
+  "project": "frostvalley",
+  "meta": {
+    "title": "Frost Valley: First Light",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 20.0
+  },
+  "entries": [
+    {
+      "scene": "frostvalley/frostvalley",
+      "id": "act-frost",
+      "start": 0.0,
+      "end": 3.0,
+      "caption": { "fig": "01", "text": "STILL FROST", "dur": 2.6 }
+    },
+    {
+      "scene": "frostvalley/frostvalley",
+      "id": "act-fox",
+      "start": 3.0,
+      "end": 8.0,
+      "caption": { "fig": "02", "text": "FOX ENTERS", "dur": 2.8 }
+    },
+    {
+      "scene": "frostvalley/frostvalley",
+      "id": "act-pounce",
+      "start": 8.0,
+      "end": 12.5,
+      "caption": { "fig": "03", "text": "LISTEN · POUNCE", "dur": 3.0 }
+    },
+    {
+      "scene": "frostvalley/frostvalley",
+      "id": "act-finches",
+      "start": 12.5,
+      "end": 16.5,
+      "caption": { "fig": "04", "text": "FINCHES UP", "dur": 2.8 }
+    },
+    {
+      "scene": "frostvalley/frostvalley",
+      "id": "act-settle",
+      "start": 16.5,
+      "end": 20.0,
+      "caption": { "fig": "05", "text": "SETTLE", "dur": 2.2 }
+    }
+  ]
+}
