@@ -34,9 +34,6 @@ const DRAGON = { t0: 9.6, t1: 14.6 };                 // oval patrol window
 const MOOR = { t0: 14.6, t1: 19.0 };                  // bank stalk window
 const FROG_T = 12.2, FISH_T = 1.5, BOAT_T = 16.6;     // one-shot ripples/pulse
 
-// warbler perch points — (x, y) on the bed's stem tops
-const ST_A = { x: 0.55, y: 0.62 }, ST_B = { x: -0.15, y: 0.74 },
-      ST_C = { x: 0.95, y: 0.58 }, ST_D = { x: -0.45, y: 0.80 };
 const NEST = { x: 0.72, y: 0.08 };                    // hidden low in the bed
 const BED_Y = 0.02, WATER_TOP = -0.10, BANK_Y = -1.30;
 
@@ -122,7 +119,7 @@ void main() {
   water += vec3(0.75, 0.72, 0.5) * dot_ * step(0.88, h) * tw * 0.30;
 
   // near bank — dark warm mud with a wet dark edge at the waterline
-  vec3 bank = mix(vec3(0.075, 0.062, 0.042), vec3(0.035, 0.030, 0.022), smoothstep(-1.15, -2.1, q.y));
+  vec3 bank = mix(vec3(0.035, 0.030, 0.022), vec3(0.075, 0.062, 0.042), smoothstep(-2.1, -1.15, q.y));
   bank += vec3(0.012) * hash21(floor(q * vec2(20.0, 8.0)));
   bank = mix(bank, vec3(0.028, 0.024, 0.018), 1.0 - smoothstep(bankTop - 0.10, bankTop - 0.02, q.y));
 
@@ -192,6 +189,8 @@ interface St {
   reedFarMat: THREE.ShaderMaterial; reedNearMat: THREE.ShaderMaterial;
   litTipMat: THREE.ShaderMaterial;
   warbler: THREE.Group; warbMat: THREE.ShaderMaterial; warbThroat: THREE.Mesh; warbBeakTop: THREE.Mesh;
+  perchA: { x: number; y: number }; perchB: { x: number; y: number };
+  perchC: { x: number; y: number }; perchD: { x: number; y: number };
   dragon: THREE.Mesh; dragMat: THREE.ShaderMaterial;
   moorhen: THREE.Group; moorMat: THREE.ShaderMaterial; moorHead: THREE.Mesh;
   boatman: THREE.Mesh; boatMat: THREE.ShaderMaterial;
@@ -237,11 +236,13 @@ export default defineScene({
       const p: number[] = [], c: number[] = [];
       const stemC = [0.055, 0.095, 0.05], baseC = [0.030, 0.050, 0.030],
             topC = [0.14, 0.19, 0.09];
+      const tips: { x: number; y: number }[] = [];
       for (let i = 0; i < 60; i++) {
         const x = -1.9 + 3.8 * (i / 59) + (rng() - 0.5) * 0.05;
         const h = 0.55 + rng() * 0.45 + 0.15 * Math.sin(i * 0.7);   // stem tops vary
         const lean = (rng() - 0.5) * 0.10;
         const w = 0.008 + rng() * 0.006;
+        tips.push({ x: x + lean, y: BED_Y + h });
         // stem: dark base → green shaft
         ribbon(p, c, [[x, BED_Y - 0.12], [x + lean * 0.3, BED_Y + h * 0.35]], w * 1.6, w, baseC);
         ribbon(p, c, [[x + lean * 0.3, BED_Y + h * 0.35], [x + lean, BED_Y + h]], w, w * 0.4, stemC);
@@ -249,6 +250,11 @@ export default defineScene({
         ribbon(p, c, [[x + lean, BED_Y + h], [x + lean + 0.03, BED_Y + h + 0.10]], w * 0.7, 0.001, topC);
         ribbon(p, c, [[x + lean, BED_Y + h - 0.02], [x + lean - 0.025, BED_Y + h + 0.07]], w * 0.5, 0.001, topC);
       }
+      // warbler perches land on real stem tips near the scripted x targets
+      const tipAt = (tx: number): { x: number; y: number } =>
+        tips.reduce((b, s) => (Math.abs(s.x - tx) < Math.abs(b.x - tx) ? s : b), tips[0]!);
+      st.perchA = tipAt(0.55); st.perchB = tipAt(-0.15);
+      st.perchC = tipAt(0.95); st.perchD = tipAt(-0.45);
       st.reedFarMat = new THREE.ShaderMaterial({
         vertexShader: REED_VERT, fragmentShader: REED_FRAG, vertexColors: true,
         side: THREE.DoubleSide, uniforms: { uT: { value: 0 }, uWob: { value: 1 }, uA: { value: 1 } },
@@ -366,9 +372,10 @@ export default defineScene({
       body.frustumCulled = false;
       st.warbler.add(body);
 
-      // open beak sliver — rotated out during the call
+      // open beak sliver — verts relative to the hinge so the mesh position
+      // doubles as its pivot: rot -0.9*call swings the tip down-open
       const bp: number[] = [], bc: number[] = [];
-      poly(bp, bc, [[-0.055, 0.028], [-0.082, 0.018], [-0.056, 0.022]], wC);
+      poly(bp, bc, [[0, 0], [-0.027, -0.010], [-0.001, -0.006]], wC);
       const bgeo = new THREE.BufferGeometry();
       bgeo.setAttribute("position", new THREE.Float32BufferAttribute(bp, 3));
       bgeo.setAttribute("color", new THREE.Float32BufferAttribute(bc, 3));
@@ -515,30 +522,30 @@ export default defineScene({
         wy = mix(from.y, to.y, u) + 0.09 * Math.abs(Math.sin(u * Math.PI));
       };
       if (t < WB.in1) { a = 0; }
-      else if (t < WB.perch1) { hop(WB.in1, WB.perch1, { x: 1.8, y: 0.7 }, ST_A); a = 0.95; }
+      else if (t < WB.perch1) { hop(WB.in1, WB.perch1, { x: 1.8, y: 0.7 }, st.perchA); a = 0.95; }
       else if (t < WB.drop1) {
-        wx = ST_A.x; wy = ST_A.y; a = 0.95;
+        wx = st.perchA.x; wy = st.perchA.y; a = 0.95;
         call = sstep(WB.call, WB.call + 0.15, t) * (1 - sstep(WB.callEnd - 0.15, WB.callEnd, t));
       }
-      else if (t < WB.back1) { const u = sCurve((t - WB.drop1) / (WB.back1 - WB.drop1)); wx = ST_A.x; wy = mix(ST_A.y, -0.2, u); a = 0.95 * (1 - u); }
-      else if (t < WB.dip1) { hop(WB.back1, WB.dip1, { x: -0.55, y: 0.95 }, ST_B); a = 0.95; }
+      else if (t < WB.back1) { const u = sCurve((t - WB.drop1) / (WB.back1 - WB.drop1)); wx = st.perchA.x; wy = mix(st.perchA.y, -0.2, u); a = 0.95 * (1 - u); }
+      else if (t < WB.dip1) { hop(WB.back1, WB.dip1, { x: -0.55, y: 0.95 }, st.perchB); a = 0.95; }
       else if (t < WB.dip1End) {
         const u = sCurve((t - WB.dip1) / (WB.dip1End - WB.dip1));
-        wx = mix(ST_B.x, NEST.x, u); wy = mix(ST_B.y, NEST.y, u); a = 0.95;
+        wx = mix(st.perchB.x, NEST.x, u); wy = mix(st.perchB.y, NEST.y, u); a = 0.95;
       }
-      else if (t < WB.sit1) { hop(WB.dip1End, WB.sit1, NEST, ST_B); a = 0.95; }
-      else if (t < WB.in2) { wx = ST_B.x; wy = ST_B.y; a = 0.95; }
-      else if (t < WB.perch2) { hop(WB.in2, WB.perch2, ST_B, ST_C); a = 0.95; }
-      else if (t < WB.dip2) { wx = ST_C.x; wy = ST_C.y; a = 0.95; }
+      else if (t < WB.sit1) { hop(WB.dip1End, WB.sit1, NEST, st.perchB); a = 0.95; }
+      else if (t < WB.in2) { wx = st.perchB.x; wy = st.perchB.y; a = 0.95; }
+      else if (t < WB.perch2) { hop(WB.in2, WB.perch2, st.perchB, st.perchC); a = 0.95; }
+      else if (t < WB.dip2) { wx = st.perchC.x; wy = st.perchC.y; a = 0.95; }
       else if (t < WB.dip2End) {
         const u = sCurve((t - WB.dip2) / (WB.dip2End - WB.dip2));
-        wx = mix(ST_C.x, NEST.x + 0.08, u); wy = mix(ST_C.y, NEST.y + 0.02, u); a = 0.95;
+        wx = mix(st.perchC.x, NEST.x + 0.08, u); wy = mix(st.perchC.y, NEST.y + 0.02, u); a = 0.95;
       }
-      else if (t < WB.sit2) { hop(WB.dip2End, WB.sit2, { x: NEST.x + 0.08, y: NEST.y + 0.02 }, ST_C); a = 0.95; }
-      else if (t < WB.hide2) { wx = ST_C.x; wy = ST_C.y; a = 0.95; }
-      else if (t < WB.back3) { const u = sCurve((t - WB.hide2) / (WB.back3 - WB.hide2)); wx = ST_C.x; wy = mix(ST_C.y, -0.2, u); a = 0.95 * (1 - u); }
-      else if (t < WB.perch3) { hop(WB.back3, WB.perch3, { x: -1.4, y: 1.0 }, ST_D); a = 0.95; }
-      else { wx = ST_D.x; wy = ST_D.y; a = 0.95; }
+      else if (t < WB.sit2) { hop(WB.dip2End, WB.sit2, { x: NEST.x + 0.08, y: NEST.y + 0.02 }, st.perchC); a = 0.95; }
+      else if (t < WB.hide2) { wx = st.perchC.x; wy = st.perchC.y; a = 0.95; }
+      else if (t < WB.back3) { const u = sCurve((t - WB.hide2) / (WB.back3 - WB.hide2)); wx = st.perchC.x; wy = mix(st.perchC.y, -0.2, u); a = 0.95 * (1 - u); }
+      else if (t < WB.perch3) { hop(WB.back3, WB.perch3, { x: -1.4, y: 1.0 }, st.perchD); a = 0.95; }
+      else { wx = st.perchD.x; wy = st.perchD.y; a = 0.95; }
 
       st.warbler.position.set(wx, wy, 0.06);
       st.warbMat.uniforms.uA!.value = a;
