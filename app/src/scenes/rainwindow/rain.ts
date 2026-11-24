@@ -53,9 +53,10 @@ function headAt(d: Drop, t: number): { x: number; y: number; r: number } | null 
   };
 }
 
-function integrate(x0: number, r: number, t0: number, parent?: Drop): Drop {
-  // Rivulet dynamics: gravity pulls, surface tension stalls; bigger drops run
-  // faster. x wiggles around a slowly-drifting rivulet line.
+// Rivulet dynamics: gravity pulls, surface tension stalls; bigger drops run
+// faster. x wiggles around a slowly-drifting rivulet line. boostT speeds the
+// drop up after a merge (post-merge vmax ×1.55).
+function integrate(x0: number, r: number, t0: number, parent?: Drop, boostT = Infinity): Drop {
   const cap = Math.ceil(END / DT) + 2;
   const xs = new Float32Array(cap), ys = new Float32Array(cap), ts = new Float32Array(cap);
   const wf = 0.012 + 0.02 * hash(t0 * 91, r);          // wiggle freq per unit y
@@ -67,7 +68,8 @@ function integrate(x0: number, r: number, t0: number, parent?: Drop): Drop {
   for (let t = t0; t <= END + DT && n < cap; t += DT) {
     // stick-slip: short deterministic stalls seeded on y-bands
     const stall = hash(Math.floor(y / 37), t0 * 7.7) < 0.16 ? 0.25 : 1;
-    v += (vmax * (0.72 + 0.4 * Math.sin(y * 0.05 + wp)) - v) * 3.2 * DT;
+    const vm = t > boostT ? vmax * 1.55 : vmax;        // merged drops run faster
+    v += (vm * (0.72 + 0.4 * Math.sin(y * 0.05 + wp)) - v) * 3.2 * DT;
     y += Math.max(4, v * stall) * DT;
     const x = x0 + drift * (y / H) + wAmp * Math.sin(y * wf * 6.2831853 + wp);
     xs[n] = x; ys[n] = y; ts[n] = t; n++;
@@ -75,7 +77,12 @@ function integrate(x0: number, r: number, t0: number, parent?: Drop): Drop {
     // child on a parent's rivulet dies when it catches the parent's head
     if (parent) {
       const ph = headAt(parent, t);
-      if (ph && Math.abs(y - ph.y) < ph.r + r && Math.abs(x - ph.x) < ph.r + r) break;
+      // circular heads must actually touch — a per-axis box counts a
+      // diagonal approach as contact while the discs are still apart
+      if (ph) {
+        const dx = x - ph.x, dy = y - ph.y, rr = ph.r + r;
+        if (dx * dx + dy * dy < rr * rr) break;
+      }
     }
   }
   return { t0, xs: xs.slice(0, n), ys: ys.slice(0, n), ts: ts.slice(0, n), r, warm: 0, mergedAt: Infinity, mergeR: r };
@@ -105,16 +112,17 @@ function buildDrops(): Drop[] {
     if (tm < p.mergedAt) {
       p.mergedAt = tm;
       p.mergeR = Math.cbrt(p.r * p.r * p.r + cr * cr * cr);
-      // bigger drop runs faster after the merge: compress remaining node
-      // times. Only when the path actually reaches the bottom — retiming a
-      // path that was capped at END would make the drop vanish mid-pane.
-      if (p.ys[p.ys.length - 1] > H) {
-        for (let k = 0; k < p.ts.length; k++) {
-          if (p.ts[k] > tm) p.ts[k] = tm + (p.ts[k] - tm) * 0.62;
-        }
-      }
     }
     drops.push(c);
+  }
+  // merged parents get a post-merge velocity boost: re-integrate them with
+  // the boost applied after the merge time. Pre-merge nodes are identical
+  // (same deterministic params), so children's recorded merges stay aligned;
+  // the parent then genuinely accelerates instead of only swelling.
+  for (const p of parents) {
+    if (p.mergedAt === Infinity) continue;
+    const np = integrate(p.xs[0], p.r, p.t0, undefined, p.mergedAt);
+    p.xs = np.xs; p.ys = np.ys; p.ts = np.ts;
   }
   // warm accent on the few largest drops only
   drops.sort((a, b) => b.r - a.r).slice(0, 4).forEach((d) => (d.warm = 1));
@@ -147,7 +155,9 @@ function buildTrailField(drops: Drop[]): THREE.DataTexture {
           // earliest wetting τ wins; closest pass wins distance. Independent
           // mins so a nearer later pass can't leave a dry gap inside a trail.
           if (dist < data[o]) data[o] = dist;
-          if (tau < data[o + 1]) data[o + 1] = tau;
+          // τ = earliest pass that actually wets the texel — a far graze
+          // (dist ≥ 0.7) mustn't light the trail before the drop arrives
+          if (dist < 0.7 && tau < data[o + 1]) data[o + 1] = tau;
         }
       }
     }
