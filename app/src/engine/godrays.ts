@@ -111,7 +111,7 @@ export function shaftInscatter(
     const radial = Math.sqrt(Math.max(0, dot(co, co) - axial * axial));
     const coneR = Math.max(1e-9, axial * Math.sqrt(1 - shaft.cosAngle * shaft.cosAngle) / shaft.cosAngle);
     const rr = Math.min(1, radial / coneR);
-    const edge = 0.5 + 0.5 * Math.cos(Math.PI * rr);
+    const edge = Math.pow(0.5 + 0.5 * Math.cos(Math.PI * rr), Math.max(0.05, edgeSoftness / 0.15));
     const axialFade = 1 - Math.min(1, Math.max(0, axial) / shaft.length) * 0.6;
     return edge * axialFade;
   };

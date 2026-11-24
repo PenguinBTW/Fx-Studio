@@ -18,17 +18,10 @@ ${SHAFT_GLSL}
 uniform vec3 sunDir;
 uniform vec3 camPos;
 
-float sunDisc(vec3 omega, vec3 sd, float discAngle, float radiance) {
-  float cosGamma = dot(omega, sd);
-  float cosDisc = cos(discAngle);
-  float edge = clamp((cosGamma - cosDisc) / max(1e-6, (1.0 - cosDisc) * 0.5), 0.0, 1.0);
-  float sunZen = max(0.0, sd.y);
-  float extinction = exp(-0.35 / max(0.06, sunZen + 0.02));
-  return edge * edge * (3.0 - 2.0 * edge) * radiance * extinction;
-}
 
 vec3 shaftContrib(vec3 omega, vec3 apex, vec3 dir, float cosA, float len, float density, vec3 color) {
   vec2 seg = shaftRaySegment(apex, dir, cosA, len, camPos, omega);
+  if (omega.y < -1e-6) { float tG = -camPos.y / omega.y; if (seg.x >= 0.0) seg.y = min(seg.y, tG); if (seg.y <= seg.x) seg = vec2(-1.0); }
   if (seg.x < 0.0) return vec3(0.0);
   float pathLen = seg.y - seg.x;
   float tm = (seg.x + seg.y) * 0.5;
@@ -46,7 +39,7 @@ vec3 shaftContrib(vec3 omega, vec3 apex, vec3 dir, float cosA, float len, float 
 
 void main() {
   vec2 ndc = (FRAG_PX / vec2(1920.0, 1080.0)) * 2.0 - 1.0;
-  vec3 omega = normalize(vec3(ndc.x * 1.78, ndc.y, 2.2)); // face south: the sun arc crosses the frame
+  vec3 omega = normalize(vec3(ndc.x * 1.78, ndc.y + 0.9, 2.2)); // face south: the sun arc crosses the frame
   vec3 col = skyRadiance(omega, sunDir, 2.0);
   float disc = sunDisc(omega, sunDir, 0.0047, 40.0);
   col += vec3(disc, disc * 0.95, disc * 0.85);
