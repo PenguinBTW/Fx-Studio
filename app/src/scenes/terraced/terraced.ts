@@ -44,6 +44,21 @@ const terrH = (x: number, z: number): number => {
   const f = v / LEVEL - k;
   return LEVEL * (k + ss(0.80, 1.0, f));
 };
+// rendered ground height — mirrors the terrain mesh formula exactly
+// (terrace stepping blends into the smooth valley drop past z>34, and the
+// near field rises gently toward the camera at z<0)
+const groundH = (x: number, z: number): number => {
+  const v0 = -0.18 * z + wander(x);
+  const fade = ss(34, 42, z);
+  const k0 = Math.floor(v0 / LEVEL);
+  const f0 = v0 / LEVEL - k0;
+  const stepped = LEVEL * (k0 + ss(0.80, 1.0, f0));
+  const smoothH = v0 - 0.5 * LEVEL;
+  let y = stepped * (1 - fade) + smoothH * fade;
+  if (z > 36) y -= (z - 36) * (0.9 + 0.03 * (z - 36));
+  if (z < 0) y += 0.55 * Math.min(-z, 14) * 0.06;
+  return y;
+};
 // z of the wall band for level k at lateral x (same solver as bandZ_, flipped)
 const wallZ = (x: number, k: number) => (wander(x) - (k + 0.9) * LEVEL) / 0.18;
 // z of the flat mid-band of terrace level k — where trees + scatter sit
@@ -480,7 +495,7 @@ export default class TerracedScene extends Scene {
       const z = bandZ(x, k) + (ph - 0.5) * 1.2;
       const tr = src.clone();
       tr.visible = true;
-      tr.position.set(x, terrH(x, z) - 0.06, z);
+      tr.position.set(x, groundH(x, z) - 0.06, z);
       const s = 0.8 + hash(i * 7.7) * 0.55;
       tr.scale.set(s, s * (0.9 + hash(i * 11.1) * 0.3), s);
       tr.rotation.y = hash(i * 5.3) * Math.PI * 2;
@@ -527,7 +542,7 @@ export default class TerracedScene extends Scene {
         const f = ((v / LEVEL) % 1 + 1) % 1;
         if (flatOnly && f > 0.78) continue;
         if (Math.abs(x - pathX(z)) < 1.6) continue; // keep the path clear
-        this.dummy.position.set(x, terrH(x, z) - 0.04, z);
+        this.dummy.position.set(x, groundH(x, z) - 0.04, z);
         this.dummy.rotation.set((hash(seed + placed * 7.3) - 0.5) * 0.3, hash(seed + placed * 3.9) * Math.PI * 2, 0);
         const s = 0.45 + hash(seed + placed * 13.3) * 0.85;
         this.dummy.scale.set(s * 1.25, s * (0.6 + hash(seed + placed * 17.1) * 0.8), s);
@@ -562,7 +577,7 @@ export default class TerracedScene extends Scene {
         x = -46 + hash(i * 2.9) * 92;
         z = -1 + hash(i * 7.7) * 50;
       }
-      this.dummy.position.set(x, terrH(x, z) - 0.02, z);
+      this.dummy.position.set(x, groundH(x, z) - 0.02, z);
       this.dummy.rotation.set(hash(i * 3.1) * 3, hash(i * 5.9) * 3, hash(i * 9.7) * 3);
       const s = 0.3 + hash(i * 11.3) * 1.3;
       this.dummy.scale.set(s, s * (0.5 + hash(i * 13.7) * 0.5), s);
@@ -657,7 +672,7 @@ export default class TerracedScene extends Scene {
       scene.add(cap);
     }
     const bould = new THREE.Mesh(new THREE.DodecahedronGeometry(1.6, 1), rockMat);
-    bould.position.set(21, terrH(21, -4) + 0.35, -4);
+    bould.position.set(21, groundH(21, -4) + 0.35, -4);
     bould.scale.set(1.3, 0.85, 1.1);
     bould.rotation.set(0.4, 1.1, 0.2);
     bould.castShadow = true;
@@ -759,7 +774,7 @@ export default class TerracedScene extends Scene {
     // the figure walks downhill along the path, lantern swaying
     const zFig = 7.5 + 1.05 * t;
     const xFig = pathX(zFig);
-    const yFig = terrH(xFig, zFig);
+    const yFig = groundH(xFig, zFig);
     this.figure.position.set(xFig, yFig - 0.04, zFig);
     // face along the path's descent direction
     const dxdz = -9.0 * 0.115 * Math.cos(-zFig * 0.115 + 0.6);
