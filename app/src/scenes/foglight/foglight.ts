@@ -32,7 +32,8 @@ float beamBeta(float t) { return 6.2831853 * (t / 6.5) + 1.1; }
 
 // fog veil: dense early, thins around t=14 so stars prick through
 float fogVeil(float t) {
-  float thin = exp(-pow((t - 14.0) / 2.6, 2.0));
+  float dt = (t - 14.0) / 2.6;
+  float thin = exp(-dt * dt); // pow(neg, 2) is undefined — square instead
   return 0.85 * (1.0 - 0.7 * thin);
 }
 
@@ -44,8 +45,9 @@ float fogD(vec2 p, float t) {
   f /= 1.5;
   // milkier fog: compress the field so it reads as haze, not cloud blobs
   f = 0.22 + 0.55 * f;
-  // fog sits heavier near the water, thins upward
-  return f * mix(1.0, 0.45, smoothstep(SEA, 0.95, p.y));
+  // fog sits heavier near the water, thins upward; fbm is signed, so the
+  // density floor is 0 (a negative haze would pull color away from fogCol)
+  return max(0.0, f * mix(1.0, 0.45, smoothstep(SEA, 0.95, p.y)));
 }
 
 void main() {
@@ -53,14 +55,14 @@ void main() {
   float t = uT;
 
   // --- camera: slow lateral drift + slight push-in, closed-form -----------
-  p = (p - 0.5) / (1.0 - 0.035 * smoothstep(0.0, 20.0, t)) + 0.5;
+  p = (p - 0.5) * (1.0 - 0.035 * smoothstep(0.0, 20.0, t)) + 0.5;
   p.x += 0.011 * sin(t * 0.12 + 0.4);
 
   vec2 asp = vec2(uRes.x / uRes.y, 1.0);
 
   // ---- sky: near-black gradient ----
   vec3 c = mix(vec3(0.008, 0.011, 0.020), vec3(0.016, 0.022, 0.042),
-               smoothstep(1.0, 0.35, p.y));
+               1.0 - smoothstep(0.35, 1.0, p.y));
 
   // ---- fog field ----
   float F = fogD(p, t) * fogVeil(t);
@@ -79,7 +81,7 @@ void main() {
 
   // ---- rotating beam ------------------------------------------------------
   float beta = beamBeta(t);
-  vec2 beamDir = normalize(vec2(cos(beta), 0.16));        // sweeps L<->R, tips slightly down
+  vec2 beamDir = normalize(vec2(cos(beta), -0.13));       // sweeps L<->R, tilted down at the water
   float toward = smoothstep(0.35, 0.95, sin(beta));       // pointing at camera
 
   vec2 v = p - LAMP;
@@ -116,26 +118,22 @@ void main() {
   if (p.y < SEA) {
     vec3 sea = vec3(0.006, 0.009, 0.016);
     sea += fbm(vec2(p.x * 30.0, p.y * 60.0 - t * 0.35), 3) * vec3(0.008, 0.010, 0.016);
-    // reflection column under the beam's in-plane direction
-    float refx = LAMP.x + beamDir.x * (SEA - p.y) * 1.9;
-    float shim = exp(-pow((p.x - refx) * 26.0, 2.0));
-    shim *= 0.5 + 0.5 * fbm(vec2(p.x * 90.0, p.y * 140.0 - t * 1.7), 3);
-    // only shimmer while the beam tips downward enough to graze the water
-    float graze = wedge * (0.4 + 0.6 * beamDir.y * 4.0);
-    sea += beamCol * shim * graze * dist * 0.9;
+    // shimmer = the beam wedge continued below the waterline, rippled
+    float shim = wedge * dist * (0.5 + 0.5 * fbm(vec2(p.x * 90.0, p.y * 140.0 - t * 1.7), 3));
+    sea += beamCol * shim * 0.9;
     // faint phosphor sheen along the waterline (cold accent companion)
     sea += vec3(0.03, 0.09, 0.12) * exp(-abs(p.y - SEA) * 26.0)
          * (0.45 + 0.55 * fbm(vec2(p.x * 18.0, t * 0.2), 3));
-    c = mix(c, sea, smoothstep(SEA + 0.004, SEA - 0.004, p.y));
+    c = mix(c, sea, 1.0 - smoothstep(SEA - 0.004, SEA + 0.004, p.y));
   }
 
   // ---- rocky point + lighthouse silhouette ----
   float rock = 0.30 + fbm(vec2(p.x * 9.0, 2.0), 4) * 0.045 - abs(p.x - 0.735) * 0.5;
-  float onRock = smoothstep(rock + 0.006, rock - 0.006, p.y) * step(SEA - 0.02, p.y);
-  // tower: tapered column, gallery, lamp room, dome
+  float onRock = (1.0 - smoothstep(rock - 0.006, rock + 0.006, p.y)) * step(SEA - 0.02, p.y);
+  // tower: tapered column, gallery, lamp room, dome — base sits on the rock
   float lx = abs(p.x - LAMP.x);
-  float taper = mix(0.0125, 0.0075, clamp((p.y - 0.34) / 0.19, 0.0, 1.0));
-  float tower = step(lx, taper) * step(0.34, p.y) * step(p.y, 0.53);
+  float taper = mix(0.0125, 0.0075, clamp((p.y - 0.30) / 0.23, 0.0, 1.0));
+  float tower = step(lx, taper) * step(0.295, p.y) * step(p.y, 0.53);
   float gallery = step(lx, 0.0145) * step(0.53, p.y) * step(p.y, 0.545);
   float room = step(lx, 0.0105) * step(0.545, p.y) * step(p.y, 0.568);
   float dome = step(lx, 0.007) * step(0.568, p.y) * step(p.y, 0.574);
@@ -170,6 +168,9 @@ export default class FogLight extends Scene {
 
   override init() {}
   override reset() {}
+  override dispose() {
+    this.pass.dispose();
+  }
 
   override render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
     const t = f.lt;
