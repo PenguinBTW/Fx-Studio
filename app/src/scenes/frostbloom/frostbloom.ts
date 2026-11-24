@@ -18,11 +18,12 @@ const FOG = (t: number) => smooth01((t - 19.0) / 1.6) * (1 - smooth01((t - 21.4)
 
 // camera: slow macro push across the pane, drifting toward the densest arm
 function camPos(t: number): [number, number, number] {
-  const s = smooth01((t - 4) / 18);
-  return [0.4 - 2.2 * s + 0.15 * Math.sin(t * 0.11), -0.2 - 0.7 * s, 26 - 6.5 * s];
+  // near-linear push (2s soft head, settles after t≈22): constant speed across acts
+  const s = Math.min(1, Math.max(0, (t - 2) / 20));
+  return [0.4 - 2.2 * s + 0.15 * Math.sin(t * 0.11), -0.2 - 0.7 * s, 26 - 5.5 * s];
 }
 function camTarget(t: number): [number, number, number] {
-  const s = smooth01((t - 4) / 18);
+  const s = Math.min(1, Math.max(0, (t - 2) / 20));
   return [-1.2 + 1.4 * s, -0.6 - 0.3 * s, 0];
 }
 
@@ -53,8 +54,8 @@ void main() {
 
   vec3 col = mix(night, dawnCol, uDawn);
   // soft frame vignette — the pane sits inside a dark sash
-  float vig = smoothstep(0.0, 0.055, vUv.x) * smoothstep(1.0, 0.945, vUv.x)
-            * smoothstep(0.0, 0.075, vUv.y) * smoothstep(1.0, 0.925, vUv.y);
+  float vig = smoothstep(0.0, 0.055, vUv.x) * smoothstep(0.0, 0.055, 1.0 - vUv.x)
+            * smoothstep(0.0, 0.075, vUv.y) * smoothstep(0.0, 0.075, 1.0 - vUv.y);
   col *= mix(0.25, 1.0, vig);
   // clear centre lets the bokeh ghost through the glass; sash stays opaque
   gl_FragColor = vec4(col, mix(0.78, 1.0, 1.0 - vig));
@@ -148,7 +149,7 @@ void main() {
   float base = (aKind > 0.5) ? 2.0 : 1.2;
   float size = base * (1.0 + glint * 2.4);
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
-  gl_PointSize = min(size * 300.0 / max(1.0, -mv.z), 14.0);
+  gl_PointSize = min(size * 300.0 / max(1.0, -mv.z), 30.0);
   gl_Position = projectionMatrix * mv;
 }
 `;
@@ -256,18 +257,21 @@ function growArm(
 function buildSkeleton(rng: () => number): SkelVert[] {
   const out: SkelVert[] = [];
   // mother arms rooted along the pane edges / corners, creeping inward
+  // rooted just outside the opening frame (52 mm ≈ ±9 half-width at z=26) so
+  // seeds read at the frame's edge and arms visibly creep inward; latest arms
+  // still finish growing before the project ends at t=24
   const roots: { x: number; y: number; ang: number; t0: number; dur: number; len: number }[] = [
-    { x: -15.5, y: -6.5, ang: 0.55, t0: 2.6, dur: 9.0, len: 16 },  // lower-left corner → centre
-    { x: -15.8, y: 4.5, ang: -0.35, t0: 5.0, dur: 10.0, len: 13 }, // left edge
-    { x: -6.0, y: -8.2, ang: 1.30, t0: 8.0, dur: 9.0, len: 12 },   // bottom edge
-    { x: 5.5, y: -8.2, ang: 1.75, t0: 12.0, dur: 8.5, len: 11 },   // bottom-right
-    { x: 15.6, y: -3.0, ang: 2.75, t0: 15.5, dur: 6.5, len: 9 },   // right edge, late
-    { x: -8.0, y: 8.0, ang: -1.35, t0: 10.5, dur: 8.0, len: 10 },  // top edge
-    { x: 15.5, y: 6.0, ang: 3.55, t0: 17.5, dur: 5.5, len: 8 },    // top-right, latest
+    { x: -9.8, y: -3.8, ang: 0.5, t0: 2.6, dur: 8.5, len: 12 },  // lower-left → centre
+    { x: -10.2, y: 2.8, ang: -0.3, t0: 5.0, dur: 9.0, len: 10 }, // left edge
+    { x: -4.5, y: -4.9, ang: 1.35, t0: 8.0, dur: 8.0, len: 9 },  // bottom edge
+    { x: 3.8, y: -4.9, ang: 1.7, t0: 11.5, dur: 7.5, len: 8.5 }, // bottom-right
+    { x: 9.8, y: -2.2, ang: 2.8, t0: 14.5, dur: 6.0, len: 7 },   // right edge, late
+    { x: -5.5, y: 4.8, ang: -1.4, t0: 10.0, dur: 7.0, len: 8 },  // top edge
+    { x: 9.6, y: 3.4, ang: 3.5, t0: 16.5, dur: 4.5, len: 6.5 },  // top-right, latest
   ];
   for (const r of roots) {
     // warmth: arms nearer the dawn corner (bottom-right) rim more strongly
-    const w = Math.min(1, Math.max(0, (r.x + 15) / 30 * 0.6 + (8 - r.y) / 16 * 0.4));
+    const w = Math.min(1, Math.max(0, (r.x + 10) / 20 * 0.6 + (5 - r.y) / 10 * 0.4));
     growArm(out, rng, r.x, r.y, r.ang, r.len, r.t0, r.dur, 0, w);
   }
   return out;
@@ -324,10 +328,11 @@ export default defineScene({
     const gp = new Float32Array(NS2 * 3);
     const gs = new Float32Array(NS2);
     for (let i = 0; i < NS2; i++) {
-      // hug the frame edges
+      // hug the edges of the OPENING frame (52mm at z=26 sees ±9 x, ±5 y) so
+      // the first glints are on-camera when they fade in
       const edge = i % 4;
-      const x = edge === 0 ? -15.5 + rng() * 1.4 : edge === 1 ? 14.2 + rng() * 1.4 : -14 + rng() * 28;
-      const y = edge === 2 ? -8.0 + rng() * 1.2 : edge === 3 ? 6.9 + rng() * 1.2 : -7.6 + rng() * 15;
+      const x = edge === 0 ? -9.7 + rng() * 1.1 : edge === 1 ? 8.6 + rng() * 1.1 : -8.6 + rng() * 17.2;
+      const y = edge === 2 ? -4.85 + rng() * 0.9 : edge === 3 ? 3.95 + rng() * 0.9 : -4.6 + rng() * 9.2;
       gp[i * 3] = x; gp[i * 3 + 1] = y; gp[i * 3 + 2] = 0.05;
       gs[i] = rng() * 100;
     }
