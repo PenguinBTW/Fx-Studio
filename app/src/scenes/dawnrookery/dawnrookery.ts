@@ -288,7 +288,7 @@ void main() {
   vec2 p = aC + vec2(position.x * r, position.y * r * 0.22);
   p.x += 0.01 * sin(uT * 1.1 + position.x * 9.0);
   vA = on * (1.0 - u) * 0.55;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(p.x, uW + 0.02 + p.y, -2.7, 1.0);
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(p.x, uW + 0.02 + p.y - r * 0.22, -2.7, 1.0);
 }`;
 
 const RING_FRAG = /* glsl */ `
@@ -570,7 +570,7 @@ const scene = defineScene({
       if (h.kind === "arrive") addRing(nests[h.nest].x, h.land + 0.1, 2.6);
     }
     addRing(0.9, HERO.rise + 0.15, 3.0);   // hero launch splash
-    addRing(nests[1].x, HERO.land + 0.1, 2.4);
+    addRing(nests[3].x, HERO.land + 0.1, 2.4);
     addRing(-2.6, 4.2, 3.4);               // fish-rise far off
     addRing(1.9, 21.8, 3.4);               // late fish-rise
     const rg = new THREE.BufferGeometry();
