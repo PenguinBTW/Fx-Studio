@@ -142,7 +142,7 @@ export default class RippleScene extends Scene {
     });
     // Large enough that the low-tilt widescreen/portrait frame never sees past
     // the plane's edge — the near-horizontal top-of-frame ray travels far.
-    this.water = new THREE.Mesh(new THREE.PlaneGeometry(240, 170), this.waterMat);
+    this.water = new THREE.Mesh(new THREE.PlaneGeometry(280, 280), this.waterMat);
     this.water.rotation.x = -Math.PI / 2;
     this.threeScene.add(this.water);
 
