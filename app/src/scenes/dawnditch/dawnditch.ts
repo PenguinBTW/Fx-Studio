@@ -20,8 +20,10 @@ const volePos = (t: number): [number, number, number] => {
   if (t < 4.5) return [-0.05, 0, -1];
   if (t < 7.5) return [0.18 + (t - 4.5) * 0.07, 0, 0];
   if (t < 8.3) return [0.39, 0.5, 0];
+  if (t < 8.7) return [0.39 + (t - 8.3) * 0.075, 0.5 + (t - 8.3) * 1.25, 0];   // dip in over 0.4s
   if (t < 12.5) return [0.39 + (t - 8.3) * 0.075, 1, 0];
-  if (t < 13.2) return [0.705 + (t - 12.5) * 0.03, 0.5, 0];
+  if (t < 12.9) return [0.705 + (t - 12.5) * 0.03, 1.0 - (t - 12.5) * 1.25, 0]; // climb out over 0.4s
+  if (t < 13.2) return [0.717 + (t - 12.9) * 0.03, 0.5, 0];
   return [1.0, 0, -1];
 };
 const sunX = (t: number) => 1.05 - 1.15 * ss(2, 9, t);   // strip sweeps right→left
@@ -202,14 +204,15 @@ void main() {
     if (mode < 0.9) {
       // walking / pausing on the far bank (y ~0.505)
       float gait = (mode < 0.4 ? abs(sin(t * 10.0)) * 0.003 : 0.0);
-      vec2 vp = vec2(vx, 0.508 + gait);
+      // mode in (0.5,0.9) is the dive/climb ramp: sink toward water level
+      vec2 vp = vec2(vx, 0.508 + gait - max(0.0, mode - 0.5) * 0.09);
       float vb = 1.0 - smoothstep(0.006, 0.011, length((uv - vp) / vec2(1.6, 0.9)));
       float vh = 1.0 - smoothstep(0.003, 0.006, length((uv - (vp + vec2(0.010, 0.006))) / vec2(1.0, 1.0)));
       float vt = 1.0 - smoothstep(0.002, 0.005, sdSeg(uv, vp - vec2(0.012, 0.0), vp - vec2(0.022, 0.006)));
       col = mix(col, vec3(0.05, 0.04, 0.03), clamp(vb + vh + vt, 0.0, 1.0) * 0.9);
     } else {
       // swimming: back + nose above the water, trailing wake
-      vec2 vp = vec2(vx, 0.485);
+      vec2 vp = vec2(vx, 0.472 + (mode - 0.9) * 0.13);
       float back = 1.0 - smoothstep(0.004, 0.008, length((uv - vp) / vec2(1.7, 0.6)));
       float nose = 1.0 - smoothstep(0.002, 0.005, length((uv - (vp + vec2(0.011, 0.004))) / vec2(1.0, 0.7)));
       col = mix(col, vec3(0.05, 0.04, 0.03), clamp(back + nose, 0.0, 1.0) * 0.9);
@@ -256,7 +259,7 @@ export default class DawnditchScene extends Scene {
     const [vx, vmode, vgone] = volePos(t);
     this.bu.uT.value = t;
     this.bu.uSun.value = sunX(t);
-    this.bu.uGlow.value = ss(5, 14, t);   // lingering warmth after the strip passes
+    this.bu.uGlow.value = ss(5, 16.5, t);   // lingering warmth after the strip passes
     this.bu.uLark.value = larkU(t);
     this.bu.uHen.value = hensU(t);
     this.bu.uCrow.value = crowU(t);

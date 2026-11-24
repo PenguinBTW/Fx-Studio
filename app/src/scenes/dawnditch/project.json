@@ -25,13 +25,13 @@
       "scene": "dawnditch/dawnditch",
       "id": "act-vole",
       "start": 9.0,
-      "end": 10.0,
-      "caption": { "fig": "03", "text": "A VOLE WORKS THE BANK", "dur": 1.0 }
+      "end": 11.0,
+      "caption": { "fig": "03", "text": "A VOLE WORKS THE BANK", "dur": 2.0 }
     },
     {
       "scene": "dawnditch/dawnditch",
       "id": "act-lark",
-      "start": 10.0,
+      "start": 11.0,
       "end": 14.0,
       "caption": { "fig": "04", "text": "SKYLARK OVER THE STUBBLE", "dur": 2.4 }
     },
