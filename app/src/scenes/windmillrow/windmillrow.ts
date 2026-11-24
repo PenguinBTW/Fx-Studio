@@ -137,7 +137,7 @@ void main() {
   col = mix(col, field, inField);
 
   // --- hare bounding through the near wheat row, once -----------------------
-  float hph = (t - 10.0) / 6.0;
+  float hph = (t - 11.0) / 6.0;
   if (hph > 0.0 && hph < 1.0) {
     float hops = hph * 5.0;
     float hi = floor(hops), hf = fract(hops);
@@ -145,7 +145,9 @@ void main() {
     // x advances only during the bound phase — the hare crouches still
     // between hops instead of gliding
     float bound = min(hf / 0.55, 1.0);
-    float hx = 0.30 + 0.048 * (hi + bound) / 5.0;
+    // bound right→left toward the near mill, so the run stays in the
+    // closing frame of narrow exports instead of running ahead of the pan
+    float hx = 0.36 - 0.050 * (hi + bound) / 5.0;
     float hb = 0.020 * max(0.0, sin(bound * 3.1416)) * pause;
     vec2 hd = (vUv - vec2(hx, 0.335 + hb)) * vec2(2.2, 3.2);
     float hare = 1.0 - smoothstep(0.012, 0.020, length(hd));
@@ -383,7 +385,7 @@ export default class WindmillRowScene extends Scene {
       // then continue left so the near mill + crow land the closing beat
       const tMid = 16.0 - 0.45 * halfW;
       targetX = 40.0 - (40.0 - tMid) * ss(1, 8, t)
-              - (tMid - targetEnd) * ss(10.5, 17.5, t);
+              - (tMid - targetEnd) * ss(10.5, 15.0, t);
     }
     const progress = (40.0 - targetX) / (40.0 - targetEnd);
     this.rig.position = [targetX + 5.0 + 0.8 * Math.sin(t * 0.06), 6.5, 24.0];
