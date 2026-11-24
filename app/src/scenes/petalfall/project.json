@@ -1,0 +1,6 @@
+{
+  "project": "petalfall",
+  "entries": [
+    { "scene": "petalfall/petalfall", "id": "petalfall", "start": 0, "end": 20 }
+  ]
+}
