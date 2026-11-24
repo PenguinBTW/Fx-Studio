@@ -9,8 +9,9 @@
 // Everything is f(t) — no accumulators, no Math.random.
 import * as THREE from 'three';
 import { Scene, type Frame, type SceneCtx, type PostOverrides } from '../../engine/scene';
-import { Layer2D } from '../../engine/gl';
+import { Layer2D, H } from '../../engine/gl';
 import { overlayTextDuck } from '../../engine/transition';
+import { CameraRig } from '../../engine/rig';
 import { F } from '../../engine/type';
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
@@ -28,15 +29,17 @@ void main() {
 }`;
 
 // HZ = horizon line in uv space. The road occupies uv.y < HZ, compressed
-// perspective: z = HZ / (HZ - y) gives world depth, road half-width grows
-// linearly with z. Mirage = resample the scene at uv + wobble where the
-// wobble is masked to the road band + a thin sky sliver above the horizon.
+// perspective: z = HZ / (HZ - y) gives world depth, road half-width is RW/z
+// so the tarmac narrows to a vanishing point at the horizon. Mirage =
+// resample the scene at uv + wobble where the wobble is masked to the road
+// band + a thin sky sliver above the horizon.
 const FRAG = /* glsl */ `
 precision highp float;
 in vec2 vUv;
 uniform float uT, uAmp, uGust;
 out vec4 fragColor;
 const float HZ = 0.42;
+const float RW = 0.34;   // road half-width in uv at z=1 — pole cx derives from it
 const float ASPECT = ${(16 / 9).toFixed(4)};
 
 float h1(float p) { return fract(sin(p * 127.1) * 43758.5453123); }
@@ -56,15 +59,20 @@ float fbm2(vec2 p) {
   for (int i = 0; i < 4; i++) { s += a * vn2(p); p = p * 2.13 + 7.7; a *= 0.5; }
   return s;
 }
+// GLSL ES leaves smoothstep(edge0>edge1) undefined; sstep keeps the same
+// semantics on every driver by flipping to the descending complement.
+float sstep(float e0, float e1, float x) {
+  return e0 < e1 ? smoothstep(e0, e1, x) : 1.0 - smoothstep(e1, e0, x);
+}
 
 vec3 skyCol(vec2 uv, float t) {
   // bleached noon: pale steel-blue zenith washing to hot white-amber haze
-  vec3 c = mix(vec3(0.95, 0.84, 0.62), vec3(0.32, 0.47, 0.70), smoothstep(HZ, 0.72, uv.y));
+  vec3 c = mix(vec3(0.95, 0.84, 0.62), vec3(0.32, 0.47, 0.70), sstep(HZ, 0.72, uv.y));
   float sunD = length((uv - vec2(0.68, 0.70)) * vec2(ASPECT, 1.0));
   c += vec3(1.0, 0.85, 0.55) * (0.0012 / (sunD * sunD + 0.0012));          // blinding disc
   c += vec3(1.0, 0.90, 0.65) * 0.12 * exp(-sunD * 6.0);                    // halo
   // faint cirrus streaks, drifting
-  c += vec3(0.10) * smoothstep(0.55, 0.85, fbm2(vec2(uv.x * 5.0 + t * 0.008, uv.y * 18.0))) * smoothstep(0.9, 0.55, uv.y) * step(HZ, uv.y);
+  c += vec3(0.10) * sstep(0.55, 0.85, fbm2(vec2(uv.x * 5.0 + t * 0.008, uv.y * 18.0))) * sstep(0.9, 0.55, uv.y) * step(HZ, uv.y);
   return c;
 }
 
@@ -72,7 +80,9 @@ vec3 skyCol(vec2 uv, float t) {
 float pylon(vec2 uv, float z, float side) {
   float y0 = HZ - HZ / z;                          // ground y at this depth
   float hgt = 0.30 / z;                            // pylon height shrinks with depth
-  float cx = 0.5 + side * (0.14 + 0.34 * (z / 60.0)); // sits on the roadside
+  // roadside pole: constant world offset from centreline → screen x ∝ 1/z,
+  // always outside the road edge (RW/z) so poles never stand on tarmac.
+  float cx = 0.5 + side * (0.46 / z + 0.004);
   float dx = uv.x - cx;
   float wdt = 0.0016 * (10.0 / z);                  // pole width shrinks with depth
   float pole = step(abs(dx), wdt) * step(y0, uv.y) * step(uv.y, y0 + hgt);
@@ -83,10 +93,11 @@ float pylon(vec2 uv, float z, float side) {
 
 vec3 sceneCol(vec2 uv, float t) {
   if (uv.y >= HZ) return skyCol(uv, t);
-  // road: perspective depth — near bottom edge = close tarmac
+  // road: perspective depth — near bottom edge = close tarmac. Screen
+  // half-width is RW/z, so the tarmac narrows to the vanishing point at HZ.
   float z = HZ / (HZ - uv.y + 1e-5);
-  float xw = (uv.x - 0.5) / (0.055 * z + 0.004);      // lateral pos in road-half-widths
-  float road = 1.0 - smoothstep(0.95, 1.05, abs(xw));
+  float xw = (uv.x - 0.5) * z / RW;                  // lateral pos in road-half-widths
+  float road = 1.0 - sstep(0.95, 1.05, abs(xw));
   float verge = 1.0 - road;
   // tarmac: dark asphalt, finer grain near, washed by distance haze
   float grain = fbm2(vec2(xw * 6.0, z * 2.0)) * 0.5 + vn1(z * 40.0) * 0.1;
@@ -95,23 +106,23 @@ vec3 sceneCol(vec2 uv, float t) {
   float dash = step(abs(xw), 0.02) * step(0.5, fract(z * 0.35));
   c = mix(c, vec3(0.95, 0.88, 0.62), dash * 0.8 * road);
   // edge lines
-  float edge = smoothstep(0.055, 0.03, abs(abs(xw) - 0.92));
+  float edge = sstep(0.055, 0.03, abs(abs(xw) - 0.92));
   c = mix(c, vec3(0.9, 0.85, 0.68), edge * 0.65 * road);
   // gravel shoulders + bleached dirt, then baked earth to the haze line
   vec3 dirt = mix(vec3(0.62, 0.50, 0.34), vec3(0.78, 0.66, 0.46), fbm2(vec2(xw * 0.5 + z * 0.15, z * 0.7)));
   c = mix(c, dirt, verge);
   // heat-haze mirage pools on the tarmac: sky-bright patches shimmering
-  float pool = smoothstep(0.62, 0.85, fbm2(vec2(uv.x * 9.0, z * 0.55 + t * 0.30)))
-             * smoothstep(1.5, 4.0, z) * (1.0 - smoothstep(18.0, 40.0, z)) * road;
+  float pool = sstep(0.62, 0.85, fbm2(vec2(uv.x * 9.0, z * 0.55 + t * 0.30)))
+             * sstep(1.5, 4.0, z) * (1.0 - sstep(18.0, 40.0, z)) * road;
   c = mix(c, skyCol(vec2(uv.x, HZ + 0.02), t), pool * (0.35 + 0.55 * uAmp));
   // receding pylons silhouetted against the haze
   for (int i = 0; i < 5; i++) {
     float zz = 6.0 + float(i) * 11.0;
     float p = pylon(uv, zz, 1.0);
-    c = mix(c, vec3(0.12, 0.10, 0.09), p * smoothstep(55.0, 12.0, zz));
+    c = mix(c, vec3(0.12, 0.10, 0.09), p * sstep(55.0, 12.0, zz));
   }
   // distance haze swallows everything at the horizon
-  float haze = smoothstep(9.0, 60.0, z);
+  float haze = sstep(9.0, 60.0, z);
   c = mix(c, mix(vec3(0.95, 0.85, 0.64), vec3(0.90, 0.78, 0.55), 0.5), haze * 0.65);
   return c;
 }
@@ -121,19 +132,24 @@ void main() {
   // shimmer displacement: lateral wobble strongest in the mirage band —
   // road near horizon + thin sky sliver above it. Two travelling modes +
   // fbm breakup; the envelope uAmp is computed on CPU f(t).
-  float band = smoothstep(HZ, HZ - 0.10, uv.y) * smoothstep(HZ - 0.30, HZ - 0.06, uv.y)
-             + smoothstep(HZ, HZ + 0.05, uv.y) * smoothstep(HZ + 0.16, HZ + 0.02, uv.y);
+  float band = sstep(HZ, HZ - 0.10, uv.y) * sstep(HZ - 0.30, HZ - 0.06, uv.y)
+             + sstep(HZ, HZ + 0.05, uv.y) * sstep(HZ + 0.16, HZ + 0.02, uv.y);
+  // horizon spike: band is engineered to be ~0 exactly at uv.y=HZ, so a
+  // separate narrow mask wobbles the road/sky boundary itself — without it
+  // the horizon never refracts and stays razor straight at peak shimmer.
+  float hb = 1.0 - sstep(0.0, 0.035, abs(uv.y - HZ));
   float rise = fract(uv.y * 3.0 - uT * 0.9);                    // waves climb with time
   float wob = sin(uv.y * 160.0 - uT * 7.0 + fbm2(uv * 8.0 + uT * 0.25) * 9.0)
             + 0.6 * sin(uv.y * 70.0 - uT * 4.3 + uv.x * 12.0);
   vec2 q = uv + vec2(wob * 0.0022 * band * uAmp, 0.0);
-  // a touch of vertical refraction right at the horizon line
-  q.y += 0.0012 * band * uAmp * sin(uv.x * 90.0 + uT * 5.0);
+  // vertical refraction right at the horizon line — strong enough that
+  // pixels within ~0.006 uv of HZ sample across the road/sky boundary
+  q.y += (0.0015 * band + 0.006 * hb) * uAmp * sin(uv.x * 90.0 + uT * 5.0);
   vec3 c = sceneCol(q, uT);
   // rising shimmer ghost: faint brightening where the wobble is strongest
   c += vec3(1.0, 0.9, 0.7) * abs(wob) * 0.010 * band * uAmp * (0.5 + 0.5 * rise);
   // overall hot white-out lift near the horizon as intensity peaks
-  c = mix(c, vec3(1.0, 0.93, 0.78), smoothstep(HZ - 0.06, HZ, uv.y) * smoothstep(HZ + 0.08, HZ, uv.y) * uAmp * 0.06);
+  c = mix(c, vec3(1.0, 0.93, 0.78), sstep(HZ - 0.06, HZ, uv.y) * sstep(HZ + 0.08, HZ, uv.y) * uAmp * 0.06);
   fragColor = vec4(c, 1.0);
 }`;
 
@@ -157,6 +173,7 @@ const CAPTIONS: { at: number; end: number; s: string }[] = [
 
 export default class HeatwaveScene extends Scene {
   private three = new THREE.Scene();
+  private rig = new CameraRig();
   private cam: THREE.PerspectiveCamera;
   private u = { uT: { value: 0 }, uAmp: { value: 0 }, uGust: { value: 0 } };
   private weed: THREE.Mesh;
@@ -167,6 +184,9 @@ export default class HeatwaveScene extends Scene {
   constructor(ctx: SceneCtx) {
     super(ctx);
     this.cam = new THREE.PerspectiveCamera(38, ctx.W / ctx.H, 0.1, 500);
+    // keep the 38° vfov look: camToThreeCamera derives fov from rig.f with
+    // the same logical H, so pinning focalLengthPx reproduces it exactly.
+    this.rig.focalLengthPx = (H / 2) / Math.tan(THREE.MathUtils.degToRad(38 / 2));
 
     const back = new THREE.Mesh(
       new THREE.PlaneGeometry(PW, PH),
@@ -213,14 +233,17 @@ export default class HeatwaveScene extends Scene {
     this.weed.rotation.set(t * 2.6, t * 0.9, -t * 3.4);
     this.weed.visible = wx < 0.97;
 
-    // low dolly over the tarmac: gentle sway + slow push, slight roll
+    // low dolly over the tarmac: gentle sway + slow push, slight roll —
+    // evaluated through the rig (closed-form position/target, f(t) only).
     const push = ss(0, this.ctx.end, t);
-    this.cam.position.set(
+    this.rig.position = [
       1.4 * Math.sin(t * 0.05),
       6.0 - 1.6 * push,
       24.0 - 2.5 * push,
-    );
-    this.cam.lookAt(0, 13.5, PZ);
+    ];
+    this.rig.target = [0, 13.5, PZ];
+    this.rig.roll = 0.018 * Math.sin(t * 0.31);
+    this.rig.syncToThreeCamera(this.rig.evalCam(t), this.cam);
 
     r.setRenderTarget(out);
     r.clear(true, true, true);
@@ -236,14 +259,51 @@ export default class HeatwaveScene extends Scene {
       if (a <= 0) continue;
       g.save();
       g.globalAlpha = a;
-      g.font = `52px "${F.archivo(112, 500)}"`;
+      // shrink-to-fit: at portrait widths a 52px caption overflows the
+      // frame, so measure and scale the font down to a safe margin.
+      const text = c.s.toUpperCase();
+      const maxW = this.ctx.W - 48;
+      let fs = 52;
+      let ls = 7;
+      const setFont = () => {
+        g.font = `${fs}px "${F.archivo(112, 500)}"`;
+        (g as unknown as { letterSpacing: string }).letterSpacing = `${ls}px`;
+      };
+      setFont();
+      const w = g.measureText(text).width;
+      if (w > maxW) {
+        fs = Math.max(14, Math.floor((fs * maxW) / w));
+        ls = Math.max(1, Math.floor((ls * maxW) / w));
+        setFont();
+      }
+      const tw = g.measureText(text).width;
+      const tx = this.ctx.W / 2;
+      const ty = this.ctx.H - 120;
       g.textAlign = 'center';
       g.shadowColor = 'rgba(0,0,0,0.85)';
       g.shadowBlur = 14;
-      (g as unknown as { letterSpacing: string }).letterSpacing = '7px';
       g.fillStyle = 'rgba(255,244,225,0.95)';
-      g.fillText(c.s.toUpperCase(), this.ctx.W / 2, this.ctx.H - 120);
+      g.fillText(text, tx, ty);
       g.restore();
+
+      // telemetry: publish the caption's screen-space bbox so export
+      // diagnostics (window.__motion.textProbes) sees the text.
+      const P = (globalThis as { __motion?: { textProbes?: unknown[]; recordText?: boolean; currentFrameIdx?: number } }).__motion
+        ?? (globalThis as { __pdoom?: { textProbes?: unknown[]; recordText?: boolean; currentFrameIdx?: number } }).__pdoom;
+      if (P && P.textProbes && P.recordText !== false) {
+        P.textProbes.push({
+          frameIdx: P.currentFrameIdx ?? 0,
+          t: f.t,
+          text,
+          fontFamily: F.archivo(112, 500),
+          fontPx: fs,
+          fillStyle: 'rgba(255,244,225,0.95)',
+          globalAlpha: a,
+          layerId: 'heatwave-captions',
+          bbox: [tx - tw / 2, ty - fs, tx + tw / 2, ty + fs * 0.2],
+          w: tw,
+        });
+      }
     }
     this.ctx.comp.draw(r, this.layer.upload(), out, { mode: 'normal', opacity: 1 });
     r.resetState();
