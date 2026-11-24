@@ -12,8 +12,8 @@ Dusk as thermal contrast: a dying 2500 K key outside the glass, a 3000 K
 lamp inside. Warmth = survival inside the glass at the end of the day.
 
 ## staging
-- Real 3D: Blender-built GLB (`assets/greenhouse`), 76 named parts —
-  6 iron frame ribs, 45 panes (walls, roof, back wall), ridge + wall rails,
+- Real 3D: Blender-built GLB (`assets/greenhouse`), 86 named parts —
+  6 iron frame ribs, 55 panes (walls incl. eave row, roof, back wall), ridge + wall rails,
   2 plank benches, 8 pots, 10 ferns (8 potted + 2 hanging baskets),
   pendant lamp, watering can, tool props.
 - Glass: near-clear MeshPhysicalMaterial — condensation bump map gives
