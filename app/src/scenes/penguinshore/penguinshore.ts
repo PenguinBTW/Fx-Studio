@@ -322,6 +322,11 @@ export default class PenguinshoreScene extends Scene {
       targetX = -32.0 + (tMid + 32.0) * ss(2, 8, t)
               + (targetEnd - tMid) * ss(10.5, 16.5, t);
     }
+    // never let either frame edge leave the backdrop (160 units each side,
+    // minus margin); on frames wider than the backdrop, hold the centre
+    const lo = -155.0 + halfW;
+    const hi = 155.0 - halfW;
+    targetX = lo < hi ? Math.min(Math.max(targetX, lo), hi) : 0.0;
     const push = ss(12, 17, t);
     this.rig.position = [targetX + 4.0 + 0.7 * Math.sin(t * 0.05), 7.0, 24.0 - 3.5 * push];
     this.rig.target = [targetX, 4.0 + 2.0 * push, PZ];
