@@ -427,7 +427,7 @@ export default defineScene({
       // points back at the pane so the cone widens into the interior
       mesh.position.set(rx + sunDir.x * 2.6, ry + sunDir.y * 2.6, 2.4 + sunDir.z * 2.6);
       mesh.lookAt(rx, ry, 2.4);
-      mesh.rotateX(-Math.PI / 2);
+      mesh.rotateX(Math.PI / 2);   // cone apex toward the pane, wide end into the room
       rays.push(mesh);
       ctx.scene3D.add(mesh);
     }
@@ -468,7 +468,8 @@ export default defineScene({
     ctx.rig.setLensMm(50);
     // register the orbit as a spline path so God-View/blueprint sampling sees
     // the real camera move, not a static default pose
-    ctx.rig.setPath([0, 4, 8, 12, 16, DUR].map((tt) => {
+    ctx.rig.setPath(Array.from({ length: Math.ceil(DUR) + 1 }, (_, i) => {
+      const tt = Math.min(DUR, i);
       const p = camPose(tt);
       return { t: tt / DUR, pos: orbitPosition(p.tgt, p.radius, p.pitch, p.yaw), target: p.tgt };
     }));
@@ -481,7 +482,7 @@ export default defineScene({
     inst.ownedMaterials.push(...Object.values(mats), glow.material as THREE.Material);
     ctxState.skyMat = skyMat; ctxState.sunMat = sunMat;
     ctxState.envRT = envRT; ctxState.sunLight = sun;
-    ctxState.textures = [texFloor, texClay, texCond, texWood];
+    ctxState.textures = [texFloor, texClay, texCond, texWood, glowTex];
   },
 
   dispose: () => {

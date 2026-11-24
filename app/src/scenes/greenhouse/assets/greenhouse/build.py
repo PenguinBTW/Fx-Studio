@@ -185,7 +185,7 @@ for sx in (-1, 1):
 # roof slope panes: half-arches approximated as two tilted slabs per side
 for sx in (-1, 1):
     for yi, y in enumerate([-1.92, -0.96, 0.0, 0.96, 1.92]):
-        pane(f'pane_{pane_id}', (sx*0.75, y, 2.47), (0.012, 0.44, 1.85),
+        pane(f'pane_{pane_id}', (sx*0.72, y, 2.47), (0.012, 0.44, 2.3),
              rot=(0, math.radians(-sx*38), 0))
         pane_id += 1
 # back wall panes (far end, facing camera)
