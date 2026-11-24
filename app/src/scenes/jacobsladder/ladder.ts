@@ -64,12 +64,15 @@ float arcWiggle(float u, float t, float seed) {
 float arcDens(vec2 p, float t, float slot) {
   float ph = fract(t / CYCLE + slot / NARC);
   float h = arcH(ph);
-  float g = gapHalf(h);
   float cx = 0.5 * (uRes.x / uRes.y) + 0.02;
-  float xL = cx - g, xR = cx + g;
-  if (abs(p.x - cx) > g + 0.10) return 0.0;     // outside the bridge reach
-  float u = clamp((p.x - xL) / max(2.0 * g, 1e-4), 0.0, 1.0);
-  float seed = slot * 17.0 + floor(t / CYCLE);  // new jitter chain per strike
+  // span pixel-to-rail at the pixel's own height: rails diverge with y, so
+  // the channel's reach follows the real electrode positions and its tips
+  // always terminate on a rail
+  float gEff = gapHalf(p.y) + 0.004 * p.y * p.y;
+  if (abs(p.x - cx) > gEff + 0.01) return 0.0;
+  float u = (p.x - (cx - gEff)) / max(2.0 * gEff, 1e-4);
+  // jitter chain re-seeds on THIS slot's strike boundary, not the shared clock
+  float seed = slot * 17.0 + floor(t / CYCLE + slot / NARC);
   float amp = 0.016 + 0.030 * (h / 0.80);       // wiggle grows with the gap
   float ya = h + amp * arcWiggle(u, t, seed);
   float dy = abs(p.y - ya);
@@ -138,12 +141,14 @@ void main() {
     float h3 = hash11(fi * 5.9 + slot * 23.1);
     float sx = cx + (h1 * 2.0 - 1.0) * g * 0.9;
     float u = clamp((sx - cx + g) / max(2.0 * g, 1e-4), 0.0, 1.0);
-    float seed = slot * 17.0 + floor(uT / CYCLE);
+    float seed = slot * 17.0 + floor(uT / CYCLE + slot / NARC);
     float sy = h + (0.016 + 0.030 * (h / 0.80)) * arcWiggle(u, uT, seed)
              + (h2 - 0.5) * 0.03;
     float clock = fract(uT * (1.5 + h3 * 3.0) + h1 * 9.0);
     float burst = 1.0 + 2.5 * smoothstep(0.86, 0.96, ph);        // starve burst
-    float spark = smoothstep(0.93, 1.0, clock) * burst;
+    // sparks ride the channel's burn envelope so none stays lit across the
+    // re-strike jump (position hops top->base while the clock keeps running)
+    float spark = smoothstep(0.93, 1.0, clock) * burst * arcBurn(ph);
     float d2 = (p.x - sx) * (p.x - sx) + (p.y - sy) * (p.y - sy);
     c += CORE * spark * exp(-d2 * 3.0e5) * 0.8;
   }
