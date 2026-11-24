@@ -42,12 +42,16 @@ export function fogOpticalDepth(y0: number, y1: number, dist: number, baseDensit
   // difference form: a·(e^(−b·y0) − e^(−b·y1))·d/(b·dy) — mathematically identical to
   // the factored integral but NEVER evaluates large exponentials for positive heights
   // (the factored form overflows float32 shaders on downward rays, e.g. y0=100→y1=0).
-  // Exponent args are clamped to ±80 (float32-safe); beyond that the density ratio is
-  // astronomically thin/dense and the saturate is physically indistinguishable.
-  const e0 = Math.max(-80, Math.min(80, -heightFalloff * y0));
-  const e1 = Math.max(-80, Math.min(80, -heightFalloff * y1));
+  // Reference-factored difference: e^{cmax}·(e^{c0−cmax} − e^{c1−cmax}) — the inner
+  // exponentials are ≤ 1 so they never overflow; when the true optical depth is huge
+  // (deep negative heights), e^{cmax} overflows to +inf which is PHYSICALLY CORRECT:
+  // τ = +inf → T = e^{−inf} = 0. IEEE semantics do the right thing — no NaN because
+  // the inf appears only as a multiplier of a nonzero finite difference.
+  const c0 = -heightFalloff * y0;
+  const c1 = -heightFalloff * y1;
+  const cmax = Math.max(c0, c1);
   const k = dy / dist;
-  return (baseDensity * (Math.exp(e0) - Math.exp(e1))) / (heightFalloff * k);
+  return (baseDensity * Math.exp(cmax) * (Math.exp(c0 - cmax) - Math.exp(c1 - cmax))) / (heightFalloff * k);
 }
 
 /** Beer-Lambert transmittance T = e^(−τ). */
@@ -115,11 +119,13 @@ float fogOpticalDepth(float y0, float y1, float dist, float baseDensity, float h
   float bdy = heightFalloff * dy;
   // shallow-ray branch keys on TOTAL height change, not slope — midpoint density
   if (abs(bdy) < 1e-3) return baseDensity * exp(-heightFalloff * (y0 + y1) * 0.5) * dist;
-  // difference form — no large exponentials for positive heights; args clamped ±80 (float32-safe)
-  float e0 = clamp(-heightFalloff * y0, -80.0, 80.0);
-  float e1 = clamp(-heightFalloff * y1, -80.0, 80.0);
+  // reference-factored difference — inner exponentials ≤ 1, no NaN; deep negative
+  // heights overflow the outer factor to +inf which is correct (T = e^(−inf) = 0)
+  float c0 = -heightFalloff * y0;
+  float c1 = -heightFalloff * y1;
+  float cmax = max(c0, c1);
   float k = dy / dist;
-  return baseDensity * (exp(e0) - exp(e1)) / (heightFalloff * k);
+  return baseDensity * exp(cmax) * (exp(c0 - cmax) - exp(c1 - cmax)) / (heightFalloff * k);
 }
 float fogTransmittance(float y0, float y1, float dist, float baseDensity, float heightFalloff) {
   return exp(-fogOpticalDepth(y0, y1, dist, baseDensity, heightFalloff));
