@@ -112,15 +112,26 @@ void main() {
   vec3 wheatB = vec3(0.62, 0.46, 0.19);
   vec3 field = mix(wheatA, wheatB, rows);
   // far field lighter in the haze, near field deeper
-  field = mix(field, col, 0.55 * smoothstep(0.415, 0.30, y));
+  field = mix(field, col, 0.55 * smoothstep(0.30, 0.415, y));
   // wind waves: a brightness front sweeping left→right while the wind blows
   float wind = smoothstep(5.0, 9.0, t) * (1.0 - smoothstep(17.0, 19.5, t));
   float wave = sin(x * 34.0 - t * 2.3 + y * 16.0) * wind;
   field += vec3(0.10, 0.08, 0.03) * max(0.0, wave) * (0.6 + 0.4 * rows);
   field -= vec3(0.06, 0.05, 0.03) * max(0.0, -wave) * 0.7;
-  // long shadows stretching late: diagonal darken from the mills' bases
-  float shadow = cool * smoothstep(0.40, 0.12, y) * (0.4 + 0.3 * sin(x * 40.0 + 8.0));
-  field *= 1.0 - shadow * 0.35;
+  // long shadows stretching late: slanted bands thrown left-down from
+  // each mill's base, lengthening as the sun drops
+  float shadow = 0.0;
+  for (int m = 0; m < 3; m++) {
+    float mx = m == 0 ? 0.28 : (m == 1 ? 0.55 : 0.78);
+    float ms = m == 0 ? 1.0 : (m == 1 ? 0.6 : 0.35);
+    float d = x - mx; // shadow reaches left of the tower (sun is right)
+    if (d < 0.0 && y < ridgeY) {
+      float reach = 0.10 + 0.16 * cool;
+      float lane = ridgeY + d * (0.28 + 0.22 * cool);
+      shadow += ms * exp(-pow((y - lane) * 90.0, 2.0)) * smoothstep(-reach, -0.01, d);
+    }
+  }
+  field *= 1.0 - clamp(shadow, 0.0, 1.0) * cool * 0.5;
   float inField = 1.0 - smoothstep(ridgeY - 0.002, ridgeY + 0.002, y);
   col = mix(col, field, inField);
 
@@ -130,8 +141,11 @@ void main() {
     float hops = hph * 5.0;
     float hi = floor(hops), hf = fract(hops);
     float pause = step(hf, 0.55); // bound 55%, pause 45%
-    float hx = 0.30 + 0.030 * hi + 0.030 * hf;
-    float hb = 0.020 * max(0.0, sin(clamp(hf / 0.55, 0.0, 1.0) * 3.1416)) * pause;
+    // x advances only during the bound phase — the hare crouches still
+    // between hops instead of gliding
+    float bound = min(hf / 0.55, 1.0);
+    float hx = 0.30 + 0.048 * (hi + bound) / 5.0;
+    float hb = 0.020 * max(0.0, sin(bound * 3.1416)) * pause;
     vec2 hd = (vUv - vec2(hx, 0.335 + hb)) * vec2(2.2, 3.2);
     float hare = 1.0 - smoothstep(0.012, 0.020, length(hd));
     // ears
@@ -146,7 +160,7 @@ void main() {
     float bph = (t - 8.0) / 5.5 - fk * 0.02;
     if (bph > 0.0 && bph < 1.0) {
       float bx = 0.10 + 0.80 * bph;
-      float by = 0.78 - 0.20 * bph + 0.03 * fk + 0.008 * sin(t * 3.0 + fk * 2.0);
+      float by = 0.64 - 0.18 * bph + 0.016 * fk + 0.008 * sin(t * 3.0 + fk * 2.0);
       float flap = sin(t * 7.0 + fk * 1.7);
       vec2 bd = (vUv - vec2(bx, by)) * vec2(3.0, 5.0 + 2.0 * flap);
       float bird = 1.0 - smoothstep(0.006, 0.012, length(bd));
@@ -177,10 +191,13 @@ void main() {
 const ROTOR_VERT = /* glsl */ `
 out vec2 vUv;
 out float vRim;
+out float vSunAngle;
 attribute float aRim;
+attribute float aSunAngle;
 void main() {
   vUv = uv;
   vRim = aRim;
+  vSunAngle = aSunAngle;
   gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
 }`;
 
@@ -188,7 +205,9 @@ const ROTOR_FRAG = /* glsl */ `
 precision highp float;
 in vec2 vUv;
 in float vRim;
+in float vSunAngle;
 out vec4 fragColor;
+#define aSunAngle vSunAngle
 
 float segDist(vec2 p, vec2 a, vec2 b) {
   vec2 pa = p - a, ba = b - a;
@@ -213,8 +232,11 @@ void main() {
   float shape = max(blade, hub);
   if (shape < 0.01) discard;
   vec3 col = vec3(0.07, 0.05, 0.06);
-  // warm rim on the sun-side blade edge
-  float rim = smoothstep(0.55, 0.95, r) * shape;
+  // warm rim on the sun-side blade edge — only the blade pointing at the
+  // sun catches light (aSunAngle is the sun azimuth in rotor-local space)
+  vec2 sunDir = vec2(cos(aSunAngle), sin(aSunAngle));
+  float facing = pow(max(dot(normalize(p + vec2(1e-4)), sunDir), 0.0), 6.0);
+  float rim = smoothstep(0.55, 0.95, r) * facing * shape;
   col = mix(col, vec3(0.95, 0.60, 0.22), rim * vRim);
   fragColor = vec4(col, shape * 0.96);
 }`;
@@ -225,23 +247,30 @@ const uv2w = (ux: number, uy: number): [number, number] => [(ux - 0.5) * PW, PY 
 
 // Mill rotors: uv of hub, radius (world), base rate (rad/s), phase, dir.
 // Near mill's rotor sweeps past the left frame edge on purpose.
-const RIDGE_Y = 0.415;
+// ridgeAt mirrors the shader's wiggled ridge so hubs sit on the cap center.
+const ridgeAt = (x: number) => 0.415 + 0.012 * Math.sin(x * 9.0 + 1.3) + 0.006 * Math.sin(x * 23.0);
 const MILLS = [
-  { ux: 0.28, hubY: RIDGE_Y - 0.002 + 0.150 * 1.06, radius: 17.0, rate: 1.35, phase: 0.4, dir: 1 },
-  { ux: 0.55, hubY: RIDGE_Y + 0.004 + 0.105 * 1.06, radius: 11.0, rate: 1.05, phase: 2.3, dir: -1 },
-  { ux: 0.78, hubY: RIDGE_Y + 0.006 + 0.075 * 1.06, radius: 7.5, rate: 0.85, phase: 4.1, dir: 1 },
+  { ux: 0.28, hubY: ridgeAt(0.28) - 0.002 + 0.150 * 1.06, radius: 17.0, rate: 1.35, phase: 0.4, dir: 1 },
+  { ux: 0.55, hubY: ridgeAt(0.55) + 0.004 + 0.105 * 1.06, radius: 11.0, rate: 1.05, phase: 2.3, dir: -1 },
+  { ux: 0.78, hubY: ridgeAt(0.78) + 0.006 + 0.075 * 1.06, radius: 7.5, rate: 0.85, phase: 4.1, dir: 1 },
 ];
 
 // Wind envelope shared by rotor speed and the shader's wheat waves.
 const wind = (t: number) => ss(5, 9, t) * (1 - ss(17, 19.5, t));
+// Monotone-increasing stand-in for the wind integral — the rotor angle
+// must never decrease, so spin-up/slow-down ride this accumulated curve
+// instead of multiplying t by the (decaying) envelope directly.
+const windInt = (t: number) => 4.0 * ss(5, 9, t) + 8.0 * ss(9, 17, t) + 5.0 * ss(17, 19.5, t);
 
 // Sun azimuth from the near-mill hub (for the rim-light computation).
 const SUN = uv2w(0.80, 0.455);
 
-const CAPTIONS: Array<[number, number, string]> = [
-  [0.8, 4.2, 'last light on the wheat'],
-  [5.5, 9.5, 'wind comes over the ridge'],
-  [12.0, 16.0, 'the mills run hard before dark'],
+// [tin, tout, text, anchorUv] — captions are anchored to points on the
+// backdrop and projected through the camera, so they travel with the pan
+const CAPTIONS: Array<[number, number, string, [number, number]]> = [
+  [0.8, 4.2, 'last light on the wheat', [0.45, 0.30]],
+  [5.5, 9.5, 'wind comes over the ridge', [0.55, 0.47]],
+  [12.0, 16.0, 'the mills run hard before dark', [0.28, 0.40]],
 ];
 
 export default class WindmillRowScene extends Scene {
@@ -252,6 +281,7 @@ export default class WindmillRowScene extends Scene {
   private u = { uT: { value: 0 } };
   private rotors: THREE.InstancedMesh;
   private aRim: THREE.InstancedBufferAttribute;
+  private aSun: THREE.InstancedBufferAttribute;
   private m = new THREE.Matrix4();
   private q = new THREE.Quaternion();
   private e = new THREE.Euler();
@@ -274,6 +304,9 @@ export default class WindmillRowScene extends Scene {
     this.aRim = new THREE.InstancedBufferAttribute(new Float32Array(3), 1);
     this.aRim.setUsage(THREE.DynamicDrawUsage);
     geo.setAttribute('aRim', this.aRim);
+    this.aSun = new THREE.InstancedBufferAttribute(new Float32Array(3), 1);
+    this.aSun.setUsage(THREE.DynamicDrawUsage);
+    geo.setAttribute('aSunAngle', this.aSun);
     const mat = new THREE.ShaderMaterial({
       vertexShader: ROTOR_VERT,
       fragmentShader: ROTOR_FRAG,
@@ -295,22 +328,27 @@ export default class WindmillRowScene extends Scene {
     const mill = MILLS[i]!;
     const [wx, wy] = uv2w(mill.ux, mill.hubY);
     const w = wind(t);
-    // speed picks up with the wind, eases at the end — analytic-ish rate
-    const ang = mill.dir * (mill.phase + t * mill.rate * (0.45 + 0.55 * w) + 1.4 * w * Math.sin(t * 0.6 + mill.phase));
+    // angle rides the monotone wind-integral (never reverses on die-down);
+    // the small sine term is a gust surge, not direction
+    const ang = mill.dir * (mill.phase + mill.rate * (0.5 * t + 0.85 * windInt(t)) + 0.7 * w * mill.rate * Math.sin(t * 0.6 + mill.phase));
     // yaw wobble: slight elliptical squash as the rotor yaws
     const yaw = 0.92 + 0.08 * Math.sin(t * 0.35 + mill.phase * 2.0);
     this.e.set(0, 0, ang);
     this.q.setFromEuler(this.e);
     this.scl.set(mill.radius * yaw, mill.radius, 1);
-    this.v.set(wx, wy, -75);
+    // sit just in front of the backdrop plane so the hub tracks its cap
+    // through the pan (deep z offsets would parallax the rotor off the mill)
+    this.v.set(wx, wy, PZ + 0.4);
     this.m.compose(this.v, this.q, this.scl);
     this.rotors.setMatrixAt(i, this.m);
 
-    // rim light: strong while the sun is up, dies as the sky cools
+    // rim: fades as the sky cools; the shader lights whichever blade is
+    // currently turned toward the sun (aSunAngle = sun azimuth in the
+    // rotor's local frame, i.e. world azimuth minus the rotor's angle)
     const cool = ss(13, 18.5, t);
     const sunAz = Math.atan2(SUN[1] - wy, SUN[0] - wx);
-    const align = Math.pow(Math.max(0, Math.cos(ang - sunAz)), 6.0);
-    this.aRim.setX(i, (0.15 + 0.85 * align) * (1 - cool));
+    this.aSun.setX(i, sunAz - ang);
+    this.aRim.setX(i, (1 - cool) * 0.9 + 0.05);
   }
 
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
@@ -321,10 +359,14 @@ export default class WindmillRowScene extends Scene {
     for (let i = 0; i < 3; i++) this.place(i, t);
     this.rotors.instanceMatrix.needsUpdate = true;
     this.aRim.needsUpdate = true;
+    this.aSun.needsUpdate = true;
 
     // CameraRig: establishing frame holds the far mill + low sun at the
-    // right edge, pans left along the ridge, then settles on the near mill
-    const pan = ss(1, 14, t);
+    // right edge, pans left along the ridge, then settles on the near mill.
+    // In narrow/vertical exports the pan shortens and anchors on the near
+    // mill so the focal mills stay in frame
+    const span = Math.min(1, (this.ctx.W / this.ctx.H) / (16 / 9));
+    const pan = ss(1, 14, t) * span;
     this.rig.position = [45.0 - 63.0 * pan + 0.8 * Math.sin(t * 0.06), 6.5, 24.0];
     this.rig.target = [40.0 - 62.0 * pan, -2.0 + 1.5 * pan, PZ];
     this.rig.focalLengthPx = (this.ctx.H / 2) / Math.tan(0.5 * 40 * Math.PI / 180);
@@ -333,15 +375,22 @@ export default class WindmillRowScene extends Scene {
     r.setRenderTarget(out);
     r.clear(true, true, true);
     r.render(this.three, this.cam);
+    r.resetState();
 
     // probe captions (textProbes auto-emit via the main.ts canvas hook)
     if (CAPTIONS.some(([a, b]) => t >= a && t <= b)) {
       const c = this.layer.ctx;
       c.clearRect(0, 0, W, H);
       const duck = overlayTextDuck(f.tin, f.tout);
-      for (const [tin, tout, text] of CAPTIONS) {
+      for (const [tin, tout, text, auv] of CAPTIONS) {
         const a = ss(tin, tin + 0.4, t) * (1 - ss(tout - 0.4, tout, t)) * duck;
         if (a <= 0.001) continue;
+        // world-anchored: project the caption's backdrop point to screen
+        const [awx, awy] = uv2w(auv[0], auv[1]);
+        const ndc = this.v.set(awx, awy, PZ + 0.4).project(this.cam);
+        const cx = (ndc.x * 0.5 + 0.5) * W;
+        const cy = (0.5 - ndc.y * 0.5) * H + H * 0.18; // sit below the anchor
+        if (ndc.z > 1 || cx < -W * 0.4 || cx > W * 1.4) continue;
         c.save();
         c.globalAlpha = a;
         c.font = `46px "${F.archivo(112, 500)}", sans-serif`;
@@ -351,7 +400,6 @@ export default class WindmillRowScene extends Scene {
         c.lineJoin = 'round';
         c.strokeStyle = 'rgba(5, 6, 10, 0.9)';
         c.lineWidth = 12;
-        const cx = W / 2, cy = H * 0.85;
         c.strokeText(text, cx, cy);
         c.fillStyle = '#f2ecea';
         c.fillText(text, cx, cy);
@@ -359,7 +407,6 @@ export default class WindmillRowScene extends Scene {
       }
       this.ctx.comp.draw(r, this.layer.upload(), out, { mode: 'normal', opacity: 1 });
     }
-    r.resetState();
 
     return {
       exposure: 0.55,

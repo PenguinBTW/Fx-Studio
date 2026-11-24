@@ -9,7 +9,8 @@
 | 13–18.5 | cooling | on near mill | sky desaturates, shadows stretch | rim light dies with the sun | crow sits on tail vane |
 | 17–20 | near-still | locked | field calms | rotors ease to near-stop | — |
 
-Stills verified at t = 3 (establish), t = 9 (wind/birds/hare), t = 14
-(settle on near mill), t = 18.5 (cooling, crow).
+Stills verified at t = 3 (establish: sun behind far mill), t = 9
+(wind/birds), t = 11.5 (hare mid-bound), t = 16.5 (crow on the vane,
+sky cooling).
 
 Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
