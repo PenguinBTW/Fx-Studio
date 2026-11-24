@@ -295,10 +295,11 @@ export default defineScene({
     ctx.rig.setLensMm(48);
     // register the flight path keyed to this entry's absolute-time window, so
     // God-View's sampler and updateCamera's evalPath both land on camPos(t)
+    // dense keys so the arc-length spline tracks camPos within ~1s samples
     const wps = [];
-    for (let i = 0; i <= 8; i++) {
-      const wt = ctx.sceneCtx.start + (i / 8) * (ctx.sceneCtx.end - ctx.sceneCtx.start);
-      wps.push({ t: i / 8, pos: camPos(wt), target: camTarget(wt) });
+    for (let i = 0; i <= 24; i++) {
+      const wt = ctx.sceneCtx.start + (i / 24) * (ctx.sceneCtx.end - ctx.sceneCtx.start);
+      wps.push({ t: i / 24, pos: camPos(wt), target: camTarget(wt) });
     }
     ctx.rig.setPath(wps);
     ctx.rig.position = camPos(0);

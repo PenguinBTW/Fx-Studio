@@ -105,7 +105,7 @@ export async function runGodView(page: Page, argv: string[] = []): Promise<void>
         if (loaded) {
           for (const [__, entry] of loaded.entries()) {
             if (entry.scene && typeof entry.scene.evaluateCamera === 'function'
-              && entry.entry && tt >= entry.entry.start && tt < entry.entry.end) return entry.scene;
+              && entry.entry && tt >= entry.entry.start && tt <= entry.entry.end) return entry.scene;
           }
         }
         return activeSceneObj;
