@@ -57,9 +57,9 @@ float seamGlow(float x, float t) {
 
 vec3 skyGrad(vec2 p) {
   vec3 c = mix(vec3(0.008, 0.010, 0.018), vec3(0.022, 0.026, 0.045),
-               smoothstep(1.0, 0.35, p.y));
+               1.0 - smoothstep(0.35, 1.0, p.y));
   // faint warm wash climbing from the seam
-  c += vec3(0.045, 0.022, 0.006) * smoothstep(0.55, 0.26, p.y)
+  c += vec3(0.045, 0.022, 0.006) * (1.0 - smoothstep(0.26, 0.55, p.y))
        * smoothstep(0.14, 0.26, p.y);
   return c;
 }
@@ -84,7 +84,7 @@ void main() {
 
   // --- ground + smolder seam ---
   float ry = ridgeY(p.x);
-  float below = smoothstep(ry + 0.002, ry - 0.002, p.y);
+  float below = 1.0 - smoothstep(ry - 0.002, ry + 0.002, p.y);
   vec3 ground = vec3(0.020, 0.018, 0.016)
               + fbm(p * vec2(26.0, 14.0), 3) * vec3(0.012);
   // warm bounce climbing a few pixels above the seam
@@ -94,7 +94,7 @@ void main() {
   ground += seamCol * warmBand * (0.25 + 0.75 * sg);
   // hot pinpricks right on the ridge crest
   float prick = smoothstep(0.90, 1.0, fbm(vec2(p.x * 160.0, ry * 40.0), 3))
-              * smoothstep(0.012, 0.0, abs(p.y - ry));
+              * (1.0 - smoothstep(0.0, 0.012, abs(p.y - ry)));
   ground += vec3(1.0, 0.72, 0.30) * prick * 1.6;
   c = mix(c, ground, below);
   // seam glow also reaches a little above the ridgeline
@@ -102,7 +102,7 @@ void main() {
 
   // --- smoke haze: fbm veil lifting off the seam, lit warm underneath ---
   vec2 hp = vec2(p.x * 3.0 + t * 0.02, p.y * 1.6 - t * 0.045);
-  float haze = fbm(hp, 4) * smoothstep(ry + 0.34, ry + 0.05, p.y)
+  float haze = fbm(hp, 4) * (1.0 - smoothstep(ry + 0.05, ry + 0.34, p.y))
              * smoothstep(ry - 0.02, ry + 0.06, p.y);
   c += vec3(0.10, 0.09, 0.085) * haze * 0.5;                       // grey body
   c += vec3(0.30, 0.13, 0.03) * haze * exp(-(p.y - ry) * 10.0);    // warm under-light
