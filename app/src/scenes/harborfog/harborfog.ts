@@ -127,7 +127,7 @@ void main() {
   vec2 q = (vUv - 0.5) * vec2(10.0, 7.0);
   // dusk sky — deep slate, barely warmer at the horizon
   vec3 sky = mix(vec3(0.22, 0.24, 0.32), vec3(0.05, 0.07, 0.12), smoothstep(-0.9, 1.6, q.y));
-  sky += vec3(0.55, 0.35, 0.18) * 0.10 * smoothstep(0.5, -0.6, q.y);   // last dusk warmth
+  sky += vec3(0.55, 0.35, 0.18) * 0.10 * (1.0 - smoothstep(-0.6, 0.5, q.y));   // last dusk warmth
 
   if (q.y > uW) {
     // sky-side fog — layered veils thickening with uFog
@@ -142,7 +142,7 @@ void main() {
     gl_FragColor = vec4(sky, 1.0);
   } else {
     // water — dark mirror of the sky, plus lamp smears + beam glint
-    vec3 wat = mix(vec3(0.14, 0.16, 0.22), vec3(0.04, 0.06, 0.10), smoothstep(uW, uW - 1.6, q.y));
+    vec3 wat = mix(vec3(0.14, 0.16, 0.22), vec3(0.04, 0.06, 0.10), 1.0 - smoothstep(uW - 1.6, uW, q.y));
     float jx = q.x + 0.008 * sin(q.y * 20.0 + uT * 1.1);
     // lamp smears — vertical warm streaks under each lit lamp
     float sm = 0.0;
@@ -150,7 +150,7 @@ void main() {
       float on = uLamp[i].z;
       float dx = abs(jx - uLamp[i].x);
       float stretch = 0.55 + 0.10 * uLampS[i].y;
-      float under = smoothstep(uW, uW - stretch, q.y) * smoothstep(0.03, -0.01, q.y - uW);
+      float under = (1.0 - smoothstep(uW - stretch, uW, q.y)) * (1.0 - smoothstep(-0.01, 0.03, q.y - uW));
       sm += on * under * exp(-dx * dx * 260.0) * (0.85 + 0.15 * sin(q.y * 12.0 + uT * 2.0 + uLampS[i].x));
     }
     wat += vec3(1.0, 0.72, 0.35) * sm;
@@ -167,12 +167,13 @@ void main() {
 const BOAT_VERT = /* glsl */ `
 uniform float uT;
 uniform float uCalm;   // 0 rolling → 1 settled
+uniform float uRefl;   // 1 on the mirrored copy — roll mirrors about the waterline
 varying vec3 vC;
 void main() {
   vC = color;
   vec3 p = position;
   float roll = (1.0 - uCalm) * 0.015 * sin(uT * 0.9 + p.x * 1.7);
-  p.y += roll * (p.x + 3.0);
+  p.y += roll * (p.x + 3.0) * (1.0 - 2.0 * uRefl);
   gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
 }`;
 
@@ -188,7 +189,7 @@ const BEAM_VERT = /* glsl */ `
 uniform float uAng;
 varying float vT;
 void main() {
-  vT = position.x / 5.2;
+  vT = position.x / 5.6;
   vec3 p = position;
   float c = cos(uAng), s = sin(uAng);
   p.xy = vec2(p.x * c - p.y * s, p.x * s + p.y * c);
@@ -206,7 +207,7 @@ void main() {
 
 // ---------------------------------------------------------------------------
 // point cloud — 0 fog wisps, 1 deck lamps, 2 lamp halos, 3 buoy blink,
-// 4 cormorant trail, 5 gull-in-beam, 6 beam dust
+// 5 gull-in-beam, 6 beam dust  (kind 4 retired: cormorant is a dark mesh)
 // --------------------------------------------------------------------------
 
 const PT_VERT = /* glsl */ `
@@ -219,6 +220,7 @@ attribute vec3 aTo;
 uniform float uT;
 uniform float uFog;
 uniform float uBeamAng;
+uniform float uPx;   // render-target height / 1080 — sprites stay a fixed frame fraction
 varying float vA;
 varying float vKind;
 void main() {
@@ -250,14 +252,8 @@ void main() {
     p.y += 0.02 * sin(uT * 0.8);
     sz = 4.0;
   } else if (aKind < 4.5) {
-    // cormorant — dark dart low over the water (aSeed = trail index)
-    float v = (aTo.x - position.x) / aT1;
-    float u = uT - aT0;
-    p.x = position.x + v * u - aSeed * 0.10;
-    p.y = position.y + 0.05 * sin(u * 10.0) - aSeed * 0.01;
-    float on = step(0.0, u) * step(u, aT1);
-    a = on * (1.0 - aSeed / 6.0) * 0.9;
-    sz = 9.0 - aSeed * 1.0;
+    // (kind 4 removed — the cormorant is a dark non-additive mesh, not a point)
+    a = 0.0;
   } else if (aKind < 5.5) {
     // gull — only lit when the beam sweeps across its post
     float d = abs(mod(uBeamAng - 0.5 + 0.5, 1.0) - 0.5); // unused; lit via aOn
@@ -272,7 +268,7 @@ void main() {
   }
   vA = a;
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
-  gl_PointSize = sz * (3.4 / -mv.z);
+  gl_PointSize = sz * (3.4 / -mv.z) * uPx;
   gl_Position = projectionMatrix * mv;
 }`;
 
@@ -334,6 +330,8 @@ interface FU {
   _aOnAttr: THREE.BufferAttribute;
   _gullIdx: number;
   _dustIdx: number[];
+  _dustPos: [number, number][];
+  _corm: THREE.Mesh;
 }
 
 const U = new WeakMap<object, FU>();
@@ -377,12 +375,12 @@ const scene = defineScene({
     const { geo, refl, boats } = buildBoats(9021);
     const boatMat = new THREE.ShaderMaterial({
       vertexShader: BOAT_VERT, fragmentShader: BOAT_FRAG,
-      uniforms: { uT: { value: 0 }, uCalm: { value: 0 }, uA: { value: 1.0 } },
+      uniforms: { uT: { value: 0 }, uCalm: { value: 0 }, uRefl: { value: 0 }, uA: { value: 1.0 } },
       vertexColors: true, transparent: true, side: THREE.DoubleSide,
     });
     const reflMat = new THREE.ShaderMaterial({
       vertexShader: BOAT_VERT, fragmentShader: BOAT_FRAG,
-      uniforms: { uT: { value: 0 }, uCalm: { value: 0 }, uA: { value: 0.30 } },
+      uniforms: { uT: { value: 0 }, uCalm: { value: 0 }, uRefl: { value: 1 }, uA: { value: 0.30 } },
       vertexColors: true, transparent: true, side: THREE.DoubleSide,
     });
     ctx.scene3D.add(new THREE.Mesh(geo, boatMat));
@@ -403,14 +401,14 @@ const scene = defineScene({
     bwRib(-4.35, WATER_Y + 0.30, -4.28, WATER_Y + 1.55, 0.10, 0.055);
     bwRib(-4.40, WATER_Y + 1.55, -4.23, WATER_Y + 1.55, 0.05, 0.05);
     bwRib(-4.35, WATER_Y + 1.60, -4.28, WATER_Y + 1.75, 0.05, 0.03);
-    // gull post mid-right
-    bwRib(2.45, WATER_Y - 0.05, 2.45, WATER_Y + 0.28, 0.03, 0.03);
+    // gull post — inside the beam fan's 5.6-unit reach from x=-4.32
+    bwRib(0.55, WATER_Y - 0.05, 0.55, WATER_Y + 0.28, 0.03, 0.03);
     const bwGeo = new THREE.BufferGeometry();
     bwGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(bwPos), 3));
     bwGeo.setAttribute("color", new THREE.BufferAttribute(new Float32Array(bwCol), 3));
     const bwMat = new THREE.ShaderMaterial({
       vertexShader: BOAT_VERT, fragmentShader: BOAT_FRAG,
-      uniforms: { uT: { value: 0 }, uCalm: { value: 1 }, uA: { value: 1.0 } },
+      uniforms: { uT: { value: 0 }, uCalm: { value: 1 }, uRefl: { value: 0 }, uA: { value: 1.0 } },
       vertexColors: true, transparent: true, side: THREE.DoubleSide,
     });
     ctx.scene3D.add(new THREE.Mesh(bwGeo, bwMat));
@@ -421,8 +419,8 @@ const scene = defineScene({
     for (let i = 0; i < 24; i++) {
       const a0 = (i / 24 - 0.5) * 0.16, a1 = ((i + 1) / 24 - 0.5) * 0.16;
       bp.push(0, 0, 0,
-              5.2 * Math.cos(a0), 5.2 * Math.sin(a0), 0,
-              5.2 * Math.cos(a1), 5.2 * Math.sin(a1), 0);
+              5.6 * Math.cos(a0), 5.6 * Math.sin(a0), 0,
+              5.6 * Math.cos(a1), 5.6 * Math.sin(a1), 0);
     }
     beamGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(bp), 3));
     const beamMat = new THREE.ShaderMaterial({
@@ -452,12 +450,14 @@ const scene = defineScene({
       addPt(2, b.seed * 31, b.lampT, DUR, [b.x + 0.04, WATER_Y + 0.16, b.z + 0.02], [0, 0, 0]);
     });
     addPt(3, 5.1, 0, DUR, [1.45, WATER_Y + 0.02, -2.35], [0, 0, 0]);      // buoy
-    for (let i = 0; i < 6; i++)                                        // cormorant trail
-      addPt(4, i, CORMORANT.t0, CORMORANT.dur, [-3.8, WATER_Y + 0.38, -2.4], [7.4, 0, 0]);
     // gull on the post — aOn patched per frame while the beam crosses it
-    addPt(5, 9.3, 0, DUR, [2.45, WATER_Y + 0.33, -3.25], [0, 0, 0], 0);
-    for (let i = 0; i < 14; i++)   // beam dust
-      addPt(6, rng() * 31, 0, DUR, [-3.5 + rng() * 6, -0.2 + rng() * 1.6, -3.0], [0, 0, 0], 0);
+    addPt(5, 9.3, 0, DUR, [0.55, WATER_Y + 0.33, -3.25], [0, 0, 0], 0);
+    const dustPos: [number, number][] = [];
+    for (let i = 0; i < 14; i++) {   // beam dust — lit per-point while inside the fan
+      const dx = -3.5 + rng() * 6, dy = -0.2 + rng() * 1.6;
+      dustPos.push([dx, dy]);
+      addPt(6, rng() * 31, 0, DUR, [dx, dy, -3.0], [0, 0, 0], 0);
+    }
 
     const pg = new THREE.BufferGeometry();
     pg.setAttribute("position", new THREE.BufferAttribute(new Float32Array(pp), 3));
@@ -472,7 +472,7 @@ const scene = defineScene({
     const dustIdx = pk.map((k, i) => k === 6 ? i : -1).filter((i) => i >= 0);
     const ptMat = new THREE.ShaderMaterial({
       vertexShader: PT_VERT, fragmentShader: PT_FRAG,
-      uniforms: { uT: { value: 0 }, uFog: { value: 0.6 }, uBeamAng: { value: 0 } },
+      uniforms: { uT: { value: 0 }, uFog: { value: 0.6 }, uBeamAng: { value: 0 }, uPx: { value: 1 } },
       transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
     });
     const pts = new THREE.Points(pg, ptMat);
@@ -503,8 +503,31 @@ const scene = defineScene({
     });
     ctx.scene3D.add(new THREE.LineSegments(rg, ringMat));
 
+    // ---- cormorant — a dark non-additive dart; additive points can't darken
+    const cPos: number[] = [], cCol: number[] = [];
+    const crib = (x0: number, y0: number, x1: number, y1: number, w0: number, w1: number) => {
+      const ddx = x1 - x0, ddy = y1 - y0, len = Math.hypot(ddx, ddy) || 1;
+      const nx = (-ddy / len) * w0 * 0.5, ny = (ddx / len) * w0 * 0.5;
+      const mx = (-ddy / len) * w1 * 0.5, my = (ddx / len) * w1 * 0.5;
+      cPos.push(x0 + nx, y0 + ny, 0, x0 - nx, y0 - ny, 0, x1 + mx, y1 + my, 0,
+                x0 - nx, y0 - ny, 0, x1 - mx, y1 - my, 0, x1 + mx, y1 + my, 0);
+      for (let k = 0; k < 6; k++) cCol.push(0.035, 0.045, 0.06);
+    };
+    crib(-0.05, 0.0, 0.16, 0.0, 0.05, 0.015);   // body tapering to the beak
+    crib(-0.05, 0.0, -0.22, 0.01, 0.05, 0.008); // tail
+    crib(0.01, 0.01, 0.11, 0.075, 0.02, 0.004); // raised wing
+    crib(0.01, -0.01, 0.11, -0.065, 0.02, 0.004); // dropped wing
+    const cGeo = new THREE.BufferGeometry();
+    cGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(cPos), 3));
+    cGeo.setAttribute("color", new THREE.BufferAttribute(new Float32Array(cCol), 3));
+    const corm = new THREE.Mesh(cGeo, bwMat);
+    corm.position.z = -2.4;
+    corm.visible = false;
+    ctx.scene3D.add(corm);
+
     U.set(ctx, { back: back.material as THREE.ShaderMaterial, boatMat, reflMat, beamMat, ptMat, ringMat,
-      _boats: boats, _lampU: lampU, _aOnAttr: aOnAttr, _gullIdx: gullIdx, _dustIdx: dustIdx });
+      _boats: boats, _lampU: lampU, _aOnAttr: aOnAttr, _gullIdx: gullIdx, _dustIdx: dustIdx,
+      _dustPos: dustPos, _corm: corm });
   },
 
   render: (ctx, f, out) => {
@@ -530,7 +553,8 @@ const scene = defineScene({
     st.back.uniforms.uBeam!.value = beamIn * beamLow;
     for (let i = 0; i < 5; i++) {
       const b = st._boats[i] as Boat;
-      st._lampU[i].set(b.x + 0.04, WATER_Y + 0.16, sstep(b.lampT, b.lampT + 0.8, t));
+      // backdrop q-space is (uv-0.5)*10 over a 12.5-wide plane → x * 0.8
+      st._lampU[i].set((b.x + 0.04) * 0.8, WATER_Y + 0.16, sstep(b.lampT, b.lampT + 0.8, t));
     }
 
     // boats + reflection
@@ -542,11 +566,25 @@ const scene = defineScene({
     // points
     st.ptMat.uniforms.uT!.value = t;
     st.ptMat.uniforms.uFog!.value = fog;
-    // gull lit only while the beam sweeps across its post x≈2.45
-    const beamHit = Math.max(0, 1 - Math.abs((Math.tan(beamAng) * (2.45 + 4.32)) + WATER_Y + 1.68 - (WATER_Y + 0.33)) / 0.35);
-    st._aOnAttr.setX(st._gullIdx, beamIn * beamHit);
-    for (const i of st._dustIdx) st._aOnAttr.setX(i, beamIn * (0.5 + 0.5 * beamLow));
+    // gull + dust lit only while inside the beam fan (angle + reach test)
+    const beamHit = (x: number, y: number) => {
+      const dx = x + 4.32, dy = y - (WATER_Y + 1.68);
+      if (Math.hypot(dx, dy) > 5.6) return 0;
+      return Math.max(0, 1 - Math.abs(Math.atan2(dy, dx) - beamAng) / 0.10);
+    };
+    st._aOnAttr.setX(st._gullIdx, beamIn * beamHit(0.55, WATER_Y + 0.33));
+    st._dustIdx.forEach((i: number, k: number) =>
+      st._aOnAttr.setX(i, beamIn * beamHit(st._dustPos[k][0], st._dustPos[k][1])));
     st._aOnAttr.needsUpdate = true;
+
+    // cormorant dart — closed-form crossing during the bird act
+    const cu = (t - CORMORANT.t0) / CORMORANT.dur;
+    st._corm.visible = cu >= 0 && cu <= 1;
+    if (st._corm.visible) {
+      st._corm.position.x = -3.8 + 7.4 * cu;
+      st._corm.position.y = WATER_Y + 0.42 - 0.07 * Math.sin(cu * Math.PI) + 0.035 * Math.sin(t * 11.0);
+    }
+    st.ptMat.uniforms.uPx!.value = out.height / 1080;
 
     // rings
     st.ringMat.uniforms.uT!.value = t;
