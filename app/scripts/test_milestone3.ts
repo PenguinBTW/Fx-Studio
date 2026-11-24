@@ -140,7 +140,10 @@ const cont = new AnalyticalParticles(64);
 cont.addEmitter('small', { capacity: 10, origin: [0, 0, 0], direction: [1, 0, 0], speed: 1.0, lifetime: 0.5, gravity: [0, -0.5, 0] });
 cont.addEmitter('huge', { capacity: 10, origin: [1, 0, 0], direction: [1, 0, 0], speed: 40.0, lifetime: 3.0, gravity: [0, -0.5, 0] });
 const cSphere = (cont as any).geo.boundingSphere;
-const hugeR = 40.0 * 3.0 + 0.5 * 0.5 * 3.0 * 3.0 + 1.0;
+// standalone reach of 'huge' (includes turbulence/size defaults)
+const lone = new AnalyticalParticles(64);
+lone.addEmitter('huge', { capacity: 10, origin: [1, 0, 0], direction: [1, 0, 0], speed: 40.0, lifetime: 3.0, gravity: [0, -0.5, 0] });
+const hugeR = (lone as any).geo.boundingSphere.radius;
 if (Math.hypot(1 - cSphere.center.x, cSphere.center.y, cSphere.center.z) > 1e-6 || Math.abs(cSphere.radius - hugeR) > 1e-6) {
   console.error(`Enclosing-emitter union wrong! center=[${cSphere.center.x},${cSphere.center.y},${cSphere.center.z}] radius=${cSphere.radius} expected ${hugeR}`);
   allPassed = false;
