@@ -60,7 +60,7 @@ void main() {
   float limb = 0.25 + 0.75 * pow(mu, 0.7);
 
   vec3 col = mix(uDark, uMid, sat(gran * 1.6 + 0.15));
-  col = mix(col, uHot, sat(pow(gran, 2.0) * 1.8 + uSwell * 0.15));
+  col = mix(col, uHot, sat(gran * gran * 1.8 + uSwell * 0.15));
   col *= limb;
   col += uHot * uErupt * 0.18;
   gl_FragColor = vec4(col, 1.0);
@@ -94,7 +94,7 @@ void main() {
 
   float a = (rays * 1.1 + fine * 0.7) * ext * fall;
   // bright base ring hugging the limb
-  a += ext * smoothstep(disc + 0.3, disc + 0.02, r) * 0.7;
+  a += ext * (1.0 - smoothstep(disc + 0.02, disc + 0.3, r)) * 0.7;
   a *= (1.1 + uSwell * 0.9 + uErupt * 0.45);
 
   vec3 col = mix(vec3(1.0, 0.62, 0.2), vec3(1.0, 0.92, 0.7), sat(1.0 - r));
@@ -349,6 +349,10 @@ export default defineScene({
     sc.add(stars);
 
     ctx.rig.setLensMm(42);
+    // seed the rig so non-rendering samplers (God-View blueprint) see the path
+    ctx.rig.position = camPos(0);
+    ctx.rig.target = camTarget(0);
+    ctx.updateCamera(0, 0);
     sfStates.set(ctx, { sunMat, coronaMat, proms, starMat });
   },
 
@@ -371,7 +375,7 @@ export default defineScene({
       const u = (t - spec.t0) / spec.dur;
       const env = u <= 0 ? 0 : u >= 1 ? Math.max(0, 1 - (u - 1) * 4.0) : Math.min(1, u * 3.0);
       let grow = 0.05 + env * 0.95;
-      if (spec.erupt && erupt > 0) grow *= 1.0 + erupt * 1.3; // release stretches skyward
+      if (spec.erupt && erupt > 0) grow *= 1.0 + erupt * 0.45; // release stretches, apex stays in frame
       mat.uniforms.uT.value = t;
       mat.uniforms.uGrow.value = grow;
       mat.uniforms.uGlow.value = (0.5 + 0.5 * env) * (0.8 + erupt * (spec.erupt ? 0.9 : 0.2));
