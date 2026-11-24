@@ -400,7 +400,7 @@ export default class NightTrainScene extends Scene {
       g.textAlign = 'center';
       g.lineJoin = 'round';
       g.strokeStyle = 'rgba(5,6,10,0.9)';
-      g.lineWidth = 6;
+      g.lineWidth = 12; // knockout halo: 6px of ink outside each glyph
       g.strokeText(text, this.ctx.W / 2, this.ctx.H - 120);
       g.fillStyle = 'rgba(235,235,240,0.95)';
       g.fillText(text, this.ctx.W / 2, this.ctx.H - 120);
