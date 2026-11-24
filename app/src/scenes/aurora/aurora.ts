@@ -246,7 +246,7 @@ type CurtainDef = {
   env: (t: number) => number; // beat envelope → uIntensity multiplier
 };
 
-const PW = 200, PH = 130, PY = 30, PZ = -80;
+const PW = 420, PH = 130, PY = 30, PZ = -80;
 
 // Curtain 1 — the first unfurling arc, mid-distance. Spine sweeps across
 // the sky; it grows from centre on the beat-1 envelope.
