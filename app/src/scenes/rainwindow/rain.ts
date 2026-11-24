@@ -33,6 +33,7 @@ interface Drop {
   warm: number;        // warm accent weight for big drops
   mergedAt: number;    // for parents: time a child merged into it (radius bump)
   mergeR: number;      // post-merge radius
+  growT: number;       // seconds to reach full radius (mid-pane spawns)
 }
 
 // Head position at time t: pure lookup over the precomputed node arrays.
@@ -50,7 +51,7 @@ function headAt(d: Drop, t: number): { x: number; y: number; r: number } | null 
   return {
     x: d.xs[lo] + (d.xs[hi] - d.xs[lo]) * s,
     y: d.ys[lo] + (d.ys[hi] - d.ys[lo]) * s,
-    r: t >= d.mergedAt ? d.mergeR : d.r
+    r: t >= d.mergedAt ? d.mergeR : d.r * Math.min(1, (t - d.t0) / d.growT)
   };
 }
 
@@ -95,7 +96,7 @@ function integrate(
       }
     }
   }
-  return { x0, t0, xs: xs.slice(0, n), ys: ys.slice(0, n), ts: ts.slice(0, n), r, warm: 0, mergedAt: Infinity, mergeR: r };
+  return { x0, t0, xs: xs.slice(0, n), ys: ys.slice(0, n), ts: ts.slice(0, n), r, warm: 0, mergedAt: Infinity, mergeR: r, growT: 0.001 };
 }
 
 function buildDrops(): Drop[] {
@@ -123,6 +124,8 @@ function buildDrops(): Drop[] {
     const x0c = (ph0 ? ph0.x : p.xs[0]) + (hash(i, 31) - 0.5) * 10;
     const y0c = ph0 ? ph0.y - (ph0.r + cr + 40) : undefined;
     const c = integrate(x0c, cr, t0c, p, Infinity, 1.9, y0c);
+    // a mid-pane spawn pops into view — grow its radius in over ~1 s
+    c.growT = 1.0;
     // merge time ≈ child's last node; parent swells by cubic-volume addition
     c.mergedAt = -1; // marker: this drop is a merging child
     const tm = c.ts[c.ts.length - 1];
