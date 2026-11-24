@@ -1,0 +1,32 @@
+{
+  "project": "paperboats",
+  "meta": {
+    "title": "Paper Boats",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 24
+  },
+  "entries": [
+    {
+      "scene": "paperboats/paperboats",
+      "id": "act-runoff",
+      "start": 0,
+      "end": 8,
+      "caption": { "fig": "01", "text": "AFTER THE STORM", "dur": 4 }
+    },
+    {
+      "scene": "paperboats/paperboats",
+      "id": "act-drift",
+      "start": 8,
+      "end": 16,
+      "caption": { "fig": "02", "text": "FLEET DOWN THE GUTTER", "dur": 4 }
+    },
+    {
+      "scene": "paperboats/paperboats",
+      "id": "act-glint",
+      "start": 16,
+      "end": 24,
+      "caption": { "fig": "03", "text": "SUN LANE", "dur": 4 }
+    }
+  ]
+}
