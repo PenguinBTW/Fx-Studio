@@ -332,8 +332,10 @@ export default class VortexScene extends Scene {
         h = 1;
         th = thE;
         fling = 1;
-        // hide the wrap-around pop between arc end and respawn
-        const fade = 1 - ss(0.92, 1.0, cyc);
+        // hide the wrap-around pop between arc end and respawn; flung
+        // debris also eases out just ahead of the backdrop so long arcs
+        // never pop through the plane mid-flight
+        const fade = (1 - ss(0.92, 1.0, cyc)) * ss(PZ + 1.5, PZ + 9.0, z);
         if (fade <= 0) {
           this.m.makeScale(0, 0, 0);
           this.motes.setMatrixAt(i, this.m);
