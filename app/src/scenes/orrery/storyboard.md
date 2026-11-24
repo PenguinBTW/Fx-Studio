@@ -1,4 +1,4 @@
-# orrery — storyboard (20 s, 9:16 frame, f.p = progress)
+# orrery — storyboard (20 s, 16:9 frame, f.p = progress)
 
 Camera throughout: slow low orbit, 58 mm. Every frame: deep-black desk world,
 one warm key high right, cold rim back-left, ember sun glowing.
