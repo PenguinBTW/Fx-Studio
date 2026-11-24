@@ -692,7 +692,10 @@ export default defineScene({
         if (age > 0 && age <= 3.5) act.push({ x: d.x - 0.35, z: d.z, t0: plopT });
       }
     }
-    act.sort((a, b) => b.t0 - a.t0);
+    // 8 slots must serve the rings the camera can actually see — fill by
+    // distance to the look point so offscreen plops never evict visible ones
+    const lookZ = leadZ(t) - 1.6;
+    act.sort((a, b) => Math.abs(a.z - lookZ) - Math.abs(b.z - lookZ));
     for (let i2 = 0; i2 < 8; i2++) {
       const r = rings[i2];
       if (i2 < act.length) r.set(act[i2].x, act[i2].z, act[i2].t0);
