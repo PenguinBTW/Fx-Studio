@@ -159,13 +159,16 @@ void main() {
   q.y += drop;
 
   bool inSlabOrig = x >= SLAB_X0 && x <= SLAB_X1 && y >= WATERLINE;
-  // soft coverage (anti-aliased slab outline) + hard gate for uv decisions
+  float inSlabOrigF = smoothstep(SLAB_X0 - 0.004, SLAB_X0 + 0.004, x)
+    * (1.0 - smoothstep(SLAB_X1 - 0.004, SLAB_X1 + 0.004, x))
+    * smoothstep(WATERLINE - 0.004, WATERLINE + 0.004, y);
+  // soft coverage (anti-aliased slab outline); also drives the scar fade
+  // and the crack's continuous uv handoff
   float movedCov = uSlump
     * smoothstep(SLAB_X0 - 0.004, SLAB_X0 + 0.004, q.x)
     * (1.0 - smoothstep(SLAB_X1 - 0.004, SLAB_X1 + 0.004, q.x))
     * smoothstep(WATERLINE - 0.004, WATERLINE + 0.004, q.y)
     * (1.0 - smoothstep(wallTop(q.x) - 0.006, wallTop(q.x) + 0.006, q.y));
-  bool movedCovers = movedCov > 0.5;
 
   float wt = wallTop(x);
   float inWall = 1.0 - smoothstep(wt - 0.004, wt + 0.004, y);
@@ -179,15 +182,14 @@ void main() {
     ice = mix(ice, vec3(0.22, 0.34, 0.50), torn * (1.0 - smoothstep(0.32, 0.44, y - WATERLINE)) * 0.75);
   }
   col = mix(col, ice, inWall);
-  if (inSlabOrig && !movedCovers) {
-    // gap the slab left: darker torn face across the vacated footprint
-    col = mix(col, vec3(0.20, 0.32, 0.46), inWall * uSlump * 0.8);
-  }
+  // scar fades in as the slab vacates — 1-movedCov so it never pops
+  col = mix(col, vec3(0.20, 0.32, 0.46), inSlabOrigF * inWall * uSlump * 0.8 * (1.0 - movedCov));
   // moved slab is composited after the sea pass below — pixels under the
   // waterline belong to the block while it plunges, not the sea.
 
-  // glowing blue fracture — measured in pre-drop uv so it rides the slab down
-  vec2 cuv = movedCovers ? q : vec2(x, y);
+  // glowing blue fracture — uv blends continuously from wall to slab
+  // coordinates with coverage, so the crack never detaches mid-drop
+  vec2 cuv = mix(vec2(x, y), q, movedCov);
   float crackD2 = 1e9;
   crackD2 = min(crackD2, seg(cuv, c0, c1) + (1.0 - clamp(reveal - 0.0, 0.0, 1.0)) * 1e3);
   crackD2 = min(crackD2, seg(cuv, c1, c2) + (1.0 - clamp(reveal - 1.0, 0.0, 1.0)) * 1e3);
@@ -205,8 +207,8 @@ void main() {
   float crackFlicker = 0.85 + 0.15 * sin(t * 37.0 + crackD2 * 4000.0);
   float crackMask = movedCov > 0.001 ? 0.8 * movedCov
                   : inWall * (inSlabOrig && uSlump > 0.001 ? 0.0 : 1.0);
-  col += crackCol * (crackGlow * 1.15 + crackHalo) * crackFlicker
-       * crackMask * (1.0 - uSlump);
+  // glow is added after the slab composite so it is not attenuated by the
+  // moving ice — the fracture stays luminous on the falling block.
 
   // --- sea ---------------------------------------------------------------
   if (y < WATERLINE) {
@@ -257,6 +259,9 @@ void main() {
     slab *= y < WATERLINE ? 0.75 : 1.0;          // dim the submerged part
     col = mix(col, slab, movedCov);
   }
+
+  col += crackCol * (crackGlow * 1.15 + crackHalo) * crackFlicker
+       * crackMask * (1.0 - uSlump);
 
   // --- mist + glitter over the splash -------------------------------------
   float mz = dist * 2.2;
