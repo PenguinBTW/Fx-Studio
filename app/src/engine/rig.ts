@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { ViewportSpace } from './viewport';
 import { type Cam } from './camera3d';
-import { clamp, noise1, TAU, type V3 } from './util';
+import { clamp, hash, noise1, TAU, type V3 } from './util';
 import { W, H } from './gl';
 
 export type CameraMode = 'perspective' | 'isometric' | 'orthographic';
