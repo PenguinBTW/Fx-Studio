@@ -473,8 +473,11 @@ export default defineScene({
       m.uniforms.uT!.value = t;
       m.uniforms.uSway!.value = 1.2 * bloom;
       m.uniforms.uA!.value = bloom;
-      // filaments open outward from the shell — a bloom, not a fade
-      st.barnFil[i]!.scale.setScalar(0.15 + 0.85 * bloom);
+      // filaments open outward from the shell — a bloom, not a fade; xy-only
+      // so their z-plane stays flush with the shell (uniform scale would
+      // pull the verts toward the camera)
+      const bs = 0.15 + 0.85 * bloom;
+      st.barnFil[i]!.scale.set(bs, bs, 1);
     }
 
     // crab — walk the rim, two pauses, claw wave, slip in
