@@ -157,7 +157,7 @@ void main() {
     water += vec3(0.012, 0.02, 0.03) * smear * 0.5;
     // shore edge line
     water += vec3(0.02, 0.028, 0.04) * (1.0 - smoothstep(0.0, 0.012, 0.15 - uv.y));
-    c = mix(c, water, (1.0 - smoothstep(0.0, 0.012, 0.15 - uv.y)) * 0.96);
+    c = mix(c, water, 1.0 - smoothstep(0.0, 0.012, 0.15 - uv.y));
   }
 
   fragColor = vec4(c, 1.0);
