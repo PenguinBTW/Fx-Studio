@@ -183,7 +183,7 @@ void main() {
   // per-vertex fbm shimmer: small in-plane curl flutter, stronger aloft
   vec3 p = position;
   vec3 n = curlNoise3(p * 0.08 + vec3(0.0, uT * 0.06, 0.0), uT * 0.05);
-  p += n * uShimmer * (0.15 + 0.85 * uv.x);
+  p += n * uShimmer * (0.15 + 0.85 * (1.0 - uv.x));
   vec4 wp = modelMatrix * vec4(p, 1.0);
   vWp = wp.xyz;
   gl_Position = projectionMatrix * viewMatrix * wp;
@@ -209,8 +209,9 @@ vec3 ramp(float a) {
 }
 
 void main() {
-  float alt = vUv.x;   // 0 lower edge → 1 upper edge
-  float path = vUv.y;  // along the curtain
+  // Bishop binormal hangs downward: vUv.x = 0 at the TOP edge, 1 at the bottom.
+  float alt = 1.0 - vUv.x;  // 0 lower (bright fringe) → 1 upper (rarefied)
+  float path = vUv.y;       // along the curtain
 
   // precipitation striations: vertical rays flickering along the path,
   // two spatial octaves drifting at different rates on closed-form time
