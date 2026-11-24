@@ -352,7 +352,7 @@ void main() {
   float legL = step(abs(q.x + 0.045 + sway * 0.012), 0.030)
              * step(q.y, 0.30) * step(0.02, q.y) * smoothstep(-0.25, 0.25, sway);
   float legR = step(abs(q.x - 0.045 + sway * 0.012), 0.030)
-             * step(q.y, 0.30) * step(0.02, q.y) * smoothstep(0.25, -0.25, sway);
+             * step(q.y, 0.30) * step(0.02, q.y) * (1.0 - smoothstep(-0.25, 0.25, sway));
   float legs = max(legL, legR);
   float shape = max(max(body, head), legs);
   if (shape < 0.05) discard;
