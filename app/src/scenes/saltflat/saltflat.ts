@@ -13,6 +13,7 @@ const ss = (a: number, b: number, x: number) => {
 
 // --- envelopes (beat times from storyboard.md) -------------------------------
 const walkX = (t: number) => 0.62 - 0.20 * ss(3.0, 17.0, t);              // walker paces left
+const walkMove = (t: number) => ss(2.8, 3.6, t) * (1 - ss(16.4, 17.2, t));  // 1 while striding
 const threadT = (t: number) => ss(3.5, 14.0, t);                          // thread unspool 0→1
 const kiteF = (t: number) => ss(9.8, 10.2, t) * (1 - ss(10.6, 11.4, t));  // kite sun-flash
 const devilT = (t: number) => ss(13.8, 14.6, t) * (1 - ss(15.8, 16.8, t));// salt-devil spin-up
@@ -41,6 +42,7 @@ precision highp float;
 in vec2 vUv;
 uniform float uT;
 uniform float uWalk;    // walker x (authored)
+uniform float uMove;    // walking gate: 1 while striding, 0 in the holds
 uniform float uThread;  // thread unspool 0..1
 uniform float uKite;    // kite flash
 uniform float uDevil;   // salt-devil envelope
@@ -104,13 +106,13 @@ vec3 flatScene(vec2 uv, float t) {
   vec3 sand = mix(vec3(0.88, 0.82, 0.78), vec3(0.94, 0.90, 0.86), uv.y);
   sand *= 0.92 + 0.08 * n2(uv * vec2(40.0, 90.0));
 
-  // polygon cracks — voronoi cells enlarge toward the bottom edge (perspective)
-  float zoom = mix(26.0, 4.5, smoothstep(0.0, 0.60, uv.y));
-  vec2 vf = voro(uv * zoom + vec2(0.0, t * 0.02));
+  // polygon cracks — vertical compress toward the horizon (monotone warp, no fold)
+  vec2 vv = vec2(uv.x * 20.0, uv.y * 20.0 / (0.35 + uv.y * 1.2)) + vec2(0.0, t * 0.02);
+  vec2 vf = voro(vv);
   float crack = 1.0 - smoothstep(0.02, 0.09, vf.y - vf.x);
   sand = mix(sand, vec3(0.62, 0.58, 0.55), crack * (0.55 + 0.25 * (1.0 - uv.y)));
   // soft per-cell tint so plates read as separate pans
-  sand *= 0.94 + 0.06 * n2(floor(uv * zoom) * 3.7);
+  sand *= 0.94 + 0.06 * n2(floor(vv) * 3.7);
   col = mix(col, sand, flatA);
 
   // crystal glints near the camera — sparse twinkle cells
@@ -131,11 +133,11 @@ vec3 flatScene(vec2 uv, float t) {
   // --- walker silhouette (~2% frame) pacing left, legs striding
   {
     vec2 wp = vec2(uWalk, 0.385);
-    float bob = 0.0025 * abs(sin(t * 6.5));
+    float bob = 0.0025 * abs(sin(t * 6.5)) * uMove;
     float body = 1.0 - smoothstep(0.0035, 0.0055, abs(uv.x - wp.x));
     body *= smoothstep(wp.y - 0.002, wp.y, uv.y) * (1.0 - smoothstep(wp.y + 0.014 + bob, wp.y + 0.020 + bob, uv.y));
     float head = 1.0 - smoothstep(0.0035, 0.0050, length(uv - (wp + vec2(0.0, 0.019 + bob))));
-    float stride = sin(t * 6.5) * 0.006;
+    float stride = sin(t * 6.5) * 0.006 * uMove;
     float legs = (1.0 - smoothstep(0.0020, 0.0035, abs(uv.x - wp.x + stride)))
                * (1.0 - smoothstep(wp.y - 0.010, wp.y, uv.y)) * step(wp.y - 0.012, uv.y)
                + (1.0 - smoothstep(0.0020, 0.0035, abs(uv.x - wp.x - stride)))
@@ -148,7 +150,7 @@ vec3 flatScene(vec2 uv, float t) {
   {
     vec2 kpos = vec2(0.66, 0.735 + 0.010 * sin(t * 1.3));
     float n = clamp((uv.y - 0.385) / (kpos.y - 0.385), 0.0, 1.0);
-    float tx = uWalk + (kpos.x - uWalk) * n + 0.015 * sin(n * 9.0 + uv.y * 55.0 + t * 2.4);
+    float tx = uWalk + (kpos.x - uWalk) * n + 0.015 * sin(n * 9.0 + uv.y * 55.0 + t * 2.4) * 4.0 * n * (1.0 - n);
     float onY = smoothstep(0.383, 0.387, uv.y) * (1.0 - smoothstep(kpos.y - 0.002, kpos.y, uv.y));
     float lit = step(n, uThread);                                 // unspooled so far
     float td = abs(uv.x - tx);
@@ -162,13 +164,13 @@ vec3 flatScene(vec2 uv, float t) {
     vec3 kcol = mix(vec3(0.30, 0.22, 0.38), vec3(0.95, 0.55, 0.30), 0.35 + 0.65 * uKite);
     col = mix(col, kcol, kite);
     // star flash rays when it catches the sun
-    float rays = (exp(-kd.x * kd.x * 6000.0) + exp(-kd.y * kd.y * 6000.0)) * uKite;
+    float rays = (exp(-kd.x * kd.x * 6000.0) + exp(-kd.y * kd.y * 6000.0)) * exp(-dot(kd, kd) * 180.0) * uKite;
     col += vec3(1.0, 0.9, 0.65) * rays * 0.20;
   }
 
   // --- salt-devil: brief dust spiral right-of-center, then collapse
   {
-    vec2 dc = vec2(0.30, 0.42);
+    vec2 dc = vec2(0.72, 0.42);
     vec2 dq = uv - dc;
     float hh = clamp(dq.y / 0.14, 0.0, 1.0);
     float w = 0.030 + 0.050 * hh;
@@ -183,7 +185,7 @@ vec3 flatScene(vec2 uv, float t) {
   // --- far birds crossing the pink band once (small Vs)
   for (int i = 0; i < 4; i++) {
     float fi = float(i);
-    vec2 b = vec2(1.05 - 0.55 * uBirds + fi * 0.028, 0.74 + fi * 0.017 + 0.004 * sin(t * 3.0 + fi));
+    vec2 b = vec2(1.05 - 0.55 * uBirds + fi * 0.028, 0.72 + fi * 0.014 + 0.004 * sin(t * 3.0 + fi));
     vec2 bd = uv - b;
     float wing = abs(bd.y - abs(bd.x) * 0.55 - 0.002 * sin(t * 9.0 + fi * 2.0));
     float bird = (1.0 - smoothstep(0.0015, 0.0035, wing)) * (1.0 - smoothstep(0.010, 0.016, abs(bd.x)));
@@ -206,7 +208,7 @@ export default class SaltflatScene extends Scene {
   private cam = new THREE.PerspectiveCamera(40, 16 / 9, 0.1, 400);
   private bu = {
     uT: { value: 0 }, uWalk: { value: 0.62 }, uThread: { value: 0 },
-    uKite: { value: 0 }, uDevil: { value: 0 }, uHareB: { value: 0 },
+    uKite: { value: 0 }, uDevil: { value: 0 }, uHareB: { value: 0 }, uMove: { value: 0 },
     uHareU: { value: 0 }, uBirds: { value: 0 }, uSun: { value: 0.625 },
   };
   private p = new THREE.Vector3();
@@ -230,6 +232,7 @@ export default class SaltflatScene extends Scene {
 
     this.bu.uT.value = t;
     this.bu.uWalk.value = walkX(t);
+    this.bu.uMove.value = walkMove(t);
     this.bu.uThread.value = threadT(t);
     this.bu.uKite.value = kite;
     this.bu.uDevil.value = devilT(t);
