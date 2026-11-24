@@ -207,11 +207,12 @@ void main() {
   for (int i = 0; i < 26; i++) {
     float fi = float(i);
     if (h1(fi * 5.3) > thick) continue;
-    if (h1(fi * 7.7 + 3.0) < drop) continue;
+    float away = sstep(h1(fi * 7.7 + 3.0) - 0.10, h1(fi * 7.7 + 3.0), drop); // fade out, don't pop
+    if (away > 0.99) continue;
     float alive, landed;
     vec2 p = mothPos(fi, t, alive, landed);
     if (alive <= 0.01) continue;
-    float m = mothAt(uv, p, fi, t) * alive;
+    float m = mothAt(uv, p, fi, t) * alive * (1.0 - away);
     moths += m;
     mothsOnLamp += m * (1.0 - sstep(0.7, 1.0, sdist(uv, LP, vec2(LR * 1.6 / ASPECT, LR * 1.6))));
     vec2 cp = p - (CAT + vec2(0.012, 0.048)); cp.x *= ASPECT;
