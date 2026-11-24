@@ -10,7 +10,10 @@
 | 15–20 | same | settle: wind still strong, crow still holding; a bat flickers past at ~17.5 |
 
 Camera: low and near-static, slight drift along the wall (x -0.6 → +0.6 over the
-scene), crow held near compositional center.
+scene), crow held near compositional center. Lens ~40mm-equivalent
+(PerspectiveCamera fov 40, z 30); focal plane on the stile/crow mid-ground —
+sky and far field stay flat by design (SDF quad, no DoF pass); crow's rock and
+the cane tear are the focal accents of the two moving beats.
 
 Captions (HUD fig cards):
 - 01 (0s) "WIND AT THE FIELD EDGE"

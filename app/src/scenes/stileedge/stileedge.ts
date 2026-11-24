@@ -35,7 +35,7 @@ const BACK_FRAG = /* glsl */ `
 precision highp float;
 in vec2 vUv;
 out vec4 fragColor;
-uniform float uT, uGust, uRab, uBat1, uBat2, uBlow;
+uniform float uT, uGust, uRab, uBat1, uBat2, uBlow, uGustInt;
 
 float h1(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 float h2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -85,7 +85,7 @@ void main() {
     float twig = 1.0 - smoothstep(0.001, 0.005, sdSeg(uv, trB, trB + vec2(-0.03 - lean * 0.4, 0.045)));
     vec2 cc = vec2(0.655 + lean * 0.9, 0.685 + 0.004 * sin(t * 1.7));
     float can = ellipse(uv, cc, vec2(0.105 + lean * 0.5, 0.052));
-    can = smoothstep(0.012, -0.02, can + (vnoise(uv * 90.0) - 0.5) * 0.05);
+    can = 1.0 - smoothstep(-0.02, 0.012, can + (vnoise(uv * 90.0) - 0.5) * 0.05);
     col = mix(col, vec3(0.05, 0.055, 0.04), clamp(trunk + twig + can, 0.0, 1.0) * 0.9);
   }
 
@@ -129,10 +129,23 @@ void main() {
   // leaf debris sliding along the path, stronger on the gust
   for (int k = 0; k < 4; k++) {
     float fk = float(k) + 40.0;
-    float lx = fract(0.2 + fk * 0.31 + t * 0.045 * (0.6 + g));
+    float lx = fract(0.2 + fk * 0.31 + 0.045 * (0.6 * t + uGustInt));
     vec2 lp = vec2(lx, 0.30 - lx * 0.20 + 0.02 * h1(fk));
     float lf = 1.0 - smoothstep(0.002, 0.006, ellipse(uv, lp, vec2(0.006, 0.003)));
     col = mix(col, vec3(0.16, 0.12, 0.06), lf * 0.55 * g);
+  }
+
+  // ---- rabbit loping along the wall top, left to right; drawn BEFORE the
+  // stile so the uprights occlude it as it passes behind, then off-frame
+  if (uRab > 0.0 && uRab < 1.0) {
+    float rx = 0.08 + uRab * 0.97;
+    float hop = abs(sin(uRab * 22.0)) * 0.014;
+    vec2 rp = vec2(rx, 0.558 + hop);
+    float rb = 1.0 - smoothstep(0.004, 0.008, ellipse(uv, rp, vec2(0.016, 0.009)));
+    float re = min(sdSeg(uv, rp + vec2(0.006, 0.008), rp + vec2(0.008, 0.020)),
+                   sdSeg(uv, rp + vec2(0.010, 0.008), rp + vec2(0.012, 0.019)));
+    float head = 1.0 - smoothstep(0.003, 0.006, ellipse(uv, rp + vec2(0.013, -0.002), vec2(0.007, 0.006)));
+    col = mix(col, vec3(0.04, 0.035, 0.03), clamp(rb + (1.0 - smoothstep(0.001, 0.004, re)) + head, 0.0, 1.0) * 0.9);
   }
 
   // ---- the stile: two uprights, top rail, two worn step planks
@@ -152,13 +165,15 @@ void main() {
   }
 
   // ---- bramble canes arcing left over the step (from lower right)
+  vec2 caneTip5 = vec2(0.0);
   for (int k = 0; k < 6; k++) {
     float fk = float(k);
-    if (k == 5 && uBlow > 0.0) continue;          // this cane tears away at the gust
     float bx = 0.575 + 0.045 * fk + 0.02 * h1(fk * 7.1);
     float sw = lean * (0.6 + 0.5 * h1(fk * 3.3)) + 0.006 * sin(t * 2.6 + fk * 1.7);
     vec2 mid = vec2(bx - 0.05, 0.47 + 0.05 * h1(fk * 5.9));
     vec2 tip = vec2(bx - 0.13 - 0.04 * h1(fk * 9.7) - sw * 0.5, 0.50 + 0.09 * h1(fk * 11.3));
+    if (k == 5) caneTip5 = tip;
+    if (k == 5 && uBlow > 0.0) continue;          // this cane tears away at the gust
     float cane = min(sdSeg(uv, vec2(bx, 0.415), mid), sdSeg(uv, mid, tip));
     col = mix(col, vec3(0.055, 0.05, 0.035), (1.0 - smoothstep(0.0015, 0.0045, cane)) * 0.9);
     // a few leaf dots along the upper half
@@ -168,24 +183,13 @@ void main() {
       col = mix(col, vec3(0.07, 0.09, 0.04), leaf * 0.7);
     }
   }
-  // the torn cane tumbling across the frame
+  // the torn cane tumbling across the frame — starts at the rooted cane's tip
+  // so the gust reads as carrying it away, not swapping in a new object
   if (uBlow > 0.0 && uBlow < 1.0) {
-    vec2 cp = vec2(0.68 + uBlow * 0.55, 0.52 + 0.10 * sin(uBlow * 6.0) + uBlow * 0.06);
+    vec2 cp = caneTip5 + vec2(uBlow * 0.55, 0.10 * sin(uBlow * 6.0) + uBlow * 0.06);
     float tum = sin(uBlow * 12.0);
     float cane = sdSeg(uv, cp - vec2(0.03, tum * 0.02), cp + vec2(0.03, tum * 0.02));
     col = mix(col, vec3(0.055, 0.05, 0.035), (1.0 - smoothstep(0.002, 0.005, cane)) * (1.0 - uBlow));
-  }
-
-  // ---- rabbit loping along the wall top, left to right
-  if (uRab > 0.0 && uRab < 1.0) {
-    float rx = 0.08 + uRab * 0.32;
-    float hop = abs(sin(uRab * 22.0)) * 0.014;
-    vec2 rp = vec2(rx, 0.558 + hop);
-    float rb = 1.0 - smoothstep(0.004, 0.008, ellipse(uv, rp, vec2(0.016, 0.009)));
-    float re = min(sdSeg(uv, rp + vec2(0.006, 0.008), rp + vec2(0.008, 0.020)),
-                   sdSeg(uv, rp + vec2(0.010, 0.008), rp + vec2(0.012, 0.019)));
-    float head = 1.0 - smoothstep(0.003, 0.006, ellipse(uv, rp + vec2(0.013, -0.002), vec2(0.007, 0.006)));
-    col = mix(col, vec3(0.04, 0.035, 0.03), clamp(rb + (1.0 - smoothstep(0.001, 0.004, re)) + head, 0.0, 1.0) * 0.9);
   }
 
   // ---- the crow on the top rail: rocks, tail counter-tips, one wing flare
@@ -238,6 +242,7 @@ export default class StileedgeScene extends Scene {
   private bu = {
     uT: { value: 0 }, uGust: { value: 0 }, uRab: { value: 0 },
     uBat1: { value: 0 }, uBat2: { value: 0 }, uBlow: { value: 0 },
+    uGustInt: { value: 0 },
   };
   private p = new THREE.Vector3();
 
@@ -268,29 +273,42 @@ export default class StileedgeScene extends Scene {
     this.bu.uBat1.value = bat1U(t);
     this.bu.uBat2.value = bat2U(t);
     this.bu.uBlow.value = blowU(t);
+    // ∫gust dt (tanh-approximate CDF of the gaussian gust envelope) so leaf
+    // drift stays monotone: speed eases with the gust but never reverses
+    const ug = (t - 14) / Math.sqrt(1.2);
+    this.bu.uGustInt.value = 0.35 * t + 0.65 * Math.sqrt(1.2) * 0.5 * (1 + Math.tanh(1.6 * ug));
 
     if (typeof window !== 'undefined') {
       const P = (window as any).__motion || (window as any).__pdoom;
       if (P?.probe && P.textProbes && P.recordText) {
         const W = P.width || 1920, H = P.height || 1080;
         this.cam.updateMatrixWorld();
-        aToV(0.50, 0.735, this.p).project(this.cam);
-        const cx = (this.p.x * 0.5 + 0.5) * W, cy = (0.5 - this.p.y * 0.5) * H;
+        // probe boxes are projected silhouette corners, not fixed px — they
+        // cover the whole silhouette and scale with export resolution
+        const boxFor = (ux0: number, uy0: number, ux1: number, uy1: number) => {
+          aToV(ux0, uy0, this.p).project(this.cam);
+          const x0 = (this.p.x * 0.5 + 0.5) * W, y0 = (0.5 - this.p.y * 0.5) * H;
+          aToV(ux1, uy1, this.p).project(this.cam);
+          const x1 = (this.p.x * 0.5 + 0.5) * W, y1 = (0.5 - this.p.y * 0.5) * H;
+          const l = Math.min(x0, x1), r2 = Math.max(x0, x1);
+          const tp = Math.min(y0, y1), bt = Math.max(y0, y1);
+          return { bbox: [l, tp, r2, bt] as number[], w: r2 - l, h: bt - tp, cx: (l + r2) / 2, cy: (tp + bt) / 2 };
+        };
+        const crowB = boxFor(0.455, 0.655, 0.545, 0.745);
         P.textProbes.push({
           frameIdx: P.currentFrameIdx ?? 0, t, text: 'crow',
           fontFamily: 'Archivo, sans-serif', fontPx: 20,
           fillStyle: '#14121a', globalAlpha: 0.9, layerId: 'stileedge',
-          bbox: [cx - 22, cy - 18, cx + 22, cy + 12],
-          w: 44, h: 30, cx, cy, hPct: (30 / H) * 100, isStroke: false,
+          bbox: crowB.bbox,
+          w: crowB.w, h: crowB.h, cx: crowB.cx, cy: crowB.cy, hPct: (crowB.h / H) * 100, isStroke: false,
         });
-        aToV(0.50, 0.60, this.p).project(this.cam);
-        const sx = (this.p.x * 0.5 + 0.5) * W, sy = (0.5 - this.p.y * 0.5) * H;
+        const stilB = boxFor(0.42, 0.40, 0.58, 0.72);
         P.textProbes.push({
           frameIdx: P.currentFrameIdx ?? 0, t, text: 'stile',
           fontFamily: 'Archivo, sans-serif', fontPx: 20,
           fillStyle: '#2a2318', globalAlpha: 0.75, layerId: 'stileedge',
-          bbox: [sx - 20, sy - 18, sx + 20, sy + 12],
-          w: 40, h: 30, cx: sx, cy: sy, hPct: (30 / H) * 100, isStroke: false,
+          bbox: stilB.bbox,
+          w: stilB.w, h: stilB.h, cx: stilB.cx, cy: stilB.cy, hPct: (stilB.h / H) * 100, isStroke: false,
         });
       }
     }

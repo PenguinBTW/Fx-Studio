@@ -25,13 +25,13 @@
       "scene": "stileedge/stileedge",
       "id": "act-rabbit",
       "start": 8.0,
-      "end": 13.5,
+      "end": 12.5,
       "caption": { "fig": "03", "text": "A RABBIT WORKS THE WALL", "dur": 2.4 }
     },
     {
       "scene": "stileedge/stileedge",
       "id": "act-gust",
-      "start": 13.5,
+      "start": 12.5,
       "end": 16.0,
       "caption": { "fig": "04", "text": "THE GUST TAKES A CANE", "dur": 2.2 }
     },
