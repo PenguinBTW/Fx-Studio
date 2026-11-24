@@ -1,0 +1,11 @@
+{
+  "project": "frostfern",
+  "entries": [
+    {
+      "scene": "frostfern/frostfern",
+      "id": "frost_fern",
+      "start": 0.0,
+      "end": 20.0
+    }
+  ]
+}
