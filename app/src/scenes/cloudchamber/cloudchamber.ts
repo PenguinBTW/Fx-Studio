@@ -13,6 +13,7 @@ import { GLSL_COMMON } from '../../engine/glsl/common';
 import { orbitPosition } from '../../engine/rig';
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
+const hash1js = (n: number) => { const s = Math.sin(n * 127.1) * 43758.5453123; return s - Math.floor(s); };
 const smooth = (a: number, b: number, x: number) => {
   const t = clamp01((x - a) / (b - a));
   return t * t * (3 - 2 * t);
@@ -159,10 +160,21 @@ export default class CloudChamberScene extends Scene {
     // very slow dolly-in at a slight oblique through the shared camera rig:
     // shrinking orbit radius descends toward the chamber; slow yaw drift keeps
     // the parallax alive.
+    // Keep the projection honest for whatever shape the frame is rendered at —
+    // a constructor-time aspect would squash portrait/ultrawide exports.
+    const aspect = out.width / out.height;
+    this.cam.aspect = aspect;
+    this.cam.updateProjectionMatrix();
+
     const r = 12.6 - 2.8 * smooth(1.0, 18.0, t);
     const pitch = 0.88 + 0.04 * smooth(1.0, 18.0, t) + 0.02 * Math.sin(t * 0.07);
     const yaw = 0.06 * Math.sin(t * 0.09); // centred on +z: front-on with a slow drift
-    const target: [number, number, number] = [0.4 * Math.sin(t * 0.045), 0, -0.5];
+    // Track 6 (the warm-gold colour event) enters from the right; as the frame
+    // narrows, pull the aim toward its source so the entrance stays in shot.
+    // Same seed math the fragment shader uses for the source x — keep in sync.
+    const goldX = -7.5 + 15 * hash1js(6 * 11.17 + 4.2);
+    const pull = Math.min(0.65, Math.max(0.2, 1.1 - aspect * 0.5));
+    const target: [number, number, number] = [0.4 * Math.sin(t * 0.045) + goldX * pull, 0, -0.5];
     const pos = orbitPosition(target, r, pitch, yaw);
     this.cam.position.set(pos[0], pos[1], pos[2]);
     this.cam.lookAt(target[0], target[1], target[2]);
