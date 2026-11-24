@@ -1,0 +1,13 @@
+{
+  "project": "eclipse",
+  "entries": [
+    {
+      "scene": "eclipse/eclipse",
+      "id": "eclipse",
+      "start": 0.0,
+      "end": 20.0,
+      "caption": { "fig": "01", "text": "ECLIPSE", "dur": 3.5 }
+    }
+  ],
+  "transitions": []
+}
