@@ -139,9 +139,14 @@ while made < NSPIKE and i < NSPIKE * 4:
         continue  # sparse gaps — organic clustering
     d = (dx, dy, dz)
     px, py, pz = disp(d)
-    # seat on the inner wall: displaced point pushed inward
+    # Only seat where the shell actually exists: the jagged mouth cut removes
+    # faces above rim_cut — a spike placed there hangs in air.
+    if pz > rim_cut(dx, dy) - 0.08:
+        continue
+    # seat buried below the inner wall (solidify pulls it inward ~0.07 —
+    # 0.13 puts the base hexagon fully inside the rock on every spike)
     dl = math.sqrt(px**2 + py**2 + pz**2)
-    bx, by, bz = px - px/dl * WALL, py - py/dl * WALL, pz - pz/dl * WALL
+    bx, by, bz = px - px/dl * (WALL + 0.03), py - py/dl * (WALL + 0.03), pz - pz/dl * (WALL + 0.03)
     ln = math.sqrt(bx**2 + by**2 + bz**2)
     ax, ay, az = -bx/ln, -by/ln, -bz/ln          # spike axis → centre
     # tilt jitter so spikes fan naturally
