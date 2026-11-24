@@ -124,7 +124,7 @@ void main() {
 
   // near-black water with the faintest top-light
   vec3 c = vec3(0.008, 0.009, 0.013)
-         + vec3(0.012, 0.013, 0.018) * (1.0 - smoothstep(0.30, 1.0, p.y));
+         + vec3(0.012, 0.013, 0.018) * smoothstep(0.30, 1.0, p.y);
 
   // the two drops
   float amber1;
@@ -136,7 +136,7 @@ void main() {
   float s2 = strike(pa, vec2(C2.x * aspect, C2.y), t - T_HIT2);
 
   // top-light catches the bloom's face: brighter toward frame top
-  float top = 0.55 + 0.65 * (1.0 - p.y);
+  float top = 0.55 + 0.65 * p.y;
 
   c += INK * min(d1 + d2, 1.45) * top;
   c += AMBER * amber1 * top * 0.55;
