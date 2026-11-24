@@ -72,7 +72,9 @@ void main() {
   col += vec3(0.42, 0.16, 0.03) * exp(-(y - 0.56) * (y - 0.56) * 90.0);
 
   // pale cold planet — the single cool accent, slowly brightening
-  vec2 pd = vec2(x - 0.55, y - 0.72);
+  // uv distances are anisotropic (the plane is ~2.6:1) — scale x so the
+  // disc stays circular in world units
+  vec2 pd = vec2((x - 0.55) * 2.63, y - 0.72);
   float pr = length(pd);
   float planet = (1.0 - smoothstep(0.010, 0.014, pr)) + 0.35 * exp(-pr * pr * 3000.0);
   col += vec3(0.62, 0.70, 0.82) * planet * (0.25 + 0.75 * smoothstep(2.0, 10.0, t));
