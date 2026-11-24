@@ -146,8 +146,10 @@ function anchorAt(t: number, pos: THREE.Vector3, off: THREE.Vector3) {
   let i = 0;
   for (let k = 0; k < ANCH.length; k++) if (t >= ANCH[k]!.t) i = k;
   const cur = ANCH[i]!;
-  const blendT = cur.t - 0.8;
-  const w = i === 0 ? 1 : smooth01((t - blendT) / 1.0);
+  // ease the whole approach: the move ends exactly at the key, so the rig
+  // settles on the next site instead of snapping between sampled waypoints
+  const blendT = cur.t - 1.6;
+  const w = i === 0 ? 1 : smooth01((t - blendT) / 1.6);
   const prev = ANCH[Math.max(0, i - 1)]!;
   pos.lerpVectors(prev.p, cur.p, w);
   off.lerpVectors(prev.o, cur.o, w);
