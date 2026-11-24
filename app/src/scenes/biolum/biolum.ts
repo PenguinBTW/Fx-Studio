@@ -278,7 +278,9 @@ export default class BiolumScene extends Scene {
         // foam disperses as it recedes: wobble grows with time since break
         const spread = 1 + Math.max(0, lt - c.tc) * 0.35;
         const wob = spread * (0.12 * Math.sin(x * 0.7 + c.phase * 2) + 0.06 * Math.sin(x * 1.9 + lt * 0.25));
-        fpAttr.setXYZ(s, x, fyi + wob, 0);
+        // clamp per-vertex too — the dispersing wobble must not lift peaks
+        // above the sea band into the sky
+        fpAttr.setXYZ(s, x, Math.min(SPAWN_Y - 0.2, fyi + wob), 0);
         const edge = Math.sin((Math.PI * s) / (LINE_N - 1));
         const b = fgi * (0.25 + 0.75 * edge);
         fcAttr.setXYZ(s, CYAN.r * b * 0.5 + BONE.r * b * 0.5,
