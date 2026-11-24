@@ -133,13 +133,19 @@ def displace(obj, amp, seed=0.0):
             + math.sin(c.z * 4.6 - c.y * 2.2) * 0.15 \
             + math.sin(c.x * 7.3 + c.z * 6.1 - c.y * 5.4 + seed) * 0.13 \
             + math.sin(c.x * 13.1 - c.z * 11.3 + c.y * 9.7) * 0.05
+        # terraced strata: partial quantization reads as layered bedding edges
+        n = n * 0.62 + (math.floor(n * 5.0 + 0.5) / 5.0) * 0.38
         v.co += c.normalized() * n * amp
 
 def vcolor_noise(obj, seed, lo=0.45):
-    """mottled vertex colours multiplying the base colour — exported as COLOR_0"""
+    """mottled vertex colours multiplying the base colour — exported as COLOR_0.
+    Other colour attributes must go first: joined objects can carry their own,
+    and a second attribute exports as COLOR_1 which three.js ignores."""
+    for a in list(obj.data.color_attributes):
+        obj.data.color_attributes.remove(a)
     ca = obj.data.color_attributes.new('Col', 'FLOAT_COLOR', 'POINT')
     for i, v in enumerate(obj.data.vertices):
-        c = v.co
+        c = v.co + obj.location
         n = lo + (1.0 - lo) * (0.5 + 0.5 * math.sin(c.x * 3.1 + c.y * 2.3 + c.z * 4.7 + seed))
         ca.data[i].color = (n, n, n, 1)
 
@@ -148,8 +154,7 @@ def rock_blob(loc, radius, squash, seed):
     o = bpy.context.object
     o.scale = (squash[0], squash[2], squash[1])
     bpy.ops.object.transform_apply(scale=True)
-    displace(o, 0.16 * radius, seed)
-    vcolor_noise(o, seed)
+    displace(o, 0.17 * radius, seed)
     o.data.materials.append(ROCK)
     o.data.materials.append(ROCKDRY)
     # wet below the waterline (authored y < -0.9), dry above — face split
@@ -194,7 +199,7 @@ prim('tower', 'box', (0, 0.85, 1.86), (0.85, 1.7, 0.12), matl=DOOR_M, verts=16, 
 prim('tower', 'sphere', (0, 1.72, 1.86), (0.43,), matl=DOOR_M, verts=20)
 prim('tower', 'cyl', (0.28, 0.9, 1.94), (0.035, 0.06), rot=(math.pi/2, 0, 0), matl=BRASS, verts=12)
 # window slots climbing the drum (two, offset) — centred on the local radius
-for (wy, wx, wz) in ((2.2, 0.42, 1.72), (5.3, -0.65, -1.38)):
+for (wy, wx, wz) in ((2.2, 0.44, 1.80), (5.3, -0.68, -1.45)):
     prim('tower', 'box', (wx, wy, wz), (0.30, 0.55, 0.10), rot=(0, math.atan2(wx, wz), 0),
          matl=WINDOW_M, verts=12, bevel=0.02)
 
@@ -246,6 +251,10 @@ for name, p in parts.items():
     else:
         parts[name]['root'] = p['objs'][0]
     root = parts[name]['root']
+    if name == 'rock':
+        # mottle AFTER the join so every vertex (ledges, cap, skerries) gets
+        # one consistent colour attribute
+        vcolor_noise(root, 0.7)
     root.name = name
     root['fx_part'] = name
 
@@ -255,4 +264,5 @@ for p in parts.values():
     except Exception: pass
 print('[export] parts:', ', '.join(parts.keys()))
 bpy.ops.export_scene.gltf(filepath=os.path.join(HERE, 'model.glb'), export_format='GLB',
-                          export_extras=True, export_yup=True, use_selection=True)
+                          export_extras=True, export_yup=True, use_selection=True,
+                          export_vertex_color='ACTIVE', export_all_vertex_colors=False)

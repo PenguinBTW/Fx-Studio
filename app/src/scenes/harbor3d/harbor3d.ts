@@ -18,14 +18,19 @@ const WATER_Y = -0.9;
 const BEAM_PERIOD = 8;                            // seconds per beam rotation
 const beamYaw = (t: number) => (t / BEAM_PERIOD) * TAU;
 
-// camera: low slow orbit, drifting in and rising a touch
+// camera: low slow orbit, drifting in and rising a touch. The look-at is
+// shifted along the CAMERA's right vector so the tower holds the left third
+// of frame throughout the orbit (a fixed world offset slides as we circle).
 const camAt = (t: number) => {
   const yaw = -0.65 + t * 0.055;
   const radius = 30 - t * 0.28;
   const y = 2.6 + t * 0.07 + Math.sin(t * 0.21) * 0.35;
-  // look past the tower so it holds the left third and the beam sweeps open sea
-  const target = new THREE.Vector3(5.5, 5.0 + t * 0.05, 0);
-  return { pos: new THREE.Vector3(Math.cos(yaw) * radius, y, Math.sin(yaw) * radius), target, fov: 38 };
+  const pos = new THREE.Vector3(Math.cos(yaw) * radius, y, Math.sin(yaw) * radius);
+  const aim = new THREE.Vector3(0, 5.0 + t * 0.05, 0);
+  const fwd = aim.clone().sub(pos).normalize();
+  const right = new THREE.Vector3().crossVectors(fwd, new THREE.Vector3(0, 1, 0)).normalize();
+  const target = aim.addScaledVector(right, pos.distanceTo(aim) * 0.22);
+  return { pos, target, fov: 38 };
 };
 
 // swell: closed-form sum of three directional waves + a chop term — no sim
@@ -139,6 +144,9 @@ export default class HarborlightScene extends Scene {
   private waterPos!: THREE.BufferAttribute;
   private beamGroup = new THREE.Group();
   private spot!: THREE.SpotLight;
+  private foamMat!: THREE.ShaderMaterial;
+  private dust!: THREE.Points;
+  private dustSeed!: Float32Array;
   private gulls: { g: THREE.Group; wings: [THREE.Mesh, THREE.Mesh] }[] = [];
   private p = new THREE.Vector3();
 
@@ -185,13 +193,63 @@ export default class HarborlightScene extends Scene {
     wg.rotateX(-Math.PI / 2);
     this.waterPos = wg.attributes.position as THREE.BufferAttribute;
     this.water = new THREE.Mesh(wg, new THREE.MeshStandardMaterial({
-      color: new THREE.Color(0x1a3547),
-      roughness: 0.2,
+      color: new THREE.Color(0x234a63),
+      roughness: 0.15,
       metalness: 0.0,
       envMapIntensity: 0,
     }));
     this.water.position.y = WATER_Y;
     this.scene3D.add(this.water);
+
+    // --- foam: additive flecks ringing the rock waterline + skerries,
+    // pulsing on the same swell terms so they read as wash, not snow
+    const FOAM_FRAG = /* glsl */ `
+      precision highp float;
+      in vec2 vUv;
+      in vec3 vWp;
+      out vec4 fragColor;
+      uniform float uT;
+      float h1(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+      void main() {
+        float d = length(vUv - 0.5) * 2.0;
+        float blob = smoothstep(1.0, 0.15, d);
+        float ph = h1(floor(vWp.x * 3.7) + floor(vWp.z * 2.9) * 57.0);
+        float pulse = 0.30 + 0.70 * pow(0.5 + 0.5 * sin(uT * 0.9 + ph * 6.28), 2.0);
+        float a = blob * pulse * 0.55;
+        fragColor = vec4(vec3(0.62, 0.66, 0.68) * a, a);
+      }`;
+    const foamMat = new THREE.ShaderMaterial({
+      glslVersion: THREE.GLSL3,
+      uniforms: { uT: { value: 0 } },
+      vertexShader: /* glsl */ `
+        varying vec2 vUv; varying vec3 vWp;
+        void main() {
+          vUv = uv;
+          vec4 wp = modelMatrix * vec4(position, 1.0);
+          vWp = wp.xyz;
+          gl_Position = projectionMatrix * viewMatrix * wp;
+        }`,
+      fragmentShader: FOAM_FRAG,
+      transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
+    });
+    this.foamMat = foamMat;
+    const foamGeo = new THREE.PlaneGeometry(1.4, 0.9);
+    const foamAt = (cx: number, cz: number, r0: number, n: number, seed: number) => {
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * TAU + seed;
+        const rr = r0 + Math.sin(i * 12.9898 + seed) * 0.5;
+        const m = new THREE.Mesh(foamGeo, foamMat);
+        m.position.set(cx + Math.cos(a) * rr, WATER_Y + 0.22, cz + Math.sin(a) * rr);
+        m.rotation.x = -Math.PI / 2;
+        m.rotation.z = a + Math.sin(seed + i) * 0.6;
+        const s = 0.8 + 0.5 * Math.sin(i * 7.13 + seed * 2.1);
+        m.scale.setScalar(s);
+        this.scene3D.add(m);
+      }
+    };
+    foamAt(0, 0, 4.1, 16, 0.4);
+    foamAt(-13.5, 11.0, 1.7, 7, 2.1);
+    foamAt(11.0, -9.5, 1.5, 6, 4.6);
 
     // --- lighting: cold ambient + moon fill + the lamp's warm spot
     this.scene3D.add(new THREE.AmbientLight(new THREE.Color(0x24344a), 0.85));
@@ -199,7 +257,7 @@ export default class HarborlightScene extends Scene {
     moon.position.set(-60, 50, -40);
     this.scene3D.add(moon);
     // low sea-light kick so the swell picks up silhouettes and faint glints
-    const seaKick = new THREE.DirectionalLight(new THREE.Color(0x2e4460), 0.45);
+    const seaKick = new THREE.DirectionalLight(new THREE.Color(0x2e4460), 0.6);
     seaKick.position.set(40, 6, 60);
     this.scene3D.add(seaKick);
     // cool rim from behind-left to separate the tower from the sky
@@ -207,7 +265,7 @@ export default class HarborlightScene extends Scene {
     rim.position.set(-30, 20, -55);
     this.scene3D.add(rim);
     // grazing horizon sheen so the swell catches specular crests
-    const sheen = new THREE.DirectionalLight(new THREE.Color(0x3a5570), 0.3);
+    const sheen = new THREE.DirectionalLight(new THREE.Color(0x3a5570), 0.5);
     sheen.position.set(25, 3, -60);
     this.scene3D.add(sheen);
     // soft camera-side fill so the whitewash reads instead of clipping to black
@@ -244,8 +302,32 @@ export default class HarborlightScene extends Scene {
     // apex meets the lamp; flip if needed via scale
     cone.scale.y = -1;                          // wide end outward
     cone.position.set(33, 0, 0);
+    // a tighter, brighter core shaft nested inside the outer wash
+    const core = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.1, 0.07, 62, 16, 1, true),
+      (cone.material as THREE.ShaderMaterial).clone(),
+    );
+    core.position.set(31, 0, 0);
+    core.rotation.z = Math.PI / 2;
+    core.scale.y = -1;
     this.beamGroup.position.copy(LAMP);
-    this.beamGroup.add(cone);
+    this.beamGroup.add(cone, core);
+    // dust motes drifting through the shaft — points in beam-local space
+    const dustN = 42;
+    const dustPos = new Float32Array(dustN * 3);
+    this.dustSeed = new Float32Array(dustN * 3);
+    for (let i = 0; i < dustN; i++) {
+      this.dustSeed[i * 3] = (i * 7.37) % 60;              // x phase along beam
+      this.dustSeed[i * 3 + 1] = Math.sin(i * 12.9) * 1.6; // y
+      this.dustSeed[i * 3 + 2] = Math.sin(i * 4.7 + 1.3) * 1.6; // z
+    }
+    const dustGeo = new THREE.BufferGeometry();
+    dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+    this.dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({
+      color: 0xffd9a0, size: 0.32, transparent: true, opacity: 0.4,
+      blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
+    }));
+    this.beamGroup.add(this.dust);
     this.scene3D.add(this.beamGroup);
 
     // --- gulls wheeling the lantern
@@ -288,9 +370,21 @@ export default class HarborlightScene extends Scene {
     const flick = 0.9 + 0.1 * Math.sin(t * 13.0) * Math.sin(t * 3.7);
 
     this.skyMat.uniforms.uT.value = t;
+    this.foamMat.uniforms.uT.value = t;
     const beamMat = (this.beamGroup.children[0] as THREE.Mesh).material as THREE.ShaderMaterial;
-    beamMat.uniforms.uI.value = 0.5 * flick;
+    const coreMat = (this.beamGroup.children[1] as THREE.Mesh).material as THREE.ShaderMaterial;
+    beamMat.uniforms.uI.value = 0.9 * flick;
+    coreMat.uniforms.uI.value = 1.7 * flick;
     this.spot.intensity = 12000 * flick;
+    // dust motes drifting down the shaft and slowly swirling
+    const dp = this.dust.geometry.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < this.dustSeed.length / 3; i++) {
+      const x0 = this.dustSeed[i * 3], y0 = this.dustSeed[i * 3 + 1], z0 = this.dustSeed[i * 3 + 2];
+      const x = ((x0 + t * 2.4) % 62) + 2;
+      const spread = 0.12 + x * 0.08;                    // cone widens along +x
+      dp.setXYZ(i, x, y0 * spread + Math.sin(t * 0.8 + i) * 0.3, z0 * spread);
+    }
+    dp.needsUpdate = true;
 
     // gulls: circular orbits around the lamp, banking into the turn, flapping
     for (let i = 0; i < this.gulls.length; i++) {
