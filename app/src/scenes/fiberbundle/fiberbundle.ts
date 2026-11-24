@@ -240,7 +240,7 @@ export default class FiberBundleScene extends Scene {
 
     // Frame tremor: deterministic high-frequency flicker on the pulse
     // heads so transits don't read as single-curve motion.
-    const frameIdx = Math.floor(lt * 60);
+    const frameIdx = Math.round(lt * 60); // shutter-centered: constant across the blur window
     this.headMat.size = 0.22 * (1 + 0.14 * (hash(frameIdx, 7) - 0.5));
 
     const r = this.ctx.renderer;
