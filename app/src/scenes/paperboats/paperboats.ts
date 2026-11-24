@@ -56,7 +56,8 @@ function snagClock(t: number): number {
 }
 function boat3Z(t: number): number {
   const base = boatZ(snagClock(t), BOAT_T0 + 1.0, 0.96);
-  return Math.min(base, DAM_Z + 0.55); // hull nose at the dam while held
+  // nose clamp only while the dam holds; it clears once the dam gives
+  return t < FREE_T ? Math.min(base, DAM_Z + 0.55) : base;
 }
 function boatZByIndex(i: number, t: number): number {
   if (i === 2) return boat3Z(t);
@@ -87,7 +88,9 @@ function boatX(i: number, t: number, z: number): number {
 function leadZ(t: number): number {
   let m = -1e9;
   for (let i = 0; i < 5; i++) m = Math.max(m, boatZByIndex(i, t));
-  return Math.min(m, 6.5); // camera stops chasing once boats pass near
+  // -26 holds the gutter in frame while the first boat is still upstream;
+  // 6.5 stops chasing once boats pass near the camera
+  return Math.min(Math.max(m, -26.0), 6.5);
 }
 function camPos(t: number): [number, number, number] {
   const lz = leadZ(t);
@@ -126,7 +129,7 @@ void main() {
   // thin torn wisps low over the rooftops
   col *= 1.0 - 0.22 * smoothstep(0.4, 0.75, fbm3(vec3(uv.x * 5.0 + uT * 0.035, uv.y * 16.0, 2.0), 2, 2.0, 0.5));
   // rooftop + chimney + tree silhouette along the horizon
-  float roof = smoothstep(0.16, 0.15, uv.y + 0.02 * fbm3(vec3(uv.x * 22.0, 1.0, 0.0), 2, 2.0, 0.5));
+  float roof = 1.0 - smoothstep(0.15, 0.16, uv.y + 0.02 * fbm3(vec3(uv.x * 22.0, 1.0, 0.0), 2, 2.0, 0.5));
   col = mix(col, vec3(0.05, 0.05, 0.09), roof);
   gl_FragColor = vec4(col, 1.0);
 }
@@ -143,6 +146,7 @@ uniform vec3 uRings[8]; // x,z world center, w = ring birth time
 uniform float uCloudGap; // 0..1 sun-lane glint envelope (cloud gaps)
 
 float hashg(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5); }
+float sq(float v) { return v * v; }
 float voronoi(vec2 p) {
   vec2 i = floor(p), f = fract(p);
   float d = 8.0;
@@ -157,7 +161,8 @@ float voronoi(vec2 p) {
 void main() {
   // uv maps straight onto world coords
   float wx = mix(${GROUND_X0.toFixed(1)}, ${GROUND_X1.toFixed(1)}, vUv.x);
-  float wz = mix(${GROUND_Z0.toFixed(1)}, ${GROUND_Z1.toFixed(1)}, vUv.y);
+  // plane rotation.x=-PI/2 maps uv.y=1 to world Z0 — flip the mix so wz is world z
+  float wz = mix(${GROUND_Z1.toFixed(1)}, ${GROUND_Z0.toFixed(1)}, vUv.y);
   vec2 w = vec2(wx, wz);
 
   // ---- wet pavement base: stone slabs, darkened by rain
@@ -217,12 +222,12 @@ void main() {
                    smoothstep(${CHAN_X0.toFixed(2)}, ${CHAN_X1.toFixed(2)}, wx));
     // flow streaks advected along +z; speed varies with channel width —
     // narrow stretches stream faster (shorter wavelet scale, quicker scroll)
-    float pinch = 1.0 - 0.30 * exp(-pow((wz - ${DAM_Z.toFixed(1)}) / 5.0, 2.0));
+    float pinch = 1.0 - 0.30 * exp(-sq((wz - ${DAM_Z.toFixed(1)}) / 5.0));
     float speed = 1.6 / pinch;
     float streak = fbm3(vec3(wx * 6.0, wz * 2.2 - uT * speed, 1.0), 3, 2.0, 0.55);
     wat += vec3(0.12, 0.14, 0.19) * smoothstep(0.42, 0.82, streak);
     // sheen of the sky down the channel center
-    wat += vec3(0.10, 0.09, 0.10) * exp(-pow((wx - 0.0) / 0.5, 2.0));
+    wat += vec3(0.10, 0.09, 0.10) * exp(-sq(wx / 0.5));
     // transverse wavelets breaking the sheen — moving water reads
     float wave = sin(wz * 6.0 - uT * (3.0 + speed)) * 0.5 + 0.5;
     wat += vec3(0.06, 0.07, 0.10) * wave * wave * smoothstep(0.3, 0.8, streak);
@@ -238,7 +243,7 @@ void main() {
     }
     wat += vec3(0.14, 0.15, 0.19) * min(ed, 1.2) * 0.8;
     // sun lane: glinting strip while the cloud gap is open
-    float lane = exp(-pow((wx - 0.1) / 0.55, 2.0)) * uCloudGap;
+    float lane = exp(-sq((wx - 0.1) / 0.55)) * uCloudGap;
     float glint = pow(0.5 + 0.5 * fbm3(vec3(wx * 14.0, wz * 5.0 - uT * 2.2, 6.0), 2, 2.0, 0.5), 5.0);
     wat += vec3(1.0, 0.62, 0.25) * (lane * (0.35 + glint * 1.6));
     // rainbow oil-slick shimmer patches drifting with the flow
@@ -248,7 +253,7 @@ void main() {
     vec3 rainbow = 0.5 + 0.5 * cos(hue + vec3(0.0, 2.1, 4.2));
     wat += rainbow * oil * 0.30;
     // wet dark rim where water meets stone
-    wat *= 1.0 - 0.25 * smoothstep(0.08, 0.0,
+    wat *= 0.75 + 0.25 * smoothstep(0.0, 0.08,
         min(wx - ${CHAN_X0.toFixed(2)}, ${CHAN_X1.toFixed(2)} - wx));
     // leaf dam: brown matted leaves banked against the pinch until it gives
     float give = smoothstep(${FREE_T.toFixed(1)}, ${FREE_T.toFixed(1)} + 1.2, uT);
@@ -267,13 +272,13 @@ void main() {
     if (age <= 0.0 || age > 3.5) continue;
     float rw = min(age * 1.5, 2.6);
     float d = length(w - uRings[i].xy);
-    float rim = exp(-pow((d - rw) / 0.10, 2.0)) * (1.0 - age / 3.5);
+    float rim = exp(-sq((d - rw) / 0.10)) * (1.0 - age / 3.5);
     col += vec3(0.45, 0.42, 0.38) * rim * 0.9;
   }
 
-  // distance fog into the gold haze
-  float dFog = smoothstep(4.0, ${GROUND_Z0.toFixed(1)} + 12.0, wz);
-  col = mix(col, vec3(0.42, 0.26, 0.20), dFog * 0.65);
+  // distance fog into the gold haze — only the far end fades toward the horizon
+  float dFog = 1.0 - smoothstep(-34.0, -14.0, wz);
+  col = mix(col, vec3(0.42, 0.26, 0.20), dFog * 0.45);
 
   gl_FragColor = vec4(col, 1.0);
 }
@@ -291,6 +296,7 @@ varying float vSeed;
 varying float vFlap;
 uniform float uT;
 uniform float uPx;
+uniform float uLeadZ;  // lead-boat z — drip beads stay in the tracked band
 
 void main() {
   float t0 = aAux.x;
@@ -304,6 +310,8 @@ void main() {
 
   if (aKind < 0.5) {
     // curb drip bead: gather on the curb lip → fall → tiny plop
+    // beads ride a band just ahead of the tracking camera's look point
+    pos.z = position.z + uLeadZ;
     float gather = amp, fall = rate, rest = ph;
     float cyc = gather + fall + rest;
     float pc = mod(uT - t0, cyc);
@@ -514,6 +522,7 @@ export default defineScene({
     for (let i = 0; i < 5; i++) {
       const b = buildBoat(rng);
       b.rotation.y = Math.PI / 2 + (rng() - 0.5) * 0.5;
+      b.userData.yaw0 = b.rotation.y;
       b.renderOrder = 4;
       sc.add(b);
       boats.push(b);
@@ -536,7 +545,8 @@ export default defineScene({
     };
     // curb drip beads: run-off dripping off the curb lip into the channel
     for (let dI = 0; dI < ND; dI++) {
-      const z = -8 - rng() * 18;
+      // z is an offset ahead of the lead boat — beads stay in the tracked band
+      const z = -2 - rng() * 7;
       const gather = 2.0 + rng() * 3.0;
       const fall = Math.sqrt(2 * 0.35 / 8) * (0.9 + rng() * 0.2);
       const rest = 0.6 + rng() * 2.4;
@@ -563,7 +573,7 @@ export default defineScene({
     const addMat = new THREE.ShaderMaterial({
       vertexShader: PT_VERT, fragmentShader: PT_FRAG,
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-      uniforms: { uT: { value: 0 }, uPx: { value: 1 } },
+      uniforms: { uT: { value: 0 }, uPx: { value: 1 }, uLeadZ: { value: 0 } },
     });
     const addPts = new THREE.Points(geo, addMat);
     addPts.frustumCulled = false;
@@ -603,6 +613,9 @@ export default defineScene({
 
     // --- camera: low tracking drift along the gutter after the lead boat
     ctx.rig.setLensMm(48);
+    // keyed timing: each sampled waypoint is reached at its own t — otherwise
+    // uniform arc-length speed pulls the camera ahead of the lead boat
+    ctx.rig.pathTiming = 'keyed';
     const wps: { t: number; pos: [number, number, number]; target: [number, number, number] }[] = [];
     for (let w = 0; w <= 24; w++) {
       const wt = ctx.sceneCtx.start + (w / 24) * (ctx.sceneCtx.end - ctx.sceneCtx.start);
@@ -657,24 +670,26 @@ export default defineScene({
         const g = Math.sin(Math.min(1, (t - GUST_T) / 2.5) * Math.PI);
         b.rotation.z += g * 0.45;
       }
-      // frame tremor keyed deterministically (hash-free jitter)
-      b.rotation.y += 0.012 * Math.sin(t * 23.0 + i * 9.0);
+      // frame tremor keyed deterministically (absolute, not accumulated)
+      b.rotation.y = (b.userData.yaw0 as number) + 0.012 * Math.sin(t * 23.0 + i * 9.0);
     }
 
     // ---- rings: splash + curb drip plops feed the uniform array
     const rings = st.groundMat.uniforms.uRings.value as THREE.Vector3[];
     const act: { x: number; z: number; t0: number }[] = [];
+    const lz = leadZ(t);
+    st.addMat.uniforms.uLeadZ.value = lz;
     // sneaker splash ring
     const splashAge = t - (SPLASH_T + 0.55);
     if (splashAge > 0 && splashAge <= 3.5) act.push({ x: -1.0, z: -30.0, t0: SPLASH_T + 0.55 });
-    // curb drip plops: mirror of the vertex-shader cycle
+    // curb drip plops: mirror of the vertex-shader cycle; bead z rides the band
     for (const d of st.drips) {
       const cyc = d.gather + d.fall + d.rest;
       const k = Math.floor((t - d.off) / cyc);
       for (let m = Math.max(0, k - 1); m <= k; m++) {
         const plopT = d.off + m * cyc + d.gather + d.fall;
         const age = t - plopT;
-        if (age > 0 && age <= 3.5) act.push({ x: d.x - 0.35, z: d.z, t0: plopT });
+        if (age > 0 && age <= 3.5) act.push({ x: d.x - 0.35, z: d.z + leadZ(plopT), t0: plopT });
       }
     }
     act.sort((a, b) => b.t0 - a.t0);
