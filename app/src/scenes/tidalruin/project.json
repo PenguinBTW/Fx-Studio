@@ -1,0 +1,6 @@
+{
+  "project": "tidalruin",
+  "entries": [
+    { "scene": "tidalruin/tidalruin", "id": "tidalruin", "start": 0, "end": 18 }
+  ]
+}
