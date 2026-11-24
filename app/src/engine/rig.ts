@@ -384,7 +384,9 @@ export class CameraRig {
       const w = hc.weight;
       // channels are seed·1024 + axis·128 apart so different seeds never share a
       // motion curve (plain +101/+202 collided: seed 0's X was seed 101's Y)
-      const sb = hc.seed * 1024;
+      // pre-mix the seed through hash() — raw multiplication collides mod 2^32
+      // inside hash's truncation (seeds 0 and 4194304 produced identical motion)
+      const sb = hash(hc.seed) * 4294967296;
       p[0] += CameraRig.hn(ts, sb + 101) * hc.posAmp * w;
       p[1] += CameraRig.hn(ts, sb + 202) * hc.posAmp * w;
       p[2] += CameraRig.hn(ts, sb + 303) * hc.posAmp * 0.6 * w;
