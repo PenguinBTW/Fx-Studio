@@ -18,7 +18,7 @@ fishes the channel it fills, the crow visits a block it will soon cover.
 | collapsed blocks | `blocksAt` — 5 seeded tilted slabs scattered at the ruin's feet |
 | pale grey-green sky | `skyAt` — desaturated gradient + warm smear low left (raking sun) |
 | sea horizon band | `seaAt` — thin darker band under the sky, faint white-crest stripes |
-| advancing waterline | `wlX(t)` — closed-form sweep 1.18→0.56 over `WATER_IN→COVER`, wavy front + glow + foam flecks |
+| advancing waterline | `wlX(t)` — closed-form sweep 0.93→0.56 over `WATER_IN→COVER`, wavy front + glow + foam flecks |
 | covering shallow / mirror | `cov` gate → `waterColAt` sheen + ruin flipped about `RUIN_BASE` with `sin` shimmer |
 | barnacle-dark bases | `ruinColAt` — `barn` band + `cov`-driven wet darkening at the waterline |
 | gull on the arch | pale speck + head dot perched on the crown's unbroken side |

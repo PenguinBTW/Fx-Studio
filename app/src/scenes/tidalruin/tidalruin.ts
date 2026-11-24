@@ -234,7 +234,8 @@ void main() {
   // foam flecks riding just behind the front — on top of the sheet
   float fleck = sstep(0.96, 0.995, h2(floor(uv * vec2(900.0, 400.0)) + floor(t * 2.0)));
   col += vec3(0.40, 0.44, 0.42) * fleck * sstep(wl - 0.002, wl + 0.05, uv.x) * sstep(wl + 0.09, wl + 0.02, uv.x)
-         * sstep(WATER_IN, WATER_IN + 1.0, t) * sstep(FLAT_TOP, FLAT_TOP - 0.05, uv.y) * 0.5;
+         * sstep(WATER_IN, WATER_IN + 1.0, t) * sstep(COVER + 1.0, COVER - 0.5, t)
+         * sstep(FLAT_TOP, FLAT_TOP - 0.05, uv.y) * 0.5;
   float rm = ruinMask(uv);
   vec3 rcol = ruinColAt(uv, rm);
   // covered ruin bases read darker through the water
