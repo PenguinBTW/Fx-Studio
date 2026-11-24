@@ -136,7 +136,7 @@ void main() {
     // far-shore treeline: fine dark teeth just above the horizon
     float teeth = 0.003 + max(fbm3(vec3(uv.x * 60.0, 8.0, 0.0), 4), 0.0) * 0.019;
     float treeM = (1.0 - smoothstep(hz, hz + teeth, uv.y))
-                * smoothstep(hz - 0.006, hz - 0.001, uv.y);
+                * smoothstep(hz - 0.001, hz + 0.004, uv.y); // soft rise off the waterline
     col = mix(col, vec3(0.09, 0.10, 0.12), treeM * (0.6 + 0.4 * uBurn));
     // high cloud wisps catching first light
     float wisp = max(fbm3(vec3(uv.x * 4.0 + t * 0.01, uv.y * 26.0, 5.0), 4), 0.0);
@@ -280,13 +280,15 @@ void main() {
   }
 
   // ---------- near-edge reeds ----------
-  if (uv.y < 0.20) {
+  if (uv.y < 0.36) {
     for (int k = 0; k < 14; k++) {
       float fk = float(k);
       float edge = h1(fk * 3.3);              // <0.5 left cluster, else right
       float rx = edge < 0.5 ? 0.27 + 0.10 * h1(fk * 7.7)
                             : 0.66 + 0.12 * h1(fk * 7.7);
-      float hgt = 0.05 + 0.09 * h1(fk * 11.3);
+      // tall enough that tips cross the frame's bottom edge even after the
+      // camera pushes in (frame floor sits ~uv.y 0.21 at the opening)
+      float hgt = 0.16 + 0.16 * h1(fk * 11.3);
       float lean = 0.012 * (h1(fk * 5.9) - 0.5) + 0.006 * sin(t * 0.7 + fk);
       // reed line: x drifts with height (lean), silhouette dark
       float xr = rx + lean * (uv.y / hgt);
