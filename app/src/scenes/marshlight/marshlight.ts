@@ -98,7 +98,12 @@ uniform float uT;
 uniform float uBeamX;   // beam azimuth → faint sky glow follows the sweep
 uniform float uBeamA;
 varying vec2 vUv;
-float hash21(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+// sine-free hash — stays stable in half-precision fragment math
+float hash21(vec2 p) {
+  vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
+}
 void main() {
   vec2 q = (vUv - 0.5) * vec2(12.0, 7.0);
   float hor = -0.55;                          // horizon line in backdrop coords
@@ -139,7 +144,7 @@ void main() {
   col = mix(col, duneCol, dune * (1.0 - below));
   col = mix(col, marsh, below);
   // the dune band fades out just below the horizon, not the whole marsh
-  float duneBelow = dune * (1.0 - smoothstep(hor - 0.40, hor - 0.10, q.y));
+  float duneBelow = dune * smoothstep(hor - 0.40, hor - 0.10, q.y);
   col = mix(col, duneCol, duneBelow * below * 0.9);
   gl_FragColor = vec4(col, 1.0);
 }`;
