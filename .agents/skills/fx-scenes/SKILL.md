@@ -107,6 +107,16 @@ If you subclass `Scene` directly, you take full ownership of the pipeline. You m
 
 Never use or import the `@deprecated` `camera3d.ts`. True 3D in f(x) Studio utilizes `CameraRig` ([`app/src/engine/rig.ts`](../../../app/src/engine/rig.ts)) built on Three.js cameras, centripetal Catmull-Rom splines, and closed-form analytical solvers.
 
+### 3.0 Handheld Operator Layer (`rig.handheld`)
+For human-operated camera feel (documentary, chase, intimate beats) — continuous multi-band operator noise composable on any path, strictly closed-form f(t) like every other rig feature:
+```typescript
+// in setup():
+ctx.rig.handheld({ weight: 0.8, posAmp: 0.02, rotAmp: 0.004, seed: 3 });
+```
+- **Distinct from trauma**: `addTrauma` is event-driven decay bursts; `handheld` is persistent noise with the operator frequency signature (drift 0.43 Hz + sway 1.7 Hz + tremor 11.3 Hz, amplitude-weighted 0.55/0.30/0.15).
+- `posAmp` is positional sway in world units (~0.02 = 2cm operator drift), `rotAmp` the micro pan/tilt in radians (0.004 subtle), `rollAmp` defaults to rotAmp × 0.35, `speed` scales cadence, `seed` decorrelates takes.
+- Deterministic and drift-free by construction: value noise at fixed frequencies, mean-zero over long windows. Safe for sub-frame motion-blur sampling.
+
 ### 3.1 Analytical Dolly-Zoom (The Hitchcock Vertigo Effect)
 To create dramatic spatial distortion while keeping the subject's screen scale perfectly constant down to sub-pixel tolerances ($< 4.44 \times 10^{-16}$ error):
 ```typescript

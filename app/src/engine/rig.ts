@@ -18,6 +18,27 @@ export interface CameraWaypoint {
   focalLength?: number; // mm (if < 300) or screen px (if >= 300)
 }
 
+/**
+ * Continuous handheld operator layer — distinct from trauma impulses (event-driven
+ * decay bursts): handheld is persistent multi-band noise with the classic operator
+ * frequency signature (slow body sway + fast muscle tremor). Strictly closed-form
+ * f(t): value noise at fixed frequencies, no integration, zero drift.
+ */
+export interface HandheldOpts {
+  /** Master strength 0..1 (default 1). */
+  weight?: number;
+  /** Positional sway amplitude in world units (default 0.02 — ~2cm operator drift). */
+  posAmp?: number;
+  /** Rotational micro pan/tilt amplitude in radians (default 0.004). */
+  rotAmp?: number;
+  /** Roll amplitude in radians (default rotAmp × 0.35). */
+  rollAmp?: number;
+  /** Cadence scaling — 1 is natural operator timing (default 1). */
+  speed?: number;
+  /** Deterministic seed for independent takes (default 0). */
+  seed?: number;
+}
+
 export interface TraumaImpulse {
   t0: number;
   intensity: number;
@@ -189,6 +210,37 @@ export class CameraRig {
   /**
    * Register a deterministic trauma impulse at timestamp t0 (decays exponentially)
    */
+  private handheldCfg: Required<HandheldOpts> | null = null;
+  private _hhTarget: V3 | null = null;
+
+  /**
+   * Enable the continuous handheld operator layer. Composable on any path:
+   * evaluated inside evalCam after waypoints, before basis construction.
+   */
+  handheld(opts: HandheldOpts = {}): this {
+    const rotAmp = opts.rotAmp ?? 0.004;
+    this.handheldCfg = {
+      weight: opts.weight ?? 1,
+      posAmp: opts.posAmp ?? 0.02,
+      rotAmp,
+      rollAmp: opts.rollAmp ?? rotAmp * 0.35,
+      speed: opts.speed ?? 1,
+      seed: opts.seed ?? 0,
+    };
+    return this;
+  }
+
+  /** Multi-band operator noise: drift (0.43 Hz) + sway (1.7 Hz) + tremor (11.3 Hz),
+   *  amplitude-weighted 0.55/0.30/0.15 — the measured handheld frequency signature.
+   *  Each axis uses a decorrelated seed offset. Pure closed form. */
+  private static hn(t: number, seed: number): number {
+    return (
+      noise1(t * 0.43, seed) * 0.55 +
+      noise1(t * 1.7, seed + 31) * 0.3 +
+      noise1(t * 11.3, seed + 67) * 0.15
+    );
+  }
+
   addTrauma(amount: number, t0 = 0, decay = 1.5): this {
     if (amount <= 0) return this;
     this.impulses.push({ t0, intensity: amount, decay: Math.max(1e-4, decay) });
@@ -322,10 +374,34 @@ export class CameraRig {
       roll += noise1(t * 29.0, 104) * shakeRot;
     }
 
+    // Continuous handheld operator layer: positional sway on the camera and rotational
+    // micro-noise as a look-at offset scaled by focus distance (small-angle rotation).
+    // In world axes — at milliradian amplitudes the view-axis component reads as the
+    // micro focus-breathing real operators produce. Closed-form, no drift.
+    if (this.handheldCfg && this.handheldCfg.weight > 0) {
+      const hc = this.handheldCfg;
+      const ts = t * hc.speed;
+      const w = hc.weight;
+      p[0] += CameraRig.hn(ts, hc.seed + 101) * hc.posAmp * w;
+      p[1] += CameraRig.hn(ts, hc.seed + 202) * hc.posAmp * w;
+      p[2] += CameraRig.hn(ts, hc.seed + 303) * hc.posAmp * 0.6 * w;
+      const tdx = this.target[0] - p[0], tdy = this.target[1] - p[1], tdz = this.target[2] - p[2];
+      const focusDist = Math.hypot(tdx, tdy, tdz) || 1;
+      this._hhTarget = [
+        this.target[0] + CameraRig.hn(ts, hc.seed + 404) * hc.rotAmp * focusDist * w,
+        this.target[1] + CameraRig.hn(ts, hc.seed + 505) * hc.rotAmp * focusDist * w,
+        this.target[2] + CameraRig.hn(ts, hc.seed + 606) * hc.rotAmp * focusDist * 0.5 * w,
+      ];
+      roll += CameraRig.hn(ts, hc.seed + 707) * hc.rollAmp * w;
+    } else {
+      this._hhTarget = null;
+    }
+    const effTarget = this._hhTarget ?? this.target;
+
     // Compute Forward unit vector towards target (guard coincident pos==target)
-    const dx = this.target[0] - p[0];
-    const dy = this.target[1] - p[1];
-    const dz = this.target[2] - p[2];
+    const dx = effTarget[0] - p[0];
+    const dy = effTarget[1] - p[1];
+    const dz = effTarget[2] - p[2];
     const rawLen = Math.hypot(dx, dy, dz);
     if (rawLen < 1e-6 && !this._degenerateWarned) {
       // Coincident waypoint — hold +Z forward to avoid zero-basis NaN.
