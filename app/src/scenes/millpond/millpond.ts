@@ -145,7 +145,7 @@ float heronAt(vec2 uv, float t) {
 vec4 kingAt(float t) {
   if (t < KING || t > KING + 0.9) return vec4(0.0);
   float u = (t - KING) / 0.9;
-  vec2 p = vec2(0.85 - u * 0.72, 0.46 + 0.05 * sin(u * 9.0));
+  vec2 p = vec2(0.85 - u * 0.62, 0.46 + 0.05 * sin(u * 9.0));
   return vec4(p, 0.0, sstep(0.0, 0.06, u) * (1.0 - sstep(0.94, 1.0, u)));
 }
 // ---------- bats: seeded zigzag flits ----------
@@ -184,7 +184,7 @@ float fishAt(vec2 uv, float t) {
 float ratAt(vec2 uv, float t) {
   if (t < RAT || t > RAT + 2.6) return 0.0;
   float u = (t - RAT) / 2.6;
-  vec2 p = vec2(0.22 + u * 0.12, WATER - 0.012 + 0.004 * sin(u * 12.0));
+  vec2 p = vec2(0.24 + u * 0.12, WATER - 0.012 + 0.004 * sin(u * 12.0));
   vec2 d = uv - p; d.x *= ASPECT;
   float body = 1.0 - sstep(0.0, 0.007, length(d / vec2(2.0, 0.9)));
   // vee wake trailing behind
@@ -207,14 +207,14 @@ void main() {
   float willow = 0.0;
   for (int i = 0; i < 6; i++) {
     float fi = float(i);
-    vec2 c = vec2((i < 3) ? 0.02 + fi * 0.055 : 0.86 + (fi - 3.0) * 0.05,
+    vec2 c = vec2((i < 3) ? 0.20 + fi * 0.05 : 0.70 + (fi - 3.0) * 0.045,
                   0.58 + 0.05 * h1(fi * 3.7));
     willow += 1.0 - sstep(0.4, 1.0, sdist(uv, c, vec2(0.030 / ASPECT, 0.038)));
   }
   float fronds = 0.0;
   for (int i = 0; i < 8; i++) {
     float fi = float(i);
-    float bx = (i < 4) ? 0.05 + fi * 0.045 : 0.87 + (fi - 4.0) * 0.045;
+    float bx = (i < 4) ? 0.21 + fi * 0.045 : 0.71 + (fi - 4.0) * 0.04;
     fronds += sstep(0.0018, 0.0, seg(uv, vec2(bx, 0.56), vec2(bx + 0.008 * sin(t * 0.4 + fi), 0.505)));
   }
   // mill building
