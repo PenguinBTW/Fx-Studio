@@ -95,10 +95,17 @@ const FRAG = /* glsl */ `
     float h = field(p);
 
     // Thin rings per source, extinguished where the superposition cancels —
-    // the gaps in each ring train ARE the interference fringes.
-    float lineA = pow(0.5 + 0.5 * cos(phaseA(p)), 9.0) * waveEnv(p, SRC_A, uTime);
-    float lineB = pow(0.5 + 0.5 * cos(phaseB(p)), 9.0) * waveEnv(p, SRC_B, uTime);
-    float rings = (lineA + lineB) * (0.06 + 0.94 * smoothstep(0.05, 0.45, abs(h)));
+    // the gaps in each ring train ARE the interference fringes. The gate is
+    // |h| relative to the stronger local component, so envelope decay and the
+    // wavefront edge don't dim rings where only one source is present.
+    float cA = cos(phaseA(p));
+    float cB = cos(phaseB(p));
+    float hA = waveEnv(p, SRC_A, uTime) * cA;
+    float hB = waveEnv(p, SRC_B, uTime) * cB;
+    float lineA = pow(0.5 + 0.5 * cA, 9.0) * waveEnv(p, SRC_A, uTime);
+    float lineB = pow(0.5 + 0.5 * cB, 9.0) * waveEnv(p, SRC_B, uTime);
+    float gate = clamp(abs(h) / (max(abs(hA), abs(hB)) + 0.02), 0.0, 1.0);
+    float rings = (lineA + lineB) * (0.06 + 0.94 * gate);
     float energy = pow(clamp(h * h * 0.34, 0.0, 1.0), 1.6);
 
     // Pseudo-normal from the field gradient for water specular.
