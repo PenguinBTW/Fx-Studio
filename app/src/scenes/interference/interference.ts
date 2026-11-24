@@ -104,7 +104,9 @@ const FRAG = /* glsl */ `
     float hB = waveEnv(p, SRC_B, uTime) * cB;
     float lineA = pow(0.5 + 0.5 * cA, 9.0) * waveEnv(p, SRC_A, uTime);
     float lineB = pow(0.5 + 0.5 * cB, 9.0) * waveEnv(p, SRC_B, uTime);
-    float gate = clamp(abs(h) / (max(abs(hA), abs(hB)) + 0.02), 0.0, 1.0);
+    // |hA + hB| rather than |h|: chop is surface texture, not cancellation,
+    // and would otherwise lift rings in the dark lanes where both waves die.
+    float gate = clamp(abs(hA + hB) / (max(abs(hA), abs(hB)) + 0.02), 0.0, 1.0);
     float rings = (lineA + lineB) * (0.06 + 0.94 * gate);
     float energy = pow(clamp(h * h * 0.34, 0.0, 1.0), 1.6);
 
