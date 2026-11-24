@@ -154,7 +154,7 @@ const T = fogTransmittance(camY, targetY, dist, 0.02, 0.15);
 const c = applyAerialPerspective(objColor, y0, y1, dist, elevNorm, { baseDensity: 0.02, heightFalloff: 0.15 }, fogColor);
 ```
 - Inscatter is Rayleigh-ordered: horizon brightens/warms slightly, zenith unchanged.
-- Inject `ATMOSPHERE_GLSL` into custom shaders for bit-consistent GPU/CPU fog.
+- Inject `ATMOSPHERE_GLSL` into custom shaders for GPU fog consistent with the CPU planning math (same formula; float32-vs-float64 rounding means comparisons need a small tolerance, not bit equality).
 - `uniformEquivalentDensity(yRef, fog, distRef)` approximates standard-material FogExp2
   (quadratic exponent — matched at a reference distance, documented in the API).
 

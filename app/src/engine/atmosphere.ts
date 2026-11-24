@@ -142,6 +142,9 @@ export function uniformEquivalentDensity(referenceHeight: number, fog: HeightFog
   // THREE.FogExp2 attenuates as e^(−(density·depth)²) — QUADRATIC in depth, so a
   // linear height-fog exponent can't be matched exactly. We match transmittance at
   // a characteristic scene distance: (d·dRef)² = a·e^(−b·y)·dRef → d = sqrt(a·e^(−b·y)/dRef).
+  // Note the match is exact only where view-space depth equals ray length (camera axis);
+  // off-axis rays of the same length get slightly less standard-material fog — inherent
+  // to FogExp2's depth-based formulation, not correctable without a custom shader.
   const linear = fog.baseDensity * Math.exp(-fog.heightFalloff * referenceHeight);
   return Math.sqrt(linear / referenceDistance);
 }
