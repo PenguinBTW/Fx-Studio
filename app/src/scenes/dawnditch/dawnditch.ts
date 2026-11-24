@@ -19,9 +19,9 @@ const volePos = (t: number): [number, number, number] => {
   // x, mode (0 walk / 0.5 pause / 1 swim / -1 gone)
   if (t < 4.5) return [-0.05, 0, -1];
   if (t < 7.5) return [0.18 + (t - 4.5) * 0.07, 0, 0];
-  if (t < 8.3) return [0.39, 0, 0.5];
-  if (t < 12.5) return [0.39 + (t - 8.3) * 0.075, 0, 1];
-  if (t < 13.2) return [0.705 + (t - 12.5) * 0.03, 0, 0.5];
+  if (t < 8.3) return [0.39, 0.5, 0];
+  if (t < 12.5) return [0.39 + (t - 8.3) * 0.075, 1, 0];
+  if (t < 13.2) return [0.705 + (t - 12.5) * 0.03, 0.5, 0];
   return [1.0, 0, -1];
 };
 const sunX = (t: number) => 1.05 - 1.15 * ss(2, 9, t);   // strip sweeps right→left
@@ -47,7 +47,7 @@ const BACK_FRAG = /* glsl */ `
 precision highp float;
 in vec2 vUv;
 out vec4 fragColor;
-uniform float uT, uSun, uLark, uHen, uCrow, uBub;
+uniform float uT, uSun, uLark, uHen, uCrow, uBub, uGlow;
 uniform vec3 uVole;
 
 float h1(float n) { return fract(sin(n * 127.1) * 43758.5453); }
@@ -93,7 +93,8 @@ void main() {
     field = mix(field, vec3(0.16, 0.13, 0.10), (1.0 - persp) * 0.4);
     // furrow ridges as horizontal shading bands
     field *= 1.0 - 0.30 * smoothstep(0.35, 0.5, abs(fract(uv.y * 60.0 * persp + uv.x * 2.0) - 0.5));
-    col = mix(col, field * (1.0 + sun * 0.9), smoothstep(0.645, 0.642, uv.y) * smoothstep(0.495, 0.505, uv.y));
+    col = mix(col, field * (1.0 + sun * 0.9 + 0.30 * uGlow),
+              (1.0 - smoothstep(0.642, 0.645, uv.y)) * smoothstep(0.495, 0.505, uv.y));
   }
 
   // ---- mist patches in the hollows (thin inside the sun strip)
@@ -104,7 +105,7 @@ void main() {
     mq.x -= 0.4 * sin(t * 0.25 + fk);
     float thin = 0.55 + 0.45 * h1(fk);                        // patch thins as sun passes
     float mist = (1.0 - smoothstep(0.7, 1.0, length(mq))) * thin *
-                 (1.0 - 0.7 * strip(mc, uSun));
+                 max(0.0, 1.0 - 0.7 * strip(mc, uSun) - 0.35 * uGlow);
     col = mix(col, vec3(0.42, 0.40, 0.42) * (1.0 + sun * 0.5), mist * 0.5);
   }
 
@@ -141,6 +142,12 @@ void main() {
            (1.0 - smoothstep(0.001, 0.004, length(uv - vec2(bx + dir * 0.7, 0.505 + len * 0.6))));
   }
 
+  // near ground fill below the ditch (drawn before the tuft bases)
+  if (uv.y < 0.435) {
+    col = mix(col, vec3(0.10, 0.085, 0.07) * (0.8 + 0.3 * vnoise(uv * 40.0) + sun * 0.9),
+              1.0 - smoothstep(0.430, 0.435, uv.y));
+  }
+
   // ---- near bank grass row (y < 0.435): taller tufts, dew too
   for (int k = 0; k < 10; k++) {
     float fk = float(k) + 20.0;
@@ -150,11 +157,6 @@ void main() {
     float tuft = 1.0 - smoothstep(0.0015, 0.005,
       sdSeg(uv, vec2(bx, 0.405), vec2(bx + dir, 0.405 + len)));
     col = mix(col, vec3(0.10, 0.13, 0.07) * (0.8 + sun * 1.2), tuft * 0.85);
-  }
-  // near ground fill below the ditch
-  if (uv.y < 0.435) {
-    col = mix(col, vec3(0.10, 0.085, 0.07) * (0.8 + 0.3 * vnoise(uv * 40.0) + sun * 0.9),
-              1.0 - smoothstep(0.430, 0.435, uv.y));
   }
 
   // ---- bubble trail rising in the water (~13.5s)
@@ -180,7 +182,7 @@ void main() {
   // ---- moorhen stepping out on the near bank then back in
   if (uHen > 0.0 && uHen < 1.0) {
     float outU = sin(uHen * 3.14159);                          // out then back
-    vec2 hp = vec2(0.62, 0.44 + outU * 0.035);
+    vec2 hp = vec2(0.62, 0.44 - outU * 0.04);
     float hb = 1.0 - smoothstep(0.005, 0.009, length((uv - hp) / vec2(1.5, 0.9)));
     float hh = 1.0 - smoothstep(0.003, 0.005, length((uv - (hp + vec2(-0.007, 0.008))) / vec2(1.0, 1.0)));
     col = mix(col, vec3(0.04, 0.035, 0.03), max(hb, hh) * 0.9);
@@ -224,7 +226,7 @@ export default class DawnditchScene extends Scene {
   private three = new THREE.Scene();
   private cam = new THREE.PerspectiveCamera(40, 16 / 9, 0.1, 400);
   private bu = {
-    uT: { value: 0 }, uSun: { value: 0 }, uLark: { value: 0 },
+    uT: { value: 0 }, uSun: { value: 0 }, uGlow: { value: 0 }, uLark: { value: 0 },
     uHen: { value: 0 }, uCrow: { value: 0 }, uBub: { value: 0 },
     uVole: { value: new THREE.Vector3(0, 0, -1) },
   };
@@ -254,6 +256,7 @@ export default class DawnditchScene extends Scene {
     const [vx, vmode, vgone] = volePos(t);
     this.bu.uT.value = t;
     this.bu.uSun.value = sunX(t);
+    this.bu.uGlow.value = ss(5, 14, t);   // lingering warmth after the strip passes
     this.bu.uLark.value = larkU(t);
     this.bu.uHen.value = hensU(t);
     this.bu.uCrow.value = crowU(t);
