@@ -20,7 +20,7 @@ const catX = (t: number) => {
   if (t < 10.0) return 0.55;
   return Math.min(1.06, 0.55 + 0.51 * (t - 10.0) / 3.0);
 };
-const custX = (t: number) => (t < 9.5 ? 0.80 : Math.min(1.08, 0.80 + 0.28 * (t - 9.5) / 4.5));
+const custX = (t: number) => (t < 10.3 ? 0.80 : Math.min(1.08, 0.80 + 0.28 * (t - 10.3) / 3.7));
 const armW = (t: number) =>
   ss(6.0, 6.6, t) * (1 - ss(7.4, 8.0, t)) + ss(15.0, 15.6, t) * (1 - ss(16.4, 17.0, t));
 const puffW = (t: number) => ss(11.5, 11.9, t) * (1 - ss(12.0, 12.6, t));   // lid-lift
@@ -116,15 +116,15 @@ void main() {
       float pool = exp(-dot(pq, pq));
       cob += warm * pool * b.z * 0.22;
     }
-    col = mix(col, cob, smoothstep(0.50, 0.495, uv.y));
+    col = mix(col, cob, (1.0 - smoothstep(0.495, 0.50, uv.y)));
     // foreground props: crate left, barrel right
-    float crate = step(abs(uv.x - 0.115), 0.055) * step(abs(uv.y - 0.375), 0.030) * smoothstep(0.50, 0.495, uv.y);
+    float crate = step(abs(uv.x - 0.115), 0.055) * step(abs(uv.y - 0.375), 0.030) * (1.0 - smoothstep(0.495, 0.50, uv.y));
     col = mix(col, vec3(0.050, 0.040, 0.030), crate * 0.95);
     // crate top edge catches the festoon light
     float crim = step(abs(uv.x - 0.115), 0.055) * (1.0 - smoothstep(0.002, 0.006, abs(uv.y - 0.405)));
     col += warm * crim * 0.18;
     col = mix(col, vec3(0.09, 0.07, 0.05), crate * step(0.45, fract(uv.y * 60.0)) * 0.4);
-    float barrel = step(length((uv - vec2(0.885, 0.37)) / vec2(1.5, 1.0)), 0.045) * smoothstep(0.50, 0.495, uv.y);
+    float barrel = step(length((uv - vec2(0.885, 0.37)) / vec2(1.5, 1.0)), 0.045) * (1.0 - smoothstep(0.495, 0.50, uv.y));
     col = mix(col, vec3(0.048, 0.038, 0.030), barrel * 0.95);
     float band = step(abs(uv.y - 0.37), 0.004) + step(abs(uv.y - 0.352), 0.004);
     col = mix(col, vec3(0.10, 0.075, 0.05), barrel * band * 0.7);
@@ -133,13 +133,13 @@ void main() {
     // rope over the quay edge
     col = mix(col, vec3(0.06, 0.05, 0.04),
               (1.0 - smoothstep(0.0018, 0.004, abs(uv.x - 0.185 - 0.006 * sin(uv.y * 40.0)))) *
-              smoothstep(0.50, 0.49, uv.y) * smoothstep(0.40, 0.42, uv.y) * 0.8);
+              (1.0 - smoothstep(0.49, 0.50, uv.y)) * smoothstep(0.40, 0.42, uv.y) * 0.8);
   }
 
   // ---- festoon poles + wire + bulbs
   {
-    float p1 = 1.0 - smoothstep(0.003, 0.007, abs(uv.x - 0.18)) * step(0.62, uv.y) * step(uv.y, 0.855);
-    float p2 = 1.0 - smoothstep(0.003, 0.007, abs(uv.x - 0.92)) * step(0.62, uv.y) * step(uv.y, 0.855);
+    float p1 = (1.0 - smoothstep(0.003, 0.007, abs(uv.x - 0.18))) * step(0.62, uv.y) * step(uv.y, 0.855);
+    float p2 = (1.0 - smoothstep(0.003, 0.007, abs(uv.x - 0.92))) * step(0.62, uv.y) * step(uv.y, 0.855);
     col = mix(col, vec3(0.03, 0.028, 0.030), max(p1, p2));
     if (uv.x > 0.18 && uv.x < 0.92) {
       float wy = wireY(uv.x) + 0.002 * sin(t * 0.9 + uv.x * 20.0);
@@ -160,7 +160,7 @@ void main() {
     // trestle legs
     float leg = (1.0 - smoothstep(0.002, 0.005, abs(uv.x - sx - 0.085)) +
                  1.0 - smoothstep(0.002, 0.005, abs(uv.x - sx + 0.085))) *
-                smoothstep(0.50, 0.505, uv.y) * smoothstep(0.385, 0.39, uv.y);
+                (1.0 - smoothstep(0.50, 0.505, uv.y)) * smoothstep(0.385, 0.39, uv.y);
     // counter body
     float body = step(abs(uv.x - sx), 0.095) * smoothstep(0.50, 0.505, uv.y) * step(uv.y, 0.615);
     // awning: striped, slight scalloped lower edge
@@ -220,7 +220,7 @@ void main() {
                  (1.0 - smoothstep(0.003, 0.006, sdSeg(uv, cp, cp + vec2(0.008, -0.075))));
     float torso = 1.0 - smoothstep(0.011, 0.018, length((uv - cp) / vec2(0.85, 1.5)));
     float head = 1.0 - smoothstep(0.005, 0.009, length((uv - (cp + vec2(0.0, 0.038))) / vec2(0.9, 1.1)));
-    float parcel = (uCust.x > 0.82 ? 1.0 - smoothstep(0.006, 0.011, length((uv - (cp + vec2(-0.018, -0.010))))) : 0.0);
+    float parcel = uCust.y * (1.0 - smoothstep(0.006, 0.011, length((uv - (cp + vec2(-0.018, -0.010))))));
     col = mix(col, vec3(0.042, 0.034, 0.032), clamp(legs + torso + head + parcel, 0.0, 1.0) * 0.95);
   }
 
@@ -282,7 +282,7 @@ export default class QuayfeastScene extends Scene {
     this.bu.uArm.value = armW(t);
     this.bu.uPuff.value = puffW(t);
     this.bu.uCat.value.set(catX(t), 0.415);
-    this.bu.uCust.value.set(custX(t), 0.505);
+    this.bu.uCust.value.set(custX(t), ss(9.5, 9.9, t));
 
     if (typeof window !== 'undefined') {
       const P = (window as any).__motion || (window as any).__pdoom;
