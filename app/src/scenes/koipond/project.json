@@ -1,0 +1,39 @@
+{
+  "project": "koipond",
+  "meta": {
+    "title": "Koi Pond: Glass",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 20.0
+  },
+  "entries": [
+    {
+      "scene": "koipond/koipond",
+      "id": "act-glass",
+      "start": 0.0,
+      "end": 5.0,
+      "caption": { "fig": "01", "text": "GLASS", "dur": 3.6 }
+    },
+    {
+      "scene": "koipond/koipond",
+      "id": "act-surface",
+      "start": 5.0,
+      "end": 10.0,
+      "caption": { "fig": "02", "text": "SURFACING", "dur": 4.0 }
+    },
+    {
+      "scene": "koipond/koipond",
+      "id": "act-plop",
+      "start": 10.0,
+      "end": 14.0,
+      "caption": { "fig": "03", "text": "THE PLOP", "dur": 3.4 }
+    },
+    {
+      "scene": "koipond/koipond",
+      "id": "act-gold",
+      "start": 14.0,
+      "end": 20.0,
+      "caption": { "fig": "04", "text": "DUSK GOLD", "dur": 4.2 }
+    }
+  ]
+}
