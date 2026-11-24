@@ -1,0 +1,11 @@
+{
+  "project": "dawnrookery",
+  "meta": { "title": "Dawnrookery — heron rookery waking at first light", "aspectRatio": "16:9", "fps": 60, "duration": 24 },
+  "entries": [
+    { "scene": "dawnrookery/dawnrookery", "id": "act-mist",    "start": 0,  "end": 5,  "caption": { "fig": "i",   "text": "STILL MIST", "dur": 4 } },
+    { "scene": "dawnrookery/dawnrookery", "id": "act-arrive",  "start": 5,  "end": 10, "caption": { "fig": "ii",  "text": "FIRST ARRIVALS", "dur": 4 } },
+    { "scene": "dawnrookery/dawnrookery", "id": "act-feed",    "start": 10, "end": 15, "caption": { "fig": "iii", "text": "FEEDING BEAT", "dur": 4 } },
+    { "scene": "dawnrookery/dawnrookery", "id": "act-awake",   "start": 15, "end": 20, "caption": { "fig": "iv",  "text": "ROOKERY AWAKE", "dur": 4 } },
+    { "scene": "dawnrookery/dawnrookery", "id": "act-sun",     "start": 20, "end": 24, "caption": { "fig": "v",   "text": "SUN OVER THE RIM", "dur": 3.5 } }
+  ]
+}
