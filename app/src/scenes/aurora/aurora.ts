@@ -75,7 +75,7 @@ float meteor(vec2 uv, float t, float seed) {
   float body = (1.0 - smoothstep(0.0, trail, -along)) * step(along, 0.0);
   float core = 1.0 - smoothstep(0.0, 0.0022, perp);
   float fade = sin(lt * 3.14159);
-  return body * core * fade * (0.4 + 1.6 * exp(along * 60.0));
+  return body * core * fade * (0.4 + 1.6 * exp(min(along, 0.0) * 60.0));
 }
 
 void main() {
@@ -99,7 +99,7 @@ void main() {
 
   // --- stars: hash grid, twinkle, denser high in frame ---
   if (uv.y > 0.44) {
-    vec2 g = su * vec2(220.0, 140.0);
+    vec2 g = su * vec2(140.0, 140.0);
     vec2 id = floor(g);
     vec2 f = fract(g) - 0.5;
     float h = h21(id);
@@ -110,7 +110,7 @@ void main() {
       c += vec3(0.9, 0.95, 1.0) * (1.0 - smoothstep(0.0, 0.09, d)) * tw * smoothstep(0.32, 0.7, uv.y) * 0.85;
     }
     // a few brighter stars
-    vec2 g2 = su * vec2(60.0, 40.0);
+    vec2 g2 = su * vec2(40.0, 40.0);
     vec2 id2 = floor(g2);
     vec2 f2 = fract(g2) - 0.5;
     float h2 = h21(id2 + 71.0);
