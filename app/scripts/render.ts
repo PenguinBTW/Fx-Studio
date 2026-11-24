@@ -370,7 +370,8 @@ async function audioOnly(page: Page, from: number, to: number, outOpt: string | 
     const mp3Out = out.replace(/\.[^.]+$/, '') + '.mp3';
     console.log(`[audio] Encoding MP3 (320 kbps): ${mp3Out}...`);
     const p = Bun.spawn(['ffmpeg', '-y', '-v', 'error', '-i', out, '-b:a', '320k', mp3Out]);
-    await p.exited;
+    const mp3Code = await p.exited;
+    if (mp3Code !== 0) throw new Error(`[audio] MP3 encode failed with code ${mp3Code} — not reporting a missing file as written`);
     console.log(`[audio] Wrote ${mp3Out}`);
   }
 }

@@ -67,7 +67,7 @@ for (const c of spec.chunks) {
     const p = Bun.spawn(args, { cwd: APP, stdout: 'inherit', stderr: 'pipe' });
     const [err] = await Promise.all([new Response(p.stderr).text(), p.exited]);
     process.stderr.write(err);
-    const sceneErrors = /SCENE ERRORS:|BROWSER LOG:\\n\\[pageerror\\]/.test(err);
+    const sceneErrors = /SCENE ERRORS:|\[pageerror\]/.test(err);
     if (sceneErrors) console.error(`[chunks] ${c.name}: scene errors reported by the render, treating as failed`);
     try { ok = p.exitCode === 0 && !sceneErrors && (await countFrames(part)) === want; } catch { ok = false; }
   }
