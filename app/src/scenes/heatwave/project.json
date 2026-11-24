@@ -1,0 +1,6 @@
+{
+  "project": "heatwave",
+  "entries": [
+    { "scene": "heatwave/heatwave", "id": "heatwave", "start": 0, "end": 20 }
+  ]
+}
