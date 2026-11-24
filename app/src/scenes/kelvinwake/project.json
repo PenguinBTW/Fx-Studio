@@ -1,0 +1,11 @@
+{
+  "project": "kelvinwake",
+  "entries": [
+    {
+      "scene": "kelvinwake/wake",
+      "id": "kelvinwake",
+      "start": 0.0,
+      "end": 20.0
+    }
+  ]
+}
