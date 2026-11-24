@@ -201,8 +201,8 @@ void main() {
   float shaft = 0.0;
   for (int k = 0; k < 3; k++) {
     float fk = float(k);
-    // angles past PI fan the rays down-left over the vine
-    float c0 = 3.14159 + 0.30 + fk * 0.24 + 0.03 * sin(uT * 0.07 + fk * 2.0);
+    // negative angles in (-PI, -PI/2) fan the rays down-left over the vine
+    float c0 = -(3.14159 - 0.30 - fk * 0.24) + 0.03 * sin(uT * 0.07 + fk * 2.0);
     float bw = 0.05 + 0.02 * fk;
     shaft += (1.0 - smoothstep(0.0, bw, abs(ang - c0)))
            * (0.55 + 0.45 * sin(uT * 0.12 + fk * 1.9));
