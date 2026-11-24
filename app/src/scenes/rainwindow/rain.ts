@@ -124,10 +124,11 @@ function buildDrops(): Drop[] {
     const x0c = (ph0 ? ph0.x : p.xs[0]) + (hash(i, 31) - 0.5) * 10;
     const y0c = ph0 ? ph0.y - (ph0.r + cr + 40) : undefined;
     const c = integrate(x0c, cr, t0c, p, Infinity, 1.9, y0c);
-    // a mid-pane spawn pops into view — grow its radius in over ~1 s
+    // a mid-pane spawn pops into view — grow its radius in over ~1 s.
+    // (mergedAt stays Infinity: setting it to a past time would make
+    // headAt report mergeR forever and skip the grow-in.)
     c.growT = 1.0;
     // merge time ≈ child's last node; parent swells by cubic-volume addition
-    c.mergedAt = -1; // marker: this drop is a merging child
     const tm = c.ts[c.ts.length - 1];
     // A real merge = the child died on contact: ended early AND still on
     // the pane. Children that run to END or off the bottom just vanish.
