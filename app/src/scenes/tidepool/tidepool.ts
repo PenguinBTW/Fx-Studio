@@ -24,9 +24,9 @@ const int DRIPS = 4;
 const int MOTES = 9;
 const int ANEM = 6;
 
-// drip i's j-th event time: a steady cadence per drip, staggered by seed;
-// first ring lands at/just before t=2; last start ~15.5 so the t=18
-// surface is decayed-calm (a ring older than ~2.5s holds <3% amplitude)
+// drip i's j-th event time: 6 events per drip, staggered by seed;
+// first ring lands at/just before t=2; last start ~14.4 so every ring
+// is >3s old by t=18 and the surface reads calm (<3% amplitude)
 float dripTime(int i, int j) {
   float fj = float(j);
   float seed = hash11(float(i) * 7.13 + 0.37) * 1.1;
