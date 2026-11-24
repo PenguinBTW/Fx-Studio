@@ -69,7 +69,7 @@ void main() {
   c += vec3(0.9, 0.95, 1.0) * star * tw * breaks * 2.2;
 
   // moon low right with halo
-  vec2 mp = uv - vec2(0.68, 0.55); mp.x *= 2.0; // plane is 2x wider in uv-x: keep the disc round
+  vec2 mp = uv - vec2(0.62, 0.57); mp.x *= 2.0; // plane is 2x wider in uv-x: keep the disc round
   float mr = length(mp * vec2(1.0, 1.4));
   float moon = 1.0 - smoothstep(0.018, 0.026, mr);
   float halo = exp(-mr * mr * 60.0);
@@ -125,7 +125,7 @@ void main() {
 
   // beam light beamPatch on the water: beamPatch x follows the beam azimuth
   float beamPatchX = twX + bd.x * 0.55;
-  float beamPatch = exp(-pow((uv.x - beamPatchX) * 5.0, 2.0)) * exp(-pow((uv.y - seaLevel + 0.10) * 14.0, 2.0));
+  float beamPatch = exp(-((uv.x - beamPatchX) * 5.0) * ((uv.x - beamPatchX) * 5.0)) * exp(-((uv.y - seaLevel + 0.10) * 14.0) * ((uv.y - seaLevel + 0.10) * 14.0));
   beamPatch *= smoothstep(0.2, 0.9, abs(bd.x)) * uSweep * fogFade;
 
   // white-cap glints where the beam passes
@@ -134,24 +134,24 @@ void main() {
   seaC += beamC * (beamPatch * 0.55 + glint * 2.5);
 
   // faint moon lane on the sea
-  float lane = exp(-pow((uv.x - 0.68) * 9.0, 2.0)) * exp(-pow((uv.y - seaLevel) * 8.0, 2.0));
+  float lane = exp(-((uv.x - 0.68) * 9.0) * ((uv.x - 0.68) * 9.0)) * exp(-((uv.y - seaLevel) * 8.0) * ((uv.y - seaLevel) * 8.0));
   seaC += moonC * lane * 0.10 * (0.5 + 0.5 * breaks) * (0.6 + 0.4 * sw2);
 
   // vessel light crossing once, far right horizon
-  float vx = 0.62 + 0.30 * smoothstep(9.0, 17.0, t);
-  float vessel = exp(-pow((uv.x - vx) * 260.0, 2.0)) * exp(-pow((uv.y - (seaLevel + 0.012)) * 700.0, 2.0));
-  seaC += vec3(1.0, 0.75, 0.45) * vessel * 2.0 * (1.0 - smoothstep(17.0, 18.0, t));
+  float vx = 0.56 + 0.18 * smoothstep(9.0, 16.0, t);
+  float vessel = exp(-((uv.x - vx) * 260.0) * ((uv.x - vx) * 260.0)) * exp(-((uv.y - (seaLevel + 0.012)) * 700.0) * ((uv.y - (seaLevel + 0.012)) * 700.0));
 
   /* ---------- compose ---------- */
   // sky above, sea below horizon
   vec3 base = mix(c, seaC, sea);
+  base += vec3(1.0, 0.75, 0.45) * vessel * 2.0 * (1.0 - smoothstep(17.0, 18.0, t));
 
   // beam behind silhouette
   base += beamC * beam * (1.0 - cliff) * (1.0 - tower) * 0.45;
 
   // beam light beamPatch sliding across the cliff face when angle points left
-  float cliffPatch = exp(-pow((uv.x - (twX - 0.28 - bd.x * 0.2)) * 4.0, 2.0))
-                   * exp(-pow((uv.y - ridge + 0.05) * 10.0, 2.0))
+  float cliffPatch = exp(-((uv.x - (twX - 0.28 - bd.x * 0.2)) * 4.0) * ((uv.x - (twX - 0.28 - bd.x * 0.2)) * 4.0))
+                   * exp(-((uv.y - ridge + 0.05) * 10.0) * ((uv.y - ridge + 0.05) * 10.0))
                    * uSweep * fogFade;
   vec3 cliffC = vec3(0.010, 0.011, 0.014);
   cliffC += beamC * cliffPatch * 0.5 * (1.0 - smoothstep(-0.2, 0.4, bd.x));
@@ -162,7 +162,7 @@ void main() {
   // tower silhouette + lamp room
   base = mix(base, vec3(0.008, 0.009, 0.012), tower);
   vec3 lampGlow = vec3(1.0, 0.82, 0.45);
-  float lampGlass = exp(-pow((uv.x - twX) * 90.0, 2.0)) * step(abs(uv.y - lampY), 0.014);
+  float lampGlass = exp(-((uv.x - twX) * 90.0) * ((uv.x - twX) * 90.0)) * step(abs(uv.y - lampY), 0.014);
   base = mix(base, lampGlow * (1.2 + 0.6 * uSweep), max(lampRoom * 0.0 + lampGlass, 0.0));
 
   // lamp bloom dot
@@ -179,7 +179,7 @@ void main() {
   /* ---------- rain squall refracting the beam ---------- */
   // faint vertical sheen where squall curtain crosses the beam
   float sqStreak = step(0.93, h1(floor((uv.x * 180.0 + uv.y * 4.0) + floor(t * 18.0) * 0.31)));
-  base += beamC * sqStreak * uSquall * beam * 2.0;
+  base += beamC * sqStreak * uSquall * beam * (1.0 - cliff) * (1.0 - tower) * 2.0;
 
   fragColor = vec4(base * uAwake, 1.0);
 }`;
@@ -212,7 +212,7 @@ void main() {
     a += streak * (0.05 + 0.05 * h1(col + 4.0)) * (1.0 - fi * 0.35);
   }
   vec3 c = vec3(0.55, 0.65, 0.80);
-  fragColor = vec4(c * a, a) * uInt;
+  fragColor = vec4(c, a * uInt);
 }`;
 
 const VERT = /* glsl */ `
