@@ -741,7 +741,7 @@ export default class TerracedScene extends Scene {
     const t = f.lt;
     const r = this.ctx.renderer;
     r.shadowMap.enabled = true;
-    r.shadowMap.type = THREE.PCFSoftShadowMap;
+    r.shadowMap.type = THREE.PCFShadowMap; // r186 removed PCFSoft (warn+fallback each frame)
     this.skyMat.uniforms.uT.value = t;
     this.swayU.value = t;
     this.flapU.value = t;
@@ -780,9 +780,10 @@ export default class TerracedScene extends Scene {
     const dxdz = -9.0 * 0.115 * Math.cos(-zFig * 0.115 + 0.6);
     this.figure.rotation.y = Math.atan2(dxdz, 1.0) * 0.9;
     this.figure.rotation.z = 0.02 * Math.sin(t * 2.2); // gentle walk sway
-    // lantern rides the arm at ~(0.62, 0.55, 0.36) in figure space
+    // lantern cage sits at (0.5, 0.87, 0.16) in figure space (build.py) —
+    // the glow + light hang there, swaying with the walk
     const swing = 0.10 * Math.sin(t * 2.2 + 0.7);
-    this.v.set(0.62 + swing * 0.15, 0.55 - Math.abs(swing) * 0.05, 0.36 + swing * 0.1);
+    this.v.set(0.5 + swing * 0.15, 0.87 - Math.abs(swing) * 0.05, 0.16 + swing * 0.1);
     this.figure.localToWorld(this.v);
     this.lanternLight.position.copy(this.v);
     this.lanternGlow.position.copy(this.v);
@@ -890,6 +891,7 @@ export default class TerracedScene extends Scene {
     this.layer.dispose();
     this.glb?.dispose();
     this.noiseTex?.dispose();
+    this.stripeTex?.dispose();
     this.hazeTex?.dispose();
     this.glow?.material.map?.dispose();
     this.glow?.material.dispose();
