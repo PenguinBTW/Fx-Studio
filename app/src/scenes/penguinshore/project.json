@@ -1,0 +1,6 @@
+{
+  "project": "penguinshore",
+  "entries": [
+    { "scene": "penguinshore/penguinshore", "id": "penguinshore", "start": 0, "end": 20 }
+  ]
+}
