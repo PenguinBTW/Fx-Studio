@@ -1,0 +1,46 @@
+{
+  "project": "kestrelhover",
+  "meta": {
+    "title": "Kestrel Hover: Chalk Verge",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 20.0
+  },
+  "entries": [
+    {
+      "scene": "kestrelhover/kestrelhover",
+      "id": "act-hover",
+      "start": 0.0,
+      "end": 4.5,
+      "caption": { "fig": "01", "text": "LOCKED ON THE WIND", "dur": 2.6 }
+    },
+    {
+      "scene": "kestrelhover/kestrelhover",
+      "id": "act-gust",
+      "start": 4.5,
+      "end": 8.5,
+      "caption": { "fig": "02", "text": "THE GUST", "dur": 2.6 }
+    },
+    {
+      "scene": "kestrelhover/kestrelhover",
+      "id": "act-lark",
+      "start": 8.5,
+      "end": 12.5,
+      "caption": { "fig": "03", "text": "SKYLARK UP", "dur": 2.6 }
+    },
+    {
+      "scene": "kestrelhover/kestrelhover",
+      "id": "act-stoop",
+      "start": 12.5,
+      "end": 16.8,
+      "caption": { "fig": "04", "text": "THE STOOP", "dur": 2.8 }
+    },
+    {
+      "scene": "kestrelhover/kestrelhover",
+      "id": "act-resume",
+      "start": 16.8,
+      "end": 20.0,
+      "caption": { "fig": "05", "text": "BACK ON STATION", "dur": 2.4 }
+    }
+  ]
+}
