@@ -1,14 +1,23 @@
 // Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
 // petalfall — cherry-blossom petals drifting through a twilight garden.
-// Backdrop shader: dusk gradient, faint blue moon-haze in the top corner,
-// out-of-focus tree silhouettes, a warm lantern glow low in frame. ~220
-// instanced petals on closed-form flutter paths — falling + swaying +
-// tumbling (fake 3D via squash/skew of an ellipse silhouette drawn in the
-// instance fragment shader). Petals are pink-white with a darker rim and a
-// warm edge glint when the tumble catches the lantern light. A breeze gust
-// envelope swells the drift mid-take. Everything is f(t) — no accumulators.
+// Backdrop shader: dusk gradient on a slow warm→cool arc, faint blue
+// moon-haze, distant hills in haze, out-of-focus tree silhouettes, a warm
+// lantern glow, raked-gravel bands ringing the lantern, a koi pond corner
+// (two shadows pass), a white wagtail hopping the gravel edge once, and
+// seeded seed-puffs drifting through. ~220 instanced petals on closed-form
+// flutter paths — falling + swaying + tumbling (fake 3D via squash/skew of
+// an ellipse silhouette drawn in the instance fragment shader); a few catch
+// on the lantern cap and dislodge, others settle onto the gravel/pond.
+// Petals are pink-white with a darker rim and a warm edge glint when the
+// tumble catches the lantern light. A breeze gust envelope swells the drift
+// mid-take. CameraRig drifts toward the lantern and tilts up into the
+// falling column. Everything is f(t) — no accumulators.
 import * as THREE from 'three';
 import { Scene, type Frame, type SceneCtx, type PostOverrides } from '../../engine/scene';
+import { CameraRig } from '../../engine/rig';
+import { Layer2D, W, H } from '../../engine/gl';
+import { overlayTextDuck } from '../../engine/transition';
+import { F } from '../../engine/type';
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 const ss = (a: number, b: number, x: number) => {
@@ -36,6 +45,7 @@ float vnoise(float x) {
   float u = f * f * (3.0 - 2.0 * f);
   return mix(hash1(i), hash1(i + 1.0), u);
 }
+float pow2(float a) { return a * a; }
 
 void main() {
   float x = vUv.x;
@@ -49,6 +59,11 @@ void main() {
   vec3 col = mix(vec3(0.028, 0.018, 0.035), plum,  smoothstep(0.10, 0.34, y));
   col = mix(col, dusk,   smoothstep(0.40, 0.62, y));
   col = mix(col, indigo, smoothstep(0.66, 1.00, y));
+
+  // warm→cool arc: a low ember glow early that cools into late dusk
+  float warm = 1.0 - smoothstep(5.0, 15.0, t);
+  col += vec3(0.30, 0.12, 0.04) * warm * (1.0 - smoothstep(0.28, 0.60, y)) * 0.5;
+  col = mix(col, col * vec3(0.86, 0.92, 1.12), (1.0 - warm) * 0.35);
 
   // faint blue moon-haze in the top-left corner — the cold accent
   // (uv must stay inside the camera's ~0.29–0.71 x window on the backdrop)
@@ -75,6 +90,11 @@ void main() {
   // faint halo ring
   col += vec3(0.9, 0.4, 0.1) * exp(-dot(ld, ld) * 18.0) * 0.5 * lant;
 
+  // --- distant hills in dusk haze ------------------------------------------
+  float hillTop = 0.36 + 0.03 * vnoise(x * 4.0 + 9.0) + 0.012 * vnoise(x * 17.0 + 4.0);
+  float hills = smoothstep(0.30, 0.34, y) * (1.0 - smoothstep(hillTop - 0.004, hillTop + 0.03, y));
+  col = mix(col, vec3(0.085, 0.060, 0.115), hills * 0.55);
+
   // --- out-of-focus tree silhouettes --------------------------------------
   // two blurred dark banks; the top edge undulates like foliage bokeh
   float tr = 0.30 + 0.035 * vnoise(x * 9.0 + 3.1) + 0.018 * vnoise(x * 23.0 + 7.7);
@@ -86,8 +106,68 @@ void main() {
   float trunk = tree2 * smoothstep(0.90, 0.98, vnoise(x * 55.0)) * smoothstep(0.04, 0.13, y);
   col = mix(col, vec3(0.014, 0.009, 0.011), max(tree2 * 0.92, trunk * 0.6));
 
-  // ground haze at the very bottom
-  col = mix(col, vec3(0.05, 0.03, 0.05), (1.0 - smoothstep(0.0, 0.10, y)) * 0.7);
+  // --- raked gravel ground -------------------------------------------------
+  float gravel = 1.0 - smoothstep(0.24, 0.27, y);
+  vec3 sand = vec3(0.21, 0.155, 0.175);
+  float lines = sin(y * 190.0 + 2.5 * sin(x * 30.0));
+  vec2 lc = vec2((x - 0.63) * 2.2, y - 0.04);
+  float arcs = sin(length(lc) * 300.0);
+  float nearL = 1.0 - smoothstep(0.05, 0.11, length(lc));
+  sand *= 0.72 + 0.28 * mix(lines, arcs, nearL);
+  // cool moon sheen across the upper gravel
+  sand += vec3(0.05, 0.06, 0.09) * smoothstep(0.02, 0.15, y);
+  col = mix(col, sand, gravel * 0.94);
+
+  // --- koi pond tucked in the near-left corner -----------------------------
+  vec2 pq = (vUv - vec2(0.35, 0.115)) * vec2(2.0, 1.0);
+  float pond = 1.0 - smoothstep(0.10, 0.13, length(pq));
+  col = mix(col, vec3(0.048, 0.075, 0.125), pond * 0.95);
+  col += vec3(0.40, 0.45, 0.60) * pond * exp(-dot(pq - vec2(0.02, 0.02), pq - vec2(0.02, 0.02)) * 22.0) * 0.5;
+  for (int k = 0; k < 2; k++) {
+    float fk = float(k);
+    float kph = (t - (4.0 + fk * 8.0)) / 10.0;
+    if (kph > 0.0 && kph < 1.0) {
+      vec2 kp = vec2(0.315 + 0.08 * kph + 0.012 * sin(t * 0.8 + fk * 2.0),
+                     0.105 + 0.020 * fk + 0.007 * sin(t * 0.9 + fk));
+      vec2 kd = (vUv - kp) * vec2(2.4, 7.0);
+      float koi = 1.0 - smoothstep(0.014, 0.024, length(kd));
+      col = mix(col, vec3(0.015, 0.020, 0.040), koi * pond * 0.85);
+    }
+  }
+
+  // --- white wagtail: pause-hop-pause along the gravel edge, once ----------
+  float hopW = (t - 9.0) / 6.5;
+  if (hopW > 0.0 && hopW < 1.0) {
+    float hops = hopW * 5.0;
+    float hi = floor(hops);
+    float hf = fract(hops);
+    float bx = 0.33 + 0.026 * hi + 0.026 * smoothstep(0.0, 0.45, hf);
+    float hop = 0.018 * max(0.0, sin(clamp(hf, 0.0, 0.55) / 0.55 * 3.1416));
+    vec2 bd = (vUv - vec2(bx, 0.225 + hop)) * vec2(2.6, 1.6);
+    float birdB = 1.0 - smoothstep(0.014, 0.024, length(bd));
+    float tailW = (1.0 - smoothstep(0.0, 0.003, abs(bd.y - bd.x * 0.45)))
+                * step(0.008, bd.x) * step(bd.x, 0.035);
+    // white wagtail: pale body, dark tail
+    col = mix(col, vec3(0.62, 0.62, 0.66), birdB * 0.85);
+    col = mix(col, vec3(0.03, 0.028, 0.040), tailW * 0.9);
+  }
+
+  // --- seed-puffs drifting through on the same breeze ----------------------
+  for (int k = 0; k < 4; k++) {
+    float fk = float(k);
+    float pph = (t - (3.0 + fk * 4.6)) / 9.0;
+    if (pph > 0.0 && pph < 1.0) {
+      vec2 pp = vec2(0.72 - 0.45 * pph + 0.03 * sin(t * 0.4 + fk * 3.0),
+                     0.34 + 0.10 * hash1(fk * 7.7) + 0.04 * sin(t * 0.5 + fk * 1.7) - 0.08 * pph);
+      vec2 pd2 = (vUv - pp) * vec2(2.2, 1.0);
+      col += vec3(0.85, 0.80, 0.75) * exp(-dot(pd2, pd2) / 0.0005) * 0.3;
+    }
+  }
+
+  // drifting petal-layer fog hugging the gravel and the pond edge
+  float fog = (1.0 - smoothstep(0.0, 0.24, y))
+            * (0.35 + 0.30 * vnoise(x * 6.0 - t * 0.35) + 0.15 * vnoise(x * 16.0 + t * 0.2));
+  col = mix(col, vec3(0.13, 0.085, 0.12), fog * 0.55);
 
   fragColor = vec4(col, 1.0);
 }`;
@@ -115,8 +195,10 @@ in float vGlint;
 out vec4 fragColor;
 void main() {
   vec2 p = vUv * 2.0 - 1.0;
-  // petal: tall ellipse, slightly pinched at the base, cleft tip on top
+  // petal: blossom silhouette — tall ellipse with a 5-fold lobed edge,
+  // slightly pinched at the base, cleft tip on top
   float d = length(vec2(p.x * 1.18, (p.y + 0.06) * 1.42));
+  d -= 0.05 * sin(atan(p.y + 0.06, p.x) * 5.0);
   float body = 1.0 - smoothstep(0.80, 0.88, d);
   float notch = 1.0 - smoothstep(0.08, 0.22, length(p - vec2(0.0, 0.60)));
   float shape = body * (1.0 - notch);
@@ -132,7 +214,7 @@ void main() {
   fragColor = vec4(col, shape * 0.96);
 }`;
 
-const PETALS = 220;
+const PETALS = 150;
 // Backdrop plane mapping (must match the mesh below): uv → world.
 const PW = 320, PH = 140, PY = 8, PZ = -80;
 
@@ -212,9 +294,17 @@ const seeds: PetalSeed[] = [];
   }
 }
 
+const CAPTIONS: Array<[number, number, string]> = [
+  [1.0, 4.5, 'the garden holds its breath'],
+  [6.5, 10.5, 'a gust loosens the canopy'],
+  [14.5, 19.0, 'petals settle where the koi pass'],
+];
+
 export default class PetalfallScene extends Scene {
   private three = new THREE.Scene();
   private cam: THREE.PerspectiveCamera;
+  private rig = new CameraRig();
+  private layer = new Layer2D(W, H);
   private u = { uT: { value: 0 } };
   private petals: THREE.InstancedMesh;
   private aTint: THREE.InstancedBufferAttribute;
@@ -278,16 +368,40 @@ export default class PetalfallScene extends Scene {
     const u0 = s.x0 + g * 0.06 * life * (s.swayP > Math.PI ? 1 : -1);
     // wrap span must exceed the widest view slice (~±62 world at z=-72)
     // so a wrapping petal is never teleported inside the frame
-    const wx = (frac(u0 + 0.5) - 0.5) * PW * 0.55;
+    let wx = (frac(u0 + 0.5) - 0.5) * PW * 0.55;
     // fall distance integrates the gust factor over the petal's own window
     // — applying the fading gust to the whole life would lift petals back up
-    const wy = 48.0 - s.fallV * (gustInt(t) - gustInt(s.onset));
-    const x = wx + s.swayA * (0.6 + 0.7 * g) * Math.sin(life * s.swayF + s.swayP);
-    const y = wy + s.swayA * 0.18 * Math.sin(life * s.swayF * 1.7 + s.swayP * 2.0);
+    let wy = 48.0 - s.fallV * (gustInt(t) - gustInt(s.onset));
+    // a few petals catch on the lantern cap, rock, then dislodge on the next
+    // gust front; others settle onto the gravel or the pond corner and rest
+    // flat until they fade — all keyed off the seed index, still closed-form
+    const caught = i % 29 === 0;
+    const pondRest = i % 37 === 0;
+    const settle = i % 13 === 0 || pondRest;
+    let grounded = false;
+    if (caught && wy < LANTERN.y + 4.0) {
+      const rel = s.onset + s.life * 0.78;
+      if (t < rel) {
+        wx = LANTERN.x + 2.0 + 2.0 * Math.sin(t * 1.7 + s.swayP);
+        wy = LANTERN.y + 3.5 + 0.8 * Math.sin(t * 2.3 + s.swayP * 2.0);
+      } else {
+        wy = LANTERN.y + 3.5 - s.fallV * 0.5 * (t - rel);
+      }
+    } else if (settle) {
+      const gy = pondRest ? -46.0 : -27.0 - frac(i * 0.318) * 6.0;
+      if (wy < gy) {
+        wy = gy;
+        grounded = true;
+        if (pondRest) wx = Math.max(-62.0, Math.min(-31.0, wx)); // pond corner
+      }
+    }
+    const swayK = grounded ? 0.04 : 1.0;
+    const x = wx + s.swayA * (0.6 + 0.7 * g) * Math.sin(life * s.swayF + s.swayP) * swayK;
+    const y = wy + s.swayA * 0.18 * Math.sin(life * s.swayF * 1.7 + s.swayP * 2.0) * swayK;
 
     // tumble: the silhouette wobbles between ellipse orientations
     const tum = t * s.tumR + s.tumP;
-    const squash = 0.25 + 0.75 * Math.abs(Math.cos(tum));
+    const squash = (0.25 + 0.75 * Math.abs(Math.cos(tum))) * (grounded ? 0.35 : 1.0);
     const angle = s.rotA * Math.sin(tum * 0.7) + 0.35 * Math.sin(life * s.swayF + s.swayP);
     this.e.set(0, 0, angle);
     this.q.setFromEuler(this.e);
@@ -319,14 +433,43 @@ export default class PetalfallScene extends Scene {
     this.petals.instanceMatrix.needsUpdate = true;
     this.aGlint.needsUpdate = true;
 
-    // near-static macro feel: a breath of lateral drift and a slow push
+    // CameraRig: slow drift toward the lantern with a tilt up into the
+    // falling column during the crescendo, easing back for the settle
     const push = ss(0, this.ctx.end, t);
-    this.cam.position.set(0.7 * Math.sin(t * 0.05), 8.0 - 0.6 * push, 24.0 - 1.0 * push);
-    this.cam.lookAt(0, 12.0, PZ);
+    this.rig.position = [0.7 * Math.sin(t * 0.05) + 14.0 * ss(5, 16, t), 8.0 - 0.6 * push, 24.0 - 1.0 * push];
+    this.rig.target = [26.0 * ss(5, 15, t), 3.0 + 11.0 * ss(8, 13, t) - 4.0 * ss(16, this.ctx.end, t), PZ];
+    this.rig.focalLengthPx = (this.ctx.H / 2) / Math.tan(0.5 * 40 * Math.PI / 180);
+    this.rig.syncToThreeCamera(this.rig.evalCam(t), this.cam);
 
     r.setRenderTarget(out);
     r.clear(true, true, true);
     r.render(this.three, this.cam);
+
+    // probe captions (textProbes auto-emit via the main.ts canvas hook)
+    if (CAPTIONS.some(([a, b]) => t >= a && t <= b)) {
+      const c = this.layer.ctx;
+      c.clearRect(0, 0, W, H);
+      const duck = overlayTextDuck(f.tin, f.tout);
+      for (const [tin, tout, text] of CAPTIONS) {
+        const a = ss(tin, tin + 0.4, t) * (1 - ss(tout - 0.4, tout, t)) * duck;
+        if (a <= 0.001) continue;
+        c.save();
+        c.globalAlpha = a;
+        c.font = `46px "${F.archivo(112, 500)}", sans-serif`;
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        // knockout halo: 12px stroke = ~6px outside glyph edges
+        c.lineJoin = 'round';
+        c.strokeStyle = 'rgba(5, 6, 10, 0.9)';
+        c.lineWidth = 12;
+        const cx = W / 2, cy = H * 0.85;
+        c.strokeText(text, cx, cy);
+        c.fillStyle = '#f2ecea';
+        c.fillText(text, cx, cy);
+        c.restore();
+      }
+      this.ctx.comp.draw(r, this.layer.upload(), out, { mode: 'normal', opacity: 1 });
+    }
     r.resetState();
 
     return {
