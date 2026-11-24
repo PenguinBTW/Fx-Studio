@@ -1,0 +1,46 @@
+{
+  "project": "stileedge",
+  "meta": {
+    "title": "Stile at the Field Edge: The Crow Holds",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 20.0
+  },
+  "entries": [
+    {
+      "scene": "stileedge/stileedge",
+      "id": "act-wind",
+      "start": 0.0,
+      "end": 4.0,
+      "caption": { "fig": "01", "text": "WIND AT THE FIELD EDGE", "dur": 2.6 }
+    },
+    {
+      "scene": "stileedge/stileedge",
+      "id": "act-crow",
+      "start": 4.0,
+      "end": 8.0,
+      "caption": { "fig": "02", "text": "THE CROW HOLDS THE STILE", "dur": 2.6 }
+    },
+    {
+      "scene": "stileedge/stileedge",
+      "id": "act-rabbit",
+      "start": 8.0,
+      "end": 13.5,
+      "caption": { "fig": "03", "text": "A RABBIT WORKS THE WALL", "dur": 2.4 }
+    },
+    {
+      "scene": "stileedge/stileedge",
+      "id": "act-gust",
+      "start": 13.5,
+      "end": 16.0,
+      "caption": { "fig": "04", "text": "THE GUST TAKES A CANE", "dur": 2.2 }
+    },
+    {
+      "scene": "stileedge/stileedge",
+      "id": "act-settle",
+      "start": 16.0,
+      "end": 20.0,
+      "caption": { "fig": "05", "text": "DUSK SETTLES BACK", "dur": 2.6 }
+    }
+  ]
+}
