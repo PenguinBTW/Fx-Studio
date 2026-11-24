@@ -134,10 +134,10 @@ void main() {
       col = mix(col, hillCol(i), m);
     }
     // far-shore treeline: fine dark teeth just above the horizon
-    float teeth = max(fbm3(vec3(uv.x * 60.0, 8.0, 0.0), 4), 0.0) * 0.012;
+    float teeth = 0.003 + max(fbm3(vec3(uv.x * 60.0, 8.0, 0.0), 4), 0.0) * 0.019;
     float treeM = (1.0 - smoothstep(hz, hz + teeth, uv.y))
-                * (1.0 - smoothstep(hz - 0.004, hz, uv.y));
-    col = mix(col, vec3(0.10, 0.11, 0.13), treeM * (0.55 + 0.45 * uBurn));
+                * smoothstep(hz - 0.006, hz - 0.001, uv.y);
+    col = mix(col, vec3(0.09, 0.10, 0.12), treeM * (0.6 + 0.4 * uBurn));
     // high cloud wisps catching first light
     float wisp = max(fbm3(vec3(uv.x * 4.0 + t * 0.01, uv.y * 26.0, 5.0), 4), 0.0);
     col += vec3(0.7, 0.45, 0.35) * wisp * smoothstep(HORIZON + 0.04, HORIZON + 0.12, uv.y) * uGold * 0.4;
@@ -197,13 +197,14 @@ void main() {
       }
     }
     // oar-dip rings: each stroke spreads a small ellipse at the dip point;
-    // rings keep expanding after their stroke but stop once the boat's gone
-    float t0 = 6.6;
+    // rings keep expanding after their stroke but stop once the boat's gone.
+    // Blade bottoms out at stroke min: (t-6.6)*2π/1.7 = 3π/2 → t = 7.875
+    float t0 = 7.875;
     for (int k = 0; k < 6; k++) {
       float dipT = t0 + float(k) * 1.7;
       float age = t - dipT;
       if (age <= 0.0 || age > 2.6) continue;
-      vec2 dip = vec2(boatX(dipT) + 0.012, BOAT_Y - 0.004);
+      vec2 dip = vec2(boatX(dipT) - 0.014, BOAT_Y - 0.004); // blade tip is on -x
       vec2 dp = (uv - dip) * vec2(2.0, 1.0);
       float rr = age * 0.018;
       float ring = exp(-pow2(length(dp) - rr) / 0.00003) * (1.0 - age / 2.6);
@@ -257,8 +258,9 @@ void main() {
       for (int k = 0; k < 5; k++) {
         float fk = float(k);
         float side = (fk - 2.0);              // -2..2 vee offsets
+        // arms trail the leader (+x, they travel -x) and split left/right in y
         float dx = mix(0.80, 0.28, dd) + abs(side) * 0.016;
-        float dy = 0.335 - side * side * 0.002 - abs(side) * 0.003
+        float dy = 0.335 - abs(side) * 0.002 + side * 0.007
                  + 0.0015 * sin(t * 6.0 + fk * 3.0);
         vec2 db = (uv - vec2(dx, dy)) * vec2(2.0, 1.0);
         float bod = 1.0 - smoothstep(0.004, 0.007, length(db * vec2(1.0, 2.2)));
@@ -363,7 +365,9 @@ export default class DawnMistScene extends Scene {
       3.5 - 1.2 * push,
       26.0 - 7.0 * push,
     ];
-    this.rig.target = [boatXw * 0.35 * boatP, 4.0 + 1.0 * gold, -60];
+    // aim a few degrees above the horizon so the shoreline sits ~35-40%
+    // from the top (plan: midpoint-ish); ease down during the boat beat
+    this.rig.target = [boatXw * 0.35 * boatP, 16.0 - 5.0 * boatP + 1.0 * gold, -60];
     this.rig.roll = 0.002 * Math.sin(t * 0.09);
     this.rig.syncToThreeCamera(this.rig.evalCam(t), this.cam);
 
