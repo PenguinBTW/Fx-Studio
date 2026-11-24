@@ -50,4 +50,38 @@ amplitude collapses to a locked glide during the bank.
 `CameraRig` near-static: lateral position drifts with the owl's arc
 (`owlX`), tiny push (`z 76→71`) during the web-glint beat, ~2% roll sway.
 
+## Concept mapping
+
+| Intangible | Physical stand-in |
+|---|---|
+| silence / stealth | locked-glide silhouette — flap amplitude collapses during the bank, no motion blur, captions carry the "no sound" idea |
+| night | indigo gradient + single key light (moon); everything else is silhouette or rim |
+| hunting intent | the transit path itself: wide circle, one bank, a dip that drops behind cover — the classic quartering pattern |
+| the hollow sleeping | still mist, static barn, one fence post; life only appears as brief beats (swallow, mouse, distant fox) |
+
+## Anti-cliché audit
+
+- No moon-behind-clouds Gothic framing — the moon is a hard disc with a
+  measured halo, not a fog blob.
+- No lightning flash or thunderhead sky; the drama is one bird crossing
+  a field.
+- No horror beats (no glowing eyes, no shrieking sting); the owl is a
+  neighbour, not a monster.
+- Mist stays low and read as weather, not dry-ice fog swallowing the frame.
+- Captions are plain narration, not displayed horror-movie title cards.
+
+## Eye-tracking map
+
+1. Entry: moon halo holds the top-right third; hedgerow + barn frame left.
+2. t≈2.5–7: gaze follows the owl's silhouette right→center — the brightest
+   moving shape against mid sky.
+3. t≈7–9: the belly flash pulls the eye to mid-frame, then the dip drops
+   it to the barn roofline.
+4. t≈10–12.5: the climb reappears against open sky left of the barn —
+   the eye tracks up the gap between barn and moon.
+5. t≈13–15.5: attention settles to the fence post mid-frame where the
+   web glint is the only new light source.
+6. Tail: the eye rests on the mist line; small life beats (swallow,
+   mouse) are peripheral.
+
 // Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
