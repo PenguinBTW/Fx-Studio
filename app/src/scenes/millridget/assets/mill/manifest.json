@@ -1,0 +1,7 @@
+{
+  "id": "mill",
+  "version": 1,
+  "source": "build.py",
+  "parts": { "sails": "sails", "body": "body", "cap": "cap" },
+  "budgets": { "tris": 20000, "textureMB": 1 }
+}
