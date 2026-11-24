@@ -18,7 +18,6 @@ import { GLSL_NOISE } from '../../engine/glsl/noise';
 import { mulberry32 } from '../../engine/util';
 
 // ---- world layout ---------------------------------------------------------
-const rng = mulberry32(71173);
 const VINE_PTS: [number, number, number][] = [
   [-5.0, 4.4, -2.6],
   [-2.5, 4.0, -2.2],
@@ -479,6 +478,9 @@ export default defineScene({
   id: 'hummingbird/garden',
 
   setup(ctx: SceneContext) {
+    // seed per setup — a module-level rng would advance across act entries and
+    // give each caption beat a different garden
+    const rng = mulberry32(71173);
     const sc = ctx.scene3D;
     sc.background = new THREE.Color(0x0a140c);
 
