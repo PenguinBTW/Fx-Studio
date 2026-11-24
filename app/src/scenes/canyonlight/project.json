@@ -1,0 +1,6 @@
+{
+  "project": "canyonlight",
+  "entries": [
+    { "scene": "canyonlight/canyonlight", "id": "canyonlight", "start": 0, "end": 20 }
+  ]
+}
