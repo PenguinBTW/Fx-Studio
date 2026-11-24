@@ -179,7 +179,7 @@ def pane(name, loc, scale, rot=(0,0,0)):
 pane_id = 0
 for sx in (-1, 1):
     for yi, y in enumerate([-1.92, -0.96, 0.0, 0.96, 1.92]):
-        for zi, z in enumerate([0.75, 1.42]):
+        for zi, z in enumerate([0.75, 1.42, 1.75]):
             pane(f'pane_{pane_id}', (sx*1.5, y, z), (0.012, 0.44, 0.30))
             pane_id += 1
 # roof slope panes: half-arches approximated as two tilted slabs per side
