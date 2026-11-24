@@ -1,0 +1,32 @@
+{
+  "project": "frostbloom",
+  "meta": {
+    "title": "Frostbloom: Ice Feathers at Dawn",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 24.0
+  },
+  "entries": [
+    {
+      "scene": "frostbloom/frostbloom",
+      "id": "act-seeds",
+      "start": 0.0,
+      "end": 8.0,
+      "caption": { "fig": "01", "text": "FIRST FROST", "dur": 4.0 }
+    },
+    {
+      "scene": "frostbloom/frostbloom",
+      "id": "act-creep",
+      "start": 8.0,
+      "end": 16.0,
+      "caption": { "fig": "02", "text": "THE CREEP", "dur": 4.0 }
+    },
+    {
+      "scene": "frostbloom/frostbloom",
+      "id": "act-dawn",
+      "start": 16.0,
+      "end": 24.0,
+      "caption": { "fig": "03", "text": "DAWN", "dur": 4.0 }
+    }
+  ]
+}
