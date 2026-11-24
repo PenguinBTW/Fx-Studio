@@ -83,7 +83,8 @@ void main() {
 
   // hero fly: one brighter mote sweeping near the camera inside a gaussian
   // time window — a closed-form lerp along a wide arc, not a keyed event.
-  float hw = hero ? exp(-pow((uT - uHeroT) / uHeroW, 2.0)) : 0.0;
+  float hd = (uT - uHeroT) / uHeroW;
+  float hw = hero ? exp(-hd * hd) : 0.0;
   if (hero) {
     float s = clamp((uT - (uHeroT - uHeroW * 2.0)) / (uHeroW * 4.0), 0.0, 1.0);
     vec3 near_ = vec3(mix(-7.0, 6.0, s), mix(1.4, 2.6, s) + 0.4 * sin(s * PI), mix(-1.5, -3.0, s));
@@ -133,7 +134,7 @@ void main() {
 const BACK_VERT = /* glsl */ `
 out vec2 vUv;
 void main() {
-  vUv = position.xy + 0.5;
+  vUv = uv;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 }`;
 
@@ -154,13 +155,14 @@ void main() {
   // with sparse taller blades. Fully analytic sums of sines.
   float edge = 0.40 + 0.050 * sin(vUv.x * 19.0) + 0.030 * sin(vUv.x * 47.0 + 1.7)
              + 0.016 * sin(vUv.x * 91.0 + 4.0);
-  float blade = step(0.82, fract(sin(floor(vUv.x * 220.0) * 12.9898) * 43758.5453))
-              * 0.10 * fract(sin(floor(vUv.x * 220.0) * 78.233) * 19642.3494);
+  float blade = step(0.90, fract(sin(floor(vUv.x * 220.0) * 12.9898) * 43758.5453))
+              * 0.035 * fract(sin(floor(vUv.x * 220.0) * 78.233) * 19642.3494);
   edge += blade;
   col = mix(vec3(0.0008, 0.0016, 0.0024), col, smoothstep(edge - 0.012, edge + 0.004, vUv.y));
 
   // residual warm haze dying at the horizon as dusk deepens across the take
-  col += vec3(0.030, 0.016, 0.005) * exp(-pow((vUv.y - 0.46) / 0.06, 2.0))
+  float hazeD = (vUv.y - 0.46) / 0.06;
+  col += vec3(0.030, 0.016, 0.005) * exp(-hazeD * hazeD)
        * (1.0 - smoothstep(2.0, 18.0, uT) * 0.6);
   fragColor = vec4(col, 1.0);
 }`;
