@@ -35,7 +35,7 @@ const passed = (t: number) => ss(14.5, 17.5, t);
 // brief dead-calm lull at the very deepest opacity
 const violence = (t: number) => {
   const core = whiteout(t);
-  const lull = ss(13.2, 13.8, t) * (1 - ss(14.2, 14.9, t)) * 0.45; // dip inside core
+  const lull = ss(13.2, 13.8, t) * (1 - ss(14.2, 14.9, t)) * 0.95; // near-calm dip inside core
   return clamp01(0.10 + 0.78 * approach(t) + 0.55 * core - lull - 0.85 * passed(t));
 };
 
@@ -175,7 +175,7 @@ void main() {
   float depth = smoothstep(0.0, 0.30, wallTop - y);
   float dens = inWall * (0.55 + 0.45 * depth) * (0.60 + 0.40 * uApp) * (1.0 - uPass);
   vec3 wallCol = mix(vec3(0.10, 0.045, 0.02), vec3(0.80, 0.42, 0.13), smoothstep(0.28, 0.88, churn));
-  float rollBand = smoothstep(wallTop, wallTop - 0.05, y) * (1.0 - smoothstep(wallTop - 0.05, wallTop - 0.22, y));
+  float rollBand = (1.0 - smoothstep(wallTop - 0.05, wallTop, y)) * smoothstep(wallTop - 0.22, wallTop - 0.05, y);
   wallCol = mix(wallCol, vec3(0.07, 0.03, 0.015), rollBand * 0.75 * uApp);
   // crown rim light — lobes catch the sun on top
   float rim = inWall * exp(-(wallTop - y) * 130.0) * (0.30 + 0.55 * uApp);
@@ -276,7 +276,7 @@ export default class SandstormScene extends Scene {
     const u = frac(i * 0.6180339887);
     const w = frac(i * 0.7548776662);
     const z = frac(i * 0.5698402909);
-    const speed = (14 + 46 * w) * (0.35 + 1.4 * v);      // units/s in world space
+    const speed = 14 + 46 * w;                            // units/s; constant so grain distance never rewinds
     const x = 0.27 + frac(u + t * speed / (PW * 0.46)) * 0.46;
     const yBand = 0.15 + 0.75 * z;
     const y = yBand + 0.02 * Math.sin(t * (2.0 + w) + u * 40.0);
@@ -367,7 +367,8 @@ export default class SandstormScene extends Scene {
       ca: 0.10 + 0.15 * v,
       grain: 0.05 + 0.06 * v,
       vignette: 0.5,
-      level: ss(0, 0.8, t) * (1 - ss(this.ctx.end - 0.8, this.ctx.end, t)),
+      level:
+        ss(0, 0.8, t) * (this.ctx.end >= 19.9 ? 1 - ss(20.0 - 0.8, 20.0, t) : 1),
       toneMap: 'agx',
     };
   }
