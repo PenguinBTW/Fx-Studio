@@ -19,9 +19,11 @@ const WATER_Y = -3.0;      // waterline — water band's top edge
 const PLOP_T = 19.0;       // frog plop time
 const PLOP = { x: 1.5, z: -9.0 }; // plop centre on the water (world)
 const MOON_X = 16.2;       // moon world x on the backdrop (uv 0.68 × 90 wide)
+const MOON_Y = 5.36;       // moon world y (uv 0.58 → 2 + 0.08 × 42)
 const MOON_Z = -32.0;      // backdrop plane z
 const WATER_Z = -14.0;     // water band plane z
 const QUAD_W = 90.0;       // both quads share this width
+const WATER_H = 8.0;       // water band height
 
 // chorus: first flashes → full chorus → sudden still → rekindle
 function camPos(t: number): [number, number, number] {
@@ -133,6 +135,8 @@ ${GLSL_NOISE}
 varying vec2 vUv;
 uniform float uT;
 uniform vec3 uCam;
+uniform vec3 uCamR;   // camera right basis
+uniform vec3 uCamF;   // camera forward basis
 
 void main() {
   // mirrored gradient: darkest at the bottom, horizon colour at top
@@ -149,9 +153,16 @@ void main() {
 
   // moon glint: vertical wobbling column of light under the moon. The
   // quad is far wider than the frame, so uv.x is not a screen fraction —
-  // project the moon's world x through the camera onto the water plane.
-  float tanM = (${MOON_X.toFixed(1)} - uCam.x) / (uCam.z - (${MOON_Z.toFixed(1)}));
-  float gx = 0.5 + (uCam.x + (uCam.z - (${WATER_Z.toFixed(1)})) * tanM) / ${QUAD_W.toFixed(1)}
+  // and a fixed world x drifts off the moon's screen x under camera pitch.
+  // Solve each row's world x so its view-space x/depth ratio equals the
+  // moon's: (W−C)·R / (W−C)·F = (M−C)·R / (M−C)·F.
+  vec3 md = vec3(${MOON_X.toFixed(2)}, ${MOON_Y.toFixed(2)}, ${MOON_Z.toFixed(1)}) - uCam;
+  float mr = dot(md, uCamR) / dot(md, uCamF);
+  float wy = (${WATER_Y.toFixed(2)} - ${WATER_H.toFixed(1)}) + ${WATER_H.toFixed(1)} * vUv.y;
+  float restF = (wy - uCam.y) * uCamF.y + (${WATER_Z.toFixed(1)} - uCam.z) * uCamF.z;
+  float restR = (wy - uCam.y) * uCamR.y + (${WATER_Z.toFixed(1)} - uCam.z) * uCamR.z;
+  float wx = uCam.x + (mr * restF - restR) / (uCamR.x - mr * uCamF.x);
+  float gx = 0.5 + wx / ${QUAD_W.toFixed(1)}
            + 0.012 * fbm3(vec3(vUv.y * 30.0, uT * 0.3, 2.0), 2, 2.0, 0.5);
   float gdx = (vUv.x - gx) / 0.020;
   float gl = exp(-gdx * gdx);
@@ -164,8 +175,10 @@ void main() {
   // or the splash and the scatter diverge.
   float pt = uT - ${PLOP_T.toFixed(1)};
   if (pt > 0.0) {
-    float tanP = (${PLOP.x.toFixed(1)} - uCam.x) / (uCam.z - (${PLOP.z.toFixed(1)}));
-    vec2 pc = vec2(0.5 + (uCam.x + (uCam.z - (${WATER_Z.toFixed(1)})) * tanP) / ${QUAD_W.toFixed(1)}, 0.42);
+    float sP = (uCam.z - (${WATER_Z.toFixed(1)})) / (uCam.z - (${PLOP.z.toFixed(1)}));
+    vec2 pc = vec2(
+      0.5 + (uCam.x + sP * (${PLOP.x.toFixed(1)} - uCam.x)) / ${QUAD_W.toFixed(1)},
+      (uCam.y + sP * (${WATER_Y.toFixed(2)} - uCam.y) - (${WATER_Y.toFixed(2)} - ${WATER_H.toFixed(1)})) / ${WATER_H.toFixed(1)});
     float pr = 0.02 + 0.30 * smoothstep(0.0, 2.6, pt);
     float pd = length((vUv - pc) * vec2(2.2, 1.0));
     float rd = (pd - pr) / 0.012;
@@ -363,7 +376,12 @@ export default defineScene({
     const waterMat = new THREE.ShaderMaterial({
       vertexShader: QUAD_VERT,
       fragmentShader: WATER_FRAG,
-      uniforms: { uT: { value: 0 }, uCam: { value: new THREE.Vector3() } },
+      uniforms: {
+        uT: { value: 0 },
+        uCam: { value: new THREE.Vector3() },
+        uCamR: { value: new THREE.Vector3(1, 0, 0) },
+        uCamF: { value: new THREE.Vector3(0, 0, -1) },
+      },
     });
     const water = new THREE.Mesh(new THREE.PlaneGeometry(90, 8), waterMat);
     water.position.set(0, WATER_Y - 4.0, -14);
@@ -466,6 +484,12 @@ export default defineScene({
     ctx.updateCamera(t, f.p);
     const cp = ctx.rig.position;
     (st.waterMat.uniforms.uCam.value as THREE.Vector3).set(cp[0], cp[1], cp[2]);
+    // camera basis for view-space projections (rig has no roll)
+    const tt = camTarget(t);
+    const fwd = new THREE.Vector3(tt[0] - cp[0], tt[1] - cp[1], tt[2] - cp[2]).normalize();
+    const right = new THREE.Vector3().crossVectors(fwd, new THREE.Vector3(0, 1, 0)).normalize();
+    (st.waterMat.uniforms.uCamF.value as THREE.Vector3).copy(fwd);
+    (st.waterMat.uniforms.uCamR.value as THREE.Vector3).copy(right);
     (st.flyMat.uniforms.uCamPos.value as THREE.Vector3).set(cp[0], cp[1], cp[2]);
     (st.owlMat.uniforms.uCamPos.value as THREE.Vector3).set(cp[0], cp[1], cp[2]);
     const px = out.height / 1080;
