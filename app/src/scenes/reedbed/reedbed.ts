@@ -185,7 +185,7 @@ export default class ReedbedScene extends Scene {
     const [kr, kg, kb] = blackbodyToLinearSRGB(3000);
     this.sunBase.setRGB(kr, kg, kb);
     this.sun = new THREE.DirectionalLight(this.sunBase.clone(), 2.4);
-    this.sun.position.set(-24, 6, 78);
+    this.sun.position.set(-15.5, 6, 95.6); // azimuth -14° — same as the sky warm band + glow
     this.sun.target.position.set(4, 0.5, 18);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
@@ -372,7 +372,7 @@ export default class ReedbedScene extends Scene {
     });
     const glare = new THREE.Mesh(new THREE.PlaneGeometry(26, 46), pathMat);
     glare.rotation.x = -Math.PI / 2;
-    glare.rotation.z = Math.PI + Math.atan2(-24 - -8, 78 - 18); // long axis points at the sun
+    glare.rotation.z = Math.PI + Math.atan2(this.glow.position.x + 8, this.glow.position.z - 18); // long axis points at the sun glow
     glare.position.set(-8, 0.012, 18);
     scene.add(glare);
     this.glareMat = pathMat; this.glareTex = pathTex;
@@ -398,7 +398,7 @@ export default class ReedbedScene extends Scene {
     const ringGeo = new THREE.RingGeometry(0.44, 0.5, 40);
     ringGeo.rotateX(-Math.PI / 2);
     const ringSpots: Array<[number, number]> = [
-      [-4.5, 12], [3.5, 25.6], [-9.6, 26.3], [10.5, 21], [-2, 30], [7.5, 17.6], [2, 14.5], [-12.5, 20],
+      [-4.5, 12], [3.5, 25.6], [-9.6, 26.3], [10.5, 21], [-2, 30], [7.5, 17.6], [2, 14.5], [-12.5, 20], [-6, 17],
     ];
     ringSpots.forEach(([x, z], i) => {
       const mat = new THREE.MeshBasicMaterial({
@@ -519,8 +519,8 @@ export default class ReedbedScene extends Scene {
       const wingFlick = Math.sin(t * 42 + d.ph * 9) * 0.4;
       d.wl.rotation.z = 0.15 + wingFlick;
       d.wr.rotation.z = -0.15 - wingFlick;
-      // dab rings on the low dips (rings 6-7 are the flies'; 5 is the heron's)
-      if (this.v.y < 0.16 && i < 2) {
+      // dab rings on the low dips (rings 6-8 are the flies'; 5 is the heron's)
+      if (this.v.y < 0.16) {
         const rng = this.rings[6 + i];
         if (rng) { rng.ph = -t * rng.rate; rng.m.position.set(this.v.x, 0.02, this.v.z); rng.dab = true; }
       }
