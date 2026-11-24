@@ -1,0 +1,41 @@
+{
+  "project": "willowwhisper",
+  "meta": { "title": "willowwhisper", "aspectRatio": "16:9", "fps": 60, "duration": 24.0 },
+  "entries": [
+    {
+      "scene": "willowwhisper/willowwhisper",
+      "id": "act-dusk",
+      "start": 0.0,
+      "end": 5.2,
+      "caption": { "fig": "i", "text": "STILL DUSK", "dur": 4 }
+    },
+    {
+      "scene": "willowwhisper/willowwhisper",
+      "id": "act-ducks",
+      "start": 5.2,
+      "end": 9.6,
+      "caption": { "fig": "ii", "text": "DUCKS CROSS", "dur": 4 }
+    },
+    {
+      "scene": "willowwhisper/willowwhisper",
+      "id": "act-kingfisher",
+      "start": 9.6,
+      "end": 15.2,
+      "caption": { "fig": "iii", "text": "KINGFISHER", "dur": 4 }
+    },
+    {
+      "scene": "willowwhisper/willowwhisper",
+      "id": "act-bat",
+      "start": 15.2,
+      "end": 18.5,
+      "caption": { "fig": "iv", "text": "BAT PASS", "dur": 3 }
+    },
+    {
+      "scene": "willowwhisper/willowwhisper",
+      "id": "act-settle",
+      "start": 18.5,
+      "end": 24.0,
+      "caption": { "fig": "v", "text": "SETTLE", "dur": 4 }
+    }
+  ]
+}
