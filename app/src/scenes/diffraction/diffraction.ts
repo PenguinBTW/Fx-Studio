@@ -87,7 +87,7 @@ void main() {
   float aa = 1.0 - smoothstep(0.08, 0.25, dydx); // order period ~1.1 units
   // where even the envelope lobes go sub-pixel, show the unresolved glow —
   // a coordinate-compressed envelope is the analytic low-pass of the fan
-  float vis = smoothstep(0.9, 0.3, dydx);
+  float vis = 1.0 - smoothstep(0.3, 0.9, dydx);
   float iWall = mix(envelopeI(y), patternI(y), aa) * vis
     + envelopeI(y * 0.12) * (1.0 - vis) * 0.4;
   iWall = pow(iWall, 0.6); // lift side lobes into visibility (sinc² lobe ~5% peak)
@@ -111,17 +111,17 @@ in vec3 vW; out vec4 fragColor;
 void main() {
   vec3 col = vec3(0.006, 0.007, 0.010); // near-black baffle bar
 
-  // N slits centred on x=0, centres spaced DSPACING*0.35 apart (compressed so
-  // the row reads on the panel); slit width breathes with uA.
-  // Slits fade in one by one as the count animates — fractional uN is a
-  // reveal amount for the incoming slit, not a fractional aperture.
-  float halfRow = (uN - 1.0) * 0.5 * DSPACING * 0.22;
+  // N slits centred on x=0, compressed to a row that fits the stile; slit
+  // width breathes with uA. Slits fade in one by one as the count animates —
+  // fractional uN is a reveal amount for the incoming slit, not a fractional
+  // aperture.
+  float halfRow = (uN - 1.0) * 0.5 * DSPACING * 0.12;
   float slit = 0.0;
   for (int i = 0; i < 8; i++) {
     float appear = clamp(uN - float(i), 0.0, 1.0);
-    float cx = (float(i) * DSPACING * 0.22) - halfRow;
+    float cx = (float(i) * DSPACING * 0.12) - halfRow;
     float d = abs(vW.x - cx);
-    float w = uA * 0.35;              // hairline apertures, width tracks physics
+    float w = uA * 0.18;              // hairline apertures, width tracks physics
     slit = max(slit, appear * (1.0 - smoothstep(w * 0.4, w * 0.6, d)));
   }
   float n = max(uN, 1.0);
@@ -144,7 +144,9 @@ void main() {
   // from a hairline to the pattern's full fan — the same I(y) as the wall.
   float u = clamp((-20.0 - vW.z) / 40.0, 0.0, 1.0);
   float extent = mix(0.15, 24.0, u);  // matches the wedge geometry exactly
-  float lat = abs(vW.x) / extent;          // 0 centre → 1 fan edge
+  // clamp: the triangle's z-parametrisation differs slightly from u's, so the
+  // edge vertices land at lat > 1 and (1 - lat²) would add negative light
+  float lat = min(abs(vW.x) / extent, 1.0); // 0 centre → 1 fan edge
   // fringes are angular: the wall-equivalent coordinate is x / distance gone
   float yEff = vW.x / max(u, 0.03);
   // fringe detail develops with propagation: near the slit the fan is an
@@ -195,7 +197,9 @@ export default class DiffractionScene extends Scene {
     });
     // the slit barrier is a thin floating bar, not a room-wide wall — the
     // diffraction fan must stay visible on the back wall behind it
-    const baffle = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 12), this.baffleMat);
+    // narrow stile housing the slit row — a wide bar eclipses most of the
+    // central maximum when the dolly sweeps it past the wall
+    const baffle = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 12), this.baffleMat);
     baffle.position.set(0, 1, -20);
     this.three.add(baffle);
 
@@ -239,7 +243,9 @@ export default class DiffractionScene extends Scene {
     const s2 = smooth(12.5, 19.0, t);
     (this.beamMat.uniforms.uFade as { value: number }).value = 1.0 - 0.8 * s2;
     (this.beamMat.uniforms.uWaves as { value: number }).value = 1.0 - s2;
-    const px = -15 + 26 * s1 + 6 * s2;      // -15 → 11 → 17
+    // the lens stays left of the slit through the wall-track and only crosses
+    // the slit axis during the drift, so the stile never eclipses the pattern
+    const px = -15 + 13 * s1 + 13 * s2;     // -15 → -2 → 11
     const pz = 6 - 8 * s1 - 12 * s2;        //  6  → -2 → -14
     const py = 1.6 + 0.4 * Math.sin(t * 0.11);
     const lx = (-4 + 4 * s1) * (1 - s2);    // wall centre → the slit
