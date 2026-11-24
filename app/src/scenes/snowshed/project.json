@@ -1,0 +1,6 @@
+{
+  "project": "snowshed",
+  "entries": [
+    { "scene": "snowshed/snowshed", "id": "snowshed", "start": 0, "end": 18 }
+  ]
+}
