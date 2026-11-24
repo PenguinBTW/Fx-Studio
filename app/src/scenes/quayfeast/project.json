@@ -1,0 +1,39 @@
+{
+  "project": "quayfeast",
+  "meta": {
+    "title": "Quay Feast: Bulbs Over the Stall Row",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 20.0
+  },
+  "entries": [
+    {
+      "scene": "quayfeast/quayfeast",
+      "id": "act-quiet",
+      "start": 0.0,
+      "end": 4.0,
+      "caption": { "fig": "01", "text": "BULBS OVER THE QUAY", "dur": 2.4 }
+    },
+    {
+      "scene": "quayfeast/quayfeast",
+      "id": "act-cat",
+      "start": 4.0,
+      "end": 9.5,
+      "caption": { "fig": "02", "text": "A CAT BETWEEN THE LEGS", "dur": 2.6 }
+    },
+    {
+      "scene": "quayfeast/quayfeast",
+      "id": "act-trade",
+      "start": 9.5,
+      "end": 14.0,
+      "caption": { "fig": "03", "text": "LAST ORDER OF THE NIGHT", "dur": 2.6 }
+    },
+    {
+      "scene": "quayfeast/quayfeast",
+      "id": "act-settle",
+      "start": 14.0,
+      "end": 20.0,
+      "caption": { "fig": "04", "text": "STEAM, STILL RISING", "dur": 2.6 }
+    }
+  ]
+}
