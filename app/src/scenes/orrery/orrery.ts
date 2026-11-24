@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { defineScene, type SceneContext } from '../../engine/dsl';
+import { orbitPosition } from '../../engine/rig';
 import type { Frame, PostOverrides } from '../../engine/scene';
 import { blackbodyToLinearSRGB } from '../../engine/spectrum';
 import { W, H } from '../../engine/gl';
@@ -25,6 +26,16 @@ const PHI = [0.35, 2.40, 4.60];                // per-arm phase so planets sprea
 // (20/9) — meshing pairs rotate counter at exact tooth ratios.
 const GEAR_W = [0.40, -0.55, 0.55 * (20 / 9), -0.40 * (30 / 12)];
 const GEAR_PH = [0.0, 0.7, Math.PI / 9, Math.PI / 12];  // tooth phase at t=0
+// camera: slow low orbit, gentle push-in on the last beats — shared by
+// render (rig.orbit) and the registered path (God-View blueprint sampling).
+const camPose = (t: number) => {
+  const push = sstep(13.5, DUR - 0.4, t);
+  const yaw = -0.55 + t * 0.105 + 0.012 * Math.sin(t * 0.9) + 0.008 * Math.sin(t * 2.3 + 1.0);
+  const pitch = 0.15 + 0.05 * Math.sin(t * 0.21 + 0.5) + 0.05 * push;
+  const radius = 4.75 - 1.05 * push;
+  const tgt: [number, number, number] = [0, 1.32 + 0.05 * Math.sin(t * 0.15) + 0.12 * push, 0];
+  return { tgt, radius, pitch, yaw };
+};
 const CAPTIONS: [number, number, string, number][] = [
   // [t0, t1, text, fontSize]
   [1.1, 4.6, 'THE ORRERY', 54],
@@ -335,6 +346,11 @@ export default defineScene({
 
     // ---- camera + captions
     ctx.rig.setLensMm(58);
+    ctx.rig.setPath(Array.from({ length: Math.ceil(DUR) + 1 }, (_, i) => {
+      const tt = Math.min(DUR, i);
+      const p = camPose(tt);
+      return { t: tt / DUR, pos: orbitPosition(p.tgt, p.radius, p.pitch, p.yaw), target: p.tgt };
+    }));
     ctx.text('cap0', CAPTIONS[0]![2]!, { fontSize: CAPTIONS[0]![3]!, fontFamily: 'Archivo, sans-serif', fontWeight: 700, color: '#f5e2c4', letterSpacing: 6, align: 'center', alpha: 0 });
     ctx.text('cap1', CAPTIONS[1]![2]!, { fontSize: CAPTIONS[1]![3]!, fontFamily: 'Archivo, sans-serif', fontWeight: 400, color: '#d8c4a5', letterSpacing: 3, align: 'center', alpha: 0 });
     ctx.text('cap2', CAPTIONS[2]![2]!, { fontSize: CAPTIONS[2]![3]!, fontFamily: 'Archivo, sans-serif', fontWeight: 400, color: '#d8c4a5', letterSpacing: 3, align: 'center', alpha: 0 });
@@ -380,13 +396,8 @@ export default defineScene({
     ctxState.dustMat!.uniforms.uT!.value = t;
     ctxState.wispMat!.uniforms.uT!.value = t;
 
-    // ---- camera: slow low orbit, gentle push-in on the last beats
-    const push = sstep(13.5, DUR - 0.4, t);
-    const yaw = -0.55 + t * 0.105 + 0.012 * Math.sin(t * 0.9) + 0.008 * Math.sin(t * 2.3 + 1.0);
-    const pitch = 0.15 + 0.05 * Math.sin(t * 0.21 + 0.5) + 0.05 * push;
-    const radius = 4.75 - 1.05 * push;
-    const tgt: [number, number, number] = [0, 1.32 + 0.05 * Math.sin(t * 0.15) + 0.12 * push, 0];
-    ctx.rig.orbit(tgt, radius, pitch, yaw);
+    const p = camPose(t);
+    ctx.rig.orbit(p.tgt, p.radius, p.pitch, p.yaw);
     ctx.updateCamera(f.t, f.p);
 
     // ---- captions (fade windows, halos via engine text); the 2D layer is
