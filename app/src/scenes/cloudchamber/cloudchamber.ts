@@ -10,6 +10,7 @@
 import * as THREE from 'three';
 import { Scene, type Frame, type SceneCtx, type PostOverrides } from '../../engine/scene';
 import { GLSL_COMMON } from '../../engine/glsl/common';
+import { orbitPosition } from '../../engine/rig';
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 const smooth = (a: number, b: number, x: number) => {
@@ -41,8 +42,8 @@ float arcDist(vec2 p, vec2 c, float R, float a0, float k, float extent, out vec2
   tip = c + R * vec2(cos(a0 + k * extent), sin(a0 + k * extent));
   vec2 src = c + R * vec2(cos(a0), sin(a0));
   float d = ang <= extent ? abs(length(q) - R) : length(p - tip);
-  // faint condensation clump at the entry point
-  return min(d, length(p - src) * 1.4);
+  // condensation clump at the entry point; unweighted so no amplitude seam
+  return min(d, length(p - src));
 }
 
 // One track: parent arc + optional daughter fork. Returns rgb contribution.
@@ -119,7 +120,8 @@ void main(){
   base += vec3(0.020, 0.030, 0.048) * max(mist, 0.0) * 0.55;
 
   // chamber wall vignette: corners fall off so the field reads bounded
-  float wall = smoothstep(9.2, 5.4, abs(p.x)) * smoothstep(7.2, 3.8, abs(p.y));
+  // (smoothstep edge0 must stay < edge1 — reversed edges are undefined in GLSL)
+  float wall = (1.0 - smoothstep(5.4, 9.2, abs(p.x))) * (1.0 - smoothstep(3.8, 7.2, abs(p.y)));
   base *= 0.35 + 0.65 * wall;
 
   vec3 acc = vec3(0.0);
@@ -141,8 +143,9 @@ export default class CloudChamberScene extends Scene {
   constructor(ctx: SceneCtx) {
     super(ctx);
     this.cam = new THREE.PerspectiveCamera(42, ctx.W / ctx.H, 0.1, 80);
+    // wide floor: ultrawide exports (2.37:1) must not expose clear-colour corners
     const floor = new THREE.Mesh(
-      new THREE.PlaneGeometry(26, 26),
+      new THREE.PlaneGeometry(52, 26),
       new THREE.ShaderMaterial({ uniforms: this.chamberU, vertexShader: CHAMBER_VERT, fragmentShader: CHAMBER_FRAG, glslVersion: THREE.GLSL3 }),
     );
     floor.rotation.x = -Math.PI / 2;
@@ -153,21 +156,22 @@ export default class CloudChamberScene extends Scene {
     const t = f.lt;
     this.chamberU.uT.value = t;
 
-    // very slow dolly-in at a slight oblique, with a whisper of drift so the
-    // parallax never freezes
-    const h = 9.6 - 2.1 * smooth(1.0, 18.0, t);
-    this.cam.position.set(
-      0.8 * Math.sin(t * 0.09),
-      h,
-      7.4 - 1.3 * smooth(1.0, 18.0, t) + 0.3 * Math.sin(t * 0.06 + 1.3),
-    );
-    this.cam.lookAt(0.4 * Math.sin(t * 0.045), 0, -0.5);
+    // very slow dolly-in at a slight oblique through the shared camera rig:
+    // shrinking orbit radius descends toward the chamber; slow yaw drift keeps
+    // the parallax alive.
+    const r = 12.6 - 2.8 * smooth(1.0, 18.0, t);
+    const pitch = 0.88 + 0.04 * smooth(1.0, 18.0, t) + 0.02 * Math.sin(t * 0.07);
+    const yaw = 0.06 * Math.sin(t * 0.09); // centred on +z: front-on with a slow drift
+    const target: [number, number, number] = [0.4 * Math.sin(t * 0.045), 0, -0.5];
+    const pos = orbitPosition(target, r, pitch, yaw);
+    this.cam.position.set(pos[0], pos[1], pos[2]);
+    this.cam.lookAt(target[0], target[1], target[2]);
 
-    const r = this.ctx.renderer;
-    r.setRenderTarget(out);
-    r.clear(true, true, true);
-    r.render(this.three, this.cam);
-    r.resetState();
+    const rr = this.ctx.renderer;
+    rr.setRenderTarget(out);
+    rr.clear(true, true, true);
+    rr.render(this.three, this.cam);
+    rr.resetState();
 
     const fade = t < 0.9 ? 1 - t / 0.9 : t > 19.1 ? (t - 19.1) / 0.9 : 0;
     return {
