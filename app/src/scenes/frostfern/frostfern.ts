@@ -37,6 +37,7 @@ export default class FrostfernScene extends Scene {
   private tipT: Float32Array;
   private bgGeo: THREE.PlaneGeometry;
   private bgMat: THREE.MeshBasicMaterial;
+  private bgMesh!: THREE.Mesh;
   private fogTex: THREE.CanvasTexture;
   private fogMats: THREE.SpriteMaterial[] = [];
   private fogSprites: THREE.Sprite[] = [];
@@ -60,9 +61,9 @@ export default class FrostfernScene extends Scene {
     }
     this.bgGeo.setAttribute('color', new THREE.BufferAttribute(bc, 3));
     this.bgMat = new THREE.MeshBasicMaterial({ vertexColors: true });
-    const bg = new THREE.Mesh(this.bgGeo, this.bgMat);
-    bg.position.z = -2;
-    this.threeScene.add(bg);
+    this.bgMesh = new THREE.Mesh(this.bgGeo, this.bgMat);
+    this.bgMesh.position.z = -2;
+    this.threeScene.add(this.bgMesh);
 
     // ---- Dendrite tree build ------------------------------------------------
     const pos: number[] = [];
@@ -77,6 +78,7 @@ export default class FrostfernScene extends Scene {
     const grow = (x: number, y: number, ang: number, len: number, depth: number, t0: number, seed: number, w: number) => {
       if (segs >= MAX_SEG || len < 0.3 || depth > 5) return;
       const steps = Math.max(4, Math.round(len / 0.34));
+      let spawnFlip = hash(seed + depth * 31, 29) < 0.5 ? 0 : 1;
       const dur = Math.min(4.0, 0.8 + len * 0.7);
       let px = x, py = y, a = ang;
       for (let i = 1; i <= steps && segs < MAX_SEG; i++) {
@@ -93,9 +95,10 @@ export default class FrostfernScene extends Scene {
         // Side feathers alternate ±60°, shrinking toward the tip; deeper
         // levels feather less often so the silhouette stays readable.
         const taper = 1 - (i / steps) * 0.55;
-        const side = i % 2 === 0 ? 1 : -1;
-        // Odd interval: spawned steps alternate parity, so side feathers
-        // grow on both sides of every rib (even intervals would be one-sided).
+        // Alternate per actual spawn (not per eligible slot): dropped or
+        // missed slots can't leave a rib one-sided.
+        const side = spawnFlip++ % 2 === 0 ? 1 : -1;
+        // Odd interval spreads spawn slots across both step parities.
         const interval = depth % 2 === 0 ? depth + 1 : depth + 2;
         const spawn = depth === 0 ? true : i % interval === 0;
         if (spawn && hash(seed * 733 + i * 97 + depth * 53, 7) < (depth === 0 ? 0.8 : 0.7)) {
@@ -215,10 +218,14 @@ export default class FrostfernScene extends Scene {
     }
 
     // Macro lens: near-static with a very slow push-in and gentle float.
-    // Landscape tuning assumes ~16:9; widen for narrow/portrait exports so
-    // the edge-seeded ferns stay in frame instead of cropping out entirely.
+    // Landscape tuning assumes ~16:9; on narrow/portrait exports the framing
+    // floor rises INSIDE the push-in envelope, so the take still dollies in.
     const halfHfov = Math.atan(Math.tan((this.camera.fov * Math.PI) / 360) * this.camera.aspect);
-    const dist = Math.max(26 * (1.05 - 0.07 * u), 16 / Math.tan(halfHfov));
+    const dist = Math.max(26, 16 / Math.tan(halfHfov) / 0.98) * (1.05 - 0.07 * u);
+    // Pane must cover the frame at any aspect: scale the backdrop to the
+    // viewport footprint at its depth (z = -2 behind the camera's target).
+    const visHalf = Math.tan((this.camera.fov * Math.PI) / 360) * (dist + 2);
+    this.bgMesh.scale.setScalar(Math.max(1, (visHalf * Math.max(this.camera.aspect, 1)) / 35, visHalf / 20));
     this.camera.position.set(Math.sin(lt * 0.05) * 0.5, Math.sin(lt * 0.07 + 1.2) * 0.3, dist);
     this.camera.lookAt(0.4, 0.1, 0);
     this.camera.updateMatrixWorld();
