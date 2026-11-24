@@ -42,3 +42,5 @@ the crossing and relaxes back afterward. Targets hover on the log's midpoint.
 - The hiker reads through pose, not detail: torso pitch on the stumble, a
   separate arm mesh that windmills, one stepping leg.
 - All motion is closed-form f(t); seeds via mulberry32. No simulation.
+
+// Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL

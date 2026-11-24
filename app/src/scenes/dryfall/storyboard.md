@@ -28,3 +28,5 @@ devil wisp corkscrewing across the canyon floor.
 
 Back to stillness: ravens circling, pigeon on the rim, shimmer on the floor.
 The hiker is gone; the log waits.
+
+// Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
