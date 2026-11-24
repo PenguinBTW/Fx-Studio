@@ -125,10 +125,10 @@ void main() {
   col += vec3(0.40, 0.45, 0.60) * pond * exp(-dot(pq - vec2(0.02, 0.02), pq - vec2(0.02, 0.02)) * 22.0) * 0.5;
   for (int k = 0; k < 2; k++) {
     float fk = float(k);
-    float kph = (t - (4.0 + fk * 8.0)) / 10.0;
+    float kph = (t - (2.5 + fk * 4.5)) / 9.0;
     if (kph > 0.0 && kph < 1.0) {
       vec2 kp = vec2(0.315 + 0.08 * kph + 0.012 * sin(t * 0.8 + fk * 2.0),
-                     0.105 + 0.020 * fk + 0.007 * sin(t * 0.9 + fk));
+                     0.115 + 0.020 * fk + 0.007 * sin(t * 0.9 + fk));
       vec2 kd = (vUv - kp) * vec2(2.4, 7.0);
       float koi = 1.0 - smoothstep(0.014, 0.024, length(kd));
       col = mix(col, vec3(0.015, 0.020, 0.040), koi * pond * 0.85);
@@ -136,7 +136,7 @@ void main() {
   }
 
   // --- white wagtail: pause-hop-pause along the gravel edge, once ----------
-  float hopW = (t - 9.0) / 6.5;
+  float hopW = (t - 7.5) / 6.0;
   if (hopW > 0.0 && hopW < 1.0) {
     float hops = hopW * 5.0;
     float hi = floor(hops);
@@ -259,6 +259,11 @@ interface PetalSeed {
   z: number;      // depth (parallax)
   size: number;
   tint: THREE.Color;
+  // surface-interaction subsets — seeded once so the flight profile can
+  // guarantee the petal reaches its target before it fades
+  caught: boolean;   // catches on the lantern cap, then dislodges
+  settle: boolean;   // settles flat onto the gravel
+  pondRest: boolean; // settles onto the pond corner
 }
 
 const seeds: PetalSeed[] = [];
@@ -273,14 +278,20 @@ const seeds: PetalSeed[] = [];
     const s5 = frac(i * 0.9372549019);
     // The first third is mid-flight at t=0 and lives out the take; the rest
     // arrive through the gust window and live short, so t=14 reads dense and
-    // t=18 thins out as they dissolve mid-air.
+    // t=18 thins out as they dissolve mid-air. The caught/settle subsets get
+    // a longer life and a faster fall so the closed-form path provably
+    // reaches its surface (lantern ~53 world, gravel ~75, pond ~94) inside
+    // the lifetime — otherwise they would shrink out mid-air.
+    const caught = i % 29 === 0;
+    const pondRest = i % 37 === 0;
+    const settle = i % 13 === 0 || pondRest;
     seeds.push({
       x0: (s1 - 0.5) * 1.1,
-      onset: s2 < 0.15 ? -(6 + s2 * 8) : 6.0 + Math.pow(s2, 1.3) * 8.0,
-      life: s2 < 0.15 ? 16.0 + s3 * 6.0 : 4.0 + s3 * 5.0,
+      onset: caught || settle ? 4.0 + s2 * 4.0 : (s2 < 0.15 ? -(6 + s2 * 8) : 6.0 + Math.pow(s2, 1.3) * 8.0),
+      life: caught ? 9.0 + s3 * 3.0 : settle ? 11.0 + s3 * 4.0 : (s2 < 0.15 ? 16.0 + s3 * 6.0 : 4.0 + s3 * 5.0),
       // the early cohort drifts slowly (already mid-flight); gust-window
       // petals fall faster so the frame fills top-to-bottom
-      fallV: s2 < 0.15 ? 1.4 + s4 * 1.4 : 4.0 + s4 * 3.0,
+      fallV: pondRest ? 9.0 + s4 * 1.5 : caught || settle ? 7.5 + s4 * 2.0 : s2 < 0.15 ? 1.4 + s4 * 1.4 : 4.0 + s4 * 3.0,
       swayA: 6.0 + s5 * 9.0,
       swayF: 0.55 + s1 * 0.9,
       swayP: s3 * Math.PI * 2,
@@ -290,6 +301,7 @@ const seeds: PetalSeed[] = [];
       z: -72 + s3 * 46,        // -72 … -26, nearer petals read bigger
       size: 0.55 + s4 * 0.55,
       tint: tintA.clone().lerp(tintB, s5 * s5),
+      caught, settle, pondRest,
     });
   }
 }
@@ -375,9 +387,7 @@ export default class PetalfallScene extends Scene {
     // a few petals catch on the lantern cap, rock, then dislodge on the next
     // gust front; others settle onto the gravel or the pond corner and rest
     // flat until they fade — all keyed off the seed index, still closed-form
-    const caught = i % 29 === 0;
-    const pondRest = i % 37 === 0;
-    const settle = i % 13 === 0 || pondRest;
+    const { caught, settle, pondRest } = s;
     let grounded = false;
     if (caught && wy < LANTERN.y + 4.0) {
       const rel = s.onset + s.life * 0.78;
@@ -437,7 +447,7 @@ export default class PetalfallScene extends Scene {
     // falling column during the crescendo, easing back for the settle
     const push = ss(0, this.ctx.end, t);
     this.rig.position = [0.7 * Math.sin(t * 0.05) + 14.0 * ss(5, 16, t), 8.0 - 0.6 * push, 24.0 - 1.0 * push];
-    this.rig.target = [26.0 * ss(5, 15, t), 3.0 + 11.0 * ss(8, 13, t) - 4.0 * ss(16, this.ctx.end, t), PZ];
+    this.rig.target = [26.0 * ss(5, 15, t), 3.0 + 11.0 * ss(10, 15, t) - 4.0 * ss(16, this.ctx.end, t), PZ];
     this.rig.focalLengthPx = (this.ctx.H / 2) / Math.tan(0.5 * 40 * Math.PI / 180);
     this.rig.syncToThreeCamera(this.rig.evalCam(t), this.cam);
 
@@ -487,6 +497,7 @@ export default class PetalfallScene extends Scene {
 
   override dispose() {
     this.petals.dispose();
+    this.layer.dispose();
     this.three.traverse((o: THREE.Object3D) => {
       const m = o as THREE.Mesh;
       if (m.geometry) m.geometry.dispose();
