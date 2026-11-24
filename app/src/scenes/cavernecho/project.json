@@ -1,0 +1,32 @@
+{
+  "project": "cavernecho",
+  "meta": {
+    "title": "Cavern Echo",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 24
+  },
+  "entries": [
+    {
+      "scene": "cavernecho/cavernecho",
+      "id": "act-drip",
+      "start": 0,
+      "end": 8,
+      "caption": { "fig": "01", "text": "HUSH AND DRIP", "dur": 4 }
+    },
+    {
+      "scene": "cavernecho/cavernecho",
+      "id": "act-wings",
+      "start": 8,
+      "end": 16,
+      "caption": { "fig": "02", "text": "WINGS IN THE SHAFT", "dur": 4 }
+    },
+    {
+      "scene": "cavernecho/cavernecho",
+      "id": "act-quiet",
+      "start": 16,
+      "end": 24,
+      "caption": { "fig": "03", "text": "QUIET WATER", "dur": 4 }
+    }
+  ]
+}
