@@ -135,12 +135,14 @@ vec2 robinPos(float t, out float fly) {
   vec2 e = gateEnd(t) + vec2(0.0, 0.012);
   fly = 0.0;
   float hop = sstep(6.1, 6.25, t) * 0.018 + sstep(6.55, 6.7, t) * 0.020;
-  vec2 perch = e + vec2(hop, 0.0);
+  vec2 perch = e - vec2(hop, 0.0);
   // flight arcs
   float out_ = sstep(9.5, 10.1, t) * (1.0 - sstep(10.1, 10.5, t));
   float back = sstep(12.0, 12.8, t);
   vec2 away = perch + vec2(0.10, 0.16);
-  vec2 p = mix(perch, away, out_);
+  // glide in from high right at the robin beat; perched before it
+  vec2 p = mix(vec2(1.06, 0.92), perch, sstep(ROBIN - 0.3, ROBIN + 0.3, t));
+  p = mix(p, away, out_);
   // off-frame while away, then glides back to the latch
   p = mix(p, vec2(1.06, 0.92), sstep(10.0, 10.4, t) * (1.0 - sstep(12.0, 12.8, t)));
   p = mix(p, perch + vec2(0.012, 0.004), back);
@@ -190,14 +192,14 @@ float tractorAt(vec2 uv, float t, out float puff) {
 float pheasantAt(vec2 uv, float t) {
   if (t < PHEAS || t > PHEAS + 0.85) return 0.0;
   float u = (t - PHEAS) / 0.85;
-  vec2 p = vec2(0.215 + 0.115 * pow(u, 0.8), 0.50 + 0.30 * u * u * (1.0 + u));
+  vec2 p = vec2(0.285 + 0.110 * pow(u, 0.8), 0.50 + 0.30 * u * u * (1.0 + u));
   float flap = abs(sin(t * 21.0));
   float m = 1.0 - sstep(0.4, 1.0, sdist(uv, p, vec2(0.010 / ASPECT, 0.0065)));
   m += sstep(0.0020, 0.0, seg(uv, p + vec2(-0.007, 0.0), p + vec2(-0.020, -0.006)));   // long tail
   m += sstep(0.0022, 0.0, seg(uv, p, p + vec2(-0.004, 0.008 + 0.010 * flap)));          // near wing
   m += sstep(0.0022, 0.0, seg(uv, p, p + vec2(0.007, 0.010 * (1.0 - flap))));           // far wing
   m += 1.0 - sstep(0.4, 1.0, sdist(uv, p + vec2(0.009, 0.004), vec2(0.003 / ASPECT, 0.0028))); // head
-  return m * sstep(0.0, 0.06, u) * (1.0 - sstep(0.92, 1.0, u));
+  return clamp(m, 0.0, 1.0) * sstep(0.0, 0.06, u) * (1.0 - sstep(0.92, 1.0, u));
 }
 
 // ---------- crows on the gate top ----------
@@ -211,8 +213,8 @@ float crowsAt(vec2 uv, float t) {
     float out_ = sstep(CROWS + 1.55 + fi * 0.2, CROWS + 1.8 + fi * 0.2, t); // lifting
     vec2 e = gateEnd(t);
     vec2 perch = vec2(e.x - 0.05 - fi * 0.03, e.y + 0.012 + fi * 0.004);
-    vec2 from = perch + vec2(0.14 - fi * 0.05, 0.18);
-    vec2 away = perch + vec2(0.10 + fi * 0.06, 0.20);
+    vec2 from = perch + vec2(0.38 - fi * 0.06, 0.30);
+    vec2 away = perch + vec2(0.40 + fi * 0.06, 0.30);
     vec2 p = mix(mix(from, perch, u), away, out_);
     float wing = (1.0 - u) + out_;
     float body = 1.0 - sstep(0.4, 1.0, sdist(uv, p, vec2(0.0075 / ASPECT, 0.0052)));
@@ -287,8 +289,8 @@ void main() {
   // long gate shadow sheared across the ruts (ground→gate space)
   {
     float rim0;
-    vec2 suv = vec2(uv.x - 0.62 * (GY - uv.y), GY + 0.85 * (GY - uv.y));
-    float sh = gateAt(suv, t, rim0) * sstep(GY - 0.001, GY - 0.10, uv.y) * sstep(0.36, 0.40, uv.y);
+    vec2 suv = vec2(uv.x - 0.62 * (GY - uv.y), GY + 1.5 * (GY - uv.y));
+    float sh = gateAt(suv, t, rim0) * sstep(GY - 0.001, GY - 0.10, uv.y) * sstep(0.34, 0.40, uv.y);
     col *= 1.0 - 0.32 * sh;
   }
 
@@ -400,7 +402,7 @@ export default class RustedgateScene extends Scene {
 
     // CameraRig: low near-static — a slight drift through the gate gap keyed
     // to the same closed-form swing, easing back for the settle.
-    const open = ss(3.5, 9.0, t) * (1 - ss(15.5, 17.5, t));
+    const open = (0.5 * ss(3.5, 4.2, t) + 0.5 * ss(7.0, 9.0, t)) * (1 - ss(15.5, 17.5, t));
     this.rig.position = [
       4.0 + 0.5 * Math.sin(t * 0.05) + 1.6 * open,
       10.0 + 0.3 * Math.sin(t * 0.06 + 1.0),
@@ -431,7 +433,7 @@ export default class RustedgateScene extends Scene {
         const ndc = this.v.set(awx, awy, PZ + 0.4).project(this.cam);
         if (ndc.z > 1) continue;
         const cx0 = (ndc.x * 0.5 + 0.5) * W;
-        const cy = Math.min(Math.max((0.5 - ndc.y * 0.5) * H + H * 0.18, 44), H - 44);
+        const cy = Math.min(Math.max((0.5 - ndc.y * 0.5) * H + H * 0.18, 72), H - 72);
         c.save();
         c.globalAlpha = a;
         c.font = `46px "${F.archivo(112, 500)}", sans-serif`;
