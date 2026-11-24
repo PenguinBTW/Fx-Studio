@@ -156,11 +156,12 @@ for i, z in enumerate([0.5 - j * 3.3 for j in range(16)]):
         zw = bandZ_(x, k)
         if abs(z - zw) < 1.7:
             for s_i in range(3):
+                # downhill face is the -y side: steps ascend toward the wall
                 st = box(f'stile{i}_{k}_{s_i}', (1.6, 0.34, 0.2),
-                         (x, zw + 0.55 + s_i * 0.38, k * LEVEL + 0.15 + s_i * 0.42), STONE2, bev=0.025, seg=1)
+                         (x, zw - 0.55 - (2 - s_i) * 0.38, k * LEVEL + 0.15 + s_i * 0.42), STONE2, bev=0.025, seg=1)
                 parent(st, path)
             st2 = box(f'stile{i}_{k}u', (1.6, 0.4, 0.18),
-                      (x, zw - 0.45, (k + 1) * LEVEL + 0.1), STONE2, bev=0.025, seg=1)
+                      (x, zw + 0.45, (k + 1) * LEVEL + 0.1), STONE2, bev=0.025, seg=1)
             parent(st2, path)
             break
 
