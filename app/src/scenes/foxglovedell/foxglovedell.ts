@@ -232,7 +232,7 @@ vec3 dell(vec2 uv, float t) {
     float openDn = 0.2 + 0.5 * uSong;
     float beakUp = 1.0 - smoothstep(0.0012, 0.0020, abs(bk.y - bk.x * openUp));
     float beakDn = 1.0 - smoothstep(0.0012, 0.0020, abs(bk.y + bk.x * openDn));
-    float beak = max(beakUp, beakDn) * step(abs(bk.x), 0.008) * step(abs(bk.y), 0.006);
+    float beak = max(beakUp, beakDn) * step(abs(bk.x), 0.008) * step(-0.006, bk.y) * step(bk.y, 0.010);
     wren = max(wren, beak);
     // throat feathers puff during song
     float throat = (1.0 - smoothstep(0.004, 0.006, length(wp - vec2(0.005, 0.003)))) * uSong;
