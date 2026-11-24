@@ -62,9 +62,16 @@ vec4 cycRand(vec4 B, float c) {
   return vec4(float(a >> 8u), float(b >> 8u), float(cc >> 8u), float(d >> 8u)) * (1.0 / 16777216.0);
 }
 
+float pulseOf(float t) {
+  float g = (t - 10.0) / 2.2;
+  return exp(-g * g);
+}
+
 // velocity in domain units/sec (A absorbed into uAmp)
+// the pulse is evaluated at each step's own time — historical steps
+// march through the streamfunction as it existed then, not as it is now
 vec2 vel(vec2 p, float t) {
-  float e = uEps * sin(uOm * t) + uPulse * 0.55;
+  float e = uEps * sin(uOm * t) + pulseOf(t) * 0.55;
   float a = e, b = 1.0 - 2.0 * e;
   float f = a * p.x * p.x + b * p.x;
   float fp = 2.0 * a * p.x + b;
@@ -78,9 +85,9 @@ vec2 vel(vec2 p, float t) {
 vec2 advect(vec2 p0, float t0, float t1) {
   vec2 p = p0;
   float tt = t0;
-  for (int i = 0; i < 48; i++) {
+  for (int i = 0; i < 160; i++) {
     if (tt >= t1 - 1e-5) break;
-    float h = min(0.18, t1 - tt);
+    float h = min(0.06, t1 - tt);
     vec2 k1 = vel(p, tt);
     vec2 k2 = vel(p + 0.5 * h * k1, tt + 0.5 * h);
     p += h * k2;
@@ -115,7 +122,9 @@ void main() {
   vec2 pRef = advect(s, t0, head ? max(t0, uT - 0.22) : min(uT, tc + 0.22));
   vec4 vPos = modelViewMatrix * vec4(wp, 1.0);
   vec4 vRef = modelViewMatrix * vec4(toWorld(pRef), 1.0);
-  vec2 dir = vPos.xy - vRef.xy;
+  // forward direction at BOTH endpoints: head looks back at a reference
+  // behind it, the tail looks forward at one ahead — same winding, no twist
+  vec2 dir = head ? (vPos.xy - vRef.xy) : (vRef.xy - vPos.xy);
   float dl = length(dir);
   dir = dl > 1e-5 ? dir / dl : vec2(1.0, 0.0);
   float width = uSize * iA.z * mix(0.35, 1.0, head ? 1.0 : 0.0);
@@ -126,10 +135,17 @@ void main() {
   vAlpha = smoothstep(0.0, 0.12, an) * (1.0 - smoothstep(0.86, 1.0, an));
   vAlpha *= head ? 1.0 : 0.55;
 
-  // separatrix filament: the gyre boundary slides to x ≈ 1+e when the
-  // modulation tilts the streamfunction — the warm thread tracks it
+  // separatrix filament: the boundary is the streamline f(x)=1 — solve
+  // e·x²+(1−2e)·x=1 exactly (quadratic), degenerating to x=1/b at e→0,
+  // then tint the particles threading it warm (squared distance, no pow)
   float e = uEps * sin(uOm * uT) + uPulse * 0.55;
-  vWarm = exp(-pow((pp.x - (1.0 + e)) / 0.10, 2.0)) * (0.45 + 0.55 * uPulse);
+  float qa = e, qb = 1.0 - 2.0 * e;
+  float qd = max(0.0, qb * qb + 4.0 * qa);
+  float xsep = abs(qa) > 1e-4
+    ? clamp((-qb + sqrt(qd)) / (2.0 * qa), 0.05, 1.95)
+    : clamp(1.0 / max(qb, 0.05), 0.05, 1.95);
+  float dwx = (pp.x - xsep) / 0.10;
+  vWarm = exp(-dwx * dwx) * (0.45 + 0.55 * uPulse);
 
   vSide = position.x;
   gl_Position = projectionMatrix * vPos;
@@ -142,7 +158,7 @@ in float vAlpha;
 in float vWarm;
 out vec4 fragColor;
 void main() {
-  float a = vAlpha * smoothstep(1.0, 0.2, abs(vSide)) * 0.16;
+  float a = vAlpha * (1.0 - smoothstep(0.2, 1.0, abs(vSide))) * 0.16;
   vec3 bone = vec3(0.90, 0.88, 0.82);
   vec3 warm = vec3(1.00, 0.74, 0.48);
   vec3 col = mix(bone, warm, clamp(vWarm, 0.0, 1.0));
@@ -227,6 +243,7 @@ export default class GyreScene extends Scene {
       transparent: true,
       depthWrite: false,
       depthTest: true,
+      side: THREE.DoubleSide,
       blending: THREE.AdditiveBlending,
     });
     const mesh = new THREE.Mesh(geo, mat);
