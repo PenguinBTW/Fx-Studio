@@ -175,18 +175,24 @@ void main() {
   // or the splash and the scatter diverge.
   float pt = uT - ${PLOP_T.toFixed(1)};
   if (pt > 0.0) {
+    // world-space ripple radius, then project the near/far edges through
+    // the camera — a foreshortened ellipse that stays inside the band
+    // instead of clipping at the waterline.
+    float rw = 0.8 + 4.2 * smoothstep(0.0, 2.6, pt);
+    float sN = (uCam.z - (${WATER_Z.toFixed(1)})) / (uCam.z - (${PLOP.z.toFixed(1)} + rw));
+    float sF = (uCam.z - (${WATER_Z.toFixed(1)})) / (uCam.z - (${PLOP.z.toFixed(1)} - rw));
+    float yN = (uCam.y + sN * (${WATER_Y.toFixed(2)} - uCam.y) - (${WATER_Y.toFixed(2)} - ${WATER_H.toFixed(1)})) / ${WATER_H.toFixed(1)};
+    float yF = (uCam.y + sF * (${WATER_Y.toFixed(2)} - uCam.y) - (${WATER_Y.toFixed(2)} - ${WATER_H.toFixed(1)})) / ${WATER_H.toFixed(1)};
     float sP = (uCam.z - (${WATER_Z.toFixed(1)})) / (uCam.z - (${PLOP.z.toFixed(1)}));
-    vec2 pc = vec2(
-      0.5 + (uCam.x + sP * (${PLOP.x.toFixed(1)} - uCam.x)) / ${QUAD_W.toFixed(1)},
-      (uCam.y + sP * (${WATER_Y.toFixed(2)} - uCam.y) - (${WATER_Y.toFixed(2)} - ${WATER_H.toFixed(1)})) / ${WATER_H.toFixed(1)});
-    float pr = 0.02 + 0.30 * smoothstep(0.0, 2.6, pt);
-    float pd = length((vUv - pc) * vec2(2.2, 1.0));
-    float rd = (pd - pr) / 0.012;
+    vec2 pc = vec2(0.5 + (uCam.x + sP * (${PLOP.x.toFixed(1)} - uCam.x)) / ${QUAD_W.toFixed(1)}, 0.5 * (yN + yF));
+    vec2 rr = vec2(sP * rw / ${QUAD_W.toFixed(1)}, max(1e-4, 0.5 * (yN - yF)));
+    float pd = length((vUv - pc) / rr);
+    float rd = (pd - 1.0) / 0.10;
     float ring = exp(-rd * rd);
     ring *= 1.0 - smoothstep(0.0, 3.2, pt);
-    col += vec3(0.24, 0.31, 0.38) * ring;
+    col += vec3(0.24, 0.31, 0.38) * ring * 1.4;
     // faint trailing inner ripple
-    float rd2 = (pd - pr * 0.6) / 0.010;
+    float rd2 = (pd - 0.6) / 0.08;
     float ring2 = exp(-rd2 * rd2) * 0.4;
     col += vec3(0.25, 0.30, 0.38) * ring2 * (1.0 - smoothstep(0.0, 2.8, pt));
   }
@@ -484,8 +490,9 @@ export default defineScene({
     ctx.updateCamera(t, f.p);
     const cp = ctx.rig.position;
     (st.waterMat.uniforms.uCam.value as THREE.Vector3).set(cp[0], cp[1], cp[2]);
-    // camera basis for view-space projections (rig has no roll)
-    const tt = camTarget(t);
+    // camera basis for view-space projections — use the rig's actual
+    // spline-evaluated target, not the intended camTarget(t) key
+    const tt = ctx.rig.target;
     const fwd = new THREE.Vector3(tt[0] - cp[0], tt[1] - cp[1], tt[2] - cp[2]).normalize();
     const right = new THREE.Vector3().crossVectors(fwd, new THREE.Vector3(0, 1, 0)).normalize();
     (st.waterMat.uniforms.uCamF.value as THREE.Vector3).copy(fwd);
