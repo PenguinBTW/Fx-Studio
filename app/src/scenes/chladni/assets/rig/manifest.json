@@ -1,2 +1,3 @@
 { "id": "rig", "version": 1, "source": "build.py", "budgets": { "tris": 120000, "textureMB": 1 },
-  "parts": ["base", "shaker", "plate", "column", "clamp", "console", "lamp", "cable", "saltpot"] }
+  "parts": { "base": "base", "shaker": "shaker", "plate": "plate", "column": "column", "clamp": "clamp",
+             "console": "console", "lamp": "lamp", "cable": "cable", "saltpot": "saltpot" } }

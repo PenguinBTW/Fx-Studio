@@ -32,6 +32,7 @@ export default class ChladniScene extends Scene {
   private grains = new GrainField();
   private readout = new Readout();
   private rig!: GLTFInstance;
+  private ownMats!: Map<THREE.Material, THREE.Material>;
   private pulseRing!: THREE.Mesh;
   private pulseMat!: THREE.MeshBasicMaterial;
 
@@ -42,7 +43,8 @@ export default class ChladniScene extends Scene {
 
     // The machined rig — materials cloned so grade tweaks stay local to this instance.
     this.rig = await GLTFManager.instantiate(resolveAsset('rig', 'chladni').url, {});
-    const own = new Map<THREE.Material, THREE.Material>();
+    this.ownMats = new Map<THREE.Material, THREE.Material>();
+    const own = this.ownMats;
     this.rig.root.traverse((o) => {
       const m = o as THREE.Mesh;
       if (m.isMesh) {
@@ -119,7 +121,8 @@ export default class ChladniScene extends Scene {
       grain: 0.04,
       ca: 0.25,
       depthDof: macro > 0.01
-        ? { enabled: true, focusDistance: focus, aperture: 10 * macro, maxRadius: 10, blades: 6, samples: 24 }
+        ? { enabled: true, focusDistance: focus, near: this.camera3D.near, far: this.camera3D.far,
+            aperture: 10 * macro, maxRadius: 10, blades: 6, samples: 24 }
         : undefined,
       fade: lerp(1, 0, clamp(t / 0.4)),
     };
@@ -127,6 +130,7 @@ export default class ChladniScene extends Scene {
 
   override dispose(): void {
     this.rig.dispose();
+    for (const m of this.ownMats.values()) m.dispose();
     const m = this.grains.mesh;
     m.geometry.dispose();
     (m.material as THREE.Material).dispose();

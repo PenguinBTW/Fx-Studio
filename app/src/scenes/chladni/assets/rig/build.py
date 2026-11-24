@@ -187,7 +187,7 @@ prim('console', 'box', (KX, BY+0.024, KZ), (0.150, 0.048, 0.105), matl=ALU, beve
 prim('console', 'box', (KX, BY+0.052, KZ+0.012), (0.118, 0.006, 0.062), rot=(0.96,0,0), matl=STEEL_D, bevel=0.002)   # slanted face plate
 prim('console', 'box', (KX, BY+0.056, KZ+0.013), (0.104, 0.004, 0.038), rot=(0.96,0,0), matl=BEZEL, bevel=0.001)     # display bezel glass
 prim('console', 'box', (KX, BY+0.046, KZ+0.033), (0.020, 0.004, 0.012), rot=(0.96,0,0), matl=BEZEL, bevel=0.001)     # LED bezel
-prim('console', 'sphere', (KX, BY+0.0475, KZ+0.034), (0.0048,), rot=(0.96,0,0), matl=REDLENS, verts=24)             # LED lens
+prim('console', 'sphere', (KX, BY+0.0475, KZ+0.034), (0.0048,), rot=(0.96,0,0), matl=STEEL_D, verts=24)         # LED boss (status lens itself is emissive, driven in code)
 knurl('console', (KX+0.085, BY+0.035, KZ), 0.014, 0.014, axis='X', matl=BRASS)                                      # freq knob
 prim('console', 'cyl', (KX+0.085, BY+0.035, KZ), (0.004, 0.016), rot=(0,0,math.pi/2), matl=STEEL_B, verts=16)       # knob shaft
 prim('console', 'cyl', (KX-0.045, BY+0.030, KZ-0.050), (0.006, 0.016), rot=(0.5,0,0), matl=STEEL_B, verts=16)       # toggle lever
