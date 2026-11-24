@@ -1,0 +1,13 @@
+{
+  "project": "cloudchamber",
+  "entries": [
+    {
+      "scene": "cloudchamber/cloudchamber",
+      "id": "cloudchamber",
+      "start": 0.0,
+      "end": 20.0,
+      "caption": { "fig": "01", "text": "CLOUD CHAMBER", "dur": 3.5 }
+    }
+  ],
+  "transitions": []
+}
