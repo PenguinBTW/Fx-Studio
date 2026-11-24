@@ -23,9 +23,10 @@ const creakW = (t: number) => ss(6.2, 6.5, t) * (1 - ss(7.0, 7.3, t)) + ss(15.5,
 // Pigeon A's orbit around the tank — mirror of the GLSL path for the probe.
 const pigeonLoopXY = (t: number): [number, number] => {
   const g = loopU(t);
-  if (g <= 0 || g >= 1) return [0.50, 0.275];
-  const a = Math.min(1, (t - 5.0) / 4.4) * Math.PI * 2;
-  return [0.56 + 0.11 * Math.cos(a) * g * (2 - g), 0.55 + 0.14 * Math.sin(a) * g * (2 - g)];
+  const a = Math.min(1, Math.max(0, (t - 5.0) / 4.4)) * Math.PI * 2;
+  const lx = 0.56 + 0.11 * Math.cos(a) * g * (2 - g);
+  const ly = 0.55 + 0.14 * Math.sin(a) * g * (2 - g);
+  return [0.50 + (lx - 0.50) * g, 0.275 + (ly - 0.275) * g];
 };
 
 const PW = 300, PH = 114, PY = 8, PZ = -80;
@@ -107,8 +108,10 @@ void main() {
     float bn = floor(uv.x * (10.0 + lf * 6.0));
     float bx = fract(uv.x * (10.0 + lf * 6.0)) - 0.5;
     float boxh = h1(bn + lf * 13.0) * 0.02;
-    float inBox = (1.0 - smoothstep(0.16, 0.20, abs(bx))) * (1.0 - smoothstep(hgt + boxh - 0.004, hgt + boxh, uv.y));
-    col = mix(col, haze * 0.9, inBox * inB * 0.6);
+    float inBox = (1.0 - smoothstep(0.16, 0.20, abs(bx))) *
+                  smoothstep(hgt - 0.002, hgt + 0.002, uv.y) *
+                  (1.0 - smoothstep(hgt + boxh - 0.004, hgt + boxh, uv.y));
+    col = mix(col, haze * 0.9, inBox * (0.6 - lf * 0.10));
   }
 
   // ---- foreground rooftop: parapet edge then tar roof
@@ -141,15 +144,17 @@ void main() {
     // plastic bag tumbling across, bouncing arcs
     if (uBag > 0.0) {
       float bu = min(1.0, (t - 9.5) / 3.6);
-      vec2 bp = vec2(0.16 + 0.62 * bu, 0.16 + 0.055 * abs(sin(bu * 12.5)) * (1.0 - bu * 0.5));
+      vec2 bp = vec2(-0.04 + 0.86 * bu, 0.16 + 0.055 * abs(sin(bu * 12.5)) * (1.0 - bu * 0.5));
       float bag = 1.0 - smoothstep(0.008, 0.015, length((uv - bp) / vec2(1.3 + 0.5 * sin(t * 9.0), 1.0)));
       col = mix(col, vec3(0.95, 0.95, 0.93), bag * 0.85);
     }
-    // wasp circling the parapet edge
+  }
+  // wasp circling the parapet edge (straddles roof/parapet — drawn over both)
+  {
     vec2 wc = vec2(0.30, 0.115);
     vec2 wp = wc + vec2(cos(t * 3.4) * 0.025, sin(t * 4.6) * 0.012);
     float wasp = 1.0 - smoothstep(0.0018, 0.004, length(uv - wp));
-    col = mix(col, vec3(0.10, 0.08, 0.04), wasp * 0.9);
+    col = mix(col, vec3(0.10, 0.08, 0.04), wasp * 0.9 * smoothstep(0.09, 0.20, uv.y));
   }
 
   // ---- the tank on wooden stilts (faint creak jitter)
@@ -215,6 +220,7 @@ void main() {
     vec2 pc = vec2(0.49 + h1(float(i) * 5.3) * 0.14, 0.252 + h1(float(i) * 9.1) * 0.012);
     pc.y += 0.002 * sin(t * (2.0 + h1(float(i) * 4.0) * 2.0) + float(i) * 2.0);
     float pg = bird(uv, pc, 0.0055, max(0.0, sin(t * 7.0 + float(i) * 3.0)) * 0.15);
+    if (i == 4) pg *= 1.0 - uLoop;   // this one is the orbiter
     col = mix(col, vec3(0.16, 0.14, 0.16), pg);
   }
   // pigeon A: the loop around the tank
@@ -237,9 +243,9 @@ void main() {
 
   // ---- helicopter speck crossing the sky band
   if (uHeli > 0.0 && uHeli < 1.0) {
-    vec2 hp = vec2(0.18 + 0.64 * uHeli, 0.86 + 0.008 * sin(uHeli * 20.0));
+    vec2 hp = vec2(0.18 + 0.64 * uHeli, 0.78 + 0.008 * sin(uHeli * 20.0));
     float hb = 1.0 - smoothstep(0.003, 0.006, length((uv - hp) / vec2(2.2, 0.8)));
-    float rot = 1.0 - smoothstep(0.001, 0.003, abs(uv.y - hp.y - 0.004)) * (1.0 - smoothstep(0.012, 0.014, abs(uv.x - hp.x)));
+    float rot = (1.0 - smoothstep(0.001, 0.003, abs(uv.y - hp.y - 0.004))) * (1.0 - smoothstep(0.012, 0.014, abs(uv.x - hp.x)));
     col = mix(col, vec3(0.35, 0.34, 0.34), max(hb, rot * 0.6) * 0.8);
   }
 
