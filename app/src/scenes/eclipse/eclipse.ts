@@ -44,17 +44,21 @@ vec2 moonAt(float t) {
   return vec2(x, y);
 }
 
-// 1 at totality, 0 while any photosphere shows.
-float totality(vec2 m) {
-  float d = distance(m, SUN);
-  return (1.0 - smoothstep(0.3, 0.9, d));
+// totality is 1 the moment the lunar disc contains the solar limb (d <= RM - R)
+// and falls to 0 just past it — the corona/stars therefore can't overlap a
+// still-visible crescent, and the contact envelope peaks on that same boundary.
+float totality(float d) {
+  return 1.0 - smoothstep(RM - R, RM - R + 0.06, d);
 }
 
 void main() {
   vec2 p = vW.xy;
   float t = uT;
   vec2 m = moonAt(t);
-  float tot = totality(m);
+  float dSep = distance(m, SUN);
+  float tot = totality(dSep);
+  // inMoon early — the star lattice must not shine through the silhouette.
+  float inMoon = 1.0 - smoothstep(RM - 0.008, RM + 0.008, distance(p, m));
 
   // Sky: near-black, deepening a touch as the light dies at totality.
   vec3 sky = mix(vec3(0.012, 0.016, 0.028), vec3(0.004, 0.006, 0.012), tot);
@@ -63,7 +67,7 @@ void main() {
   vec2 cell = floor(p * 4.0);
   vec2 sp = (cell + 0.5 + (hash2(cell.x * 73.7 + cell.y * 19.3) - 0.5) * 0.9) / 4.0;
   float sh = hash1(cell.x * 91.3 + cell.y * 37.1);
-  float star = (1.0 - smoothstep(0.004, 0.012, distance(p, sp))) * step(0.78, sh);
+  float star = (1.0 - smoothstep(0.004, 0.012, distance(p, sp))) * step(0.78, sh) * (1.0 - inMoon);
   float twinkle = 0.75 + 0.25 * sin(t * 2.7 + sh * TAU);
   sky += vec3(0.75, 0.8, 0.95) * star * twinkle * smoothstep(0.55, 0.95, tot) * 0.5;
 
@@ -95,26 +99,25 @@ void main() {
     col += bone * tot * 0.22 * exp(-r / 0.35); // inner ring hugging the limb
   }
 
-  // Chromosphere: a warm pin-thin rim riding the moon's limb, only while the
-  // two contacts brush past — the scene's single colour event.
-  float wC2 = exp(-pow((t - 10.85) / 0.5, 2.0)) + exp(-pow((t - 14.65) / 0.5, 2.0));
-  float rim = exp(-abs(distance(p, m) - RM) / 0.035);
-  col += vec3(1.0, 0.42, 0.22) * rim * wC2 * 0.9;
+  // Contact envelope: peaks exactly when the limb gap closes/opens
+  // (dSep ~ RM - R) — geometric, so both contacts are hit whatever the path.
+  float dContact = (dSep - (RM - R)) / 0.03;
+  float contactEnv = exp(-dContact * dContact);
 
-  // Diamond ring: a hard point of fire where the photosphere last vanishes /
-  // first returns — the leading limb at C2, the trailing limb at C3.
-  float env2 = exp(-pow((t - 10.9) / 0.3, 2.0));
-  float env3 = exp(-pow((t - 14.7) / 0.3, 2.0));
-  // The flash peeks just past the limb — at the contact instants the moon's
-  // disc still leaves a hairline gap at those points, so the points sit a
-  // shade outside R to stay visible through the moon-mix.
-  vec2 f2 = SUN + vec2(-R * 1.045, 0.05);
-  vec2 f3 = SUN + vec2(R * 1.045, -0.05);
-  float flare = env2 * exp(-distance(p, f2) / 0.09) + env3 * exp(-distance(p, f3) / 0.09);
-  col += vec3(1.0, 0.97, 0.9) * flare * 5.0;
+  // Chromosphere: a warm pin-thin rim riding the moon's limb, only while the
+  // contacts brush past — the scene's single colour event.
+  float rim = exp(-abs(distance(p, m) - RM) / 0.035);
+  col += vec3(1.0, 0.42, 0.22) * rim * contactEnv * 0.9;
+
+  // Diamond ring: a hard point of fire at the limb point where the gap last
+  // closes — the direction away from the moon's centre, so it lands on the
+  // correct limb at both contacts. It sits a shade outside R so it survives
+  // the moon-mix through the hairline gap that remains at the contact instant.
+  vec2 away = dSep > 1e-3 ? (SUN - m) / dSep : vec2(-1.0, 0.0);
+  vec2 fp = SUN + away * R * 1.045;
+  col += vec3(1.0, 0.97, 0.9) * contactEnv * 5.0 * exp(-distance(p, fp) / 0.09);
 
   // The moon: a near-black disc with a whisper of earthshine.
-  float inMoon = 1.0 - smoothstep(RM - 0.008, RM + 0.008, distance(p, m));
   vec3 moonCol = vec3(0.015, 0.017, 0.024) * (0.55 + 0.45 * smoothstep(0.0, RM, distance(p, m)));
   col = mix(col, moonCol, inMoon * 0.97);
 
