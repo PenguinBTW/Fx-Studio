@@ -87,16 +87,17 @@ uniform vec3 uSky;
 uniform vec3 uStone[4];
 
 float streak(vec2 p, float f, float sp) {
-  // pattern axis along p.y (world -z): +uT slides the field down-brook
-  return sin(p.y * f + sin(p.x * 2.0 + uT * sp * 0.35) * 2.2 + uT * sp);
+  // stripes elongated along p.y (world -z): lines run WITH the current;
+  // the inner field meanders them and drifts down-brook
+  return sin(p.x * f + sin(p.y * 2.0 + uT * sp * 0.35) * 2.2);
 }
 
 void main() {
   // world-plane coords; flow toward -z (down-brook, toward camera)
-  vec2 p = vec2(vWp.x * 0.35, vWp.z * 1.7);
+  vec2 p = vec2(vWp.x * 1.7, vWp.z * 0.35);
   float s1 = streak(p, 6.0, 1.15);
   float s2 = streak(p + vec2(3.7, 9.2), 11.0, 1.8);
-  float s3 = sin(p.y * 2.2 + uT * 0.5 + sin(p.x * 5.0) ) * 0.5;
+  float s3 = sin(p.x * 2.2 + sin(p.y * 5.0 + uT * 0.5) ) * 0.5;
   // pseudo-normal from the streak field: tilt the surface normal
   vec2 g = vec2(s1 * 0.35 + s2 * 0.22, s1 * 0.12 + s3 * 0.3);
   vec3 n = normalize(vec3(g.x, 1.0, g.y));
@@ -542,11 +543,12 @@ export default class BrooksideScene extends Scene {
     }
     dp.needsUpdate = true;
 
-    // mist breathing + slow slide downstream (-z, with the current)
+    // mist breathing + monotone downstream drift (-z, with the current)
     for (let i = 0; i < this.mistMats.length; i++) {
       this.mistMats[i].uniforms.uT.value = t;
-      this.mistMeshes[i].position.z =
-        (8 + i * 6) + Math.sin(t * 0.12 + i * 2.1) * 1.8 - (t * 0.05 % 2.0);
+      const m = this.mistMeshes[i];
+      m.position.z = (8 + i * 6) - t * 0.15;
+      m.position.x = (i - 1) + Math.sin(t * 0.12 + i * 2.1) * 0.6;
     }
 
     renderer.setRenderTarget(out);
