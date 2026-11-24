@@ -1,0 +1,32 @@
+{
+  "project": "blackhole",
+  "meta": {
+    "title": "Blackhole: The Lensed Disk",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 24.0
+  },
+  "entries": [
+    {
+      "scene": "blackhole/blackhole",
+      "id": "act-silent",
+      "start": 0.0,
+      "end": 8.0,
+      "caption": { "fig": "01", "text": "THE SILENT LENS", "dur": 4.0 }
+    },
+    {
+      "scene": "blackhole/blackhole",
+      "id": "act-brighten",
+      "start": 8.0,
+      "end": 16.0,
+      "caption": { "fig": "02", "text": "THE DISK BRIGHTENS", "dur": 4.0 }
+    },
+    {
+      "scene": "blackhole/blackhole",
+      "id": "act-warp",
+      "start": 16.0,
+      "end": 24.0,
+      "caption": { "fig": "03", "text": "THE WARP REVEALS", "dur": 4.0 }
+    }
+  ]
+}
