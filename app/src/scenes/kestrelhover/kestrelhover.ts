@@ -27,8 +27,8 @@ const kestrelXY = (t: number): [number, number] => {
   const u = stoopU(t), v = retU(t);
   let x = 0.52 + 0.003 * Math.sin(t * 7.0) + u * u * 0.34;
   let y = 0.63 + 0.004 * Math.sin(t * 5.3) - 0.045 * dipA(t) - 0.045 * dipB(t) - u * u * 0.75;
-  const mx = 0.22 + 0.30 * v, my = 0.94 - 0.31 * v;     // glide in from upper-left
-  return [x * (1 - v) + mx * v, y * (1 - v) + my * v];
+  if (v > 0) return [0.22 + 0.30 * v, 1.06 - 0.43 * v]; // glide in from off-frame upper-left
+  return [x, y];
 };
 
 const PW = 300, PH = 114, PY = 8, PZ = -80;
@@ -82,8 +82,8 @@ vec2 kestrel(float t) {
                  0.63 + 0.004 * sin(t * 5.3)
                  - 0.045 * uDipA - 0.045 * uDipB);
   kp += vec2(u * u * 0.34, -u * u * 0.75);
-  vec2 back = mix(vec2(0.22, 0.94), vec2(0.52, 0.63), v);
-  return mix(kp, back, v);
+  if (v > 0.0) return mix(vec2(0.22, 1.06), vec2(0.52, 0.63), v);
+  return kp;
 }
 
 
@@ -128,9 +128,12 @@ void main() {
 
   // ---- pale noon sky, thin drifting cloud streaks, faint sun halo
   vec3 col = mix(vec3(0.62, 0.68, 0.74), vec3(0.78, 0.82, 0.86), uv.y);
-  col += vec3(0.10, 0.09, 0.06) * exp(-pow((uv.x - 0.30) / 0.16, 2.0) - pow((uv.y - 0.86) / 0.10, 2.0));
-  float halo = exp(-pow((uv.x - 0.30) / 0.06, 2.0) - pow((uv.y - 0.86) / 0.05, 2.0));
-  col += vec3(0.18, 0.16, 0.10) * halo;
+  {
+    float g1 = (uv.x - 0.30) / 0.16, g2 = (uv.y - 0.86) / 0.10;
+    col += vec3(0.10, 0.09, 0.06) * exp(-(g1 * g1 + g2 * g2));
+    float h1d = (uv.x - 0.30) / 0.06, h2d = (uv.y - 0.86) / 0.05;
+    col += vec3(0.18, 0.16, 0.10) * exp(-(h1d * h1d + h2d * h2d));
+  }
   float cl = fbm(vec2(uv.x * 3.0 - t * 0.015, uv.y * 14.0));
   col += vec3(0.06) * smoothstep(0.55, 0.75, cl) * smoothstep(0.55, 0.75, uv.y);
 
@@ -176,11 +179,11 @@ void main() {
   // ---- skylark: vertical rise from the verge then level-off exit right
   {
     float u = uLarkU; float lv = uLarkLv;
-    vec2 lp = vec2(0.36 + lv * 0.30, 0.30 + u * 0.42 * (1.0 - lv) + lv * 0.42);
+    vec2 lp = vec2(0.36 + lv * 0.68, 0.30 + u * 0.42 * (1.0 - lv) + lv * 0.42);
     vec2 ld = (uv - lp) / vec2(0.012, 0.005);
     float lark = 1.0 - smoothstep(0.5, 0.9, length(ld * vec2(1.0, 0.6)));
     lark *= 0.75 + 0.25 * sin(t * 34.0);      // flutter
-    lark *= step(0.001, u) * (1.0 - smoothstep(0.55, 0.60, lp.x));
+    lark *= step(0.001, u) * (1.0 - smoothstep(0.94, 1.02, lp.x));
     col = mix(col, vec3(0.12, 0.10, 0.08), clamp(lark, 0.0, 1.0));
   }
 
@@ -189,8 +192,8 @@ void main() {
     float ew = uEars;
     vec2 ep = vec2(0.70, 0.315);
     float e = max(
-      1.0 - smoothstep(0.002, 0.004, length((uv - ep + vec2(0.004, -0.008)) / vec2(0.004, 0.010))),
-      1.0 - smoothstep(0.002, 0.004, length((uv - ep - vec2(0.004, -0.008)) / vec2(0.004, 0.010))));
+      1.0 - smoothstep(0.003, 0.007, length((uv - ep + vec2(0.005, -0.009)) / vec2(0.005, 0.012))),
+      1.0 - smoothstep(0.003, 0.007, length((uv - ep - vec2(0.005, -0.009)) / vec2(0.005, 0.012))));
     col = mix(col, vec3(0.10, 0.08, 0.06), e * ew);
   }
 
@@ -252,8 +255,8 @@ export default class KestrelhoverScene extends Scene {
         const W = P.width || 1920, H = P.height || 1080;
         this.cam.updateMatrixWorld();
         const [kx, ky] = kestrelXY(t);
-      if (ky > -0.05 && ky < 1.05 && retU(t) < 1) {
-        aToV(kx, ky + 0.03, this.p).project(this.cam);
+      if (ky > -0.05 && ky < 1.05) {
+        aToV(kx, ky + 0.015, this.p).project(this.cam);
         const px = (this.p.x * 0.5 + 0.5) * W, py = (0.5 - this.p.y * 0.5) * H;
         P.textProbes.push({
           frameIdx: P.currentFrameIdx ?? 0, t, text: 'kestrel',

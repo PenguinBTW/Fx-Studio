@@ -11,7 +11,7 @@ a fixed point while grass, gusts, dust, a skylark and its own stoop all move.
 
 ## Hero — the kestrel
 - Silhouette at ~(0.52, 0.63), ~0.03 uv wingspan: tilted body ellipse, fanned
-  tail, head pitched down scanning; two-segment wings whose tips ride a 27 Hz
+  tail, head pitched down scanning; two-segment wings whose tips ride a ~4.3 Hz
   flap with a second harmonic.
 - Tiny bob (3–4 ‰ of frame). Two drop-and-rise dips (4s, 11s) — a few feet
   down, re-rise over ~1.5s.
