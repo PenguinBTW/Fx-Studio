@@ -112,12 +112,20 @@ export default class PendulumWaveScene extends Scene {
     const cy = 12.5 - 9.5 * ease;
     const cx = Math.sin(0.11 * lt) * 2.6;
     // Keep the full row in frame at any aspect: half-extent of the sweep is
-    // the outer anchor + string length * sin(SWING), plus a small margin.
-    const halfRow = (CENTER * SPACING) + LEN * Math.sin(SWING) + 1.0;
+    // the outer anchor + string length * sin(SWING), plus the lookAt wander
+    // (the frustum is centred at lx, not at the row centre) and a margin.
+    const lx = Math.sin(0.11 * lt + 0.4) * 1.4;
+    const halfRow = (CENTER * SPACING) + LEN * Math.sin(SWING) + Math.abs(lx) + 1.0;
     const halfHfov = THREE.MathUtils.degToRad(this.camera.fov / 2);
     const dist = Math.max(30, halfRow / (Math.tan(halfHfov) * this.camera.aspect));
     this.camera.position.set(cx, cy, dist);
-    this.camera.lookAt(Math.sin(0.11 * lt + 0.4) * 1.4, -0.8 + 1.2 * ease, 0);
+    this.camera.lookAt(lx, -0.8 + 1.2 * ease, 0);
+    // Narrow aspect pulls the camera far back — keep the far plane ahead of it.
+    const far = Math.max(300, dist + 60);
+    if (this.camera.far !== far) {
+      this.camera.far = far;
+      this.camera.updateProjectionMatrix();
+    }
     this.camera.updateMatrixWorld();
 
     for (let i = 0; i < N_BOBS; i++) {
