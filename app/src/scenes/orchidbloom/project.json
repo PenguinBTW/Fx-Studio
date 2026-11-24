@@ -1,0 +1,11 @@
+{
+  "project": "orchidbloom",
+  "meta": { "title": "Orchidbloom — a macro orchid opening at dawn", "aspectRatio": "16:9", "fps": 60, "duration": 24 },
+  "entries": [
+    { "scene": "orchidbloom/orchidbloom", "id": "act-closed",  "start": 0,    "end": 4.8,  "caption": { "fig": "i",   "text": "BUDS CLOSED", "dur": 4 } },
+    { "scene": "orchidbloom/orchidbloom", "id": "act-sepals",  "start": 4.8,  "end": 9.6,  "caption": { "fig": "ii",  "text": "SEPALS SPLIT", "dur": 4 } },
+    { "scene": "orchidbloom/orchidbloom", "id": "act-petals",  "start": 9.6,  "end": 14.4, "caption": { "fig": "iii", "text": "PETALS OPEN", "dur": 4 } },
+    { "scene": "orchidbloom/orchidbloom", "id": "act-flies",   "start": 14.4, "end": 19.2, "caption": { "fig": "iv",  "text": "FIRST HOVER-FLY", "dur": 4 } },
+    { "scene": "orchidbloom/orchidbloom", "id": "act-droplet", "start": 19.2, "end": 24,   "caption": { "fig": "v",   "text": "DROPLET DROP", "dur": 3.5 } }
+  ]
+}
