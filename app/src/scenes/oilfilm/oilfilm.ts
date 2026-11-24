@@ -115,8 +115,10 @@ void main() {
     d += 170.0 * sin(ths * 3.0 + rs * 9.0 - uT * 0.34)
        + 90.0 * sin(ths * 5.0 - rs * 14.0 + uT * 0.22)
        + 55.0 * sin(ths * 9.0 + rs * 22.0 - uT * 0.47);
-    // late-take sharpening: near the rim the film thins hard, squeezing bands
-    float rimThin = smoothstep(0.55, 0.98, rn) * smoothstep(10.0, 17.0, uT);
+    // late-take sharpening: toward the frame edges the film thins hard and
+    // the bands squeeze — keyed on visible r (the slick's own rim is well
+    // offscreen by then, so rn can never reach it)
+    float rimThin = smoothstep(0.10, 0.24, r) * smoothstep(10.0, 17.0, uT);
     d = mix(d, d * 0.35 + 40.0 * sin(rn * 60.0 - uT * 0.9), rimThin * 0.8);
 
     vec3 film = filmColor(d);
@@ -130,23 +132,28 @@ void main() {
 
     // oily darkening of the tarmac under the film + bright wet rim edge
     slick += vec3(0.005, 0.006, 0.010);
-    float edgeGlow = smoothstep(0.10, 0.0, abs(r - R) / max(R, 1e-4));
+    // ascending bounds only — smoothstep with edge0 > edge1 is undefined
+    float edgeGlow = 1.0 - smoothstep(0.0, 0.10, abs(r - R) / max(R, 1e-4));
     slick += film * edgeGlow * 0.4;
 
     // faint dim sheen — the slick is glossy even where fringes are dark
     slick += vec3(0.006, 0.008, 0.013) * (0.5 + 0.5 * sin(ths * 2.0 + uT * 0.3));
 
     col = mix(col, slick, inside);
-    // wet highlight ring exactly on the growth front
-    float rimD = (r - R) / 0.012;
-    col += filmColor(620.0) * exp(-rimD * rimD) * 0.35 * step(0.02, g);
   }
 
+  // wet highlight ring exactly on the growth front — outside the inside-gate
+  // so the outside half of the gaussian isn't clipped at the mask boundary
+  float rimD = (r - R) / 0.012;
+  col += filmColor(620.0) * exp(-rimD * rimD) * 0.35 * step(0.02, g);
+
   // ---- sodium-lamp smear ----------------------------------------------------
-  // dim warm vertical streak upper-right — the only warm light in the frame
-  vec2 lampD = (vUv - vec2(0.74, 0.30)) * vec2(2.6, 1.62);
-  float lamp = exp(-(lampD.x * lampD.x) / 0.006 - (lampD.y * lampD.y) / 0.35);
-  col += vec3(1.0, 0.55, 0.18) * lamp * 0.08;
+  // dim warm vertical streak upper-right — the only warm light in the frame.
+  // p-space, not uv-space: the visible ground patch is only the central
+  // ~0.25 of p, so an off-centre uv lands outside the frame entirely.
+  vec2 lampD = p - vec2(0.21, 0.12);
+  float lamp = exp(-(lampD.x * lampD.x) / 0.004 - (lampD.y * lampD.y) / 0.09);
+  col += vec3(1.0, 0.55, 0.18) * lamp * 0.05;
 
   // gentle overall brightness ramp — the eye adjusts as the slick spreads
   col *= 0.85 + 0.15 * smoothstep(0.0, 6.0, uT);
