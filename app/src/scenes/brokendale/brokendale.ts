@@ -360,18 +360,6 @@ export default class BrokendaleScene extends Scene {
         c.fillStyle = '#e8edf3';
         c.fillText(text, cx, cy);
         c.restore();
-        if (typeof window !== 'undefined') {
-          const P = (window as any).__motion || (window as any).__pdoom;
-          if (P?.probe && P?.textProbes && P.recordText !== false) {
-            P.textProbes.push({
-              frameIdx: P.currentFrameIdx ?? 0, t, text,
-              fontFamily: 'Archivo, sans-serif', fontPx: 46,
-              fillStyle: '#e8edf3', globalAlpha: a, layerId: 'captions',
-              bbox: [cx - tw / 2, cy - 30, cx + tw / 2, cy + 30], w: tw, h: 60,
-              cx, cy, hPct: (46 / 1080) * 100, isStroke: false,
-            });
-          }
-        }
       }
       this.ctx.comp.draw(r, this.layer.upload(), out, { mode: 'normal', opacity: 1 });
     }
