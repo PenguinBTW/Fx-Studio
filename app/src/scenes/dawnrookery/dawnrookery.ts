@@ -72,17 +72,17 @@ function buildTrees(seed: number): TreeSet {
     const h = 1.5 + rng() * 1.0;
     // trunk in three kinked pieces, wide base tapering to the tip
     const k1x = x0 + lean * 0.33 + (rng() - 0.5) * 0.10;
-    const k1y = -1.4 + h * 0.40;
+    const k1y = -0.85 + h * 0.40;
     const k2x = x0 + lean * 0.66 + (rng() - 0.5) * 0.10;
-    const k2y = -1.4 + h * 0.72;
-    rib(x0, -1.4, k1x, k1y, 0.10, 0.062, z, c);
+    const k2y = -0.95 + h * 0.72;
+    rib(x0, -0.85, k1x, k1y, 0.10, 0.062, z, c);
     rib(k1x, k1y, k2x, k2y, 0.062, 0.034, z, c);
-    rib(k2x, k2y, x0 + lean, -1.4 + h, 0.034, 0.010, z, c);
+    rib(k2x, k2y, x0 + lean, -0.95 + h, 0.034, 0.010, z, c);
     // limbs fanning up — nest sites recorded on 6 of them
     const limbs = 3 + Math.floor(rng() * 3);
     for (let l = 0; l < limbs; l++) {
       const t0 = 0.45 + (l / limbs) * 0.55;
-      const bx = x0 + lean * t0, by = -1.4 + h * t0;
+      const bx = x0 + lean * t0, by = -0.95 + h * t0;
       const side = l % 2 === 0 ? 1 : -1;
       const lx = bx + side * (0.25 + rng() * 0.4);
       const ly = by + 0.1 + rng() * 0.35;
@@ -288,7 +288,7 @@ void main() {
   vec2 p = aC + vec2(position.x * r, position.y * r * 0.22);
   p.x += 0.01 * sin(uT * 1.1 + position.x * 9.0);
   vA = on * (1.0 - u) * 0.55;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(p.x, uW + 0.02, -2.7, 1.0);
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(p.x, uW + 0.02 + p.y, -2.7, 1.0);
 }`;
 
 const RING_FRAG = /* glsl */ `
@@ -431,7 +431,8 @@ void main() {
 const TREE_FRAG = /* glsl */ `
 precision mediump float;
 varying vec3 vC;
-void main() { gl_FragColor = vec4(vC, 1.0); }`;
+uniform float uA;
+void main() { gl_FragColor = vec4(vC, uA); }`;
 
 // ---------------------------------------------------------------------------
 // per-act state — each project entry instantiates its own ctx, so shared
@@ -457,6 +458,8 @@ interface HeronRig {
 
 interface FU {
   back: THREE.ShaderMaterial;
+  treeMat: THREE.ShaderMaterial;
+  reflMat: THREE.ShaderMaterial;
   ptMat: THREE.ShaderMaterial;
   ringMat: THREE.ShaderMaterial;
   herons: HeronRig[];
@@ -503,16 +506,16 @@ const scene = defineScene({
     const { geo, refl, nests, trunks } = buildTrees(4177);
     const treeMat = new THREE.ShaderMaterial({
       vertexShader: TREE_VERT, fragmentShader: TREE_FRAG,
-      uniforms: { uT: { value: 0 }, uWobble: { value: 0 } },
-      vertexColors: true, transparent: true,
+      uniforms: { uT: { value: 0 }, uWobble: { value: 0 }, uA: { value: 1.0 } },
+      vertexColors: true, transparent: true, side: THREE.DoubleSide,
     });
     const reflMat = new THREE.ShaderMaterial({
       vertexShader: TREE_VERT, fragmentShader: TREE_FRAG,
-      uniforms: { uT: { value: 0 }, uWobble: { value: 1 } },
-      vertexColors: true, transparent: true, opacity: 0.35,
+      uniforms: { uT: { value: 0 }, uWobble: { value: 1 }, uA: { value: 0.35 } },
+      vertexColors: true, transparent: true, side: THREE.DoubleSide,
     });
-    ctx.scene3D.add(new THREE.LineSegments(geo, treeMat));
-    ctx.scene3D.add(new THREE.LineSegments(refl, reflMat));
+    ctx.scene3D.add(new THREE.Mesh(geo, treeMat));
+    ctx.scene3D.add(new THREE.Mesh(refl, reflMat));
 
     // ---- herons -------------------------------------------------------------
     const glyph = heronGlyph();
@@ -520,7 +523,7 @@ const scene = defineScene({
       { nest: 0, kind: "arrive", from: [-4.8, 1.8], t0: 4.9, land: 6.3, face: 1, seed: 1.7 },
       { nest: 2, kind: "arrive", from: [4.9, 2.0], t0: 6.2, land: 7.5, face: -1, seed: 4.3 },
       { nest: 4, kind: "arrive", from: [-4.9, 1.5], t0: 7.4, land: 8.7, face: 1, seed: 7.9 },
-      { nest: 1, kind: "hero", from: [0.9, WATER_Y + 0.16], t0: HERO.rise, land: HERO.land, face: -1, seed: 2.2 },
+      { nest: 3, kind: "hero", from: [0.9, WATER_Y + 0.16], t0: HERO.rise, land: HERO.land, face: -1, seed: 2.2 },
       { nest: 5, kind: "perch", from: [0, 0], t0: 0, land: 0, face: 1, seed: 5.5 },
     ];
     const herons: HeronRig[] = specs.map((spec) => {
@@ -543,8 +546,12 @@ const scene = defineScene({
         uniforms: { ...uniforms(), uMirror: { value: 1 } },
         transparent: true, side: THREE.DoubleSide,
       });
-      ctx.scene3D.add(new THREE.Mesh(glyph, mat));
-      ctx.scene3D.add(new THREE.Mesh(glyph, mirror));
+      const heroMesh = new THREE.Mesh(glyph, mat);
+      heroMesh.frustumCulled = false;
+      const mirrorMesh = new THREE.Mesh(glyph, mirror);
+      mirrorMesh.frustumCulled = false;
+      ctx.scene3D.add(heroMesh);
+      ctx.scene3D.add(mirrorMesh);
       return { mat, mirror, spec, nest };
     });
 
@@ -597,15 +604,20 @@ const scene = defineScene({
     for (let i = 0; i < 14; i++) {
       addPt(1, rng() * 31, 0, DUR, [-2.8 + rng() * 5.6, -0.6 + rng() * 1.6, -2.6], [0, 0, 0]);
     }
-    // hero droplets — fall off the fish as it rises
+    // hero droplets — fall off the fish as it rises; spawn x tracks the
+    // hero's flight ease so later drops shed along the path, not at takeoff
     for (let i = 0; i < 6; i++) {
-      addPt(2, rng() * 31, HERO.rise + 0.2 + i * 0.18, 1.2,
-        [0.9 + (rng() - 0.5) * 0.2, WATER_Y + 0.25 + i * 0.1, -2.7],
+      const dt0 = HERO.rise + 0.2 + i * 0.18;
+      const dw = Math.min(Math.max((dt0 - HERO.rise) / (HERO.land - HERO.rise), 0), 1);
+      const de = dw * dw * (3 - 2 * dw);
+      const hx = 0.9 + (nests[3].x - 0.9) * de + (rng() - 0.5) * 0.15;
+      addPt(2, rng() * 31, dt0, 1.2,
+        [hx, WATER_Y + 0.25 + i * 0.1, -2.7],
         [(rng() - 0.5) * 0.4, 0, 0]);
     }
     // two chick heads on the hero's nest
-    addPt(3, 3.1, 13.6, DUR, [nests[1].x - 0.05, nests[1].y + 0.08, -2.6], [0, 0, 0]);
-    addPt(3, 7.7, 13.9, DUR, [nests[1].x + 0.06, nests[1].y + 0.07, -2.6], [0, 0, 0]);
+    addPt(3, 3.1, 13.6, DUR, [nests[3].x - 0.05, nests[3].y + 0.08, -2.6], [0, 0, 0]);
+    addPt(3, 7.7, 13.9, DUR, [nests[3].x + 0.06, nests[3].y + 0.07, -2.6], [0, 0, 0]);
     // kingfisher streak — six trail points crossing left → right
     for (let i = 0; i < 6; i++) {
       addPt(4, i, KINGFISHER.t0, KINGFISHER.dur, [-3.4, 0.55, -2.5], [3.6, 0, 0]);
@@ -632,7 +644,7 @@ const scene = defineScene({
 
     U.set(ctx, {
       back: back.material as THREE.ShaderMaterial,
-      ptMat, ringMat, herons,
+      treeMat, reflMat, ptMat, ringMat, herons,
     });
   },
 
@@ -648,6 +660,8 @@ const scene = defineScene({
     u.ptMat.uniforms.uT!.value = t;
     u.ptMat.uniforms.uSunT!.value = sunT;
     u.ringMat.uniforms.uT!.value = t;
+    u.treeMat.uniforms.uT!.value = t;
+    u.reflMat.uniforms.uT!.value = t;
 
     // heron choreography — closed-form paths, flap and fold envelopes
     for (const h of u.herons) {
@@ -664,7 +678,8 @@ const scene = defineScene({
           x = spec.from[0] + (nest.x - spec.from[0]) * e;
           // descend in a shallow glide arc — a dip then a flare
           y = spec.from[1] + (nest.y + 0.20 - spec.from[1]) * e
-            + Math.sin(w * Math.PI) * 0.35 - Math.min(Math.max((w - 0.82) / 0.18, 0), 1) * 0.10;
+            + Math.sin(w * Math.PI) * 0.35
+            - Math.sin(Math.min(Math.max((w - 0.82) / 0.18, 0), 1) * Math.PI) * 0.10;
           flight = 1 - Math.min(Math.max((w - 0.85) / 0.15, 0), 1) * 0.3;
         } else {
           const settle = Math.min(Math.max((t - spec.land) / 0.7, 0), 1);
