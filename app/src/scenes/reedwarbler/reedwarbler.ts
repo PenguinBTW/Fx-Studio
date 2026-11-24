@@ -121,7 +121,9 @@ void main() {
   // near bank — dark warm mud with a wet dark edge at the waterline
   vec3 bank = mix(vec3(0.035, 0.030, 0.022), vec3(0.075, 0.062, 0.042), smoothstep(-2.1, -1.15, q.y));
   bank += vec3(0.012) * hash21(floor(q * vec2(20.0, 8.0)));
-  bank = mix(bank, vec3(0.028, 0.024, 0.018), 1.0 - smoothstep(bankTop - 0.10, bankTop - 0.02, q.y));
+  // wet edge hugs the waterline and fades into the dry mud below — the old
+  // (1 - smoothstep) form wiped the gradient over the whole lower bank
+  bank = mix(bank, vec3(0.028, 0.024, 0.018), smoothstep(bankTop - 0.30, bankTop - 0.02, q.y));
 
   vec3 col = bed;
   col = mix(col, water, 1.0 - smoothstep(waterTop - 0.02, waterTop + 0.02, q.y));
