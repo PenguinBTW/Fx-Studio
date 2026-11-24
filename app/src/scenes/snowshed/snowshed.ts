@@ -140,28 +140,30 @@ vec3 trainAt(vec2 uv, float t, float posts) {
   // approach: lamp blooms at the far end through the timber gaps (4→8s)
   {
     float u = sstep(APPROACH, PASS - 0.4, t);
-    vec2 lp = vec2(FARX - 0.015, roofAt(FARX) - ROOF_H - 0.075);
-    float bl = exp(-sdist(uv, lp, vec2(0.035 + 0.045 * u, 0.045 + 0.045 * u)) * 2.4) * u * 2.2;
-    // light through timber gaps: modulate bloom by the post pattern
-    glow += vec3(1.0, 0.72, 0.34) * bl * (0.55 + 0.45 * posts);
-    glow += vec3(0.9, 0.6, 0.25) * bl * 0.35 * interiorAt(uv);
+    vec2 lp = vec2(0.80, roofAt(0.80) - ROOF_H - 0.075);
+    float bl = exp(-sdist(uv, lp, vec2(0.035 + 0.045 * u, 0.045 + 0.045 * u)) * 2.4) * u * 2.2 * sstep(PASS + 0.8, PASS - 0.4, t);
+    // light only lives in the gaps: interior visible and not covered by a post
+    float gap = interiorAt(uv) * (1.0 - posts);
+    glow += vec3(1.0, 0.72, 0.34) * bl * (0.15 + 0.85 * gap);
+    glow += vec3(0.9, 0.6, 0.25) * bl * 0.35 * gap;
   }
   // pass-through: a soft light sweep travels far→near behind the timbers (8→11.5s)
   {
     float u = sstep(PASS, TAIL, t);
-    float lx = mix(FARX, 0.06, u);
+    float lx = mix(0.80, 0.19, u);
     float ly = roofAt(lx) - ROOF_H - 0.075;
     float sw = exp(-sdist(uv, vec2(lx, ly), vec2(0.055, 0.085)) * 2.4) * 1.6;
     float on = sstep(PASS - 0.2, PASS + 0.4, t) * sstep(TAIL + 0.6, TAIL - 0.2, t);
-    glow += vec3(0.95, 0.68, 0.30) * sw * on * (0.5 + 0.5 * posts);
-    glow += vec3(0.8, 0.5, 0.2) * sw * on * 0.30 * interiorAt(uv);
+    float gapS = interiorAt(uv) * (1.0 - posts);
+    glow += vec3(0.95, 0.68, 0.30) * sw * on * (0.15 + 0.85 * gapS);
+    glow += vec3(0.8, 0.5, 0.2) * sw * on * 0.30 * gapS;
   }
   // tail lamp: small red point at the near end, fades (11.5→15s)
   {
-    vec2 tp2 = vec2(0.05, roofAt(0.05) - ROOF_H - 0.07);
+    vec2 tp2 = vec2(0.19, roofAt(0.19) - ROOF_H - 0.07);
     float tl = exp(-sdist(uv, tp2, vec2(0.011, 0.016)) * 4.5) * 1.6;
     glow += vec3(0.75, 0.10, 0.06) * tl * sstep(TAIL, TAIL + 0.4, t) * sstep(SETTLE, SETTLE - 2.2, t);
-    glow += vec3(0.5, 0.05, 0.03) * tl * 0.4 * sstep(TAIL, TAIL + 0.4, t) * sstep(SETTLE, SETTLE - 2.2, t) * interiorAt(uv);
+    glow += vec3(0.5, 0.05, 0.03) * tl * 0.4 * sstep(TAIL, TAIL + 0.4, t) * sstep(SETTLE, SETTLE - 2.2, t) * interiorAt(uv) * (1.0 - posts);
   }
   return glow;
 }
@@ -211,7 +213,7 @@ void main() {
   col = mix(col, vec3(0.008, 0.009, 0.014), interior * 0.92);
   // hanging lamp at the far end — warm point always on
   {
-    vec2 lp = vec2(FARX - 0.02, roofAt(FARX) - ROOF_H - 0.05);
+    vec2 lp = vec2(0.80, roofAt(0.80) - ROOF_H - 0.05);
     float flick = 0.9 + 0.1 * sin(t * 7.0) * sin(t * 3.1);
     col += vec3(1.0, 0.62, 0.22) * exp(-sdist(uv, lp, vec2(0.016, 0.026)) * 3.0) * 1.6 * flick;
     col += vec3(0.6, 0.35, 0.12) * exp(-sdist(uv, lp, vec2(0.035, 0.05)) * 5.0) * 0.4 * flick;
@@ -386,6 +388,17 @@ export default class SnowshedScene extends Scene {
         c.fillStyle = '#e8edf3';
         c.fillText(text, cx, cy);
         c.restore();
+        if (typeof window !== 'undefined') {
+          const P = (window as any).__motion || (window as any).__pdoom;
+          if (P?.textProbes && P.recordText !== false) {
+            P.textProbes.push({
+              frameIdx: P.currentFrameIdx ?? 0, t, text,
+              fontFamily: 'Archivo, sans-serif', fontPx: 46,
+              fillStyle: '#e8edf3', globalAlpha: a, layerId: 'captions',
+              bbox: [cx - tw / 2, cy - 30, cx + tw / 2, cy + 30], w: tw, h: 60,
+            });
+          }
+        }
       }
       this.ctx.comp.draw(r, this.layer.upload(), out, { mode: 'normal', opacity: 1 });
     }
