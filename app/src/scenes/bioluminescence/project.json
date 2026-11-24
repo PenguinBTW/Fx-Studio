@@ -1,0 +1,32 @@
+{
+  "project": "bioluminescence",
+  "meta": {
+    "title": "Bioluminescence: Midnight Bay",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 24.0
+  },
+  "entries": [
+    {
+      "scene": "bioluminescence/bioluminescence",
+      "id": "act-tide",
+      "start": 0.0,
+      "end": 8.0,
+      "caption": { "fig": "01", "text": "THE TIDE COMES IN", "dur": 4.0 }
+    },
+    {
+      "scene": "bioluminescence/bioluminescence",
+      "id": "act-glow",
+      "start": 8.0,
+      "end": 16.0,
+      "caption": { "fig": "02", "text": "WHERE THE WATER BREAKS, IT GLOWS", "dur": 4.0 }
+    },
+    {
+      "scene": "bioluminescence/bioluminescence",
+      "id": "act-wake",
+      "start": 16.0,
+      "end": 24.0,
+      "caption": { "fig": "03", "text": "THE WAKE", "dur": 4.0 }
+    }
+  ]
+}
