@@ -263,7 +263,7 @@ in float vA;
 out vec4 fragColor;
 void main() {
   float d = length(vUv - 0.5) * 2.0;
-  float ring = (1.0 - smoothstep(0.8, 1.0, d)) - smoothstep(0.75, 0.4, d);
+  float ring = (1.0 - smoothstep(0.8, 1.0, d)) - (1.0 - smoothstep(0.4, 0.75, d));
   float glint = (1.0 - smoothstep(0.0, 0.35, length(vUv - vec2(0.38, 0.62)))) * 1.4;
   float a = (ring + glint) * vA;
   if (a < 0.02) discard;
