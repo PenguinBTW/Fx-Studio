@@ -168,9 +168,9 @@ vec3 ribbonPos(float s, float lane, float seed) {
 void main() {
   vUv = uv;
   vSeed = aSeed;
-  // wing fold: |x| halves rotate about body axis (local Y); landed folds the
-  // wings upright over the back with a slow settle flutter
-  float fly = sin(uT * 9.0 + aSeed * 50.0) * 0.95;
+  // wing fold: |x| halves rotate about body axis (local Y) — one-sided
+  // upstroke so wings open flat then fold; landed holds wings upright
+  float fly = 0.15 + (sin(uT * 9.0 + aSeed * 50.0) * 0.5 + 0.5) * 1.2;
   float sit = 1.35 + sin(uT * 1.1 + aSeed) * 0.05;
   float flap = mix(fly, sit, uLanded);
   vec3 p = position;
@@ -196,7 +196,7 @@ void main() {
   float fore = 1.0 - smoothstep(0.30, 0.33, length(q * vec2(1.0, 1.55) - vec2(0.0, 0.10)));
   float hind = 1.0 - smoothstep(0.26, 0.30, length(q * vec2(1.0, 1.8) + vec2(0.0, 0.22)));
   float wing = max(fore, hind);
-  float body = 1.0 - smoothstep(0.030, 0.045, abs(q.x)) * step(-0.4, q.y);
+  float body = (1.0 - smoothstep(0.030, 0.045, abs(q.x))) * (1.0 - smoothstep(0.38, 0.46, abs(q.y)));
   float shape = max(wing, body * 0.6);
   if (shape < 0.05) discard;
   // wing pattern: orange field, black veins (radial), black border + white dots
@@ -217,7 +217,7 @@ const N = 300, MOTES = 40;
 
 export default class MonarchflowScene extends Scene {
   private three = new THREE.Scene();
-  private cam = new THREE.PerspectiveCamera(36, PW / PH, 0.1, 400);
+  private cam = new THREE.PerspectiveCamera(36, 16 / 9, 0.1, 400);
   private swarm: THREE.InstancedMesh;
   private hero: THREE.Mesh;
   private milkweed = new THREE.Group();
@@ -258,7 +258,12 @@ export default class MonarchflowScene extends Scene {
     this.three.add(this.swarm);
 
     // hero monarch: same shader on its own material instance
-    this.heroU = { ...this.bu, uHero: { value: 1 }, uFade: { value: 1 } };
+    this.heroU = {
+      ...this.bu,
+      uHero: { value: 1 },
+      uLanded: { value: 0 }, // own slot — sharing would fold the whole swarm
+      uFade: { value: 1 },
+    };
     const heroGeo = new THREE.PlaneGeometry(4.2, 2.6);
     heroGeo.setAttribute('aSeed', new THREE.BufferAttribute(new Float32Array(4).fill(0.42), 1));
     this.hero = new THREE.Mesh(heroGeo, new THREE.ShaderMaterial({
@@ -283,7 +288,7 @@ export default class MonarchflowScene extends Scene {
     const key = new THREE.DirectionalLight(0xff8a4a, 2.2);
     key.position.set(30, 8, -30);
     this.milkweed.add(stem, pod);
-    this.milkweed.position.set(26, -2, -18);
+    this.milkweed.position.set(14, -2, -18);
     this.three.add(this.milkweed, amb, key);
 
     // drifting seeds: additive motes
@@ -327,15 +332,15 @@ export default class MonarchflowScene extends Scene {
     const swarm = swarmT(t), strays = straysT(t), dis = disperseT(t);
     for (let i = 0; i < N; i++) {
       const u = hash(i * 7 + 1);
-      this.ribbonPoint(i, t, this.p);
-      const s = frac(u + t * 0.03);
+      const s = this.ribbonPoint(i, t, this.p); // same s the ribbon uses
       // visibility: a seeded 12% are the early strays; the swarm gates by a
-      // gust-modulated density cell; dispersal keeps a seeded fraction flying
+      // gust-modulated density cell; dispersal ramps a seeded drifting
+      // fraction in so the ribbon thins instead of re-thickening
       const strayOk = u < 0.12;
       const gust = gustT(t + u * 6);
       const den = Math.sin(s * 21 + u * 12) * 0.5 + 0.5;
       const inSwarm = swarm > 0.05 && den < (0.35 + 0.6 * gust) * swarm;
-      const drifting = dis > 0 && hash(i * 3) < swarm * 0.9 + 0.35;
+      const drifting = dis > 0 && (inSwarm || hash(i * 3) < Math.min(1, dis * 4) * 0.7);
       const vis = (strayOk && (strays > 0.02 || swarm > 0.02)) || inSwarm || drifting;
       const gone = t > 17 && hash(i * 5) > 0.25; // most have left frame by the calm
       // dispersal: blend ribbon pos -> individual drift
@@ -348,27 +353,62 @@ export default class MonarchflowScene extends Scene {
       const yaw = Math.atan2(150 * 0.03, 1) + Math.sin(t + i) * 0.3;
       this.e.set(Math.PI / 2 - 0.35, yaw, Math.sin(t * 2 + i) * 0.2);
       this.q.setFromEuler(this.e);
-      const scale = 0.8 + u * 0.7;
+      // shrink through the ribbon wrap so no instance teleports onscreen
+      const edge = ss(0.0, 0.03, s) * (1 - ss(0.97, 1.0, s));
+      const scale = (0.8 + u * 0.7) * edge;
       this.sv.setScalar(scale);
       this.m.compose(this.p, this.q, this.sv);
       this.swarm.setMatrixAt(i, this.m);
     }
     this.swarm.instanceMatrix.needsUpdate = true;
 
-    // hero: slow approach to the milkweed head, lands ~16.5, bobs
+    // hero: glides in from frame-right to a near hover, then settles onto
+    // the milkweed head ~16.5 and bobs
     const hero = heroT(t);
     const land = ss(16.2, 17.0, t);
     this.heroU.uT.value = t;
     this.heroU.uLanded.value = land;
     this.heroU.uFade.value = ss(12.5, 13.5, t);
     const start = new THREE.Vector3(55, 16, -30);
-    const perch = new THREE.Vector3(26, 0.2, -18);
-    this.heroPos.lerpVectors(start, perch, land);
+    const hover = new THREE.Vector3(20, 4.0, -20);
+    const perch = new THREE.Vector3(14, -0.45, -18);
+    this.heroPos.lerpVectors(start, hover, ss(12.8, 15.6, t));
+    this.heroPos.lerp(perch, land);
     if (land < 1) this.heroPos.y += Math.sin(t * 1.8) * (1 - land) * 2.2;
     this.hero.position.copy(this.heroPos);
     this.hero.position.y += Math.sin(t * 0.9) * land * 0.12; // perched bob
     this.hero.quaternion.setFromEuler(this.e.set(Math.PI / 2 - 0.3, Math.PI, 0));
     this.milkweed.rotation.z = Math.sin(t * 0.9) * 0.02 * land;
+
+    // diagnostics: publish hero screen bounds so probes see the node
+    if (typeof window !== 'undefined') {
+      const P = (window as any).__motion || (window as any).__pdoom;
+      if (P?.probe && P.textProbes && P.recordText) {
+        this.p.copy(this.hero.position).project(this.cam);
+        const W = P.width || 1920, H = P.height || 1080;
+        const cx = (this.p.x * 0.5 + 0.5) * W, cy = (0.5 - this.p.y * 0.5) * H;
+        const rad = 4 * H * 0.04; // rough wing span in px
+        if (this.heroU.uFade.value > 0.001) {
+          P.textProbes.push({
+            frameIdx: P.currentFrameIdx ?? 0,
+            t,
+            text: 'hero-monarch',
+            fontFamily: 'Archivo, sans-serif',
+            fontPx: 24,
+            fillStyle: '#F29B38',
+            globalAlpha: this.heroU.uFade.value,
+            layerId: 'monarchflow',
+            bbox: [cx - rad, cy - rad * 0.6, cx + rad, cy + rad * 0.6],
+            w: rad * 2,
+            h: rad * 1.2,
+            cx,
+            cy,
+            hPct: (rad * 1.2 / H) * 100,
+            isStroke: false,
+          });
+        }
+      }
+    }
 
     // seed motes: backlit drift
     for (let i = 0; i < MOTES; i++) {
@@ -393,8 +433,8 @@ export default class MonarchflowScene extends Scene {
       30 - 17 * toHero,
     );
     this.cam.lookAt(
-      -20 * track + 25 * toHero,
-      9 - 7.5 * toHero + Math.sin(t * 0.07) * 0.4,
+      -20 * track + 34 * toHero,
+      9 - 9.5 * toHero + Math.sin(t * 0.07) * 0.4,
       -50 + 32 * toHero,
     );
 
