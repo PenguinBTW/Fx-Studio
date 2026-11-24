@@ -75,6 +75,7 @@ export default class GeodeScene extends Scene {
   private moteSeed: Float32Array; // x0,y0,z0,phase,band,rad
 
   private crystalBox: THREE.Box3 | null = null;
+  private crystalMesh: THREE.Mesh | null = null;
 
   constructor(ctx: SceneCtx) {
     super(ctx);
@@ -181,6 +182,7 @@ export default class GeodeScene extends Scene {
       const geo = mesh.geometry as THREE.BufferGeometry;
       geo.computeBoundingBox();
       this.crystalBox = geo.boundingBox;
+      this.crystalMesh = mesh;
 
       // Deterministic ~1/3 sample of triangles, hash-thinned so coverage
       // spreads over shaft AND tip facets (a fixed stride lands on the same
@@ -293,13 +295,12 @@ export default class GeodeScene extends Scene {
     }
 
     // ---- telemetry: publish the crystal cluster's screen bounds --------------
-    if (typeof window !== 'undefined' && this.crystalBox && this.inst) {
+    if (typeof window !== 'undefined' && this.crystalBox && this.crystalMesh) {
       const P = (window as any).__motion || (window as any).__pdoom;
       if (P && P.probe && P.textProbes && P.recordText !== false) {
-        const cm = new THREE.Matrix4().multiplyMatrices(
-          this.inst.root.matrixWorld,
-          (this.inst.part('crystals') as THREE.Object3D).matrixWorld,
-        );
+        // matrixWorld already chains parents — multiplying root again doubles
+        // the rotation and throws projected corners behind the camera.
+        const cm = this.crystalMesh.matrixWorld;
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
         const bb = this.crystalBox;
         for (let cc = 0; cc < 8; cc++) {
