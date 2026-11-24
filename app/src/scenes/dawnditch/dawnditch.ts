@@ -27,7 +27,7 @@ const volePos = (t: number): [number, number, number] => {
   return [1.0, 0, -1];
 };
 const sunX = (t: number) => 1.05 - 1.15 * ss(2, 9, t);   // strip sweeps right→left
-const larkU = (t: number) => Math.min(1, Math.max(0, (t - 10.0) / 2.5));  // skylark spiral
+const larkU = (t: number) => Math.min(1, Math.max(0, (t - 11.0) / 2.4));  // skylark spiral (11.0-13.4, under the act-lark caption)
 const hensU = (t: number) => Math.min(1, Math.max(0, (t - 14.0) / 1.5));  // moorhen step-out
 const crowU = (t: number) => Math.min(1, Math.max(0, (t - 16.0) / 3.0));  // far crow walk
 const bubU = (t: number) => Math.min(1, Math.max(0, (t - 13.5) / 1.2));   // bubble trail
@@ -205,14 +205,15 @@ void main() {
       // walking / pausing on the far bank (y ~0.505)
       float gait = (mode < 0.4 ? abs(sin(t * 10.0)) * 0.003 : 0.0);
       // mode in (0.5,0.9) is the dive/climb ramp: sink toward water level
-      vec2 vp = vec2(vx, 0.508 + gait - max(0.0, mode - 0.5) * 0.09);
+      vec2 vp = vec2(vx, 0.508 + gait - max(0.0, mode - 0.5) * 0.10);
       float vb = 1.0 - smoothstep(0.006, 0.011, length((uv - vp) / vec2(1.6, 0.9)));
       float vh = 1.0 - smoothstep(0.003, 0.006, length((uv - (vp + vec2(0.010, 0.006))) / vec2(1.0, 1.0)));
       float vt = 1.0 - smoothstep(0.002, 0.005, sdSeg(uv, vp - vec2(0.012, 0.0), vp - vec2(0.022, 0.006)));
       col = mix(col, vec3(0.05, 0.04, 0.03), clamp(vb + vh + vt, 0.0, 1.0) * 0.9);
     } else {
       // swimming: back + nose above the water, trailing wake
-      vec2 vp = vec2(vx, 0.472 + (mode - 0.9) * 0.13);
+      // steady swimming height = the dive endpoint (0.468), so dive and climb stay monotone
+      vec2 vp = vec2(vx, 0.468);
       float back = 1.0 - smoothstep(0.004, 0.008, length((uv - vp) / vec2(1.7, 0.6)));
       float nose = 1.0 - smoothstep(0.002, 0.005, length((uv - (vp + vec2(0.011, 0.004))) / vec2(1.0, 0.7)));
       col = mix(col, vec3(0.05, 0.04, 0.03), clamp(back + nose, 0.0, 1.0) * 0.9);
