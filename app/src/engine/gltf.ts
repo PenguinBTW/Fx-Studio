@@ -96,6 +96,30 @@ export class GLTFInstance {
     this.root = clonedRoot;
     this.animations = gltf.animations ?? [];
 
+    // 0. Material-sharing isolation: SkeletonUtils.clone shares material references
+    // across instances and with the cached master, so per-instance overrides
+    // (envMapIntensity) would otherwise mutate every other instance of the same asset.
+    // Clone the materials up front when an override is requested — memoized by source
+    // material so meshes that share one still share the clone within this instance.
+    if (opts?.envMapIntensity !== undefined) {
+      const cloned = new Map<THREE.Material, THREE.Material>();
+      this.root.traverse((node) => {
+        if (!(node as THREE.Mesh).isMesh) return;
+        const mesh = node as THREE.Mesh;
+        const swapOne = (m: THREE.Material): THREE.Material => {
+          let c = cloned.get(m);
+          if (!c) {
+            c = m.clone();
+            c.name = m.name;
+            cloned.set(m, c);
+            this.ownedMaterials.push(c);
+          }
+          return c;
+        };
+        mesh.material = Array.isArray(mesh.material) ? mesh.material.map(swapOne) : swapOne(mesh.material);
+      });
+    }
+
     // 1. Catalog all child meshes, geometries, and materials
     this.root.traverse((node) => {
       const ud = node.userData as Record<string, any> | undefined;
