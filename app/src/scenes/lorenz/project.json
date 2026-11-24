@@ -1,0 +1,12 @@
+{
+  "project": "lorenz",
+  "entries": [
+    {
+      "scene": "lorenz/lorenz",
+      "id": "lorenz",
+      "start": 0,
+      "end": 20,
+      "caption": { "fig": "01", "text": "LORENZ", "dur": 3.5 }
+    }
+  ]
+}
