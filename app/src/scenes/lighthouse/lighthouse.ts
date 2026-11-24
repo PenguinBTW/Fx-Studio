@@ -134,11 +134,11 @@ void main() {
   seaC += beamC * (beamPatch * 0.55 + glint * 2.5);
 
   // faint moon lane on the sea
-  float lane = exp(-((uv.x - 0.68) * 9.0) * ((uv.x - 0.68) * 9.0)) * exp(-((uv.y - seaLevel) * 8.0) * ((uv.y - seaLevel) * 8.0));
+  float lane = exp(-((uv.x - 0.62) * 9.0) * ((uv.x - 0.62) * 9.0)) * exp(-((uv.y - seaLevel) * 8.0) * ((uv.y - seaLevel) * 8.0));
   seaC += moonC * lane * 0.10 * (0.5 + 0.5 * breaks) * (0.6 + 0.4 * sw2);
 
   // vessel light crossing once, far right horizon
-  float vx = 0.56 + 0.18 * smoothstep(9.0, 16.0, t);
+  float vx = 0.54 + 0.15 * smoothstep(11.0, 19.0, t);
   float vessel = exp(-((uv.x - vx) * 260.0) * ((uv.x - vx) * 260.0)) * exp(-((uv.y - (seaLevel + 0.012)) * 700.0) * ((uv.y - (seaLevel + 0.012)) * 700.0));
 
   /* ---------- compose ---------- */
