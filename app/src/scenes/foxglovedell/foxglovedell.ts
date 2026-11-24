@@ -226,9 +226,11 @@ vec3 dell(vec2 uv, float t) {
     wren = max(wren, tail);
     // beak: during the song it tilts up and opens (two diverging slivers)
     vec2 bk = wp - vec2(0.011, 0.010 + 0.004 * uSong);
-    float beakUp = 1.0 - smoothstep(0.0012, 0.0020, abs(bk.x - bk.y * (1.5 + 2.0 * uSong)));
-    // both slivers stay present; uSong rotates them apart into the open song pose
-    float beakDn = 1.0 - smoothstep(0.0012, 0.0020, abs(bk.x + bk.y * (0.4 + 1.6 * uSong)));
+    // slivers rotate AWAY from each other: y = ±x·(0.2 + 0.9·uSong) — ~23°
+    // apart at rest, ~95° wide open at full song
+    float open = 0.2 + 0.9 * uSong;
+    float beakUp = 1.0 - smoothstep(0.0012, 0.0020, abs(bk.y - bk.x * open));
+    float beakDn = 1.0 - smoothstep(0.0012, 0.0020, abs(bk.y + bk.x * open));
     float beak = max(beakUp, beakDn) * step(abs(bk.x), 0.008) * step(abs(bk.y), 0.006);
     wren = max(wren, beak);
     // throat feathers puff during song
@@ -244,16 +246,16 @@ vec3 dell(vec2 uv, float t) {
       // bee 0 leads the climb and reaches the top bell (>0.85) — bee 1 trails
       float v = clamp(uBeeProg * (0.55 + 0.45 * (1.0 - fb)) + 0.10 * fb, 0.0, 1.0);
       // wobble around the stem while climbing
-      vec2 bp2 = vec2(lit3x + 0.011 + 0.014 * sin(t * 6.0 + fb * 4.0) * (1.0 - 0.7 * step(0.85, v)),
-                      spikeBase(3).y + spikeH(3) * (0.35 + 0.60 * v) + 0.006 * sin(t * 9.0 + fb));
+      // wobble eases out as the bee commits to the bell — no step jump
+      float commit = smoothstep(0.78, 0.88, v);
+      vec2 bp2 = vec2(lit3x + 0.011 + 0.014 * sin(t * 6.0 + fb * 4.0) * (1.0 - 0.9 * commit),
+                      spikeBase(3).y + spikeH(3) * (0.35 + 0.60 * v) + 0.006 * sin(t * 9.0 + fb) * (1.0 - 0.9 * commit));
       // bee 0 crawls INTO the top bell late: tucks to the bell mouth and shrinks
-      if (b == 0 && v > 0.85) {
-        float into = (v - 0.85) / 0.15;
-        bp2 = mix(bp2, vec2(spikeBase(3).x + spikeLean(3, t) * 2.4 + 0.011, spikeBase(3).y + spikeH(3) * 0.95 - 0.008), into);
-      }
-      vec2 bd = uv - bp2;
+      float into = (b == 0) ? smoothstep(0.85, 1.0, v) : 0.0;
+      bp2 = mix(bp2, vec2(spikeBase(3).x + spikeLean(3, t) * 2.4 + 0.011, spikeBase(3).y + spikeH(3) * 0.95 - 0.008), into);
+      vec2 bd = (uv - bp2) / (1.0 - 0.55 * into);
       float bee = 1.0 - smoothstep(0.0035, 0.0050, length(bd * vec2(1.0, 1.5)));
-      bee *= (b == 0 && v > 0.85) ? (1.0 - (v - 0.85) / 0.15 * 0.85) : 1.0;
+      bee *= 1.0 - into;
       // wing shimmer
       bee *= 0.75 + 0.25 * sin(t * 46.0 + fb * 7.0);
       col = mix(col, vec3(0.45, 0.30, 0.06), bee * uBee * 0.95);
@@ -307,7 +309,7 @@ export default class FoxglovedellScene extends Scene {
     this.bu.uSway.value = swayT(t);
 
     // very low, near-static: slight drift around the log's focal line so the
-    // spikes parallax; a barely-there lean-in when the wren sings
+    // spike ring slowly re-frames; a barely-there lean-in when the wren sings
     this.cam.position.set(-1 + Math.sin(t * 0.06) * 1.3, 4.5, 30 - 0.9 * song);
     this.cam.lookAt(0.5 + Math.sin(t * 0.06) * 0.7, 7, PZ + 10);
 

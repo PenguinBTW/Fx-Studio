@@ -40,7 +40,7 @@ inside. A lone wren patrols the log, sings once, and yields to the bees.
 | 18–20 | settle: bees gone, breeze + motes + dapple only |
 
 Camera: very low, near-static — `x = -1 + 1.3·sin(0.06t)` drift along the log
-line for spike parallax, `z = 30 - 0.9·uSong` lean-in on the song.
+line so the spike mask slowly re-frames, `z = 30 - 0.9·uSong` lean-in on the song.
 
 ## Craft notes
 
