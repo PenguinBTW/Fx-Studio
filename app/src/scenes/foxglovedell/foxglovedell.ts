@@ -12,12 +12,22 @@ const ss = (a: number, b: number, x: number) => {
 };
 
 // --- envelopes (beat times from storyboard.md) -------------------------------
-const wrenT = (t: number) => ss(2.5, 11.0, t);          // patrol progress along the log 0→1
+const wrenT = (t: number) => ss(2.5, 8.6, t);           // patrol progress along the log 0→1 — done before the song
 const songT = (t: number) => ss(9.0, 9.8, t) * (1 - ss(11.5, 12.6, t));  // song beat
 const beeT = (t: number) => ss(12.5, 13.5, t) * (1 - ss(18.5, 19.5, t)); // bee visit window
 const beeProg = (t: number) => ss(12.5, 18.5, t);       // bees climbing the lit spike 0→1
 const shaftT = (t: number) => 0.55 + 0.45 * ss(1.5, 3.0, t); // shaft settles in after dawn-fade
 const swayT = (t: number) => 0.5 + 0.5 * Math.sin(t * 0.5);  // gentle breeze
+
+// Mirror of the wren's piecewise GLSL path — for the tracking probe.
+const wrenXY = (p: number): [number, number] => {
+  if (p < 0.45) return [0.04 + 0.18 * (p / 0.45), 0.315];
+  if (p < 0.55) {
+    const h = (p - 0.45) / 0.10;
+    return [0.22 + 0.10 * h, 0.315 + 0.02 * Math.sin(h * Math.PI)];
+  }
+  return [0.32 - 0.20 * ((p - 0.55) / 0.45), 0.315];
+};
 
 const PW = 300, PH = 114, PY = 8, PZ = -80;
 const uvToWorld = (ux: number, uy: number, out: THREE.Vector3) =>
@@ -74,7 +84,8 @@ vec3 dell(vec2 uv, float t) {
   // pale sky only through small canopy gaps at the very top
   {
     float gaps = smoothstep(0.60, 0.78, n2(vec2(uv.x * 9.0, 2.0)) - abs(uv.x - 0.5) * 0.9);
-    col = mix(col, vec3(0.55, 0.68, 0.72), gaps * smoothstep(0.86, 0.95, uv.y) * 0.85);
+    // authored uv.y tops out near 0.78 — gaps live just under the visible rim
+    col = mix(col, vec3(0.55, 0.68, 0.72), gaps * smoothstep(0.70, 0.77, uv.y) * 0.85);
     // leaf masses closing the frame
     float leaf = fbm(uv * vec2(14.0, 8.0) + vec2(0.0, t * 0.02));
     col *= 1.0 - 0.5 * smoothstep(0.45, 0.75, leaf) * smoothstep(0.55, 0.85, uv.y);
@@ -118,7 +129,7 @@ vec3 dell(vec2 uv, float t) {
 
   // --- mossy log edge, lower-left
   {
-    float logZone = smoothstep(0.255, 0.25, uv.y) * (1.0 - smoothstep(0.305, 0.315, uv.y))
+    float logZone = (1.0 - smoothstep(0.25, 0.255, uv.y)) * (1.0 - smoothstep(0.305, 0.315, uv.y))
       * (1.0 - smoothstep(0.24, 0.26, uv.x));
     vec3 bark = mix(vec3(0.06, 0.045, 0.03), vec3(0.09, 0.10, 0.05), n2(uv * vec2(120.0, 40.0)));
     bark += vec3(0.02, 0.08, 0.02) * smoothstep(0.5, 0.75, n2(uv * vec2(60.0, 25.0))); // moss
@@ -198,7 +209,7 @@ vec3 dell(vec2 uv, float t) {
       wx = 0.22 + 0.10 * h;
       wy = 0.315 + 0.02 * sin(h * 3.1416);   // little hop arc
     } else {
-      wx = 0.32 - 0.28 * ((p - 0.55) / 0.45);
+      wx = 0.32 - 0.20 * ((p - 0.55) / 0.45);
       wy = 0.315 + 0.012 * sin((p - 0.55) * 25.0);
     }
     wx = clamp(wx, 0.03, 0.34);
@@ -216,8 +227,9 @@ vec3 dell(vec2 uv, float t) {
     // beak: during the song it tilts up and opens (two diverging slivers)
     vec2 bk = wp - vec2(0.011, 0.010 + 0.004 * uSong);
     float beakUp = 1.0 - smoothstep(0.0012, 0.0020, abs(bk.x - bk.y * (1.5 + 2.0 * uSong)));
-    float beakDn = 1.0 - smoothstep(0.0012, 0.0020, abs(bk.x + bk.y * 0.2));
-    float beak = max(beakUp, beakDn * (1.0 - uSong)) * step(abs(bk.x), 0.008) * step(abs(bk.y), 0.006);
+    // both slivers stay present; uSong rotates them apart into the open song pose
+    float beakDn = 1.0 - smoothstep(0.0012, 0.0020, abs(bk.x + bk.y * (0.4 + 1.6 * uSong)));
+    float beak = max(beakUp, beakDn) * step(abs(bk.x), 0.008) * step(abs(bk.y), 0.006);
     wren = max(wren, beak);
     // throat feathers puff during song
     float throat = (1.0 - smoothstep(0.004, 0.006, length(wp - vec2(0.005, 0.003)))) * uSong;
@@ -229,7 +241,8 @@ vec3 dell(vec2 uv, float t) {
     float lit3x = spikeBase(3).x + spikeLean(3, t);
     for (int b = 0; b < 2; b++) {
       float fb = float(b);
-      float v = clamp(uBeeProg * (0.55 + 0.45 * fb) + 0.10 * fb, 0.0, 1.0);
+      // bee 0 leads the climb and reaches the top bell (>0.85) — bee 1 trails
+      float v = clamp(uBeeProg * (0.55 + 0.45 * (1.0 - fb)) + 0.10 * fb, 0.0, 1.0);
       // wobble around the stem while climbing
       vec2 bp2 = vec2(lit3x + 0.011 + 0.014 * sin(t * 6.0 + fb * 4.0) * (1.0 - 0.7 * step(0.85, v)),
                       spikeBase(3).y + spikeH(3) * (0.35 + 0.60 * v) + 0.006 * sin(t * 9.0 + fb));
@@ -304,7 +317,8 @@ export default class FoxglovedellScene extends Scene {
       if (P?.probe && P.textProbes && P.recordText) {
         const W = P.width || 1920, H = P.height || 1080;
         this.cam.updateMatrixWorld();
-        aToV(0.20, 0.32, this.p).project(this.cam);
+        const [wpx, wpy] = wrenXY(wrenT(t));
+        aToV(wpx, wpy, this.p).project(this.cam);
         const wx = (this.p.x * 0.5 + 0.5) * W, wy = (0.5 - this.p.y * 0.5) * H;
         P.textProbes.push({
           frameIdx: P.currentFrameIdx ?? 0, t, text: 'wren',
