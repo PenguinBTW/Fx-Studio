@@ -112,23 +112,33 @@ void main() {
 }`;
 
 function makeGull(): { g: THREE.Group; wings: [THREE.Mesh, THREE.Mesh] } {
-  const mat = new THREE.MeshStandardMaterial({ color: 0x1a1d24, roughness: 0.9, metalness: 0 });
+  const mat = new THREE.MeshStandardMaterial({ color: 0x4a5262, roughness: 0.7, metalness: 0, side: THREE.DoubleSide });
   const g = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.42, 8), mat);
-  body.rotation.z = -Math.PI / 2;               // nose +x
+  // plump ellipsoid body + head, nose +x
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 8), mat);
+  body.scale.set(2.2, 0.85, 0.9);
   g.add(body);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 8), mat);
+  head.position.set(0.22, 0.04, 0);
+  g.add(head);
+  // swept-back tapered wings, hinged at the body sides
   const wingGeo = (side: 1 | -1) => {
-    const geo = new THREE.PlaneGeometry(0.16, 0.62);
-    geo.rotateX(-Math.PI / 2);                  // flat, span along z
-    geo.translate(0, 0.02, side * 0.33);        // hinge at the body
+    const s = side;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([
+      0.04, 0, s * 0.06,      // root leading
+      -0.16, 0, s * 0.08,     // root trailing
+      -0.34, 0, s * 0.64,     // tip trailing (swept back)
+      -0.08, 0, s * 0.62,     // tip leading
+    ]), 3));
+    geo.setIndex([0, 1, 2, 0, 2, 3]);
+    geo.computeVertexNormals();
     return geo;
   };
   const wl = new THREE.Mesh(wingGeo(1), mat);
   const wr = new THREE.Mesh(wingGeo(-1), mat);
-  wl.material.side = THREE.DoubleSide;
-  wr.material.side = THREE.DoubleSide;
   g.add(wl, wr);
-  const tail = new THREE.Mesh(new THREE.PlaneGeometry(0.10, 0.14), mat);
+  const tail = new THREE.Mesh(new THREE.PlaneGeometry(0.14, 0.12), mat);
   tail.rotation.x = -Math.PI / 2;
   tail.position.x = -0.24;
   g.add(tail);
@@ -145,6 +155,8 @@ export default class HarborlightScene extends Scene {
   private beamGroup = new THREE.Group();
   private spot!: THREE.SpotLight;
   private foamMat!: THREE.ShaderMaterial;
+  private foamMeshes: THREE.Mesh[] = [];
+  private crest!: THREE.Points;
   private dust!: THREE.Points;
   private dustSeed!: Float32Array;
   private gulls: { g: THREE.Group; wings: [THREE.Mesh, THREE.Mesh] }[] = [];
@@ -212,7 +224,7 @@ export default class HarborlightScene extends Scene {
       float h1(float n) { return fract(sin(n * 127.1) * 43758.5453); }
       void main() {
         float d = length(vUv - 0.5) * 2.0;
-        float blob = smoothstep(1.0, 0.15, d);
+        float blob = 1.0 - smoothstep(0.15, 1.0, d);
         float ph = h1(floor(vWp.x * 3.7) + floor(vWp.z * 2.9) * 57.0);
         float pulse = 0.30 + 0.70 * pow(0.5 + 0.5 * sin(uT * 0.9 + ph * 6.28), 2.0);
         float a = blob * pulse * 0.55;
@@ -244,12 +256,48 @@ export default class HarborlightScene extends Scene {
         m.rotation.z = a + Math.sin(seed + i) * 0.6;
         const s = 0.8 + 0.5 * Math.sin(i * 7.13 + seed * 2.1);
         m.scale.setScalar(s);
+        this.foamMeshes.push(m);
         this.scene3D.add(m);
       }
     };
     foamAt(0, 0, 4.1, 16, 0.4);
     foamAt(-13.5, 11.0, 1.7, 7, 2.1);
     foamAt(11.0, -9.5, 1.5, 6, 4.6);
+
+    // --- crest foam: a points field riding the swell — points darken to
+    // nothing in the troughs and flash pale on the crest faces (colour fades
+    // act as per-point alpha under additive blending)
+    const crestN = 32;
+    const crestPos = new Float32Array(crestN * crestN * 3);
+    const crestCol = new Float32Array(crestN * crestN * 3);
+    for (let i = 0; i < crestN; i++)
+      for (let k = 0; k < crestN; k++) {
+        const idx = i * crestN + k;
+        // jitter off the lattice so flecks don't read as rows
+        const jx = Math.sin(idx * 12.9898) * 1.4, jz = Math.sin(idx * 78.233) * 1.4;
+        crestPos[idx * 3] = -50 + (i / (crestN - 1)) * 100 + jx;
+        crestPos[idx * 3 + 2] = -50 + (k / (crestN - 1)) * 100 + jz;
+        crestPos[idx * 3 + 1] = WATER_Y;
+      }
+    const crestGeo = new THREE.BufferGeometry();
+    crestGeo.setAttribute('position', new THREE.BufferAttribute(crestPos, 3));
+    crestGeo.setAttribute('color', new THREE.BufferAttribute(crestCol, 3));
+    // soft round sprite so points read as foam blobs, not squares
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 32;
+    const cx = cv.getContext('2d')!;
+    const grad = cx.createRadialGradient(16, 16, 0, 16, 16, 16);
+    grad.addColorStop(0, 'rgba(255,255,255,1)');
+    grad.addColorStop(0.6, 'rgba(255,255,255,0.5)');
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    cx.fillStyle = grad;
+    cx.fillRect(0, 0, 32, 32);
+    const sprite = new THREE.CanvasTexture(cv);
+    this.crest = new THREE.Points(crestGeo, new THREE.PointsMaterial({
+      size: 0.42, map: sprite, vertexColors: true, transparent: true, opacity: 0.55,
+      blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
+    }));
+    this.scene3D.add(this.crest);
 
     // --- lighting: cold ambient + moon fill + the lamp's warm spot
     this.scene3D.add(new THREE.AmbientLight(new THREE.Color(0x24344a), 0.85));
@@ -359,6 +407,21 @@ export default class HarborlightScene extends Scene {
     }
     pos.needsUpdate = true;
     this.water.geometry.computeVertexNormals();
+    // shoreline flecks ride the swell instead of floating fixed
+    for (const m of this.foamMeshes) {
+      m.position.y = WATER_Y + waveY(m.position.x, m.position.z, t) + 0.16;
+    }
+    // crest foam points follow the surface and fade by crest height
+    const cp = this.crest.geometry.attributes.position as THREE.BufferAttribute;
+    const cc = this.crest.geometry.attributes.color as THREE.BufferAttribute;
+    for (let i = 0; i < cp.count; i++) {
+      const h = waveY(cp.getX(i), cp.getZ(i), t);
+      cp.setY(i, WATER_Y + h + 0.12);
+      const c = clamp((h - 0.55) / 0.45, 0, 1);
+      cc.setXYZ(i, 0.55 * c, 0.60 * c, 0.62 * c);
+    }
+    cp.needsUpdate = true;
+    cc.needsUpdate = true;
 
     // beam sweep + its real spotlight
     const yaw = beamYaw(t);
@@ -382,7 +445,9 @@ export default class HarborlightScene extends Scene {
       const x0 = this.dustSeed[i * 3], y0 = this.dustSeed[i * 3 + 1], z0 = this.dustSeed[i * 3 + 2];
       const x = ((x0 + t * 2.4) % 62) + 2;
       const spread = 0.12 + x * 0.08;                    // cone widens along +x
-      dp.setXYZ(i, x, y0 * spread + Math.sin(t * 0.8 + i) * 0.3, z0 * spread);
+      const m = Math.hypot(y0, z0) || 1;
+      const k = Math.min(1, 0.8 / m);                    // keep motes inside the cone
+      dp.setXYZ(i, x, y0 * k * spread + Math.sin(t * 0.8 + i) * 0.15 * spread, z0 * k * spread);
     }
     dp.needsUpdate = true;
 
@@ -454,6 +519,11 @@ export default class HarborlightScene extends Scene {
     for (const m of this.ownMats.values()) m.dispose();
     this.water.geometry.dispose();
     (this.water.material as THREE.Material).dispose();
+    this.dust.geometry.dispose();
+    (this.dust.material as THREE.Material).dispose();
+    this.crest.geometry.dispose();
+    (this.crest.material as THREE.Material).dispose();
+    this.foamMat.dispose();
     this.scene3D.traverse((o) => {
       const m = o as THREE.Mesh;
       if (m.isMesh) {
