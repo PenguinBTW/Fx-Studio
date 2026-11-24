@@ -13,7 +13,9 @@ import { GLSL_COMMON } from '../../engine/glsl/common';
 import { orbitPosition } from '../../engine/rig';
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
-const hash1js = (n: number) => { const s = Math.sin(n * 127.1) * 43758.5453123; return s - Math.floor(s); };
+// World x of the gold track's source — must match the `if (fi == GOLD_I)`
+// override in the fragment shader.
+const GOLD_SRC_X = 1.9;
 const smooth = (a: number, b: number, x: number) => {
   const t = clamp01((x - a) / (b - a));
   return t * t * (3 - 2 * t);
@@ -59,6 +61,9 @@ vec3 trackGlow(vec2 p, float fi, float t, vec3 coreCol, vec3 haloCol) {
   float h8 = hash1(fi * 23.7 + 6.7), h9 = hash1(fi * 29.1 + 8.8);
 
   vec2 s = vec2(mix(-7.5, 7.5, h2), mix(-4.4, 4.4, hash1(fi * 6.13 + 2.9)));
+  // The hero gold track is choreographed, not hashed: float sin() inside hash1
+  // is driver-dependent, so the camera can only aim at a fixed source point.
+  if (fi == GOLD_I) s = vec2(1.9, -0.4);
   float phi = h3 * TAU;
   float k = h4 < 0.5 ? -1.0 : 1.0;        // field bends some tracks each way
   float R = mix(1.4, 5.2, pow(h5, 0.75)); // radius ⇐ seed energy
@@ -144,9 +149,9 @@ export default class CloudChamberScene extends Scene {
   constructor(ctx: SceneCtx) {
     super(ctx);
     this.cam = new THREE.PerspectiveCamera(42, ctx.W / ctx.H, 0.1, 80);
-    // wide floor: ultrawide exports (2.37:1) must not expose clear-colour corners
+    // wide floor: ultrawide exports (past 3:1) must not expose clear-colour corners
     const floor = new THREE.Mesh(
-      new THREE.PlaneGeometry(52, 26),
+      new THREE.PlaneGeometry(60, 30),
       new THREE.ShaderMaterial({ uniforms: this.chamberU, vertexShader: CHAMBER_VERT, fragmentShader: CHAMBER_FRAG, glslVersion: THREE.GLSL3 }),
     );
     floor.rotation.x = -Math.PI / 2;
@@ -169,12 +174,12 @@ export default class CloudChamberScene extends Scene {
     const r = 12.6 - 2.8 * smooth(1.0, 18.0, t);
     const pitch = 0.88 + 0.04 * smooth(1.0, 18.0, t) + 0.02 * Math.sin(t * 0.07);
     const yaw = 0.06 * Math.sin(t * 0.09); // centred on +z: front-on with a slow drift
-    // Track 6 (the warm-gold colour event) enters from the right; as the frame
-    // narrows, pull the aim toward its source so the entrance stays in shot.
-    // Same seed math the fragment shader uses for the source x — keep in sync.
-    const goldX = -7.5 + 15 * hash1js(6 * 11.17 + 4.2);
-    const pull = Math.min(0.65, Math.max(0.2, 1.1 - aspect * 0.5));
-    const target: [number, number, number] = [0.4 * Math.sin(t * 0.045) + goldX * pull, 0, -0.5];
+    // The warm-gold track is the colour event: its source is choreographed
+    // (GOLD_SRC_X in the shader). On narrow frames, pull the aim toward it so
+    // the entrance stays in shot; the pull fades to zero on ultrawide so the
+    // frame never pans past the floor's edge.
+    const pull = Math.min(0.65, Math.max(0, 1.1 - aspect * 0.5));
+    const target: [number, number, number] = [0.4 * Math.sin(t * 0.045) + GOLD_SRC_X * pull, 0, -0.5];
     const pos = orbitPosition(target, r, pitch, yaw);
     this.cam.position.set(pos[0], pos[1], pos[2]);
     this.cam.lookAt(target[0], target[1], target[2]);
