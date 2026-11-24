@@ -327,12 +327,13 @@ export default defineScene({
     ctx.updateCamera(f.t, f.p);
 
     const c2d = ctx.layer2d.ctx;
-    c2d.clearRect(0, 0, W, H);
+    const cw = ctx.W, ch = ctx.H;
+    c2d.clearRect(0, 0, cw, ch);
     for (let i = 0; i < CAPTIONS.length; i++) {
       const [t0, t1] = CAPTIONS[i]!;
       const a = sstep(t0, t0 + 0.9, t) * (1 - sstep(t1 - 0.9, t1, t));
       ctx.text(`cap${i}`, CAPTIONS[i]![2]!, { alpha: a });
-      ctx.renderText(`cap${i}`, c2d, f.t, W / 2, H * 0.82);
+      ctx.renderText(`cap${i}`, c2d, f.t, cw / 2, ch * 0.82);
     }
 
     ctx.flush(out, true);
