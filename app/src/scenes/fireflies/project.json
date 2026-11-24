@@ -1,0 +1,13 @@
+{
+  "project": "fireflies",
+  "entries": [
+    {
+      "scene": "fireflies/fireflies",
+      "id": "fireflies",
+      "start": 0.0,
+      "end": 20.0,
+      "caption": { "fig": "01", "text": "FIREFLIES", "dur": 3.5 }
+    }
+  ],
+  "transitions": []
+}
