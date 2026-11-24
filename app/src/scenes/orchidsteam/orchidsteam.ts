@@ -43,9 +43,10 @@ const DRIPS = 24;
 const PW = 300, PH = 114, PY = 8, PZ = -80;
 const uvToWorld = (ux: number, uy: number, out: THREE.Vector3) =>
   out.set((ux - 0.5) * PW, PY + (uy - 0.5) * PH, PZ);
-// authored [0,1] → camera-visible vUv band (matches the BACK_FRAG call-site remap)
+// authored [0,1] → camera-visible vUv band (exact inverse of the BACK_FRAG
+// call-site remap: authored = 0.03 + (vUv.y - 0.159) * 1.107)
 const aToV = (ux: number, uy: number, out: THREE.Vector3) =>
-  uvToWorld(0.269 + ux * 0.462, 0.159 + uy * 0.904, out);
+  uvToWorld(0.269 + ux * 0.462, 0.159 + (uy - 0.03) / 1.107, out);
 
 // --- backdrop --------------------------------------------------------------
 const BACK_VERT = /* glsl */ `
@@ -389,7 +390,7 @@ export default class OrchidsteamScene extends Scene {
 
     // frog sits on the broad leaf (uv ~0.72,0.20); one hop at ~14s
     const hopY = 0.10 * Math.sin(Math.PI * hopP(t));
-    aToV(0.72 + 0.06 * hopP(t), 0.215 + Math.abs(flex) * -0.006 + hopY, this.p);
+    aToV(0.72 + 0.06 * hopP(t), 0.245 + Math.abs(flex) * -0.006 + hopY, this.p);
     this.p.z += 12.0;
     this.frog.position.copy(this.p);
 
