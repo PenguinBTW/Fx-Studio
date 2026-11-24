@@ -1,0 +1,46 @@
+{
+  "project": "monarchflow",
+  "meta": {
+    "title": "Monarchflow: The Meadow River",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 20.0
+  },
+  "entries": [
+    {
+      "scene": "monarchflow/monarchflow",
+      "id": "act-field",
+      "start": 0.0,
+      "end": 4.5,
+      "caption": { "fig": "01", "text": "THE MEADOW AT DUSK", "dur": 4.0 }
+    },
+    {
+      "scene": "monarchflow/monarchflow",
+      "id": "act-strays",
+      "start": 4.5,
+      "end": 7.0,
+      "caption": { "fig": "02", "text": "FIRST STRAYS", "dur": 2.5 }
+    },
+    {
+      "scene": "monarchflow/monarchflow",
+      "id": "act-ribbon",
+      "start": 7.0,
+      "end": 12.0,
+      "caption": { "fig": "03", "text": "THE RIVER", "dur": 4.0 }
+    },
+    {
+      "scene": "monarchflow/monarchflow",
+      "id": "act-disperse",
+      "start": 12.0,
+      "end": 16.0,
+      "caption": { "fig": "04", "text": "DISPERSAL", "dur": 3.5 }
+    },
+    {
+      "scene": "monarchflow/monarchflow",
+      "id": "act-hero",
+      "start": 16.0,
+      "end": 20.0,
+      "caption": { "fig": "05", "text": "ONE LANDS", "dur": 3.5 }
+    }
+  ]
+}
