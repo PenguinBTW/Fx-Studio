@@ -1,0 +1,3 @@
+{ "id": "geode", "version": 1, "source": "build.py",
+  "parts": { "shell": "shell", "rim": "rim", "crystals": "crystals" },
+  "budgets": { "tris": 14000, "textureMB": 1 } }
