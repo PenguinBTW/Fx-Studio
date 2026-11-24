@@ -19,7 +19,7 @@ Fox trots on toward the right edge. At 13.1 s seven seeded finches erupt from
 the far-right bush in a dispersing fan, wings fluttering, ~2 s window.
 
 ## Act 5 · SETTLE (16.5–20.0)
-Fox exits right (`uFx` > 0.995 → gated off). A raven makes one high slow
+Fox exits right (`uFx` > 1.07 → gated off). A raven makes one high slow
 circle over the valley throat (`uRaven` 15.5→19.5). Glitter band reaches the
 meadow's right side; mist re-pools behind the fox's passing. Still frost again.
 

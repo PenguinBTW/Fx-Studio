@@ -281,7 +281,7 @@ export default class FrostvalleyScene extends Scene {
       if (P?.probe && P.textProbes && P.recordText) {
         const W = P.width || 1920, H = P.height || 1080;
         this.cam.updateMatrixWorld();
-        if (fx > -0.05 && fx < 1.05) {
+        if (fx > -0.09 && fx < 1.08) {
           aToV(fx, fy + 0.03, this.p).project(this.cam);
           const fpx = (this.p.x * 0.5 + 0.5) * W, fpy = (0.5 - this.p.y * 0.5) * H;
           P.textProbes.push({
