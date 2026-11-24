@@ -26,3 +26,5 @@
 - **Hero (60%):** the dust wall's leading face + lobed crown, center-right, grows until it dominates.
 - **Secondary (30%):** sun disc + acacia silhouettes establishing scale, foreground dune face.
 - **Ambient (10%):** heat shimmer band on the horizon, saltation streaks, ground haze.
+
+Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL

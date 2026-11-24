@@ -1,4 +1,4 @@
-# Storyboard — sandstorm (24s, 3 acts)
+# Storyboard — sandstorm (20s, 3 acts)
 
 ## Act 1 — THE WALL ON THE HORIZON (0–8s)
 - Wide establishing from mid-dune. Heat shimmer waves the horizon; two acacia silhouettes and a dead tree anchor scale. Sun high and hot.
@@ -14,3 +14,5 @@
 - Back of the front passes; visibility re-emerges through golden haze. Sun returns as a pale wafer.
 - The dune ridgeline silhouette is subtly reshaped (new crest phase). Grains die down to scattered ticks.
 - Camera settles to a quiet hold on the transformed plain.
+
+Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
