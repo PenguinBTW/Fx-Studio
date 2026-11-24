@@ -65,7 +65,7 @@ float meteor(vec2 uv, float t, float seed) {
   float lt = (t - t0) / dur;
   if (lt < 0.0 || lt > 1.0) return 0.0;
   vec2 dir = normalize(vec2(-0.55 - 0.3 * h1(seed + 3.0), -0.35 - 0.2 * h1(seed + 4.0)));
-  vec2 p0 = vec2(0.15 + 0.7 * h1(seed + 5.0), 0.72 + 0.22 * h1(seed + 6.0));
+  vec2 p0 = vec2(0.15 + 2.9 * h1(seed + 5.0), 0.72 + 0.22 * h1(seed + 6.0));
   float speed = 0.42;
   vec2 head = p0 + dir * speed * lt;
   float trail = 0.05 + 0.05 * h1(seed + 7.0);
@@ -80,6 +80,9 @@ float meteor(vec2 uv, float t, float seed) {
 
 void main() {
   vec2 uv = vUv;
+  // Aspect-corrected space for stars/meteors — uv.x spans the whole 420×130
+  // plane, so raw-uv patterns would stretch 3.23× horizontally.
+  vec2 su = vec2(uv.x * 3.2308, uv.y);
   float t = uT;
 
   // --- sky: near-black indigo, teal horizon lift, faint violet crown ---
@@ -96,7 +99,7 @@ void main() {
 
   // --- stars: hash grid, twinkle, denser high in frame ---
   if (uv.y > 0.44) {
-    vec2 g = uv * vec2(220.0, 140.0);
+    vec2 g = su * vec2(220.0, 140.0);
     vec2 id = floor(g);
     vec2 f = fract(g) - 0.5;
     float h = h21(id);
@@ -107,7 +110,7 @@ void main() {
       c += vec3(0.9, 0.95, 1.0) * (1.0 - smoothstep(0.0, 0.09, d)) * tw * smoothstep(0.32, 0.7, uv.y) * 0.85;
     }
     // a few brighter stars
-    vec2 g2 = uv * vec2(60.0, 40.0);
+    vec2 g2 = su * vec2(60.0, 40.0);
     vec2 id2 = floor(g2);
     vec2 f2 = fract(g2) - 0.5;
     float h2 = h21(id2 + 71.0);
@@ -118,9 +121,9 @@ void main() {
       c += vec3(1.0) * (1.0 - smoothstep(0.0, 0.045, d2)) * tw2 * 1.4;
     }
     // slow meteors (hashed schedules)
-    c += vec3(0.9, 0.97, 1.0) * meteor(uv, t, 7.0) * 0.9;
-    c += vec3(0.9, 0.97, 1.0) * meteor(uv, t, 19.0) * 0.7;
-    c += vec3(0.9, 0.97, 1.0) * meteor(uv, t, 33.0) * 0.5;
+    c += vec3(0.9, 0.97, 1.0) * meteor(su, t, 7.0) * 0.9;
+    c += vec3(0.9, 0.97, 1.0) * meteor(su, t, 19.0) * 0.7;
+    c += vec3(0.9, 0.97, 1.0) * meteor(su, t, 33.0) * 0.5;
   }
 
   // --- snow ridgeline + spruce silhouettes ---
