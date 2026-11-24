@@ -203,9 +203,11 @@ void main() {
   float mothsOnLamp = 0.0;
   vec2 nearP = vec2(0.0); float nearD = 1e9;
   float thick = sstep(1.5, 5.0, t); // swarm thickens after the quiet open
+  float drop = 0.55 * sstep(SETTLE + 0.3, 17.5, t); // moths peel off for the settle
   for (int i = 0; i < 26; i++) {
     float fi = float(i);
     if (h1(fi * 5.3) > thick) continue;
+    if (h1(fi * 7.7 + 3.0) < drop) continue;
     float alive, landed;
     vec2 p = mothPos(fi, t, alive, landed);
     if (alive <= 0.01) continue;
@@ -246,14 +248,15 @@ void main() {
   }
 
   // cat: head eases toward the nearest moth; ears perk ~7s; paw swipe 8.4s
+  float calm = 1.0 - 0.75 * sstep(SETTLE + 0.3, 17.5, t); // settles with the swarm
   vec2 hp = vec2(0.0);
   if (nearD < 1e9) {
     vec2 dir = normalize(nearP - (CAT + vec2(0.012, 0.048)));
-    hp = dir * min(0.010, sqrt(nearD) * 0.04) * sstep(4.0, 5.0, t);
+    hp = dir * min(0.010, sqrt(nearD) * 0.04) * sstep(4.0, 5.0, t) * calm;
   }
-  float ear = 0.3 + 0.7 * (0.5 + 0.5 * sin(t * 0.6)) * sstep(6.8, 7.2, t);
+  float ear = (0.3 + 0.7 * (0.5 + 0.5 * sin(t * 0.6)) * sstep(6.8, 7.2, t)) * calm + 0.3 * (1.0 - calm);
   float paw = (t > 8.4 && t < 9.1) ? sin((t - 8.4) / 0.7 * 3.1416) : 0.0;
-  float flick = 0.5 + 0.5 * sin(t * 1.1 + sin(t * 0.43) * 2.0);
+  float flick = (0.5 + 0.5 * sin(t * 1.1 + sin(t * 0.43) * 2.0)) * calm;
   col = mix(col, vec3(0.028, 0.026, 0.030), catAt(uv, hp, flick, paw, ear) * 0.95);
   float catTop = sstep(0.002, 0.0, abs(uv.y - (CAT.y + 0.045 + hp.y))) * sstep(0.35, 0.42, uv.x) * sstep(0.46, 0.40, uv.x);
   col += vec3(0.30, 0.18, 0.07) * catTop * lampFall(uv) * 0.6;
