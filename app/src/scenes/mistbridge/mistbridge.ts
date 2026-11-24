@@ -39,7 +39,7 @@ const deckY = (x: number) => 0.10 + 0.26 * (1 - (x / 2.3) * (x / 2.3));
 const archY = (x: number) => -0.06 + 0.24 * (1 - (x / 1.9) * (x / 1.9));
 
 // traveler path — x(t) piecewise: walk → pause → walk → stop → look back
-const TRAV_X0 = -2.4, TRAV_PAUSE = -0.05, TRAV_END = 1.60;
+const TRAV_X0 = -2.4, TRAV_PAUSE = -0.05, TRAV_END = 1.48;
 function travX(t: number) {
   if (t < TRAV.enter) return TRAV_X0;
   if (t < TRAV.pause0) return mix(TRAV_X0, TRAV_PAUSE, sCurve((t - TRAV.enter) / (TRAV.pause0 - TRAV.enter)));
