@@ -186,9 +186,9 @@ float mistAt(vec2 uv, float t) {
   if (uv.y > 0.46) return 0.0;
   float m = 0.0;
   float w1 = 0.415 + 0.020 * sin(uv.x * 9.0 + t * 0.22) + 0.012 * vn(vec2(uv.x * 14.0 + t * 0.10, 2.0));
-  m += 0.5 * exp(-pow((uv.y - w1) / 0.010, 2.0));
+  { float dm = (uv.y - w1) / 0.010; m += 0.5 * exp(-(dm * dm)); }
   float w2 = 0.372 + 0.016 * sin(uv.x * 12.0 - t * 0.16 + 3.0);
-  m += 0.35 * exp(-pow((uv.y - w2) / 0.008, 2.0));
+  { float dm = (uv.y - w2) / 0.008; m += 0.35 * exp(-(dm * dm)); }
   return m * sstep(2.0, 4.0, t);
 }
 
@@ -198,7 +198,7 @@ void main() {
 
   // dusk sky: deep blue up top, slate band toward the horizon
   vec3 col = mix(vec3(0.240, 0.290, 0.385), vec3(0.078, 0.102, 0.175), sstep(0.42, 0.95, uv.y));
-  col += vec3(0.05, 0.035, 0.02) * exp(-pow((uv.y - 0.60) / 0.10, 2.0)) * sstep(1.0, 0.0, uv.x);
+  { float dh = (uv.y - 0.60) / 0.10; col += vec3(0.05, 0.035, 0.02) * exp(-(dh * dh)) * sstep(1.0, 0.0, uv.x); }
 
   // one faint star, fading in late
   float star = exp(-sdist(uv, vec2(0.73, 0.92), vec2(0.0035, 0.0035)) * 6.0);
