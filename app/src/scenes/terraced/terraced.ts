@@ -599,6 +599,7 @@ export default class TerracedScene extends Scene {
     // ---- the hazed valley: two flat, far, violet ridge silhouettes + haze ----
     const ridgeMat = (c: number, o: number) => new THREE.MeshBasicMaterial({
       color: c, transparent: true, opacity: o, fog: false, depthWrite: false,
+      side: THREE.DoubleSide,
     });
     const mkRidge = (zc: number, h0: number, seed: number, mat: THREE.Material) => {
       const pts: number[] = [];
@@ -626,6 +627,7 @@ export default class TerracedScene extends Scene {
         depthWrite: false,
         opacity: 0.30 - i * 0.045,
         fog: false,
+        side: THREE.DoubleSide,
       });
       const hp = new THREE.Mesh(new THREE.PlaneGeometry(340, 30), hm);
       hp.position.set(0, -8 - i * 2.5, 48 + i * 28);
