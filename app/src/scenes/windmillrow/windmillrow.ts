@@ -128,7 +128,8 @@ void main() {
     if (d < 0.0 && y < ridgeY) {
       float reach = 0.10 + 0.16 * cool;
       float lane = ridgeY + d * (0.28 + 0.22 * cool);
-      shadow += ms * exp(-pow((y - lane) * 90.0, 2.0)) * smoothstep(-reach, -0.01, d);
+      float sdy = (y - lane) * 90.0; // pow(x, 2.0) is undefined for x < 0
+      shadow += ms * exp(-sdy * sdy) * smoothstep(-reach, -0.01, d);
     }
   }
   field *= 1.0 - clamp(shadow, 0.0, 1.0) * cool * 0.5;
@@ -263,7 +264,12 @@ const wind = (t: number) => ss(5, 9, t) * (1 - ss(17, 19.5, t));
 const windInt = (t: number) => 4.0 * ss(5, 9, t) + 8.0 * ss(9, 17, t) + 5.0 * ss(17, 19.5, t);
 
 // Sun azimuth from the near-mill hub (for the rim-light computation).
-const SUN = uv2w(0.80, 0.455);
+// The shader lowers the disc by 0.05 * cool, so the rim's light source
+// must track the same animated position rather than the opening sky.
+const sunW = (t: number): [number, number] => {
+  const cool = ss(13, 18.5, t);
+  return uv2w(0.80, 0.455 - 0.05 * cool);
+};
 
 // [tin, tout, text, anchorUv] — captions are anchored to points on the
 // backdrop and projected through the camera, so they travel with the pan
@@ -346,7 +352,8 @@ export default class WindmillRowScene extends Scene {
     // currently turned toward the sun (aSunAngle = sun azimuth in the
     // rotor's local frame, i.e. world azimuth minus the rotor's angle)
     const cool = ss(13, 18.5, t);
-    const sunAz = Math.atan2(SUN[1] - wy, SUN[0] - wx);
+    const [sunWX, sunWY] = sunW(t);
+    const sunAz = Math.atan2(sunWY - wy, sunWX - wx);
     this.aSun.setX(i, sunAz - ang);
     this.aRim.setX(i, (1 - cool) * 0.9 + 0.05);
   }
@@ -363,10 +370,11 @@ export default class WindmillRowScene extends Scene {
 
     // CameraRig: establishing frame holds the far mill + low sun at the
     // right edge, pans left along the ridge, then settles on the near mill.
-    // In narrow/vertical exports the pan shortens and anchors on the near
-    // mill so the focal mills stay in frame
-    const span = Math.min(1, (this.ctx.W / this.ctx.H) / (16 / 9));
-    const pan = ss(1, 14, t) * span;
+    // Narrower frames must pan FURTHER, not less — scale the sweep so the
+    // closing target still keeps the near mill (wx -70.4) inside the frame.
+    const halfW = 104.0 * Math.tan(0.5 * 40 * Math.PI / 180) * (this.ctx.W / this.ctx.H);
+    const targetEnd = Math.min(-22.0, -70.4 + 0.85 * halfW);
+    const pan = ss(1, 14, t) * ((40.0 - targetEnd) / 62.0);
     this.rig.position = [45.0 - 63.0 * pan + 0.8 * Math.sin(t * 0.06), 6.5, 24.0];
     this.rig.target = [40.0 - 62.0 * pan, -2.0 + 1.5 * pan, PZ];
     this.rig.focalLengthPx = (this.ctx.H / 2) / Math.tan(0.5 * 40 * Math.PI / 180);
@@ -388,14 +396,18 @@ export default class WindmillRowScene extends Scene {
         // world-anchored: project the caption's backdrop point to screen
         const [awx, awy] = uv2w(auv[0], auv[1]);
         const ndc = this.v.set(awx, awy, PZ + 0.4).project(this.cam);
-        const cx = (ndc.x * 0.5 + 0.5) * W;
+        if (ndc.z > 1) continue;
+        const cx0 = (ndc.x * 0.5 + 0.5) * W;
         const cy = (0.5 - ndc.y * 0.5) * H + H * 0.18; // sit below the anchor
-        if (ndc.z > 1 || cx < -W * 0.4 || cx > W * 1.4) continue;
         c.save();
         c.globalAlpha = a;
         c.font = `46px "${F.archivo(112, 500)}", sans-serif`;
         c.textAlign = 'center';
         c.textBaseline = 'middle';
+        // clamp so the full text stays readable even when its anchor
+        // is outside the frame (narrow/vertical exports)
+        const tw = c.measureText(text).width;
+        const cx = Math.min(Math.max(cx0, tw / 2 + 16), W - tw / 2 - 16);
         // knockout halo: 12px stroke = ~6px outside glyph edges
         c.lineJoin = 'round';
         c.strokeStyle = 'rgba(5, 6, 10, 0.9)';
