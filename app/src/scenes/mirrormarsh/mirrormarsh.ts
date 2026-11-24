@@ -60,10 +60,13 @@ float fbm2(vec2 p) {
   for (int i = 0; i < 4; i++) { s += a * vn2(p); p = p * 2.13 + 7.7; a *= 0.5; }
   return s;
 }
-// edges may meet: guard the gap so smoothstep never sees e0==e1
+// descending edges are fine here: evaluate on the ordered span and flip
+// the result — smoothstep itself never sees e0 >= e1 (gap clamped too)
 float sstep(float e0, float e1, float x) {
-  float g = abs(e1 - e0);
-  return smoothstep(e0, e0 + max(g, 0.001) * sign(e1 - e0), x);
+  float lo = min(e0, e1);
+  float hi = max(e0, e1);
+  float m = smoothstep(lo, lo + max(hi - lo, 0.001), x);
+  return e0 < e1 ? m : 1.0 - m;
 }
 float sdist(vec2 p, vec2 c, vec2 r) {
   vec2 q = (p - c) / r;
@@ -185,8 +188,12 @@ vec3 world(vec2 uv, float t) {
            sstep(px + 0.02, px - 0.001, uv.x) * sstep(px - 0.10, px - 0.01, uv.x);
   }
   if (dartOut > 0.0) {
-    float px = mix(0.805, -0.05, sstep(KF_OUT, KF_OUT + 0.7, t));
-    sky += vec3(0.2, 0.6, 0.7) * dartOut * 0.9 * sstep(0.0035, 0.0, abs(uv.y - 0.55)) *
+    // dive first: drop from the perch to water level in the first third
+    // of the exit, then level into the horizontal streak
+    float q = sstep(KF_OUT, KF_OUT + 0.75, t);
+    float px = 0.805 - 0.855 * q;
+    float py = 0.636 - 0.086 * min(q / 0.35, 1.0);
+    sky += vec3(0.2, 0.6, 0.7) * dartOut * 0.9 * sstep(0.0035, 0.0, abs(uv.y - py)) *
            sstep(px - 0.02, px + 0.001, uv.x) * sstep(px + 0.10, px + 0.01, uv.x);
   }
 
@@ -230,7 +237,11 @@ void main() {
     // mirror: flip the world, quiver only inside the moving mist bands
     float band1 = 0.5 + 0.5 * sin((uv.x + t * 0.014) * 21.0 + fbm2(vec2(uv.x * 6.0, t * 0.06)) * 4.0);
     float band2 = 0.5 + 0.5 * sin((uv.x - t * 0.009) * 34.0 + 2.0);
-    float move = band1 * band2;
+    // quiver only where the visible mist band is thick, and die away as
+    // the settle beat closes the mirror back to glass
+    float mistAmt = fbm2(vec2(uv.x * 3.0 - t * 0.030, uv.y * 14.0));
+    float move = band1 * band2 * (0.25 + 0.75 * mistAmt)
+               * (1.0 - sstep(15.5, 18.5, t));
     vec2 ruv = vec2(uv.x + move * 0.0035 * sin(t * 2.1 + uv.y * 90.0),
                     2.0 * HLINE - uv.y);
     vec3 col = world(ruv, t);
@@ -241,7 +252,7 @@ void main() {
     // ripple rings: strike splash, beak drip, distant fish-rise, frog
     float rip = ring(uv, 0.62, STRIKE + 0.05, t, 0.115) +
                 ring(uv, 0.625, STRIKE + 1.7, t, 0.045) * 0.7 +
-                ring(uv, 0.12, 4.5, t, 0.060) * 0.6;
+                ring(uv, 0.20, 4.5, t, 0.060) * 0.6;
     // frog bubble cluster near x≈0.33, ~t 10.2→11.4
     float frog = sstep(10.2, 10.7, t) * (1.0 - sstep(11.0, 11.6, t));
     if (frog > 0.0) {
@@ -369,5 +380,16 @@ export default class MirrormarshScene extends Scene {
       vignette: 0.42,
       level: ss(0, 0.9, t) * (1 - ss(this.ctx.end - 0.9, this.ctx.end, t)),
     };
+  }
+
+  override dispose() {
+    this.layer.dispose();
+    this.three.traverse((o) => {
+      const m = o as THREE.Mesh;
+      m.geometry?.dispose();
+      const mat = m.material as THREE.Material | THREE.Material[] | undefined;
+      if (Array.isArray(mat)) mat.forEach((x) => x.dispose());
+      else mat?.dispose();
+    });
   }
 }
