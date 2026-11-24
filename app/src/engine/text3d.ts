@@ -158,19 +158,41 @@ export class ExtrudedText {
       m.position.set(g.base[0], g.base[1] + (motion === 'slide-up' ? (1 - p) * -slide : 0), g.base[2]);
       m.scale.setScalar(motion === 'scale-pop' ? 0.3 + 0.7 * p : 1);
       if (motion === 'fade' || motion === 'slide-up') {
-        if (!m.userData.fadeMat) {
-          const src = Array.isArray(m.material) ? m.material[0]! : m.material;
-          m.userData.opaqueMat = src;
-          const mat = src.clone();
-          mat.transparent = true;
-          m.userData.fadeMat = mat;
-        }
-        // fully-revealed glyphs rejoin the opaque pass: staying transparent=true
-        // forever keeps them out of depth-sorted opaque rendering for the rest
-        // of the shot (sorting/halos against the scene behind them)
         const fullyIn = p >= 1;
-        m.material = fullyIn ? m.userData.opaqueMat : m.userData.fadeMat;
-        if (!fullyIn) (m.material as THREE.Material).opacity = p;
+        if (fullyIn) {
+          // rejoin the opaque pass with the original material(s) — staying transparent=true
+          // forever keeps finished glyphs out of depth-sorted opaque rendering for the rest
+          // of the shot. Dispose the fade clones too: once detached they are invisible to
+          // scene cleanup, which only disposes attached materials. A backward scrub
+          // recreates them below (one clone per glyph, rare).
+          if (m.userData.fadeMat) {
+            const fms = Array.isArray(m.userData.fadeMat) ? m.userData.fadeMat : [m.userData.fadeMat];
+            for (const fm of fms) (fm as THREE.Material).dispose();
+            m.userData.fadeMat = null;
+          }
+          if (m.userData.origMat) m.material = m.userData.origMat;
+        } else {
+          if (!m.userData.fadeMat) {
+            const src = m.material;
+            m.userData.origMat = src;
+            // clone per-entry so face/side material arrays survive the round trip;
+            // each clone remembers its source opacity so the fade lands exactly on it
+            const cloneOne = (mm: THREE.Material) => {
+              const c = mm.clone();
+              c.transparent = true;
+              c.userData.origOpacity = mm.opacity;
+              return c;
+            };
+            m.userData.fadeMat = Array.isArray(src) ? src.map(cloneOne) : cloneOne(src as THREE.Material);
+          }
+          m.material = m.userData.fadeMat;
+          const fms = Array.isArray(m.material) ? m.material : [m.material];
+          for (const fm of fms) {
+            // fade toward the material's OWN opacity, not 1 — translucent text must not
+            // snap darker when the original material is restored at completion
+            (fm as THREE.Material).opacity = ((fm.userData.origOpacity as number | undefined) ?? 1) * p;
+          }
+        }
       }
     });
   }
