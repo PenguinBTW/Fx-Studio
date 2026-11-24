@@ -56,7 +56,7 @@ void main() {
     float tau = age - tc;                   // <0 en route, >=0 after break
     // moving crest line while it travels (dim), flash inside the band
     if (y > BREAK_Y) {
-      float line = exp(-pow((vUv.y - y) / 0.012, 2.0));
+      float line = exp(-pow(abs(vUv.y - y) / 0.012, 2.0));
       float cluster = sat(fbm3(vec3(vUv.x * 9.0 + float(i) * 13.0, uT * 0.3, float(i) * 7.0), 4, 2.0, 0.6) * 1.4);
       float en = amp * (0.22 + 0.78 * smoothstep(-1.6, 0.0, tau));
       glow += line * cluster * en;
@@ -65,10 +65,10 @@ void main() {
     if (tau > 0.0 && tau < 6.0) {
       // crinkled break line: tight band + a bright flash line at the break
       // moment, both broken into patches by high-frequency fbm
-      float wash = exp(-pow((vUv.y - BREAK_Y) / (0.010 + tau * 0.009), 2.0));
+      float wash = exp(-pow(abs(vUv.y - BREAK_Y) / (0.010 + tau * 0.009), 2.0));
       float cl = sat(fbm3(vec3(vUv.x * 22.0 + float(i) * 17.0, tau * 0.8, float(i) * 3.0), 4, 2.0, 0.6) * 2.6 - 0.55);
       glow += wash * cl * amp * 1.5 * exp(-tau * 0.4);
-      float flash = exp(-pow((vUv.y - BREAK_Y) / 0.006, 2.0)) * cl;
+      float flash = exp(-pow(abs(vUv.y - BREAK_Y) / 0.006, 2.0)) * cl;
       glow += flash * amp * 1.1 * exp(-tau * 0.9);
     }
   }
@@ -89,7 +89,7 @@ void main() {
   vec3 col = mix(vec3(0.001, 0.002, 0.006), vec3(0.003, 0.005, 0.011), vUv.y);
   // faint diagonal galactic band
   vec2 p = vUv - vec2(0.5, 0.55);
-  float band = exp(-pow((p.y + p.x * 0.45) / 0.14, 2.0));
+  float band = exp(-pow(abs(p.y + p.x * 0.45) / 0.14, 2.0));
   float mw = band * sat(fbm3(vec3(vUv * 7.0, 4.0), 4, 2.0, 0.55) * 0.9 + 0.1);
   col += vec3(0.085, 0.105, 0.140) * mw;
   // horizon airglow hint
@@ -106,7 +106,7 @@ uniform float uEnv;
 void main() {
   vec2 c = (vUv - 0.5) * 2.0;
   float r = length(c);
-  float ring = exp(-pow((r - 0.55) / 0.22, 2.0));
+  float ring = exp(-pow(abs(r - 0.55) / 0.22, 2.0));
   float a = ring * uEnv;
   if (a < 0.004) discard;
   gl_FragColor = vec4(vec3(0.25, 0.8, 0.95) * a, a);
@@ -121,11 +121,12 @@ varying vec2 vUv;
 uniform float uT;
 uniform float uOn;
 void main() {
-  // vUv.x: 0 = at the hull, 1 = far behind. Narrow bright core fanning out
-  // with distance, fading with age, shimmered by fbm.
-  float spread = 0.05 + vUv.x * 0.4;
-  float core = exp(-pow((vUv.y - 0.5) / spread, 2.0));
-  float age = (1.0 - vUv.x);
+  // vUv.x: 0 = far behind the hull, 1 = at the stern. Brightest at the hull,
+  // core fanning out and fading with distance behind it.
+  float behind = 1.0 - vUv.x;
+  float spread = 0.05 + behind * 0.4;
+  float core = exp(-pow(abs(vUv.y - 0.5) / spread, 2.0));
+  float age = 1.0 - behind;
   float sh = sat(fbm3(vec3(vUv.x * 14.0 + uT * 0.5, vUv.y * 6.0, 8.0), 3, 2.0, 0.55) * 1.5);
   float a = core * age * (0.5 + 0.5 * sh) * uOn * 2.4;
   if (a < 0.004) discard;
@@ -357,7 +358,7 @@ export default defineScene({
     // rock rings answer each breaking set with a delayed pulse
     for (let i = 0; i < S.ringMats.length; i++) {
       let env = 0;
-      for (const tc of [7.7, 11.8, 17.3]) {
+      for (const tc of [9.2, 11.8, 17.3, 21.6]) {
         const d = t - (tc + i * 0.3);
         if (d > 0 && d < 4) env += Math.exp(-d * 0.8) * 0.5;
       }
