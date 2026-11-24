@@ -152,7 +152,7 @@ vec3 flatScene(vec2 uv, float t) {
     float n = clamp((uv.y - 0.385) / (kpos.y - 0.385), 0.0, 1.0);
     float tx = uWalk + (kpos.x - uWalk) * n + 0.015 * sin(n * 9.0 + uv.y * 55.0 + t * 2.4) * 4.0 * n * (1.0 - n);
     float onY = smoothstep(0.383, 0.387, uv.y) * (1.0 - smoothstep(kpos.y - 0.002, kpos.y, uv.y));
-    float lit = step(n, uThread) * step(0.001, uThread);          // unspooled so far
+    float lit = step(n, uThread) * smoothstep(0.0, 0.04, uThread); // unspooled so far (eases on)
     float td = abs(uv.x - tx);
     float thread = exp(-td * td * 90000.0) * onY * lit;
     float halo = exp(-td * td * 9000.0) * onY * lit * 0.25;
