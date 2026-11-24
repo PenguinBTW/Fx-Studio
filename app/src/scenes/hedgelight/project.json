@@ -1,0 +1,46 @@
+{
+  "project": "hedgelight",
+  "meta": {
+    "title": "Hedgelight: The Wren Works the Perches",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 20.0
+  },
+  "entries": [
+    {
+      "scene": "hedgelight/hedgelight",
+      "id": "act-still",
+      "start": 0.0,
+      "end": 4.0,
+      "caption": { "fig": "01", "text": "LOW SUN STRIPES THE HEDGE", "dur": 2.6 }
+    },
+    {
+      "scene": "hedgelight/hedgelight",
+      "id": "act-wren",
+      "start": 4.0,
+      "end": 8.0,
+      "caption": { "fig": "02", "text": "A WREN WORKS THE PERCHES", "dur": 2.6 }
+    },
+    {
+      "scene": "hedgelight/hedgelight",
+      "id": "act-snail",
+      "start": 8.0,
+      "end": 11.0,
+      "caption": { "fig": "03", "text": "SNAIL ON A LIT LEAF EDGE", "dur": 2.4 }
+    },
+    {
+      "scene": "hedgelight/hedgelight",
+      "id": "act-lark",
+      "start": 11.0,
+      "end": 14.0,
+      "caption": { "fig": "04", "text": "SKYLARK OVER THE FIELD", "dur": 2.4 }
+    },
+    {
+      "scene": "hedgelight/hedgelight",
+      "id": "act-settle",
+      "start": 14.0,
+      "end": 20.0,
+      "caption": { "fig": "05", "text": "THE HEDGE SETTLES BACK", "dur": 2.6 }
+    }
+  ]
+}
