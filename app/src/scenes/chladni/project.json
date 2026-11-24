@@ -1,0 +1,11 @@
+{
+  "project": "chladni",
+  "entries": [
+    {
+      "scene": "chladni/chladni",
+      "id": "chladni_main",
+      "start": 0.0,
+      "end": 22.5
+    }
+  ]
+}
