@@ -59,8 +59,9 @@ const SKY_FRAG = /* glsl */ `
   uniform float uWarm;
   float h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
   float vn(vec2 p) {
-    vec2 i = floor(p), f = fract(floor(p));
-    i = i; f = f * f * (3.0 - 2.0 * f);
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
     return mix(mix(h21(i), h21(i + vec2(1, 0)), f.x), mix(h21(i + vec2(0, 1)), h21(i + vec2(1, 1)), f.x), f.y);
   }
   void main() {
@@ -165,7 +166,7 @@ export default class ReedbedScene extends Scene {
   private reeds: THREE.Object3D[] = [];
   private lilies: THREE.Object3D[] = [];
   private mists: THREE.Mesh[] = [];
-  private rings: { m: THREE.Mesh; mat: THREE.MeshBasicMaterial; x: number; z: number; ph: number; rate: number }[] = [];
+  private rings: { m: THREE.Mesh; mat: THREE.MeshBasicMaterial; x: number; z: number; ph: number; rate: number; dab?: boolean }[] = [];
   private flies: { g: THREE.Group; wl: THREE.Mesh; wr: THREE.Mesh; ph: number }[] = [];
   private glow!: THREE.Sprite;
   private noiseTex!: THREE.CanvasTexture;
@@ -371,7 +372,7 @@ export default class ReedbedScene extends Scene {
     });
     const glare = new THREE.Mesh(new THREE.PlaneGeometry(26, 46), pathMat);
     glare.rotation.x = -Math.PI / 2;
-    glare.rotation.z = Math.atan2(24 + 0.5, 78 - 20); // lay along the sun azimuth
+    glare.rotation.z = Math.PI + Math.atan2(-24 - -8, 78 - 18); // long axis points at the sun
     glare.position.set(-8, 0.012, 18);
     scene.add(glare);
     this.glareMat = pathMat; this.glareTex = pathTex;
@@ -499,11 +500,12 @@ export default class ReedbedScene extends Scene {
       this.heron.position.z = 18 - 8.0 * fly;
       this.heron.rotation.y = -0.5 * fly;
       this.heron.rotation.z = 0.18 * fly;
-      this.heron.visible = fly < 0.995;
     } else {
-      // motionless: only the faintest neck sway
-      this.heron.rotation.x = 0.006 * Math.sin(t * 0.5);
+      // motionless: standing pose restored so scrubbing back re-shows it
+      this.heron.position.set(7.5, 0, 18);
+      this.heron.rotation.set(0.006 * Math.sin(t * 0.5), 0, 0);
     }
+    this.heron.visible = fly < 0.995;
 
     // dragonflies skim; when one dips, its ring fires at that spot
     const nFlies = t > SKIM && t < FLARE + 3 ? this.flies.length : (t <= SKIM ? 0 : 2);
@@ -517,16 +519,20 @@ export default class ReedbedScene extends Scene {
       const wingFlick = Math.sin(t * 42 + d.ph * 9) * 0.4;
       d.wl.rotation.z = 0.15 + wingFlick;
       d.wr.rotation.z = -0.15 - wingFlick;
-      // dab rings on the low dips
-      if (this.v.y < 0.16) {
-        const rng = this.rings[5 + i];
-        if (rng) { rng.ph = (t * rng.rate) % 1 - 0.001; rng.x = this.v.x; rng.z = this.v.z; rng.m.position.set(this.v.x, 0.02, this.v.z); }
+      // dab rings on the low dips (rings 6-7 are the flies'; 5 is the heron's)
+      if (this.v.y < 0.16 && i < 2) {
+        const rng = this.rings[6 + i];
+        if (rng) { rng.ph = -t * rng.rate; rng.m.position.set(this.v.x, 0.02, this.v.z); rng.dab = true; }
       }
     });
 
     // ripple rings expand + fade in a loop; the heron ring fires big on flare
     for (let i = 0; i < this.rings.length; i++) {
       const rng = this.rings[i];
+      if (i >= 6) {
+        if (!rng.dab) rng.m.position.set(rng.x, 0.02, rng.z);
+        rng.dab = false;
+      }
       let age = (t * rng.rate + rng.ph) % 1;
       if (i === 5) { // heron-strike ring
         const u = (t - FLARE) / 3.0;
