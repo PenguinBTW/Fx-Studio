@@ -113,7 +113,7 @@ void main() {
   // moonlit haze band — leans with the gust
   float hazeY = 0.34 + 0.02 * sin(x * 5.0 + t * 0.2) + uGust * 0.03 * (x - 0.5);
   float haze = exp(-(y - hazeY) * (y - hazeY) * 200.0) * (0.5 + 0.5 * fbm2(vec2(x * 6.0 - t * 0.35, y * 8.0)));
-  col = mix(col, vec3(0.14, 0.20, 0.32), haze * 0.65);
+  col = mix(col, vec3(0.14, 0.20, 0.32), haze * (0.65 + 0.18 * uSettle));
 
   // --- pine walls: far layer hazy, near layer near-black -------------------
   float farPine = 0.0;
@@ -161,9 +161,9 @@ void main() {
           + flame(uv, FIRE_X + 0.010, FIRE_Y + 0.011, 0.009, 0.070, sway * 0.8) * uBurst;
   float flameAll = max(fl * (0.85 + 0.15 * sin(t * 8.0 + x * 90.0)), fl2);
   vec3 flameCol = mix(vec3(1.0, 0.45, 0.08), vec3(1.0, 0.85, 0.35), flameAll);
-  col += coalCol * fireGlow * 1.8;
+  col += coalCol * fireGlow * (1.8 + 0.5 * uSettle);
   col = mix(col, vec3(0.02, 0.015, 0.01), logM * 0.9 * step(0.0, uv.x - FIRE_X + 0.02));
-  col += flameCol * flameAll * (1.3 + uBurst * 0.8);
+  col += flameCol * flameAll * (1.3 + uBurst * 0.8 + 0.25 * uSettle);
 
   // light cone rising from the fire — the ember corridor
   float coneW = 0.05 + (y - FIRE_Y) * 0.22;
@@ -174,7 +174,7 @@ void main() {
   float nearPine = 0.0;
   for (int i = 0; i < 5; i++) {
     float fi = float(i);
-    float x0 = 0.10 + fi * 0.175 + (hash12(vec2(fi, 11.0)) - 0.5) * 0.06;
+    float x0 = (i < 3 ? 0.07 + fi * 0.09 : 0.74 + (fi - 3.0) * 0.10) + (hash12(vec2(fi, 11.0)) - 0.5) * 0.03;
     float h = 0.80 + hash12(vec2(fi, 13.0)) * 0.22;
     nearPine = max(nearPine, pine(uv, x0, 0.075 + hash12(vec2(fi, 17.0)) * 0.035, 0.18, h));
   }
@@ -185,7 +185,7 @@ void main() {
   vec2 skI = floor(sk);
   vec2 skF = fract(sk) - vec2(0.2 + 0.6 * hash12(skI + 5.0), 0.5);
   float spark = (1.0 - smoothstep(0.0, 0.20, length(skF)))
-    * step(0.94, hash12(skI)) * smoothstep(0.25, 0.05, length(fp));
+    * step(0.94, hash12(skI)) * (1.0 - smoothstep(0.05, 0.25, length(fp)));
   col += vec3(1.0, 0.6, 0.2) * spark * (0.5 + uBurst);
 
   fragColor = vec4(col, 1.0);
@@ -292,7 +292,7 @@ export default class EmberDriftScene extends Scene {
     const gate = mothT(t);
     if (gate <= 0.01) { out.set(0, -999, 0); return { live: false, flap: 0 }; }
     const dt = t - 11.5;
-    const ang = u * 6.28 + dt * (1.9 + 0.5 * w);
+    const ang = u * 6.28 + dt * (0.85 + 0.25 * w);
     const rad = 4.5 + 2.5 * w - dt * 0.35;
     const cx = 0.5 + Math.cos(ang) * rad * 0.0028;
     const cy = 0.30 + Math.sin(ang) * rad * 0.0016 + 0.01 * Math.sin(dt * 7.0 + u * 20.0);
