@@ -115,8 +115,9 @@ void main() {
 
   col = mix(col, hedgeCol, hedge * (1.0 - below));
   col = mix(col, field, below);
-  // the hedge sits on top of the field's far edge
-  col = mix(col, hedgeCol, hedge * below * 0.9);
+  // the hedge band fades out a little below the horizon, not the whole field
+  float hedgeBelow = hedge * (1.0 - smoothstep(hor - 0.45, hor - 0.10, q.y));
+  col = mix(col, hedgeCol, hedgeBelow * below * 0.9);
   gl_FragColor = vec4(col, 1.0);
 }`;
 
@@ -131,6 +132,7 @@ void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(
 const MOON_FRAG = /* glsl */ `
 precision mediump float;
 uniform float uT;
+uniform float uHor;   // horizon y in quad-local coords (moonY subtracted)
 varying vec2 vUv;
 float hash21(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
 float noise2(vec2 p) {
@@ -155,7 +157,9 @@ void main() {
   float halo = (1.0 - smoothstep(0.87, 1.30, d)) * (1.0 - disc);
   vec3 glow = vec3(0.85, 0.40, 0.12) * halo * 0.45;
   vec3 col = m * disc + glow;
-  float a = clamp(disc + halo * 0.55, 0.0, 1.0);
+  // the field occludes whatever dips below the horizon line
+  float occl = smoothstep(uHor - 0.04, uHor + 0.03, q.y);
+  float a = clamp(disc + halo * 0.55, 0.0, 1.0) * occl;
   gl_FragColor = vec4(col, a);
 }`;
 
@@ -221,7 +225,7 @@ export default defineScene({
     // --- moon ----------------------------------------------------------------
     st.moonMat = new THREE.ShaderMaterial({
       vertexShader: MOON_VERT, fragmentShader: MOON_FRAG,
-      uniforms: { uT: { value: 0 } }, transparent: true, depthWrite: false,
+      uniforms: { uT: { value: 0 }, uHor: { value: -0.60 } }, transparent: true, depthWrite: false,
     });
     st.moon = new THREE.Mesh(new THREE.PlaneGeometry(2.7, 2.7), st.moonMat);
     st.moon.position.set(moonX(0), moonY(0), -2.5);
@@ -242,11 +246,12 @@ export default defineScene({
       const dark = [0.030, 0.028, 0.030];
       const dark2 = [0.040, 0.037, 0.038];
 
-      // barn — low roofline + gable, far left on the horizon
-      poly(p, c, [[-2.25, -0.52], [-2.25, -0.30], [-1.95, -0.14], [-1.62, -0.30], [-1.62, -0.52]], dark);
-      poly(p, c, [[-2.32, -0.29], [-1.95, -0.10], [-1.55, -0.29], [-1.55, -0.33], [-1.95, -0.15], [-2.32, -0.33]], dark2);
+      // barn — low roofline + gable, far left on the horizon (kept inside the
+      // frame at the end-drift waypoint)
+      poly(p, c, [[-2.00, -0.52], [-2.00, -0.30], [-1.70, -0.14], [-1.37, -0.30], [-1.37, -0.52]], dark);
+      poly(p, c, [[-2.07, -0.29], [-1.70, -0.10], [-1.30, -0.29], [-1.30, -0.33], [-1.70, -0.15], [-2.07, -0.33]], dark2);
       // tiny hayloft door square in the gable
-      poly(p, c, [[-1.99, -0.30], [-1.91, -0.30], [-1.91, -0.38], [-1.99, -0.38]], [0.06, 0.05, 0.045]);
+      poly(p, c, [[-1.74, -0.30], [-1.66, -0.30], [-1.66, -0.38], [-1.74, -0.38]], [0.06, 0.05, 0.045]);
 
       // bare oak — leaning trunk + clawing branches
       ribbon(p, c, [[2.10, -0.55], [1.98, -0.20], [1.90, 0.15], [1.86, 0.45]], 0.10, 0.045, dark);
@@ -333,7 +338,10 @@ export default defineScene({
       const mkCrow = (mat: THREE.ShaderMaterial, seed: number) => {
         const p: number[] = [], c: number[] = [];
         const cc = [0.02, 0.02, 0.025];
-        poly(p, c, [[-0.115, 0.018], [-0.035, 0.032], [0, 0.006], [0.035, 0.032], [0.115, 0.018], [0.030, -0.008], [0, -0.020], [-0.030, -0.008]], cc);
+        // convex pieces only — fan triangulation fills concave notches
+        poly(p, c, [[0, 0.006], [-0.115, 0.018], [-0.035, 0.032]], cc);   // left wing
+        poly(p, c, [[0, 0.006], [0.035, 0.032], [0.115, 0.018]], cc);    // right wing
+        poly(p, c, [[-0.030, -0.008], [0.030, -0.008], [0, -0.020]], cc); // body
         const g = new THREE.BufferGeometry();
         g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(p), 3));
         g.setAttribute("color", new THREE.BufferAttribute(new Float32Array(c), 3));
@@ -416,8 +424,9 @@ export default defineScene({
     st.winMat.uniforms.uT!.value = t;
     st.flyMat.uniforms.uT!.value = t;
 
-    // moon — slow rise through the frame
+    // moon — slow rise through the frame; horizon clip follows it in quad space
     st.moon.position.set(moonX(t), moonY(t), -2.5);
+    st.moonMat.uniforms.uHor!.value = -0.50 - moonY(t);
 
     // hare — three bounding hops left→right along a stubble row, then gone
     {
