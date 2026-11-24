@@ -185,7 +185,7 @@ for sx in (-1, 1):
 # roof slope panes: half-arches approximated as two tilted slabs per side
 for sx in (-1, 1):
     for yi, y in enumerate([-1.92, -0.96, 0.0, 0.96, 1.92]):
-        pane(f'pane_{pane_id}', (sx*0.75, y, 2.55), (0.012, 0.44, 0.75),
+        pane(f'pane_{pane_id}', (sx*0.75, y, 2.47), (0.012, 0.44, 1.85),
              rot=(0, math.radians(-sx*38), 0))
         pane_id += 1
 # back wall panes (far end, facing camera)
@@ -201,12 +201,12 @@ def bench(idx, cx, cy, ln=2.6):
     # three planks with small gaps
     for k in range(3):
         parts.append(box('plank', (cx + (k-1)*0.34, cy, 0.78),
-                         (0.30, ln/2, 0.035), WOOD, bevel=0.008))
+                         (0.30, ln, 0.035), WOOD, bevel=0.008))
     for dy in (-ln/2 + 0.15, ln/2 - 0.15):
         for dx in (-0.42, 0.42):
             parts.append(box('leg', (cx + dx, cy + dy, 0.39),
-                             (0.05, 0.06, 0.39), WOOD_D, bevel=0.006))
-    parts.append(box('shelf', (cx, cy, 0.36), (0.95, ln/2, 0.025), WOOD_D, bevel=0.006))
+                             (0.10, 0.12, 0.78), WOOD_D, bevel=0.006))
+    parts.append(box('shelf', (cx, cy, 0.36), (0.95, ln*0.8, 0.025), WOOD_D, bevel=0.006))
     join_parts(parts[0], parts, WOOD, bevel=0.004)
     return fxpart(parts[0], f'bench_{idx}')
 
