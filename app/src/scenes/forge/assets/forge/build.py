@@ -199,7 +199,8 @@ def stump_anvil():
     horn = bpy.context.object; horn.data.materials.append(IRON)
     for p in horn.data.polygons: p.use_smooth = True
     parts.append(horn)
-    parts.append(box('heel', (0.33, 0.6, 0.93), (0.10, 0.15, 0.09), IRON, bevel=0.015))
+    # heel abuts the body's left face (body x∈[0.25,0.85]) — no coplanar overlap
+    parts.append(box('heel', (0.20, 0.6, 0.93), (0.05, 0.15, 0.09), IRON, bevel=0.015))
     # face plate (the hammer-worn surface)
     parts.append(box('face', (0.58, 0.6, 1.035), (0.24, 0.145, 0.025), STEEL, bevel=0.01))
     join_parts(parts[0], parts, bevel=0.0)
