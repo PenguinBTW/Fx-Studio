@@ -17,11 +17,20 @@ const ss = (a: number, b: number, x: number) => {
 
 // --- envelopes (beat times from storyboard.md) -------------------------------
 const mistP = (t: number) => ss(8.2, 9.0, t) * (1 - ss(10.5, 11.8, t));   // mister fires
+// analytic integral of a smoothstep window (rise a..b) and of mistP's
+// rise-hold-fall window — keeps particle positions proportional to drift
+// actually travelled, so nothing rewinds when the burst envelope decays.
+const issT = (a: number, b: number, t: number) => {
+  const u = Math.min(1, Math.max(0, (t - a) / (b - a)));
+  return (b - a) * (u * u * u * (1 - 0.5 * u)) + (t > b ? t - b : 0);
+};
+const mistI = (t: number) =>
+  issT(8.2, 9.0, Math.min(t, 10.5)) + (t > 10.5 ? t - 10.5 - issT(10.5, 11.8, t) : 0);
 const fogT = (t: number) =>
   0.22 + 0.55 * ss(9.0, 12.0, t) * (1 - ss(15.5, 18.5, t));              // fog blooms then recedes
 const lightT = (t: number) => 0.55 + 0.45 * Math.sin(t * 0.5);           // lightbar breath
 const moonT = (t: number) => ss(0.0, 6.0, t) * (1 - ss(9.0, 13.0, t));   // moon dimmed by fog
-const hopT = (t: number) => ss(14.0, 14.25, t) * (1 - ss(14.55, 14.9, t));
+const hopP = (t: number) => ss(14.0, 14.9, t);                            // one-hop progress
 const flexT = (t: number) =>                                            // leaf dips under drips
   Math.sin(Math.max(0, t - 12.8) * 14.0) * Math.exp(-Math.max(0, t - 12.8) * 5.0) +
   Math.sin(Math.max(0, t - 15.4) * 14.0) * Math.exp(-Math.max(0, t - 15.4) * 5.0);
@@ -93,13 +102,13 @@ vec3 terrarium(vec2 uv, float t) {
 
   // glass roof mullions: dark grid over a slightly lighter pane sheen
   float pane = smoothstep(0.58, 1.0, uv.y);
-  float mullX = 1.0 - smoothstep(0.002, 0.004, abs(fract(uv.x * 5.0) - 0.5) - 0.496);
-  float mullY = 1.0 - smoothstep(0.002, 0.005, abs(fract(uv.y * 8.0) - 0.5) - 0.495);
+  float mullX = smoothstep(0.494, 0.499, abs(fract(uv.x * 5.0) - 0.5));
+  float mullY = smoothstep(0.492, 0.499, abs(fract(uv.y * 8.0) - 0.5));
   col += vec3(0.05, 0.07, 0.11) * pane * 0.5;
   col = mix(col, vec3(0.010, 0.014, 0.024), pane * clamp(mullX + mullY, 0.0, 1.0) * 0.8);
 
   // moon disc + halo, upper-left; dimmed when fog thickens
-  float md = length((uv - vec2(0.17, 0.86)) * vec2(1.4, 1.0));
+  float md = length((uv - vec2(0.17, 0.70)) * vec2(1.4, 1.0));
   col += vec3(0.55, 0.62, 0.75) * uMoon * (0.16 * exp(-md * md * 26.0) + 0.55 * exp(-md * md * 900.0));
 
   // leaf shadows sliding across the roof panes
@@ -122,7 +131,7 @@ vec3 terrarium(vec2 uv, float t) {
   vec2 lf = vec2(0.78, 0.16 + uFlex * 0.010);
   float leaf = 1.0 - smoothstep(0.16, 0.19,
       length((uv - lf) * vec2(0.7, 2.6) + vec2(0.0, -0.02 * sin(uv.x * 20.0))));
-  leaf *= smoothstep(0.98, 0.86, uv.x);                       // tapers right
+  leaf *= 1.0 - smoothstep(0.86, 0.98, uv.x);               // tapers right
   vec3 leafCol = vec3(0.05, 0.16, 0.07);
   leafCol += vec3(0.35, 0.20, 0.05) * uLight * exp(-abs(uv.y - 0.30) * 7.0); // bar spill
   col = mix(col, leafCol, clamp(leaf, 0.0, 1.0) * 0.95);
@@ -167,7 +176,7 @@ vec3 terrarium(vec2 uv, float t) {
     float core = 1.0 - smoothstep(0.008, 0.011, length(uv - bp));
     vec3 petal = mix(vec3(0.82, 0.72, 0.80), vec3(0.92, 0.80, 0.86), h1(fi * 7.0));
     // warm rim when the bar breathes up — lit edge on the bar side (below)
-    float rim = smoothstep(0.0, 1.0, uLight) * smoothstep(bp.y, bp.y - 0.02, uv.y);
+    float rim = smoothstep(0.0, 1.0, uLight) * (1.0 - smoothstep(bp.y - 0.02, bp.y, uv.y));
     petal += vec3(0.35, 0.16, 0.04) * rim * 0.6;
     col = mix(col, petal, bl * 0.92 * (1.0 - 0.45 * uFog));
     col = mix(col, vec3(0.55, 0.28, 0.40), core * 0.95 * (1.0 - 0.45 * uFog));
@@ -198,15 +207,15 @@ out float vA;
 uniform float uT;
 uniform float uFog;
 uniform float uMist;
+uniform float uMistI;  // integral of the mist envelope — distance added by the burst
 float h1(float p) { return fract(sin(p * 91.7) * 43758.5); }
 void main() {
   vUv = uv;
   float s1 = h1(aSeed * 311.0), s2 = h1(aSeed * 977.0), s3 = h1(aSeed * 131.0);
   // slow rise + lateral curl; mister burst adds a fast updraft window
-  float rise = 0.010 + 0.020 * s3 + uMist * (0.10 + 0.14 * s1);
   float fx = fract(s1 + uT * 0.004 * (0.5 + s2)
              + sin(uT * (0.10 + s3 * 0.2) + aSeed * 40.0) * 0.05);
-  float fy = fract(s2 + uT * rise);
+  float fy = fract(s2 + uT * (0.010 + 0.020 * s3) + uMistI * (0.10 + 0.14 * s1));
   vec3 p = position * vec3((0.03 + 0.05 * s3) * ${PW}.0, (0.02 + 0.03 * s2) * ${PH}.0, 1.0);
   p.x += (fx - 0.5) * ${PW}.0;
   p.y += (fy - 0.5) * ${PH}.0;
@@ -248,7 +257,7 @@ void main() {
   p.y += (fy - 0.5) * ${PH}.0;
   p.z += 22.0;                                   // closest layer — on the glass
   // drips brighten while the mister runs, fade after each slide
-  vA = (0.35 + 0.65 * uMist) * (0.5 + 0.5 * s2) * smoothstep(0.9, 0.75, cyc);
+  vA = (0.35 + 0.65 * uMist) * (0.5 + 0.5 * s2) * (1.0 - smoothstep(0.75, 0.9, cyc));
   gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
 }`;
 
@@ -292,7 +301,7 @@ void main() {
   float shape = max(max(body, head), leg);
   if (shape < 0.05 && eye < 0.05) discard;
   vec3 col = vec3(0.02, 0.05, 0.03);
-  col += vec3(0.30, 0.18, 0.05) * smoothstep(0.9, 0.3, vUv.y) * 0.3;   // warm underside
+  col += vec3(0.30, 0.18, 0.05) * (1.0 - smoothstep(0.3, 0.9, vUv.y)) * 0.3; // warm underside
   fragColor = vec4(mix(col, vec3(0.85, 0.88, 0.70), eye), max(shape, eye) * 0.96);
 }`;
 
@@ -306,7 +315,7 @@ export default class OrchidsteamScene extends Scene {
     uT: { value: 0 }, uMist: { value: 0 }, uFog: { value: 0.2 },
     uLight: { value: 0.5 }, uMoon: { value: 1 }, uFlex: { value: 0 }, uSnail: { value: 0 },
   };
-  private fgU = { uT: { value: 0 }, uFog: { value: 0.2 }, uMist: { value: 0 } };
+  private fgU = { uT: { value: 0 }, uFog: { value: 0.2 }, uMist: { value: 0 }, uMistI: { value: 0 } };
   private drU = { uT: { value: 0 }, uMist: { value: 0 } };
   private frU = { uT: { value: 0 }, uHop: { value: 0 } };
   private p = new THREE.Vector3();
@@ -365,7 +374,6 @@ export default class OrchidsteamScene extends Scene {
     const moon = moonT(t);
     const flex = flexT(t);
     const snail = snailT(t);
-    const hop = hopT(t);
 
     this.bu.uT.value = t;
     this.bu.uMist.value = mist;
@@ -375,12 +383,13 @@ export default class OrchidsteamScene extends Scene {
     this.bu.uFlex.value = flex;
     this.bu.uSnail.value = snail;
     this.fgU.uT.value = t; this.fgU.uFog.value = fog; this.fgU.uMist.value = mist;
+    this.fgU.uMistI.value = mistI(t);
     this.drU.uT.value = t; this.drU.uMist.value = mist;
-    this.frU.uT.value = t; this.frU.uHop.value = hop;
+    this.frU.uT.value = t; this.frU.uHop.value = hopP(t);
 
     // frog sits on the broad leaf (uv ~0.72,0.20); one hop at ~14s
-    const hopY = 0.10 * Math.sin(Math.PI * Math.min(1, hop)) * (hop > 0 && hop < 1 ? 1 : 0);
-    aToV(0.72 + 0.06 * hop, 0.215 + Math.abs(flex) * -0.006 + hopY, this.p);
+    const hopY = 0.10 * Math.sin(Math.PI * hopP(t));
+    aToV(0.72 + 0.06 * hopP(t), 0.215 + Math.abs(flex) * -0.006 + hopY, this.p);
     this.p.z += 12.0;
     this.frog.position.copy(this.p);
 
@@ -407,7 +416,7 @@ export default class OrchidsteamScene extends Scene {
           bbox: [cx - 30, cy - 30, cx + 30, cy + 14],
           w: 60, h: 44, cx, cy, hPct: (44 / H) * 100, isStroke: false,
         });
-        uvToWorld(0.5, 0.32, this.p).project(this.cam);
+        aToV(0.5, 0.3225, this.p).project(this.cam);
         const lx = (this.p.x * 0.5 + 0.5) * W, ly = (0.5 - this.p.y * 0.5) * H;
         P.textProbes.push({
           frameIdx: P.currentFrameIdx ?? 0, t, text: 'grow-bar',
