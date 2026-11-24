@@ -1,0 +1,13 @@
+{
+  "project": "gyre",
+  "entries": [
+    {
+      "scene": "gyre/gyre",
+      "id": "gyre",
+      "start": 0.0,
+      "end": 20.0,
+      "caption": { "fig": "01", "text": "GYRE", "dur": 3.5 }
+    }
+  ],
+  "transitions": []
+}
