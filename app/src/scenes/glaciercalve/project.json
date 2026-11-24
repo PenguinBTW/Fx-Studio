@@ -1,0 +1,32 @@
+{
+  "project": "glaciercalve",
+  "meta": {
+    "title": "Glacier Calve: The Break",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 20.0
+  },
+  "entries": [
+    {
+      "scene": "glaciercalve/glaciercalve",
+      "id": "act-front",
+      "start": 0.0,
+      "end": 7.0,
+      "caption": { "fig": "01", "text": "THE FRONT", "dur": 4.0 }
+    },
+    {
+      "scene": "glaciercalve/glaciercalve",
+      "id": "act-calve",
+      "start": 7.0,
+      "end": 14.0,
+      "caption": { "fig": "02", "text": "THE CALVE", "dur": 4.0 }
+    },
+    {
+      "scene": "glaciercalve/glaciercalve",
+      "id": "act-aftermath",
+      "start": 14.0,
+      "end": 20.0,
+      "caption": { "fig": "03", "text": "AFTERMATH", "dur": 4.0 }
+    }
+  ]
+}
