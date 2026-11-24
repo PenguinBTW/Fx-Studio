@@ -71,7 +71,7 @@ void main() {
   float d = sat(base * 0.72 + detail * 0.45 - 0.08);
 
   // radial vignette so plane edges never show
-  float edge = smoothstep(1.0, 0.55, length(vUv - 0.5) * 2.0);
+  float edge = 1.0 - smoothstep(0.55, 1.0, length(vUv - 0.5) * 2.0);
 
   float density = smoothstep(0.10, 0.62, d) * edge;
   float body = smoothstep(0.30, 0.9, d);
@@ -81,7 +81,7 @@ void main() {
   col = mix(col, uColC, sat(body * body * (0.35 + uPocket * 0.85)));
 
   // lit dust brightens inside the nursery pocket region
-  float glow = uPocket * smoothstep(0.25, 0.0, length(vUv - vec2(0.62, 0.45)) * 2.0);
+  float glow = uPocket * (1.0 - smoothstep(0.0, 0.25, length(vUv - vec2(0.62, 0.45)) * 2.0));
   col += uColC * glow * 0.9;
 
   float a = density * uAlpha * uPass;
@@ -122,7 +122,7 @@ varying float vA;
 void main() {
   vec2 c = gl_PointCoord - 0.5;
   float d = length(c) * 2.0;
-  float a = smoothstep(1.0, 0.15, d) * vA;
+  float a = (1.0 - smoothstep(0.15, 1.0, d)) * vA;
   if (a < 0.003) discard;
   gl_FragColor = vec4(vCol, a);
 }
@@ -158,7 +158,9 @@ interface NebState {
   starMat: THREE.ShaderMaterial;
   coreMat: THREE.ShaderMaterial;
 }
-let nebState: NebState;
+// Per-SceneContext state: project entries create one scene instance each, so
+// module-level state must key off the ctx or later acts freeze.
+const nebStates = new WeakMap<SceneContext, NebState>();
 
 function smooth01(x: number): number {
   x = Math.min(1, Math.max(0, x));
@@ -277,8 +279,8 @@ export default defineScene({
           float d = length(vUv - 0.5) * 2.0;
           // cloud-textured halo: fbm breaks the radial falloff into lit gas
           float n = fbm3(vec3(vUv * 7.0, uT * 0.05 + 4.0), 4, 2.0, 0.55) * 0.5 + 0.5;
-          float halo = smoothstep(1.0, 0.15, d) * (0.3 + 0.7 * n);
-          float nucleus = smoothstep(0.22, 0.0, d);
+          float halo = (1.0 - smoothstep(0.15, 1.0, d)) * (0.3 + 0.7 * n);
+          float nucleus = 1.0 - smoothstep(0.0, 0.22, d);
           float a = (halo * 0.5 + nucleus * 0.9) * uPocket;
           vec3 col = mix(vec3(0.95, 0.5, 0.18), vec3(1.0, 0.85, 0.55), nucleus + halo * 0.4);
           col += vec3(1.0, 0.9, 0.75) * nucleus * 0.8;
@@ -297,7 +299,7 @@ export default defineScene({
 
     ctx.rig.setLensMm(38);
 
-    nebState = { layers, starMat, coreMat };
+    nebStates.set(ctx, { layers, starMat, coreMat });
   },
 
   render(ctx: SceneContext, f: Frame, out: THREE.WebGLRenderTarget) {
@@ -306,11 +308,12 @@ export default defineScene({
     const inside = smooth01((t - 6.0) / 7.0); // enter the gas ~t6→13
     const pocketU = smooth01((t - 13.5) / 4.0); // nursery glow ~t14→17.5
 
-    const state = nebState as NebState;
+    const state = nebStates.get(ctx)!;
     for (const { mesh, mat, spec } of state.layers) {
       const dist = camZ - spec.z;
       // fade out as the camera reaches the plane (0.4..4 units ahead)
-      mat.uniforms.uPass.value = spec.veil ? 1 : smooth01(dist / 4.0 - 0.1);
+      // veils keep opacity until ~1.2u out, then fade ahead of the near-plane clip
+      mat.uniforms.uPass.value = spec.veil ? smooth01(dist / 1.2) : smooth01(dist / 4.0 - 0.1);
       mat.uniforms.uT.value = t;
       mat.uniforms.uInside.value = inside;
       mat.uniforms.uPocket.value = pocketU;
