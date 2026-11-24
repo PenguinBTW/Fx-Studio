@@ -119,26 +119,30 @@ if (vAfter !== vBefore) {
 // Bounding-sphere union regression: a second emitter must never leave the first outside
 // the bound (old lerp bug), and an enclosing emitter must be taken as-is (overshoot bug).
 const union = new AnalyticalParticles(64);
-union.addEmitter('big', { capacity: 10, origin: [0, 0, 0], direction: [1, 0, 0], speed: 3.0, lifetime: 2.0, gravity: [0, -0.5, 0] });
+// Unequal radii: the regression the merge fixed only shows when the existing sphere is the
+// larger one (equal radii pass even under the old lerp formula).
+union.addEmitter('big', { capacity: 10, origin: [0, 0, 0], direction: [1, 0, 0], speed: 3.0, lifetime: 4.0, gravity: [0, -0.5, 0] });
 const r1 = (union as any).geo.boundingSphere.radius;
 union.addEmitter('side', { capacity: 10, origin: [10, 0, 0], direction: [0, 1, 0], speed: 3.0, lifetime: 2.0, gravity: [0, -0.5, 0] });
 const uSphere = (union as any).geo.boundingSphere;
-// partial overlap: both emitter reaches must be enclosed
+// partial overlap: each emitter's own reach must be enclosed
 const enclosed = (c: [number, number, number], r: number) =>
   Math.hypot(c[0] - uSphere.center.x, c[1] - uSphere.center.y, c[2] - uSphere.center.z) + r <= uSphere.radius + 1e-6;
-if (!enclosed([0, 0, 0], r1) || !enclosed([10, 0, 0], r1)) {
+if (!enclosed([0, 0, 0], r1) || !enclosed([10, 0, 0], 3.0 * 2.0 + 0.5 * 0.5 * 2.0 * 2.0 + 1.0)) {
   console.error(`Bounding-sphere union does not enclose both emitters! radius=${uSphere.radius}`);
   allPassed = false;
 } else {
   console.log('✓ Two-emitter union encloses both volumes');
 }
-// containment: a later emitter whose reach contains the old sphere must be taken as-is
+// containment: a later emitter whose reach contains the old sphere must be taken as-is,
+// exactly at its own standalone radius — not undersized, not oversized
 const cont = new AnalyticalParticles(64);
 cont.addEmitter('small', { capacity: 10, origin: [0, 0, 0], direction: [1, 0, 0], speed: 1.0, lifetime: 0.5, gravity: [0, -0.5, 0] });
 cont.addEmitter('huge', { capacity: 10, origin: [1, 0, 0], direction: [1, 0, 0], speed: 40.0, lifetime: 3.0, gravity: [0, -0.5, 0] });
 const cSphere = (cont as any).geo.boundingSphere;
-if (Math.hypot(1 - cSphere.center.x, cSphere.center.y, cSphere.center.z) > 1e-6 || cSphere.radius < 40 * 3.0) {
-  console.error(`Enclosing-emitter union wrong! center=[${cSphere.center.x},${cSphere.center.y},${cSphere.center.z}] radius=${cSphere.radius}`);
+const hugeR = 40.0 * 3.0 + 0.5 * 0.5 * 3.0 * 3.0 + 1.0;
+if (Math.hypot(1 - cSphere.center.x, cSphere.center.y, cSphere.center.z) > 1e-6 || Math.abs(cSphere.radius - hugeR) > 1e-6) {
+  console.error(`Enclosing-emitter union wrong! center=[${cSphere.center.x},${cSphere.center.y},${cSphere.center.z}] radius=${cSphere.radius} expected ${hugeR}`);
   allPassed = false;
 } else {
   console.log('✓ Enclosing emitter is adopted as the union sphere');
