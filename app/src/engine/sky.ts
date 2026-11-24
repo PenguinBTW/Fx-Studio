@@ -106,7 +106,9 @@ export function sunDisc(
   const edge = Math.min(1, Math.max(0, (cosGamma - cosDisc) / (1 - cosDisc) / 0.5));
   const sunZen = Math.max(0, sunDir[1]);
   const extinction = Math.exp(-0.35 / Math.max(0.06, sunZen + 0.02));
-  return edge * edge * (3 - 2 * edge) * radiance * extinction;
+  // horizon gate: direct sunlight is occluded once the sun sets
+  const gate = Math.min(1, Math.max(0, (sunDir[1] + 0.01) / 0.02));
+  return edge * edge * (3 - 2 * edge) * radiance * extinction * gate;
 }
 
 /** Composed sky: scattering + disc, the canonical scene backdrop evaluation. */
@@ -140,5 +142,14 @@ vec3 skyRadiance(vec3 omega, vec3 sunDir, float turbidity) {
   vec3 r = betaR * phaseR * ext * 0.5;
   float m = betaM * phaseM * exp(-betaM * 10.0 * 0.08 * (pathView + pathSun)) * 12.0;
   return r + vec3(m);
+}
+
+float sunDisc(vec3 omega, vec3 sd, float discAngle, float radiance) {
+  float cosGamma = dot(omega, sd);
+  float cosDisc = cos(discAngle);
+  float edge = clamp((cosGamma - cosDisc) / max(1e-6, (1.0 - cosDisc) * 0.5), 0.0, 1.0);
+  float extinction = exp(-0.35 / max(0.06, max(0.0, sd.y) + 0.02));
+  float gate = clamp((sd.y + 0.01) / 0.02, 0.0, 1.0);
+  return edge * edge * (3.0 - 2.0 * edge) * radiance * extinction * gate;
 }
 `;
