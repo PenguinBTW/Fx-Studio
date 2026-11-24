@@ -1,0 +1,13 @@
+{
+  "project": "caustics",
+  "entries": [
+    {
+      "scene": "caustics/caustics",
+      "id": "caustics",
+      "start": 0.0,
+      "end": 20.0,
+      "caption": { "fig": "01", "text": "CAUSTICS", "dur": 3.5 }
+    }
+  ],
+  "transitions": []
+}
