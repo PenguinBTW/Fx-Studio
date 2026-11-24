@@ -224,17 +224,17 @@ export default class MushringScene extends Scene {
     this.flySprite = new THREE.CanvasTexture(fcv);
     const flyMat = new THREE.ShaderMaterial({
       glslVersion: THREE.GLSL3,
-      uniforms: { uT: { value: 0 }, uMap: { value: this.flySprite }, uSize: { value: 0.16 } },
+      uniforms: { uT: { value: 0 }, uMap: { value: this.flySprite }, uSize: { value: 0.16 }, uPix: { value: 900 } },
       vertexShader: /* glsl */ `
         attribute float aPhase;
-        uniform float uT, uSize;
+        uniform float uT, uSize, uPix;
         out float vA;
         void main() {
           // per-fly closed-form blink: different phase + rate per seed
           float b = sin(uT * (1.1 + fract(aPhase) * 0.9) + aPhase) * 0.5 + 0.5;
           vA = 0.25 + 0.75 * b * b;
           vec4 mv = modelViewMatrix * vec4(position, 1.0);
-          gl_PointSize = uSize * 900.0 / max(0.5, -mv.z);
+          gl_PointSize = uSize * uPix / max(0.5, -mv.z);
           gl_Position = projectionMatrix * mv;
         }`,
       fragmentShader: /* glsl */ `
@@ -313,6 +313,9 @@ export default class MushringScene extends Scene {
     }
     fp.needsUpdate = true;
     this.flyMat.uniforms.uT!.value = t;
+    // pixel size tracks the render-target height so fireflies keep their
+    // on-screen scale at 2x/4K exports (900 was tuned for a 1080-high frame)
+    this.flyMat.uniforms.uPix!.value = out.height * (900 / 1080);
 
     // focus racks: ring edge → dew web → log, smoothed; distance measured
     // ALONG the camera axis (a euclidean distance leaves off-center
