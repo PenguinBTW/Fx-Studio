@@ -1,0 +1,7 @@
+{
+  "project": "orrery",
+  "trimToTimeline": true,
+  "entries": [
+    { "scene": "orrery/orrery", "id": "orrery", "start": 0.0, "end": 20.0 }
+  ]
+}
