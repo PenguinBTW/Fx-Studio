@@ -182,12 +182,15 @@ export default class GeodeScene extends Scene {
       geo.computeBoundingBox();
       this.crystalBox = geo.boundingBox;
 
-      // Sample every 3rd triangle as a glint facet — world-baked once.
+      // Deterministic ~1/3 sample of triangles, hash-thinned so coverage
+      // spreads over shaft AND tip facets (a fixed stride lands on the same
+      // winding position every crystal side).
       const pos = geo.getAttribute('position') as THREE.BufferAttribute;
       const idx = geo.getIndex();
       const triCount = idx ? idx.count / 3 : pos.count / 3;
       const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
-      for (let tI = 0; tI < triCount; tI += 3) {
+      for (let tI = 0; tI < triCount; tI++) {
+        if (hash(tI, 13) > 1 / 3) continue;
         const i0 = idx ? idx.getX(tI * 3) : tI * 3;
         const i1 = idx ? idx.getX(tI * 3 + 1) : tI * 3 + 1;
         const i2 = idx ? idx.getX(tI * 3 + 2) : tI * 3 + 2;
