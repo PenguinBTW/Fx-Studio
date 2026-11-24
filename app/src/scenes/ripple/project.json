@@ -1,0 +1,6 @@
+{
+  "project": "ripple",
+  "entries": [
+    { "scene": "ripple/ripple", "id": "ripple_mirror", "start": 0.0, "end": 20.0 }
+  ]
+}
