@@ -114,7 +114,7 @@ vec4 dripBead(float t) {
   // bead forms at the bottom rim, then falls
   float id = floor(cyc);
   float jx = (h1(id * 7.7) - 0.5) * 0.006;
-  vec2 p = vec2(WC.x + jx, WC.y - WR - 0.004 - ph * ph * 0.14);
+  vec2 p = vec2(WC.x - 0.046 / ASPECT + jx, WATER + 0.010 - ph * ph * 0.05);
   return vec4(p, 0.0, sstep(0.0, 0.05, ph) * (1.0 - sstep(0.38, 0.45, ph)));
 }
 // ---------- water ----------
@@ -265,8 +265,9 @@ void main() {
   if (bead.w > 0.0) {
     col = mix(col, vec3(0.35, 0.40, 0.48), (1.0 - sstep(0.0, 0.0035, sdist(uv, bead.xy, vec2(0.003 / ASPECT, 0.004)))) * bead.w);
   }
-  float dripAge = fract((t - DRIP0) / 2.2) * 2.2 - 0.66; // bead lands ~0.66s into the cycle
-  col += vec3(0.10, 0.12, 0.15) * ring(uv, vec2(WC.x, WATER - 0.004), 0.0, dripAge, 0.05) * below;
+  // bead lands ~0.3s into the 2.2s cycle; no ring before the first landing
+  float dripAge = mod(t - DRIP0 - 0.3, 2.2);
+  col += vec3(0.10, 0.12, 0.15) * step(DRIP0 + 0.3, t) * ring(uv, vec2(WC.x - 0.046 / ASPECT, WATER - 0.004), 0.0, dripAge, 0.05) * below;
 
   // fish rise near the wheel + ring
   col = mix(col, vec3(0.16, 0.17, 0.19), fishAt(uv, t) * 0.85);
