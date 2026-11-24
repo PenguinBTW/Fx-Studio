@@ -72,9 +72,9 @@ void main() {
   col += vec3(0.42, 0.16, 0.03) * exp(-(y - 0.56) * (y - 0.56) * 90.0);
 
   // pale cold planet — the single cool accent, slowly brightening
-  vec2 pd = vec2(x - 0.74, y - 0.72);
+  vec2 pd = vec2(x - 0.55, y - 0.72);
   float pr = length(pd);
-  float planet = smoothstep(0.014, 0.010, pr) + 0.35 * exp(-pr * pr * 3000.0);
+  float planet = (1.0 - smoothstep(0.010, 0.014, pr)) + 0.35 * exp(-pr * pr * 3000.0);
   col += vec3(0.62, 0.70, 0.82) * planet * (0.25 + 0.75 * smoothstep(2.0, 10.0, t));
 
   // faint high stars
@@ -123,7 +123,7 @@ void main() {
 
 const GRAINS = 300;
 // Backdrop plane mapping (must match the mesh below): uv → world.
-const PW = 260, PH = 114, PY = 8, PZ = -80;
+const PW = 300, PH = 114, PY = 8, PZ = -80;
 const uvToWorld = (ux: number, uy: number, out: THREE.Vector3) =>
   out.set((ux - 0.5) * PW, PY + (uy - 0.5) * PH, PZ + 0.05);
 
@@ -179,7 +179,7 @@ export default class SandwaveScene extends Scene {
   }
 
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
-    const t = f.t;
+    const t = f.lt;
     const r = this.ctx.renderer;
     this.u.uT.value = t;
 
