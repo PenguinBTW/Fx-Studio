@@ -241,12 +241,16 @@ export function spatializeSource(
       const totalGain = gDist * gVel;
 
       // Air absorption & occlusion filtering
-      const { lp: lpL, hp: hpL } = svfL.process(inL);
-      const { lp: lpR, hp: hpR } = svfR.process(inR);
+      const { lp: lpL, hp: hpL, bp: bpL } = svfL.process(inL);
+      const { lp: lpR, hp: hpR, bp: bpR } = svfR.process(inR);
 
-      // Recombine with occlusion shelf: lows pass through untouched, highs are attenuated by gOcc
-      const filteredL = lpL + hpL * gOcc;
-      const filteredR = lpR + hpR * gOcc;
+      // Recombine with occlusion shelf: lows pass through untouched, highs are attenuated by gOcc.
+      // The SVF allpass identity is lp + k·bp + hp = input — omitting the bandpass term
+      // (as lp + hp·g did) leaves a notch at the cutoff even when fully unoccluded,
+      // sweeping through the audible band as the source recedes. k = 1/Q.
+      const kOcc = 1.0 / 0.7071;
+      const filteredL = lpL + gOcc * (hpL + kOcc * bpL);
+      const filteredR = lpR + gOcc * (hpR + kOcc * bpR);
 
       // Apply panning and distance
       output[inIdx] = filteredL * gPanL * totalGain;
