@@ -39,6 +39,8 @@ export default class FrostfernScene extends Scene {
   private bgMat: THREE.MeshBasicMaterial;
   private fogTex: THREE.CanvasTexture;
   private fogMats: THREE.SpriteMaterial[] = [];
+  private fogSprites: THREE.Sprite[] = [];
+  private fogBase: { x: number; y: number }[] = [];
 
   constructor(ctx: SceneCtx) {
     super(ctx);
@@ -92,7 +94,10 @@ export default class FrostfernScene extends Scene {
         // levels feather less often so the silhouette stays readable.
         const taper = 1 - (i / steps) * 0.55;
         const side = i % 2 === 0 ? 1 : -1;
-        const spawn = depth === 0 ? true : i % depth === 0;
+        // Odd interval: spawned steps alternate parity, so side feathers
+        // grow on both sides of every rib (even intervals would be one-sided).
+        const interval = depth % 2 === 0 ? depth + 1 : depth + 2;
+        const spawn = depth === 0 ? true : i % interval === 0;
         if (spawn && hash(seed * 733 + i * 97 + depth * 53, 7) < (depth === 0 ? 0.8 : 0.7)) {
           grow(nx, ny,
             a + side * (1.02 + 0.18 * hash(seed + i, 11)),
@@ -163,9 +168,12 @@ export default class FrostfernScene extends Scene {
       });
       const sp = new THREE.Sprite(m);
       sp.scale.set(14 + 6 * hash(i, 3), 9 + 4 * hash(i, 5), 1);
-      sp.position.set(-10 + 20 * hash(i, 7), -4 + 9 * hash(i, 9), 1.2);
+      const bx = -10 + 20 * hash(i, 7), by = -4 + 9 * hash(i, 9);
+      sp.position.set(bx, by, 1.2);
       this.threeScene.add(sp);
       this.fogMats.push(m);
+      this.fogSprites.push(sp);
+      this.fogBase.push({ x: bx, y: by });
     }
   }
 
@@ -201,10 +209,16 @@ export default class FrostfernScene extends Scene {
     // Fog: slow closed-form drift, densest early, thinning as frost covers.
     for (let i = 0; i < this.fogMats.length; i++) {
       this.fogMats[i].opacity = 0.11 * (0.65 + 0.35 * Math.sin(lt * 0.23 + i * 1.7)) * (1 - 0.35 * u);
+      // breath-fog drifts; the crystals grow through it
+      this.fogSprites[i].position.x = this.fogBase[i].x + Math.sin(lt * 0.05 + i * 2.1) * 1.4;
+      this.fogSprites[i].position.y = this.fogBase[i].y + Math.cos(lt * 0.04 + i * 1.3) * 0.7;
     }
 
     // Macro lens: near-static with a very slow push-in and gentle float.
-    const dist = 26 * (1.05 - 0.07 * u);
+    // Landscape tuning assumes ~16:9; widen for narrow/portrait exports so
+    // the edge-seeded ferns stay in frame instead of cropping out entirely.
+    const halfHfov = Math.atan(Math.tan((this.camera.fov * Math.PI) / 360) * this.camera.aspect);
+    const dist = Math.max(26 * (1.05 - 0.07 * u), 16 / Math.tan(halfHfov));
     this.camera.position.set(Math.sin(lt * 0.05) * 0.5, Math.sin(lt * 0.07 + 1.2) * 0.3, dist);
     this.camera.lookAt(0.4, 0.1, 0);
     this.camera.updateMatrixWorld();
