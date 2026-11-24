@@ -11,7 +11,8 @@ import { Scene, Frame, SceneCtx, PostOverrides } from '../../engine/scene';
 import { FSPass, W, H } from '../../engine/gl';
 
 const END = 20.0;
-const N = 64;          // droplet count
+const N = 96;          // uniform slots — total drops (base + merge children)
+const BASE_DROPS = 64;
 const DT = 0.04;       // path integration step (s)
 const TW = 480;        // trail field resolution
 const TH = 270;
@@ -31,6 +32,25 @@ interface Drop {
   warm: number;        // warm accent weight for big drops
   mergedAt: number;    // for parents: time a child merged into it (radius bump)
   mergeR: number;      // post-merge radius
+}
+
+// Head position at time t: pure lookup over the precomputed node arrays.
+// (Also used during setup for child/parent contact checks — retimed ts arrays
+// are no longer on a uniform grid, so an index shortcut is not valid.)
+function headAt(d: Drop, t: number): { x: number; y: number; r: number } | null {
+  if (t < d.t0 || t > d.ts[d.ts.length - 1]) return null;
+  let lo = 0, hi = d.ts.length - 1;
+  while (hi - lo > 1) {
+    const m = (lo + hi) >> 1;
+    if (d.ts[m] <= t) lo = m; else hi = m;
+  }
+  const span = d.ts[hi] - d.ts[lo] || 1;
+  const s = (t - d.ts[lo]) / span;
+  return {
+    x: d.xs[lo] + (d.xs[hi] - d.xs[lo]) * s,
+    y: d.ys[lo] + (d.ys[hi] - d.ys[lo]) * s,
+    r: t >= d.mergedAt ? d.mergeR : d.r
+  };
 }
 
 function integrate(x0: number, r: number, t0: number, parent?: Drop): Drop {
@@ -54,8 +74,8 @@ function integrate(x0: number, r: number, t0: number, parent?: Drop): Drop {
     if (y > H + 20) break;
     // child on a parent's rivulet dies when it catches the parent's head
     if (parent) {
-      const pi = Math.min(parent.ts.length - 1, Math.floor((t - parent.t0) / DT));
-      if (pi >= 0 && t >= parent.ts[pi] && Math.abs(y - parent.ys[pi]) < parent.r + r && Math.abs(x - parent.xs[pi]) < parent.r + r) break;
+      const ph = headAt(parent, t);
+      if (ph && Math.abs(y - ph.y) < ph.r + r && Math.abs(x - ph.x) < ph.r + r) break;
     }
   }
   return { t0, xs: xs.slice(0, n), ys: ys.slice(0, n), ts: ts.slice(0, n), r, warm: 0, mergedAt: Infinity, mergeR: r };
@@ -64,7 +84,7 @@ function integrate(x0: number, r: number, t0: number, parent?: Drop): Drop {
 function buildDrops(): Drop[] {
   const drops: Drop[] = [];
   // spawn waves: t≈2 a few runners, t≈8 more + merges, t≈14 many racing
-  for (let i = 0; i < N; i++) {
+  for (let i = 0; i < BASE_DROPS; i++) {
     const wave = i < 9 ? 0 : i < 30 ? 1 : i < 52 ? 2 : 3;
     const t0 = [0.8, 5.5, 9.5, 12.5][wave] + hash(i, 3) * [2.0, 4.0, 4.0, 2.5][wave];
     const r = 2.5 + 9.5 * Math.pow(hash(i, 11), 2.6);
@@ -75,7 +95,7 @@ function buildDrops(): Drop[] {
   // that catch up and merge (parent radius bumps by volume at the merge time).
   const parents = drops.filter((d) => d.r > 5 && d.ts.length > 20);
   for (let i = 0; i < Math.min(18, parents.length); i++) {
-    const p = parents[(i * 7) % parents.length];
+    const p = parents[i % parents.length]; // spread merges across the pane
     const delay = 1.5 + 3 * hash(i, 23);
     const cr = 2 + 3.5 * hash(i, 29);
     const c = integrate(p.xs[0] + (hash(i, 31) - 0.5) * 14, cr, p.t0 + delay, p);
@@ -85,9 +105,13 @@ function buildDrops(): Drop[] {
     if (tm < p.mergedAt) {
       p.mergedAt = tm;
       p.mergeR = Math.cbrt(p.r * p.r * p.r + cr * cr * cr);
-      // bigger drop runs faster after the merge: stretch remaining path times
-      for (let k = 0; k < p.ts.length; k++) {
-        if (p.ts[k] > tm) p.ts[k] = tm + (p.ts[k] - tm) * 0.62;
+      // bigger drop runs faster after the merge: compress remaining node
+      // times. Only when the path actually reaches the bottom — retiming a
+      // path that was capped at END would make the drop vanish mid-pane.
+      if (p.ys[p.ys.length - 1] > H) {
+        for (let k = 0; k < p.ts.length; k++) {
+          if (p.ts[k] > tm) p.ts[k] = tm + (p.ts[k] - tm) * 0.62;
+        }
       }
     }
     drops.push(c);
@@ -120,12 +144,27 @@ function buildTrailField(drops: Drop[]): THREE.DataTexture {
           if (dist >= 1) continue;
           const tau = d.ts[k - 1] + u * (d.ts[k] - d.ts[k - 1]);
           const o = (py * TW + px) * 2;
-          // earliest wetting wins; keep the smallest normalized distance at it
-          if (tau < data[o + 1] || (tau === data[o + 1] && dist < data[o])) {
-            data[o] = Math.min(dist, data[o] === 255 ? dist : Math.min(dist, data[o]));
-            if (tau < data[o + 1]) { data[o] = dist; }
-            data[o + 1] = tau;
-          }
+          // earliest wetting τ wins; closest pass wins distance. Independent
+          // mins so a nearer later pass can't leave a dry gap inside a trail.
+          if (dist < data[o]) data[o] = dist;
+          if (tau < data[o + 1]) data[o + 1] = tau;
+        }
+      }
+    }
+  }
+  // Dilate τ a few texels into dry neighbours so linear filtering at trail
+  // edges never blends a wet arrival time with the 255 dry sentinel.
+  for (let pass = 0; pass < 3; pass++) {
+    const prev = data.slice();
+    for (let y = 0; y < TH; y++) {
+      for (let x = 0; x < TW; x++) {
+        const o = (y * TW + x) * 2;
+        if (prev[o + 1] < 200) continue;
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const nx = x + dx, ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= TW || ny >= TH) continue;
+          const no = (ny * TW + nx) * 2;
+          if (prev[no + 1] < data[o + 1]) data[o + 1] = prev[no + 1];
         }
       }
     }
@@ -169,7 +208,7 @@ void main() {
   c += vec3(0.012) * (0.5 + 0.5 * snoise(vec3(p.x * 0.06, p.y * 0.003, 3.7)));
 
   // wet trails: displaced/reflected bg + slight brightening, fading over ~9 s
-  vec2 tr = texture(uTrail, vUv).rg;
+  vec2 tr = texture(uTrail, vec2(vUv.x, 1.0 - vUv.y)).rg; // field is y-down
   if (tr.g < 200.0) {
     float wet = 1.0 - smoothstep(0.55, 0.95, tr.r);
     float age = uT - tr.g;
@@ -237,27 +276,21 @@ export default class RainWindow extends Scene {
     const t = f.lt;
     const u = this.pass.u;
     u.uT!.value = t;
-    (u.uRes!.value as THREE.Vector2).set(out.width, out.height);
+    // uRes stays at the logical W×H: drops, paths and the trail field are all
+    // authored in logical pixels regardless of the export resolution.
 
     // droplet heads: pure lookup of t in the precomputed path arrays.
     // The parent radius swells after its merge time (precomputed).
     const u4 = this.dropU;
-    for (let i = 0; i < N && i < this.drops.length; i++) {
-      const d = this.drops[i];
+    for (let i = 0; i < N; i++) {
       const o = i * 4;
-      if (t < d.t0 || t > d.ts[d.ts.length - 1]) { u4[o + 2] = 0; continue; }
-      // binary search for the node window containing t
-      let lo = 0, hi = d.ts.length - 1;
-      while (hi - lo > 1) {
-        const m = (lo + hi) >> 1;
-        if (d.ts[m] <= t) lo = m; else hi = m;
-      }
-      const span = d.ts[hi] - d.ts[lo] || 1;
-      const s = (t - d.ts[lo]) / span;
-      u4[o] = d.xs[lo] + (d.xs[hi] - d.xs[lo]) * s;
-      u4[o + 1] = d.ys[lo] + (d.ys[hi] - d.ys[lo]) * s;
-      u4[o + 2] = t >= d.mergedAt ? d.mergeR : d.r;
-      u4[o + 3] = d.warm;
+      const d = this.drops[i];
+      const h = d ? headAt(d, t) : null;
+      if (!h) { u4[o + 2] = 0; continue; }
+      u4[o] = h.x;
+      u4[o + 1] = h.y;
+      u4[o + 2] = h.r;
+      u4[o + 3] = d!.warm;
     }
 
     // two-phase fades keep the near-black run under F16's 0.3 s threshold
