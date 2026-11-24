@@ -5,6 +5,7 @@ import { defineScene, type SceneContext } from '../../engine/dsl';
 import type { Frame, PostOverrides } from '../../engine/scene';
 import { blackbodyToLinearSRGB } from '../../engine/spectrum';
 import { W, H } from '../../engine/gl';
+import { orbitPosition } from '../../engine/rig';
 import type { GLTFInstance } from '../../engine/gltf';
 
 // ---------------------------------------------------------------------------
@@ -24,6 +25,20 @@ const CAPTIONS: [number, number, string, number][] = [
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 const sstep = (a: number, b: number, v: number) => { const u = clamp01((v - a) / (b - a)); return u * u * (3 - 2 * u); };
+
+// camera pose: macro on the floor pot → pull wide to take in the whole house
+const camPose = (t: number) => {
+  const pull = sstep(4.0, DUR - 0.5, t);
+  const yaw = 2.85 + t * 0.028 + 0.010 * Math.sin(t * 0.8) + 0.25 * pull;
+  const pitch = 0.14 + 0.05 * Math.sin(t * 0.19 + 0.4) + 0.06 * pull;
+  const radius = 1.60 + 1.30 * pull;
+  const tgt: [number, number, number] = [
+    0.10 - 0.20 * pull,
+    0.80 + 0.30 * pull,
+    1.05 - 0.45 * pull,
+  ];
+  return { tgt, radius, pitch, yaw };
+};
 
 // ------------------------------------------------------------ CPU textures
 function vnoise(seed: number) {
@@ -170,9 +185,9 @@ void main() {
   float ridge = 0.395 + 0.012 * sin(vUv.x * 24.0)
               + 0.008 * sin(vUv.x * 57.0 + 1.7) + 0.010 * sin(vUv.x * 8.0 + 0.4);
   float trees = 1.0 - smoothstep(ridge - 0.003, ridge + 0.003, h);
-  // a few taller crowns
-  float crown = 1.0 - smoothstep(ridge + 0.008 * step(0.88, sin(vUv.x * 40.0)),
-                                 ridge + 0.011 * step(0.88, sin(vUv.x * 40.0)), h);
+  // a few taller crowns — gate outside smoothstep so its edges never coincide
+  float crown = step(0.88, sin(vUv.x * 40.0))
+              * (1.0 - smoothstep(ridge + 0.008, ridge + 0.011, h));
   col = mix(col, vec3(0.028, 0.032, 0.042), trees);
   col = mix(col, vec3(0.020, 0.024, 0.033), crown);
   // ground haze just above the field
@@ -364,20 +379,19 @@ export default defineScene({
     lamp.position.set(0.55, 1.94, 1.4);     // Blender (x, y, z) → (x, z, -y)
     ctx.scene3D.add(lamp);
 
-    // lamp glow sprite — the lit bulb's halo against the dusk
-    const glowMat = new THREE.ShaderMaterial({
-      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-      uniforms: { uT: { value: 0 } },
-      vertexShader: SKY_VERT,
-      fragmentShader: `
-        varying vec2 vUv;
-        void main() {
-          float d = length(vUv - 0.5);
-          float a = exp(-d * 14.0) * 0.85 + (1.0 - smoothstep(0.02, 0.09, d)) * 0.9;
-          gl_FragColor = vec4(vec3(1.0, 0.62, 0.22) * a, a);
-        }`,
+    // lamp glow sprite — the lit bulb's halo; THREE.Sprite self-billboards
+    // so identical timestamps always draw the same halo (no camera-state read)
+    const glowTex = makeTex(128, (u, v, px, i) => {
+      const d = Math.hypot(u - 0.5, v - 0.5);
+      const a = Math.exp(-d * 14.0) * 0.85 + (1 - sstep(0.02, 0.09, d)) * 0.9;
+      px[i] = 255; px[i + 1] = 158; px[i + 2] = 56;
+      px[i + 3] = Math.round(clamp01(a) * 255);
     });
-    const glow = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.55), glowMat);
+    const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: glowTex, transparent: true, depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }));
+    glow.scale.set(0.55, 0.55, 1);
     glow.position.set(0.55, 1.94, 1.4);
     ctx.scene3D.add(glow);
     ctxState.glow = glow;
@@ -409,7 +423,9 @@ export default defineScene({
     ];
     for (const [rx, ry, rw] of RAY_DEFS) {
       const mesh = new THREE.Mesh(new THREE.ConeGeometry(rw, 6.2, 24, 1, true), rayMat);
-      mesh.position.set(rx - sunDir.x * 2.6, ry - sunDir.y * 2.6, 2.4 - sunDir.z * 2.6);
+      // centre the shaft INSIDE the room along the sun direction; apex still
+      // points back at the pane so the cone widens into the interior
+      mesh.position.set(rx + sunDir.x * 2.6, ry + sunDir.y * 2.6, 2.4 + sunDir.z * 2.6);
       mesh.lookAt(rx, ry, 2.4);
       mesh.rotateX(-Math.PI / 2);
       rays.push(mesh);
@@ -450,14 +466,20 @@ export default defineScene({
 
     // ---- camera + captions
     ctx.rig.setLensMm(50);
+    // register the orbit as a spline path so God-View/blueprint sampling sees
+    // the real camera move, not a static default pose
+    ctx.rig.setPath([0, 4, 8, 12, 16, DUR].map((tt) => {
+      const p = camPose(tt);
+      return { t: tt / DUR, pos: orbitPosition(p.tgt, p.radius, p.pitch, p.yaw), target: p.tgt };
+    }));
     ctx.text('cap0', CAPTIONS[0]![2]!, { fontSize: CAPTIONS[0]![3]!, fontFamily: 'Archivo, sans-serif', fontWeight: 700, color: '#f0e8d0', letterSpacing: 6, align: 'center', alpha: 0 });
     ctx.text('cap1', CAPTIONS[1]![2]!, { fontSize: CAPTIONS[1]![3]!, fontFamily: 'Archivo, sans-serif', fontWeight: 400, color: '#cfd8c8', letterSpacing: 3, align: 'center', alpha: 0 });
     ctx.text('cap2', CAPTIONS[2]![2]!, { fontSize: CAPTIONS[2]![3]!, fontFamily: 'Archivo, sans-serif', fontWeight: 400, color: '#d8c8a8', letterSpacing: 3, align: 'center', alpha: 0 });
 
     ctxState.inst = inst; ctxState.lamp = lamp; ctxState.lampMat = lampGlow;
     ctxState.rayMat = rayMat; ctxState.dustMat = dustMat; ctxState.mistMat = mistMat;
+    inst.ownedMaterials.push(...Object.values(mats), glow.material as THREE.Material);
     ctxState.skyMat = skyMat; ctxState.sunMat = sunMat;
-    ctxState.glowMat = glowMat;
     ctxState.envRT = envRT; ctxState.sunLight = sun;
     ctxState.textures = [texFloor, texClay, texCond, texWood];
   },
@@ -500,20 +522,10 @@ export default defineScene({
     ctxState.mistMat!.uniforms.uT!.value = t;
     ctxState.skyMat!.uniforms.uT!.value = t;
     ctxState.sunMat!.uniforms.uT!.value = t;
-    ctxState.glowMat!.uniforms.uT!.value = t;
-    ctxState.glow!.lookAt(ctx.threeCam.position);
 
     // ---- camera: low slow drift inside the house — macro on the floor pot,
     // pulling wide to take in the ribs + back panes, slight lateral glide.
-    const pull = sstep(4.0, DUR - 0.5, t);
-    const yaw = 2.85 + t * 0.028 + 0.010 * Math.sin(t * 0.8) + 0.25 * pull;
-    const pitch = 0.14 + 0.05 * Math.sin(t * 0.19 + 0.4) + 0.06 * pull;
-    const radius = 1.60 + 1.30 * pull;
-    const tgt: [number, number, number] = [
-      0.10 - 0.20 * pull,
-      0.80 + 0.30 * pull,
-      1.05 - 0.45 * pull,
-    ];
+    const { tgt, radius, pitch, yaw } = camPose(t);
     ctx.rig.orbit(tgt, radius, pitch, yaw);
     ctx.updateCamera(f.t, f.p);
 
@@ -547,7 +559,6 @@ const ctxState: {
   sunMat?: THREE.ShaderMaterial;
   envRT?: THREE.WebGLRenderTarget;
   sunLight?: THREE.DirectionalLight;
-  glowMat?: THREE.ShaderMaterial;
-  glow?: THREE.Mesh;
+  glow?: THREE.Sprite;
   textures?: THREE.Texture[];
 } = {};
