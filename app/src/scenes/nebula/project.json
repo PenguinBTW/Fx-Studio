@@ -1,0 +1,32 @@
+{
+  "project": "nebula",
+  "meta": {
+    "title": "Nebula: Star-Forming Drift",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 24.0
+  },
+  "entries": [
+    {
+      "scene": "nebula/nebula",
+      "id": "act-approach",
+      "start": 0.0,
+      "end": 8.0,
+      "caption": { "fig": "01", "text": "THE WIDE APPROACH", "dur": 4.0 }
+    },
+    {
+      "scene": "nebula/nebula",
+      "id": "act-inside",
+      "start": 8.0,
+      "end": 16.0,
+      "caption": { "fig": "02", "text": "INSIDE THE CLOUD", "dur": 4.0 }
+    },
+    {
+      "scene": "nebula/nebula",
+      "id": "act-nursery",
+      "start": 16.0,
+      "end": 24.0,
+      "caption": { "fig": "03", "text": "A NURSERY POCKET", "dur": 4.0 }
+    }
+  ]
+}
