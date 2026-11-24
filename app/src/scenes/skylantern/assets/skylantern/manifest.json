@@ -1,0 +1,3 @@
+{ "id": "skylantern", "version": 1, "source": "build.py",
+  "parts": { "shell": "shell", "rim": "rim", "wire0": "wire_0", "wire1": "wire_1", "flame": "flame" },
+  "budgets": { "tris": 4000, "textureMB": 1 } }
