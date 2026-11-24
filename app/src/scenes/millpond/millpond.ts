@@ -177,7 +177,10 @@ float batsAt(vec2 uv, float t) {
     // figure-8 wing flick: two tiny wings flapping fast
     vec2 dd = uv - p; dd.x *= ASPECT;
     float flap = abs(sin(t * (22.0 + fi * 4.0)));
-    m += (1.0 - sstep(0.0, 0.007, length(dd + vec2(0.0, 0.002 * flap)))) * sstep(0.0, 0.1, u) * (1.0 - sstep(0.94, 1.0, u));
+    // wings spread wide on the downstroke, fold narrow on the upstroke
+    float body = 1.0 - sstep(0.0, 0.0035, length(dd));
+    float wings = 1.0 - sstep(0.0, 0.007, length(dd / vec2(1.0 + 1.1 * flap, 0.30 + 0.70 * (1.0 - flap))));
+    m += max(body, wings * 0.9) * sstep(0.0, 0.1, u) * (1.0 - sstep(0.94, 1.0, u));
   }
   return m;
 }
