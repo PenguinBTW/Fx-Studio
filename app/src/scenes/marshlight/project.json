@@ -1,0 +1,11 @@
+{
+  "project": "marshlight",
+  "meta": { "title": "Marsh Light", "aspectRatio": "16:9", "fps": 60, "duration": 22 },
+  "entries": [
+    { "scene": "marshlight/marshlight", "id": "act-dark", "start": 0, "end": 4, "caption": { "fig": "i", "text": "DARK MARSH", "dur": 3.6 } },
+    { "scene": "marshlight/marshlight", "id": "act-sweep1", "start": 4, "end": 8.5, "caption": { "fig": "ii", "text": "FIRST SWEEP", "dur": 3.6 } },
+    { "scene": "marshlight/marshlight", "id": "act-curlew", "start": 8.5, "end": 13, "caption": { "fig": "iii", "text": "CURLEW", "dur": 3.6 } },
+    { "scene": "marshlight/marshlight", "id": "act-sweep2", "start": 13, "end": 17.5, "caption": { "fig": "iv", "text": "SECOND SWEEP", "dur": 3.6 } },
+    { "scene": "marshlight/marshlight", "id": "act-settle", "start": 17.5, "end": 22, "caption": { "fig": "v", "text": "SETTLE", "dur": 4 } }
+  ]
+}
