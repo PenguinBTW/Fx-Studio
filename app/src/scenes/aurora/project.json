@@ -1,0 +1,11 @@
+{
+  "project": "aurora",
+  "entries": [
+    {
+      "scene": "aurora/aurora",
+      "id": "aurora",
+      "start": 0,
+      "end": 20
+    }
+  ]
+}
