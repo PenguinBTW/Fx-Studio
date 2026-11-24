@@ -1,9 +1,0 @@
-{
-  "project": "kelvinwake",
-  "audit_timestamp": "2026-11-24T04:20:00Z",
-  "note": "Loaded by `bun scripts/render.ts motion` (scene-dir findings.json). Keys are RULE-t0-t1 windows in hundredths of a second — ordinal-free, so re-audits at any width/fps that flag the same windows match automatically. Bare rule names are rejected by the loader; every waiver cites its exact window per the waiver protocol.",
-  "governed_rules": ["F16"],
-  "waivers": {
-    "F16-0-33": "Intentional cinematic fade-in (uFade 0→1 over 1.2 s); near-black run is the designed opening, verified in stills f_0002.00"
-  }
-}

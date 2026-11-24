@@ -197,7 +197,14 @@ export default class KelvinWake extends Scene {
     // exports keep the source on screen.
     const asp = out.width / out.height;
     const offsetCap = Math.abs(zoff) * 0.45 * asp * 0.8;
-    const target = new THREE.Vector3(srcX - Math.min(2 + 22 * p, offsetCap), 0, -4);
+    // tanh is a soft cap: the raw drift passes through almost untouched in
+    // landscape and eases asymptotically toward the cap in portrait instead of
+    // slamming to a stop when it binds.
+    const target = new THREE.Vector3(
+      srcX - offsetCap * Math.tanh((2 + 22 * p) / offsetCap),
+      0,
+      -4
+    );
     const fw = target.clone().sub(ro).normalize();
     const rt = new THREE.Vector3().crossVectors(fw, new THREE.Vector3(0, 1, 0)).normalize();
     const up = new THREE.Vector3().crossVectors(rt, fw).normalize();
@@ -210,7 +217,13 @@ export default class KelvinWake extends Scene {
     (u.uUp!.value as THREE.Vector3).copy(up);
     (u.uSrc!.value as THREE.Vector2).set(srcX, 0);
     u.uAsp!.value = out.width / out.height;
-    u.uFade!.value = Math.min(1, t / 1.2) * Math.min(1, (END - t) / 1.0);
+    // Two-phase fade-in: snap up to ~80% within 0.3 s (so the F16 near-black
+    // audit window stays under its 0.3 s threshold), then settle the remaining
+    // exposure slowly for the cinematic reveal. Fade-out stays a plain ramp —
+    // its near-black tail is already under the threshold.
+    const fadeIn =
+      0.8 * Math.min(1, t / 0.3) + 0.2 * Math.min(1, Math.max(0, t - 0.3) / 1.5);
+    u.uFade!.value = fadeIn * Math.min(1, (END - t) / 1.0);
 
     const rr = this.ctx.renderer;
     rr.setRenderTarget(out);
