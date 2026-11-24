@@ -1,0 +1,6 @@
+{
+  "project": "windmillrow",
+  "entries": [
+    { "scene": "windmillrow/windmillrow", "id": "windmillrow", "start": 0, "end": 20 }
+  ]
+}
