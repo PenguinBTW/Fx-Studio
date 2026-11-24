@@ -288,9 +288,16 @@ export default class HeatwaveScene extends Scene {
 
       // telemetry: publish the caption's screen-space bbox so export
       // diagnostics (window.__motion.textProbes) sees the text.
-      const P = (globalThis as { __motion?: { textProbes?: unknown[]; recordText?: boolean; currentFrameIdx?: number } }).__motion
-        ?? (globalThis as { __pdoom?: { textProbes?: unknown[]; recordText?: boolean; currentFrameIdx?: number } }).__pdoom;
-      if (P && P.textProbes && P.recordText !== false) {
+      type Probe = {
+        textProbes?: unknown[]; recordText?: boolean; probe?: boolean; currentFrameIdx?: number;
+      };
+      const P = (globalThis as { __motion?: Probe }).__motion
+        ?? (globalThis as { __pdoom?: Probe }).__pdoom;
+      // same gate as engine text.ts/scenegraph: only while diagnostics are
+      // actually probing — otherwise a paused preview would keep appending
+      // records every frame and grow the array without bound.
+      if (P && P.probe && P.textProbes && P.recordText) {
+        const bh = fs * 1.2;
         P.textProbes.push({
           frameIdx: P.currentFrameIdx ?? 0,
           t: f.t,
@@ -300,8 +307,13 @@ export default class HeatwaveScene extends Scene {
           fillStyle: 'rgba(255,244,225,0.95)',
           globalAlpha: a,
           layerId: 'heatwave-captions',
-          bbox: [tx - tw / 2, ty - fs, tx + tw / 2, ty + fs * 0.2],
+          bbox: [tx - tw / 2, ty - fs, tx + tw / 2, ty - fs + bh],
           w: tw,
+          h: bh,
+          cx: tx,
+          cy: ty - fs + bh / 2,
+          hPct: (fs / 1080) * 100,
+          isStroke: false,
         });
       }
     }
