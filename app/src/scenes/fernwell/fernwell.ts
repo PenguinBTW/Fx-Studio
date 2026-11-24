@@ -77,10 +77,10 @@ float sdSeg(vec2 p, vec2 a, vec2 b) {
 }
 // golden beam: wedge from the hedge gap upper-left sweeping right-down
 float beam(vec2 uv) {
-  float d = (uv.x * 0.55 + (1.0 - uv.y) * 0.45) - 0.34;
-  float w = exp(-d * d / (0.18 * 0.18)) * smoothstep(0.98, 0.80, uv.y);
+  float d = ((1.0 - uv.x) * 0.55 + (1.0 - uv.y) * 0.45) - 0.34;
+  float w = exp(-d * d / (0.18 * 0.18)) * (1.0 - smoothstep(0.80, 0.98, uv.y));
   // hedge-gap slats: the beam arrives as raking stripes
-  w *= 0.55 + 0.45 * smoothstep(0.30, 0.55, fract((uv.x * 0.6 - uv.y * 0.8) * 9.0));
+  w *= 0.55 + 0.45 * smoothstep(0.30, 0.55, fract((-uv.x * 0.6 - uv.y * 0.8) * 9.0));
   return w;
 }
 
@@ -127,10 +127,6 @@ void main() {
     vec2 pq = (uv - vec2(0.44 + 0.008 * sin(uv.y * 40.0), 0.60)) / vec2(0.018, 0.075);
     float ivyPost = 1.0 - smoothstep(0.7, 1.0, length(pq));
     col = mix(col, vec3(0.07, 0.11, 0.05), ivyPost * 0.9);
-    // tapping tendril on the roof edge
-    float tw = 0.004 * sin(t * 1.7);
-    col = mix(col, vec3(0.08, 0.12, 0.06),
-              1.0 - smoothstep(0.002, 0.005, sdSeg(uv, vec2(0.44, 0.665), vec2(0.465 + tw, 0.645))));
   }
 
   // ---- flagstone ground (y < 0.50): seams + long raking shadows
@@ -142,7 +138,7 @@ void main() {
     // long shadows raking right-down from the well + posts
     float d1 = (uv.x - 0.50) - (0.50 - uv.y) * 0.9;
     flag *= 1.0 - 0.55 * exp(-d1 * d1 / (0.09 * 0.09));
-    col = mix(col, flag * (1.0 + bm * 1.1), smoothstep(0.50, 0.495, uv.y));
+    col = mix(col, flag * (1.0 + bm * 1.1), (1.0 - smoothstep(0.495, 0.50, uv.y)));
   }
 
   // ---- dust motes inside the beam
@@ -207,6 +203,12 @@ void main() {
     // bucket rim catching the beam
     col += gold * (1.0 - smoothstep(0.0015, 0.004, abs(uv.y - 0.60))) *
            step(abs(uv.x - bk.x), 0.013) * bm * 0.5;
+  }
+  // ivy tendril tapping the roof edge — drawn over the roof so it reads
+  {
+    float tw = 0.004 * sin(t * 1.7);
+    col = mix(col, vec3(0.08, 0.12, 0.06),
+              1.0 - smoothstep(0.002, 0.005, sdSeg(uv, vec2(0.44, 0.665), vec2(0.465 + tw, 0.645))));
   }
 
   // ---- bee working along the wall ivy
@@ -279,6 +281,8 @@ export default class FernwellScene extends Scene {
   override render(_f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
     const r = this.ctx.renderer;
     const t = _f.t;
+    this.cam.aspect = out.width / out.height;
+    this.cam.updateProjectionMatrix();
     // low near-static; slight drift toward the well
     this.cam.position.x = -1.2 + t * 0.10;
     this.cam.lookAt(this.cam.position.x * 0.35 + 0.5, 6.8, PZ + 10);
