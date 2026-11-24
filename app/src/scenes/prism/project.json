@@ -1,0 +1,13 @@
+{
+  "project": "prism",
+  "entries": [
+    {
+      "scene": "prism/prism",
+      "id": "dispersion",
+      "start": 0.0,
+      "end": 20.0,
+      "caption": { "fig": "01", "text": "DISPERSION", "dur": 3.5 }
+    }
+  ],
+  "transitions": []
+}
