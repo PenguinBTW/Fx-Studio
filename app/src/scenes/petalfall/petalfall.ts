@@ -141,7 +141,9 @@ void main() {
     float hops = hopW * 5.0;
     float hi = floor(hops);
     float hf = fract(hops);
-    float bx = 0.33 + 0.026 * hi + 0.026 * smoothstep(0.0, 0.45, hf);
+    // hop path kept right of the pond (pond spans uv x ≈0.29-0.42) so the
+    // bird stays on open gravel between the water and the lantern
+    float bx = 0.46 + 0.024 * hi + 0.024 * smoothstep(0.0, 0.45, hf);
     float hop = 0.018 * max(0.0, sin(clamp(hf, 0.0, 0.55) / 0.55 * 3.1416));
     vec2 bd = (vUv - vec2(bx, 0.225 + hop)) * vec2(2.6, 1.6);
     float birdB = 1.0 - smoothstep(0.014, 0.024, length(bd));
