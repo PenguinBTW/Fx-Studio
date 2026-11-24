@@ -188,8 +188,11 @@ void main() {
   // waterline belong to the block while it plunges, not the sea.
 
   // glowing blue fracture — uv blends continuously from wall to slab
-  // coordinates with coverage, so the crack never detaches mid-drop
-  vec2 cuv = mix(vec2(x, y), q, movedCov);
+  // coordinates so the crack never detaches mid-drop. movedCov carries the
+  // uSlump factor, which would make the blend trail the slab's own q
+  // sampling — divide it out so the handoff matches footprint coverage.
+  float slabUv = clamp(movedCov / max(uSlump, 1e-4), 0.0, 1.0);
+  vec2 cuv = mix(vec2(x, y), q, slabUv);
   float crackD2 = 1e9;
   crackD2 = min(crackD2, seg(cuv, c0, c1) + (1.0 - clamp(reveal - 0.0, 0.0, 1.0)) * 1e3);
   crackD2 = min(crackD2, seg(cuv, c1, c2) + (1.0 - clamp(reveal - 1.0, 0.0, 1.0)) * 1e3);
