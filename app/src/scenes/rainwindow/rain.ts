@@ -137,7 +137,10 @@ function buildDrops(): Drop[] {
     const realMerge = c.ys[c.ys.length - 1] <= H + 20 && tm < END;
     if (realMerge && tm < p.mergedAt) {
       p.mergedAt = tm;
-      p.mergeR = Math.cbrt(p.r * p.r * p.r + cr * cr * cr);
+      // volume of the child as drawn at contact — a still-growing child
+      // contributes only its visible volume, not its full target volume
+      const rc = headAt(c, tm)?.r ?? cr;
+      p.mergeR = Math.cbrt(p.r * p.r * p.r + rc * rc * rc);
     }
     drops.push(c);
   }
