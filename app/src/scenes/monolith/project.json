@@ -1,0 +1,12 @@
+{
+  "project": "monolith",
+  "meta": {
+    "title": "Monolith: GRAVITY in extruded type",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 30
+  },
+  "entries": [
+    { "scene": "monolith/monolith", "id": "monolith", "start": 0, "end": 30 }
+  ]
+}

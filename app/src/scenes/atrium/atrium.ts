@@ -180,7 +180,11 @@ export default class Atrium extends Scene {
         const cx = this.cam.position.x, cy = this.cam.position.y, cz = this.cam.position.z;
         const horiz = Math.hypot(cx, cz);
         const rimX = cx / Math.max(horiz, 1e-6) * 1.35, rimZ = cz / Math.max(horiz, 1e-6) * 1.35;
-        const d = Math.hypot(cx - rimX, cy - 9.0, cz - rimZ);
+        // DoF depth is along the camera's forward axis, not Euclidean range —
+        // project the rim offset onto the view direction
+        const fwd = new THREE.Vector3();
+        this.cam.getWorldDirection(fwd);
+        const d = (rimX - cx) * fwd.x + (9.0 - cy) * fwd.y + (rimZ - cz) * fwd.z;
         return base + (d - base) * w;
       })(),
       aperture: 5.0,
