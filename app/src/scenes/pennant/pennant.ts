@@ -18,7 +18,7 @@ const SEG_Y = 32;
 // distance from the hoist (x01) and gusting over time. Returns offset perpendicular
 // to the cloth plane plus a small in-plane billow.
 function clothZ(x01: number, y01: number, t: number): { z: number; sag: number } {
-  const amp = 0.06 + 0.42 * x01 * x01; // pinned at hoist, free at fly
+  const amp = 0.48 * x01 * x01; // pinned at hoist, free at fly
   const gust = 0.75 + 0.45 * Math.sin(t * 0.5) * Math.sin(t * 0.13 + 1.7);
   const w1 = Math.sin(x01 * 5.5 - t * 3.1 + y01 * 1.2) * 0.55;
   const w2 = Math.sin(x01 * 9.0 - t * 4.6 + y01 * 2.8 + 1.3) * 0.28;
@@ -186,6 +186,7 @@ export default class Pennant extends Scene {
         if (Array.isArray(m)) m.forEach((x) => x?.dispose?.());
         else m?.dispose?.();
       }
+      if (o.isLight) o.dispose?.();
     });
     super.dispose();
   }
