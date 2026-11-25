@@ -141,6 +141,7 @@ export default class Biolume extends Scene {
         }`,
     });
     const bell = new THREE.Mesh(this.bellGeo, this.bellMat);
+    bell.renderOrder = 10;
     this.jelly.add(bell);
 
     // tentacles: 9 ribbons as camera-ish-facing planes, shader-displaced sine sway.
@@ -194,6 +195,7 @@ export default class Biolume extends Scene {
       const seeds = new Float32Array(tg.attributes.position.count).fill(i / 9);
       tg.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 1));
       const tm = new THREE.Mesh(tg, this.tentMat);
+      tm.renderOrder = 1;
       const ang = (i / 9) * Math.PI * 2;
       tm.position.set(Math.cos(ang) * 0.32, -0.05, Math.sin(ang) * 0.32);
       // orient each tentacle plane facing outward-ish; shader handles the life
@@ -278,6 +280,7 @@ export default class Biolume extends Scene {
     });
     this._plankGeo = pgeo;
     const plank = new THREE.Points(pgeo, this.plankMat);
+    plank.renderOrder = 1;
     plank.frustumCulled = false; // positions are GPU-computed
     this.world.add(plank);
 
@@ -329,6 +332,7 @@ export default class Biolume extends Scene {
     });
     this._snowGeo = sgeo;
     const snow = new THREE.Points(sgeo, this.snowMat);
+    snow.renderOrder = 1;
     snow.frustumCulled = false;
     this.world.add(snow);
   }
