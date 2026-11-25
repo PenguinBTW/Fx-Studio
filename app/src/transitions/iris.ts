@@ -21,9 +21,17 @@ export default class Iris implements Transition {
         vec2 uvCenter = (vUv - 0.5) * aspect;
         float dist = length(uvCenter);
 
-        // Max radius to cover corners of 16:9 frame is ~0.8
-        float smoothU = progress * progress * (3.0 - 2.0 * progress);
-        float radius = smoothU * 0.85;
+        // Radius must reach the CORNER distance at u=1 or the corners keep showing
+        // scene A through the whole window and then pop to B when the seam ends.
+        // Derived from the actual aspect (not hardcoded) so vertical projects close too.
+        float maxR = length(0.5 * aspect) + 0.03; // small margin so the AA rim also clears
+        // Full coverage must arrive BEFORE u=1: the window is end-exclusive, so the last
+        // sampled frame is always at u<1 — coverage timed for u=1 never displays, and the
+        // corners pop to pure B on the first post-window frame. Match portal_dive's
+        // convention: fully covered by u=0.85, tail of the window is already pure B.
+        float coverU = min(1.0, progress / 0.85);
+        float smoothU = coverU * coverU * (3.0 - 2.0 * coverU);
+        float radius = smoothU * maxR;
 
         // Anti-aliased boundary
         float edge = fwidth(dist) * 2.0;
@@ -50,7 +58,7 @@ export default class Iris implements Transition {
       texA: { value: null },
       texB: { value: null },
       progress: { value: 0 },
-      aspect: { value: new THREE.Vector2(16.0 / 9.0, 1.0) },
+      aspect: { value: new THREE.Vector2(ctx.W / ctx.H, 1.0) },
     });
   }
 
@@ -71,7 +79,14 @@ export default class Iris implements Transition {
     this.pass.render(renderer, out);
     renderer.resetState();
 
-    const peak = Math.sin(u * Math.PI);
+    // Effects must die with the wipe: coverage completes at u=0.85, but the sin(u·π)
+    // envelope still sits near half-strength there — without fading it, bloom/CA/exposure
+    // ride the already-pure-B tail of the window and then snap off at the seam end.
+    // full strength through the seam centre; fade over the coverage-completion phase
+    // (u 0.7→0.85) so the tail is pure B at base post values before the window closes
+    const x = Math.min(1, Math.max(0, (u - 0.7) / 0.15));
+    const tail = x * x * (3 - 2 * x);
+    const peak = Math.sin(u * Math.PI) * (1 - tail);
     return {
       bloom: 0.55 + peak * 0.45,
       ca: 1.2 + peak * 5.0,
