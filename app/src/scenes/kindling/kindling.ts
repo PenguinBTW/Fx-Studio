@@ -86,6 +86,7 @@ export default class Kindling extends Scene {
       new THREE.MeshStandardMaterial({ color: 0x7a1f18, roughness: 0.9 }),
     );
     head.position.set(0, 1.52, 0);
+    (this as any)._headRef = head;
     this.stick.add(head);
 
     // --- the flame: billboard plane, SDF teardrop distorted by noise — layered
@@ -275,7 +276,9 @@ export default class Kindling extends Scene {
     // the combustion front descends the stick as charring progresses — the flame rides it.
     // tipness 1 = local +1.5; front tipness = 1-charV → local y
     const frontY = ((1 - charV) - 0.5) * 3.0;
-    const flameY = Math.max(frontY + 0.15, -1.15);
+    // the flame root is the billboard's bottom edge — center sits half the scaled plane above the front
+    const flameHalf = 0.8 * (0.42 + life * 0.4);
+    const flameY = frontY + flameHalf;
     this.flame!.position.y = flameY;
     if ((this as any)._sparksRef) (this as any)._sparksRef.position.y = flameY - 0.13;
     if ((this as any)._smokeRef) (this as any)._smokeRef.position.y = flameY + 1.4;
@@ -283,6 +286,11 @@ export default class Kindling extends Scene {
     // flame scale swells with life — bloom is bigger than steady state
     const fs = 0.42 + life * 0.4 + fl * 0.03 * life;
     this.flame!.scale.set(fs, fs, 1);
+    // the match head combusts entirely within the first seconds — shrink it away
+    if ((this as any)._headRef) {
+      const hs = Math.max(0.001, 1.0 - smoothstep(3.5, 7, lt));
+      (this as any)._headRef.scale.setScalar(hs);
+    }
 
     // fire light tracks the flame heart in world, flickers WITH the shape noise
     this.flame!.getWorldPosition(this.tmp.a);
