@@ -35,7 +35,8 @@ export default class Ferroscan extends Scene {
 
     // black-mirror materiality is unplayable without an environment: PMREM room studio
     const pm = new THREE.PMREMGenerator(rr);
-    this.world.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture;
+    (this as any)._envTex = pm.fromScene(new RoomEnvironment(), 0.04).texture;
+    this.world.environment = (this as any)._envTex;
     this.world.environmentIntensity = 0.55;
     pm.dispose();
     rr.resetState();
@@ -121,7 +122,10 @@ export default class Ferroscan extends Scene {
             // d/dx exp(-dd2/w2) = exp * (-2(x-spx)/w2)
             grad += g1 * (-2.0 * (pxz - sp) / (w * w)) + g2 * (-2.0 * (pxz - sp) / 0.09);
           }
-          h += sin(pxz.x * 9.0 + uTime * 1.7) * sin(pxz.y * 7.0 - uTime * 1.3) * 0.004 * (0.3 + uStrength);
+          float ripA = 0.004 * (0.3 + uStrength);
+          h += sin(pxz.x * 9.0 + uTime * 1.7) * sin(pxz.y * 7.0 - uTime * 1.3) * ripA;
+          grad.x += cos(pxz.x * 9.0 + uTime * 1.7) * sin(pxz.y * 7.0 - uTime * 1.3) * ripA * 9.0;
+          grad.y += sin(pxz.x * 9.0 + uTime * 1.7) * cos(pxz.y * 7.0 - uTime * 1.3) * ripA * 7.0;
           transformed.y += h;
           // exact analytic normal from the displacement gradient: n = normalize(-dh/dx, 1, -dh/dz)
           vNormal = normalize(normalMatrix * normalize(vec3(-grad.x, 1.0, -grad.y)));
@@ -154,33 +158,27 @@ export default class Ferroscan extends Scene {
   }
 
   private magnetPose(t: number, out: THREE.Vector3): number {
-    // choreography in closed form:
-    //  0–6s:  magnet high above center, descending — pool mirror-flat
-    //  6–18s: slow traverse across the pool, working height — spikes bloom and track
-    // 18–26s: hover near center, slow circular drift — full rosette
-    // 26–30s: lift away — spikes subside
-    if (t < 6) {
-      const k = smoothstep(0, 6, t);
-      out.set(0, 3.4 - k * 2.1, 0);
-      return k * 0.55;
-    } else if (t < 18) {
-      const lt = t - 6;
-      const k = smoothstep(0, 12, lt);
-      const x = -1.35 + k * 2.7;
-      const z = Math.sin(k * Math.PI) * 0.5;
-      const bob = Math.sin(lt * 0.9) * 0.1;
-      out.set(x, 1.15 + bob, z);
-      return 0.85;
-    } else if (t < 26) {
-      const lt = t - 18;
-      const a = lt * 0.45;
-      out.set(Math.cos(a) * 0.4, 1.0, Math.sin(a) * 0.4);
-      return 1.0;
-    } else {
-      const k = smoothstep(26, 30, t);
-      out.set(0.3, 1.0 + k * 2.6, 0);
-      return (1 - k) * 0.9;
-    }
+    // keyframed path with smoothstep blending — continuous at every phase boundary by construction
+    const KEYS: [number, number, number, number, number][] = [
+      // t, x, y, z, strength
+      [0, 0, 3.4, 0, 0],
+      [6, -0.9, 1.3, 0, 0.7],
+      [12, 0.4, 1.1, 0.3, 0.85],
+      [18, 0.5, 1.0, -0.25, 0.95],
+      [22, 0, 0.95, 0, 1.0],
+      [26, 0.2, 1.1, 0, 0.9],
+      [30, 0.3, 3.6, 0, 0],
+    ];
+    let i = 0;
+    while (i < KEYS.length - 2 && t >= KEYS[i + 1][0]) i++;
+    const a = KEYS[i], b = KEYS[i + 1];
+    const k = smoothstep(a[0], b[0], t);
+    out.set(
+      a[1] + (b[1] - a[1]) * k,
+      a[2] + (b[2] - a[2]) * k + Math.sin(t * 0.9) * 0.06 * smoothstep(4, 8, t),
+      a[3] + (b[3] - a[3]) * k,
+    );
+    return a[4] + (b[4] - a[4]) * k;
   }
 
   override render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
@@ -206,7 +204,9 @@ export default class Ferroscan extends Scene {
 
     // DoF focus tracks the magnet's spike bloom point on the pool surface
     this.tmp.b.set(this.tmp.a.x * 0.6, 0.2, this.tmp.a.z * 0.6);
-    const focusD = this.cam.position.distanceTo(this.tmp.b);
+    // DoF expects depth along the view axis, not straight-line distance (chain precedent)
+    const fwd = this.cam.getWorldDirection(new THREE.Vector3());
+    const focusD = this.tmp.b.clone().sub(this.cam.position).dot(fwd);
 
     if (!this.main) {
       this.main = new THREE.WebGLRenderTarget(out.width, out.height, {
@@ -236,6 +236,7 @@ export default class Ferroscan extends Scene {
     rr.shadowMap.enabled = (this as any)._prevShadow ?? false;
     this.main?.dispose();
     this.dof.dispose();
+    (this as any)._envTex?.dispose?.();
     this.world.traverse((o: any) => {
       if (o.isMesh) {
         o.geometry?.dispose?.();
