@@ -116,7 +116,7 @@ export default class Frost extends Scene {
 
           // ---- condensation beads (pre-frost, evaporate as frost overtakes) --
           float beadField = noise(p * 85.0) * noise(p * 60.0 + 9.0);
-          float beads = smoothstep(0.48, 0.52, beadField) * 0.4 * (1.0 - frost) * (1.0 - smoothstep(frozenAt - 0.5, frozenAt - 0.1, front));
+          float beads = smoothstep(0.48, 0.52, beadField) * 0.4 * (1.0 - frost) * (1.0 - smoothstep(frozenAt - 0.5, frozenAt + 0.02, front));
 
           // ---- lighting ---------------------------------------------------
           // night glass: dark reflective blue. dawn: backlit amber scattering
