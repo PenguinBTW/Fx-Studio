@@ -149,7 +149,10 @@ export default class Optica extends Scene {
     const ease = smoothstep(0, 2, lt);
     const yaw = lt * 0.32 * ease;
     this.gem!.rotation.y = yaw;
-    this.gem!.rotation.z = Math.sin(lt * 0.21) * 0.08;
+    const rock = Math.sin(lt * 0.21);
+    this.gem!.rotation.z = rock * 0.08;
+    // rocking pivots on the contact edge: the center rises with tilt instead of clipping the table
+    this.gem!.position.y = 0.44 + Math.abs(rock) * 0.022;
     this.causticMat!.uniforms.uTime.value = lt;
     this.causticMat!.uniforms.uYaw.value = yaw;
 
