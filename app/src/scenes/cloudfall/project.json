@@ -1,0 +1,12 @@
+{
+  "project": "cloudfall",
+  "meta": {
+    "title": "Cloudfall: fog volume rolling through a dawn ridge",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 30
+  },
+  "entries": [
+    { "scene": "cloudfall/cloudfall", "id": "cloudfall", "start": 0, "end": 30 }
+  ]
+}
