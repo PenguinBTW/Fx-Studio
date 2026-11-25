@@ -102,6 +102,7 @@ export default class Monolith extends Scene {
   private tmp = { a: new THREE.Vector3(), b: new THREE.Vector3(), c: new THREE.Vector3() };
   private probeBox = new THREE.Box3();
   private probeScratch = new Float32Array(16);
+  private probeFrustum = new THREE.Frustum();
 
   private prevShadowEnabled = false;
   private prevShadowType: THREE.ShadowMapType | null = null;
@@ -282,6 +283,9 @@ export default class Monolith extends Scene {
     // gate on P.probe like the engine's own text does — otherwise the paused preview
     // loop, which never clears the probe array, leaks a record per rendered frame
     if (P?.probe && P?.textProbes && P.recordText !== false) {
+      this.probeFrustum.setFromProjectionMatrix(
+        new THREE.Matrix4().multiplyMatrices(this.cam.projectionMatrix, this.cam.matrixWorldInverse),
+      );
       let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9, any = false;
       const corner = this.tmp.c;
       for (const gl of this.glyphs) {
@@ -290,7 +294,9 @@ export default class Monolith extends Scene {
         // skip glyphs fully outside the frame (e.g. still falling above the top):
         // including them inflates the union box and pulls the onion-skin trail's
         // center into empty space
-        let visible = false;
+        // exact frustum test — a glyph spanning the viewport can have no corner
+        // inside the frame yet fill it entirely; corner sampling alone misses that
+        const visible = this.probeFrustum.intersectsBox(b);
         // reuse flat scratch — no per-corner tuple allocations in a probed export
         const pts = this.probeScratch;
         for (let k = 0; k < 8; k++) {
@@ -301,7 +307,6 @@ export default class Monolith extends Scene {
           ).project(this.cam);
           pts[k * 2] = (corner.x + 1) / 2 * W;
           pts[k * 2 + 1] = (1 - corner.y) / 2 * H;
-          if (corner.z < 1 && pts[k * 2]! > 0 && pts[k * 2]! < W && pts[k * 2 + 1]! > 0 && pts[k * 2 + 1]! < H) visible = true;
         }
         if (!visible) continue;
         for (let k = 0; k < 8; k++) {
