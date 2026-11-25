@@ -1,3 +1,4 @@
+// Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
 // soapfilm — wave-optics/iridescence register: a soap bubble floating in a dim
 // studio void, thin-film interference marbling across its skin as the film drains
 // under gravity and convection swirls it. Where optica decomposes light by
@@ -117,7 +118,12 @@ export default class Soapfilm extends Scene {
           float d = drainBase + marble * 260.0 + swirl * 120.0;
           d = max(d, 30.0);
 
-          float cosT = abs(dot(n, view));
+          // Snell refraction into the film (n=1.33): interference depends on the
+          // INSIDE-film angle, not the incident angle in air
+          float cosI = abs(dot(n, view));
+          float sinI2 = 1.0 - cosI * cosI;
+          float sinT2 = sinI2 / (1.33 * 1.33);
+          float cosT = sqrt(max(0.0, 1.0 - sinT2));
           vec3 irid = thinfilm(d, cosT);
           irid = irid / (1.0 + irid * 0.25);
 
@@ -241,6 +247,24 @@ export default class Soapfilm extends Scene {
     const rr = this.ctx.renderer;
     const lt = f.t;
 
+    // camera first — uniforms depend on it and every frame must be order-independent
+    const k0 = smoothstep(0, 30, lt);
+    const az0 = 0.3 + lt * 0.05;
+    const b1x0 = Math.sin(lt * 0.23) * 0.3;
+    const b1y0 = 0.3 + Math.sin(lt * 0.31 + 1.0) * 0.15 + lt * 0.008;
+    const b1z0 = Math.cos(lt * 0.19) * 0.2;
+    const b2grow0 = smoothstep(BLOW_T0, BLOW_T1, lt);
+    const b2t0 = Math.max(0, lt - BLOW_T0);
+    // focus stays on bubble1 through the pop, then blends to bubble2 as it grows
+    const focusBlend = smoothstep(BLOW_T0, BLOW_T1 + 1, lt);
+    const fx0 = b1x0 * (1 - focusBlend) + (0.4 - b2t0 * 0.05) * focusBlend;
+    const fy0 = b1y0 * (1 - focusBlend) + (-0.4 + b2t0 * 0.13) * focusBlend;
+    const fz0 = b1z0 * (1 - focusBlend) + 0.3 * focusBlend;
+    const rad0 = 3.1 + smoothstep(POP_T - 2, POP_T + 2, lt) * 0.7 - k0 * 0.3;
+    this.cam.position.set(fx0 + Math.sin(az0) * rad0, fy0 + 0.25 + Math.sin(lt * 0.1) * 0.1, fz0 + Math.cos(az0) * rad0);
+    this.cam.up.set(0, 1, 0);
+    this.cam.lookAt(fx0, fy0, fz0);
+
     // ---- bubble 1: floats gently, drains, pops at POP_T -------------------
     const b1x = Math.sin(lt * 0.23) * 0.3;
     const b1y = 0.3 + Math.sin(lt * 0.31 + 1.0) * 0.15 + lt * 0.008;
@@ -251,7 +275,10 @@ export default class Soapfilm extends Scene {
     this.filmMat!.uniforms.uTime.value = lt;
     this.filmMat!.uniforms.uBirth.value = birth1;
     this.filmMat!.uniforms.uPop.value = popped;
-    this.filmMat!.uniforms.uDrain.value = Math.min(lt, POP_T);
+    // drainage accelerates after 12s per the storyboard beat
+    const drainT = Math.min(lt, POP_T);
+    const effDrain = drainT + Math.max(0, drainT - 12) * Math.max(0, drainT - 12) * 0.12;
+    this.filmMat!.uniforms.uDrain.value = effDrain;
     this.filmMat!.uniforms.uCamPos.value.copy(this.cam.position);
 
     // ---- bubble 2: blown after the pop — scales in, smaller, rises ---------
@@ -272,21 +299,10 @@ export default class Soapfilm extends Scene {
     this.dropMat!.uniforms.uTime.value = lt;
     this.dropMat!.uniforms.uCenter.value.set(b1x, b1y, b1z);
 
-    // camera: slow intimate orbit, slight vertical drift; pulls wide for the pop
-    const k = smoothstep(0, 30, lt);
-    const az = 0.3 + lt * 0.05;
-    const rad = 3.1 + smoothstep(POP_T - 2, POP_T + 2, lt) * 0.7 - k * 0.3;
-    const focus = lt < POP_T ? this.tmp.a.set(b1x, b1y, b1z) : this.tmp.a.set(b2x * b2grow, b2y, b2z);
-    this.cam.position.set(
-      focus.x + Math.sin(az) * rad,
-      focus.y + 0.25 + Math.sin(lt * 0.1) * 0.1,
-      focus.z + Math.cos(az) * rad,
-    );
-    this.cam.up.set(0, 1, 0);
-    this.cam.lookAt(focus);
-
     const fwd = this.cam.getWorldDirection(new THREE.Vector3());
-    const focusD = focus.clone().sub(this.cam.position).dot(fwd);
+    // focus on the FILM SURFACE, not the center — subtract the bubble radius along the view axis
+    const focusR = (1 - focusBlend) * 1.0 + focusBlend * 0.65;
+    const focusD = new THREE.Vector3(fx0, fy0, fz0).sub(this.cam.position).dot(fwd) - focusR;
 
     if (!this.main) {
       this.main = new THREE.WebGLRenderTarget(out.width, out.height, {

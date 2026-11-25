@@ -11,3 +11,15 @@ Concept anchors:
 
 Palette: charcoal studio void; the entire spectrum, physically derived.
 Camera: intimate slow orbit, widening for the pop, DoF on the film surface.
+
+
+## lighting
+dim studio void — hemisphere fill only; the bubble is self-revealing through interference and two implied soft-box reflections (streak highlights computed in-shader).
+
+## composition
+single-subject macro intimacy; the bubble off-center-left during drift, centering for the pop beat, second bubble entering below-right for asymmetric rebirth balance.
+
+## motion language
+everything slow and buoyant — drift amplitudes in centimeters; violence only in the 0.5s pop.
+
+Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
