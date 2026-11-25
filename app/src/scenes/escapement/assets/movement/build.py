@@ -146,9 +146,9 @@ parts.append(plate)
 g_center = gear_mesh('center_wheel', 48, 1.05, 0.92, 0.07, BRASS)
 g_center.location = (-0.55, -0.45, 0.05)
 g_third = gear_mesh('third_wheel', 36, 0.72, 0.62, 0.06, BRASS)
-g_third.location = (0.72, -0.72, 0.09)
+g_third.location = (1.05, -0.15, 0.09)
 g_fourth = gear_mesh('fourth_wheel', 30, 0.52, 0.44, 0.05, BRASS)
-g_fourth.location = (1.05, 0.28, 0.13)
+g_fourth.location = (1.08, 1.00, 0.13)
 for g in (g_center, g_third, g_fourth):
     parts.append(g)
     # pinion arbor through center
@@ -206,11 +206,11 @@ hs.data.materials.append(BLUED)
 hs['fx_part'] = 'hairspring'
 
 # --- pallet fork: lever between escape wheel and balance — rocks side to side
-pf = box('pallet_fork', (0.42, 0.05, 0.03), (0.06, 0.97, 0.24), STEEL, part='pallet', rotz=math.pi / 2)
-pf2 = box('pallet_arm', (0.16, 0.045, 0.028), (0.02, 1.28, 0.24), STEEL, part='pallet', rotz=0.5)
+pf = box('pallet_fork', (0.42, 0.05, 0.03), (0.06, 0.97, 0.17), STEEL, part='pallet', rotz=math.pi / 2)
+pf2 = box('pallet_arm', (0.16, 0.045, 0.028), (0.02, 1.28, 0.17), STEEL, part='pallet', rotz=0.5)
 # ruby pallet stones at the fork tip
 for i, (px, py) in enumerate(((0.24, 0.82), (0.30, 1.10))):
-    cyl('pallet_jewel%d' % i, 0.028, 0.06, (px, py, 0.24), RUBY, part='pallet', verts=12)
+    cyl('pallet_jewel%d' % i, 0.028, 0.06, (px, py, 0.17), RUBY, part='pallet', verts=12)
 
 # --- jewel bearings: ruby donuts sitting in the plate under each arbor
 for i, (jx, jy) in enumerate(((-0.55, -0.45), (0.72, -0.72), (1.05, 0.28), (0.30, 0.95))):

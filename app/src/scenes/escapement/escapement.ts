@@ -29,8 +29,8 @@ function escapeAngle(t: number): number {
   // step happens in the first 18% of the half-beat with an easing snap;
   // 4% recoil in the 8% before the snap (the lever drawing back)
   let adv: number;
-  if (frac > 0.92) {
-    adv = -0.04 * Math.sin((frac - 0.92) / 0.08 * Math.PI); // recoil (negative)
+  if (frac > 10 / 12) {
+    adv = -0.04 * Math.sin((frac - 10 / 12) / (2 / 12) * Math.PI); // recoil (negative)
   } else if (frac < 0.18) {
     const k = frac / 0.18;
     adv = 1 - (1 - k) * (1 - k) * (1 - k); // ease-out cubic snap
@@ -134,11 +134,11 @@ export default class Escapement extends Scene {
     // parts sharing an fx_part id collapse in the registry, so we collect by traversal.
     const centers: Record<string, [number, number, number]> = {
       center_wheel: [-0.55, -0.45, 0.05],
-      third_wheel: [0.72, -0.72, 0.09],
-      fourth_wheel: [1.05, 0.28, 0.13],
+      third_wheel: [1.05, -0.15, 0.09],
+      fourth_wheel: [1.08, 1.00, 0.13],
       escape_wheel: [0.30, 0.95, 0.16],
       balance: [-0.85, 0.95, 0.30],
-      pallet: [0.06, 1.02, 0.24],
+      pallet: [0.06, 1.02, 0.17],
     };
     const members: Record<string, string[]> = {
       center_wheel: ['center_wheel'],
@@ -183,9 +183,9 @@ export default class Escapement extends Scene {
     }
     if (this.pivots.escape_wheel) this.pivots.escape_wheel.rotation.z = escapeAngle(lt);
     if (this.pivots.pallet) this.pivots.pallet.rotation.z = palletAngle(lt);
-    if (this.pivots.fourth_wheel) this.pivots.fourth_wheel.rotation.z = trainAngle(lt, 0.1, 0.4);
-    if (this.pivots.third_wheel) this.pivots.third_wheel.rotation.z = -trainAngle(lt, 0.1 / 12, 1.1);
-    if (this.pivots.center_wheel) this.pivots.center_wheel.rotation.z = trainAngle(lt, 0.1 / 144, 2.0);
+    if (this.pivots.fourth_wheel) this.pivots.fourth_wheel.rotation.z = trainAngle(lt, -0.5, 0.4);
+    if (this.pivots.third_wheel) this.pivots.third_wheel.rotation.z = trainAngle(lt, 5 / 12, 1.1);
+    if (this.pivots.center_wheel) this.pivots.center_wheel.rotation.z = trainAngle(lt, -5 / 16, 2.0);
 
     // camera
     camPos(lt, this.tmp.a);
@@ -206,6 +206,7 @@ export default class Escapement extends Scene {
       });
     }
     rr.setRenderTarget(this.main);
+    rr.clear(true, true, true);
     rr.render(this.world, this.cam);
 
     this.dof.render(rr, this.main.texture, this.main.depthTexture!, {
@@ -215,6 +216,7 @@ export default class Escapement extends Scene {
       maxRadius: 18,
       samples: 40,
     }, out);
+    rr.resetState();
     return {};
   }
 
@@ -223,6 +225,7 @@ export default class Escapement extends Scene {
     rr.shadowMap.enabled = (this as any)._prevShadow ?? false;
     rr.shadowMap.type = (this as any)._prevType ?? THREE.PCFShadowMap;
     this.main?.dispose();
+    this.dof.dispose();
     this.inst?.dispose?.();
     super.dispose();
   }
