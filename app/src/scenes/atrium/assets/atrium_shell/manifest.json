@@ -1,0 +1,4 @@
+{
+  "parts": { "wall": "wall", "staircase": "staircase", "stringer": "stringer", "floor": "floor", "oculus_ring": "oculus_ring", "ceiling": "ceiling" },
+  "clips": {}
+}
