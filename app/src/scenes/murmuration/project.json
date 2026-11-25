@@ -1,0 +1,12 @@
+{
+  "project": "murmuration",
+  "meta": {
+    "title": "Murmuration: swarm emergence at dusk",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 30
+  },
+  "entries": [
+    { "scene": "murmuration/murmuration", "id": "murmuration", "start": 0, "end": 30 }
+  ]
+}
