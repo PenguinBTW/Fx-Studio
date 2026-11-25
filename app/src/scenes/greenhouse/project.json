@@ -1,0 +1,7 @@
+{
+  "project": "greenhouse",
+  "trimToTimeline": true,
+  "entries": [
+    { "scene": "greenhouse/greenhouse", "id": "greenhouse", "start": 0.0, "end": 20.0 }
+  ]
+}
