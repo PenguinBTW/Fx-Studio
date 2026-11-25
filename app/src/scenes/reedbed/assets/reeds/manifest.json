@@ -1,0 +1,15 @@
+{
+  "name": "reeds",
+  "generator": "blender-4.2",
+  "budgets": { "tris": 15000, "textureMB": 1 },
+  "parts": {
+    "reedbed": "reedbed",
+    "reeds": "reeds",
+    "reedTall": "reedTall",
+    "jetty": "jetty",
+    "punt": "punt",
+    "heron": "heron",
+    "lily": "lily",
+    "snag": "snag"
+  }
+}
