@@ -53,18 +53,22 @@ export default class Kindling extends Scene {
     this.stickMat = new THREE.MeshStandardMaterial({ color: 0xb98d54, roughness: 0.8, metalness: 0 });
     this.stickMat.onBeforeCompile = (sh) => {
       sh.uniforms.uChar = { value: 0 };
+      sh.uniforms.uEmberLife = { value: 1 };
       (this as any)._charU = sh.uniforms.uChar;
-      sh.fragmentShader = ('uniform float uChar;\nvarying vec3 vObjPos;\n' + sh.fragmentShader)
+      (this as any)._emberU = sh.uniforms.uEmberLife;
+      sh.fragmentShader = ('uniform float uChar;\nuniform float uEmberLife;\nvarying vec3 vObjPos;\n' + sh.fragmentShader)
         .replace('#include <emissivemap_fragment>', `
           #include <emissivemap_fragment>
           // charring: blacken from the tip downward as uChar advances, with a glowing ember edge
           float tipness = clamp(vObjPos.y / 1.5 * 0.5 + 0.5, 0.0, 1.0);
-          float char = smoothstep(uChar - 0.12, uChar, tipness);
+          // the char front starts at the tip (tipness 1) and descends as uChar grows
+          float front = 1.0 - uChar;
+          float char = smoothstep(front - 0.06, front + 0.06, tipness) * step(0.005, uChar);
           vec3 charcoal = vec3(0.03, 0.02, 0.02);
           diffuseColor.rgb = mix(diffuseColor.rgb, charcoal, char);
-          // ember line right at the char front
-          float ember = (1.0 - smoothstep(0.0, 0.09, abs(tipness - uChar))) * step(0.01, uChar);
-          totalEmissiveRadiance += vec3(1.0, 0.32, 0.05) * ember * 1.4;
+          // ember line right at the char front, dying with the flame life
+          float ember = (1.0 - smoothstep(0.0, 0.09, abs(tipness - front))) * step(0.01, uChar);
+          totalEmissiveRadiance += vec3(1.0, 0.32, 0.05) * ember * 1.4 * uEmberLife;
         `);
       sh.vertexShader = ('varying vec3 vObjPos;\n' + sh.vertexShader)
         .replace('#include <begin_vertex>', '#include <begin_vertex>\n vObjPos = position;');
@@ -264,6 +268,7 @@ export default class Kindling extends Scene {
       + smoothstep(24, 28, lt);
     (this as any)._charVal = smoothstep(5, 27, lt);
     if ((this as any)._charU) (this as any)._charU.value = (this as any)._charVal;
+    if ((this as any)._emberU) (this as any)._emberU.value = 1.0 - smoothstep(24, 29, lt);
 
     // flame scale swells with life — bloom is bigger than steady state
     const fs = 0.42 + life * 0.4 + fl * 0.03 * life;
@@ -283,7 +288,9 @@ export default class Kindling extends Scene {
     const cy = 0.4 + Math.sin(lt * 0.11) * 0.15 - k * 0.1;
     this.cam.position.set(Math.sin(az) * rad, cy, Math.cos(az) * rad);
     this.cam.up.set(0, 1, 0);
-    this.tmp.b.set(0.2, 0.15, -0.05);
+    // frame on the flame heart, drifting up as smoke becomes the subject at death
+    this.flame!.getWorldPosition(this.tmp.b);
+    this.tmp.b.y += 0.15 + smoothstep(22, 29, lt) * 0.18;
     this.cam.lookAt(this.tmp.b);
 
     // DoF on the flame heart — view-axis depth
