@@ -89,7 +89,7 @@ export default class DataGarden extends Scene {
       const h = s.base * breathe + pulse;
       const ease = smoothstep(0, 1.5, lt);
       this.dummy.position.set(s.x, 0, s.z);
-      this.dummy.scale.set(1, h * ease, 1);
+      this.dummy.scale.set(1, h * (0.35 + 0.65 * ease), 1);
       this.dummy.rotation.set(0, 0, 0);
       this.dummy.updateMatrix();
       this.rods!.setMatrixAt(i, this.dummy.matrix);
