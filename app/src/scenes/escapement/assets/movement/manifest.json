@@ -1,0 +1,8 @@
+{
+  "id": "movement",
+  "version": 1,
+  "model": "model.glb",
+  "source": "build.py",
+  "budgets": { "tris": 250000 },
+  "load": { "shadows": true }
+}
