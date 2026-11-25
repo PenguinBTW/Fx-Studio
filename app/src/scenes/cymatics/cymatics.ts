@@ -175,7 +175,6 @@ export default class Cymatics extends Scene {
     const spec = this.rig.evalCam(lt);
     this.rig.syncToThreeCamera(spec, this.cam);
 
-    this.publishBounds(lt);
     rr.setRenderTarget(out);
     rr.setClearColor(0x050608, 1);
     rr.clear(true, true, true);
@@ -192,40 +191,6 @@ export default class Cymatics extends Scene {
   }
 
 
-
-  private publishBounds(lt: number) {
-    // raw-scene telemetry rule: publish hero bounds to textProbes — but ONLY while
-    // diagnostics are actively recording (same gate as SceneGraph.syncTelemetry),
-    // so preview never accumulates probes and normal renders stay unpolluted
-    const P = (window as any).__motion || (window as any).__pdoom;
-    if (!P || !P.probe || !P.textProbes || !P.recordText) return;
-    const corners = [new THREE.Vector3(-4, 0, -4), new THREE.Vector3(4, 0, -4), new THREE.Vector3(4, 0, 4), new THREE.Vector3(-4, 0, 4)];
-    let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
-    for (const c of corners) {
-      const v = c.clone().project(this.cam);
-      const sx = (v.x * 0.5 + 0.5) * W;
-      const sy = (1 - (v.y * 0.5 + 0.5)) * H;
-      minX = Math.min(minX, sx); maxX = Math.max(maxX, sx);
-      minY = Math.min(minY, sy); maxY = Math.max(maxY, sy);
-    }
-    P.textProbes.push({
-      frameIdx: P.currentFrameIdx ?? 0,
-      t: lt,
-      text: 'hero-bounds',
-      fontFamily: 'Archivo, sans-serif',
-      fontPx: 24,
-      fillStyle: '#FFFFFF',
-      globalAlpha: 1,
-      layerId: 'scenegraph',
-      bbox: [minX, minY, maxX, maxY],
-      w: maxX - minX,
-      h: maxY - minY,
-      cx: (minX + maxX) / 2,
-      cy: (minY + maxY) / 2,
-      hPct: (24 / 1080) * 100,
-      isStroke: false,
-    });
-  }
 
   override dispose() {
     for (const d of this.disposables) d.dispose();
