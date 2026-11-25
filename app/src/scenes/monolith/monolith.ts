@@ -68,6 +68,9 @@ function camPos(lt: number, out: THREE.Vector3): THREE.Vector3 {
   let x = 0, yy = y, zz = z;
   x = x * (1 - arc) + ax * arc; yy = yy * (1 - arc) + ay * arc; zz = zz * (1 - arc) + az * arc;
   x = x * (1 - settle) + hx * settle; yy = yy * (1 - settle) + hy * settle; zz = zz * (1 - settle) + hz * settle;
+  // slow continuous drift through the settle — a locked-off frame reads dead
+  const drift = smoothstep(24, 30, lt);
+  x -= 0.5 * drift; zz -= 0.9 * drift; yy -= 0.15 * drift;
   out.set(x, yy, zz);
   return out;
 }
@@ -173,8 +176,8 @@ export default class Monolith extends Scene {
     }
 
     // warm key spot from above-front-left, hard shadowed; cool rim from behind for the sweep
-    const key = new THREE.SpotLight(0xffc078, 420, 40, 0.55, 0.5, 1.8);
-    key.position.set(-4.5, 9.5, 5.5);
+    const key = new THREE.SpotLight(0xffc078, 420, 40, 0.85, 0.7, 1.6);
+    key.position.set(-3.0, 12.5, 5.5);
     key.castShadow = true;
     key.shadow.mapSize.set(2048, 2048);
     key.shadow.bias = -0.0004;
