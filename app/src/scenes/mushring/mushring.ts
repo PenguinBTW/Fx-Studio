@@ -6,7 +6,7 @@
 // with gill slats + wart speckles, an oyster-free ring, dew spider web,
 // mossy log + snail, ferns, blades, litter.
 import * as THREE from 'three';
-import { Scene, PostOverrides } from '../../engine/scene';
+import { Scene, Frame, PostOverrides } from '../../engine/scene';
 import { W, H } from '../../engine/gl';
 import { GLTFManager, GLTFInstance } from '../../engine/gltf';
 import { resolveAsset } from '../../engine/assets';
@@ -271,7 +271,7 @@ export default class MushringScene extends Scene {
     return { pos, aim };
   }
 
-  override render(f: FrameInfo, out: THREE.WebGLRenderTarget): PostOverrides {
+  override render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
     const t = f.t;
     const { pos, aim } = this.camAt(t);
     this.camera3D.position.copy(pos);
