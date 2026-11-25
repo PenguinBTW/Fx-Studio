@@ -30,7 +30,9 @@ function escapeAngle(t: number): number {
   // 4% recoil in the 8% before the snap (the lever drawing back)
   let adv: number;
   if (frac > 10 / 12) {
-    adv = -0.04 * Math.sin((frac - 10 / 12) / (2 / 12) * Math.PI); // recoil (negative)
+    // recoil: slight backward creep off the completed tooth — baseline stays at the
+    // step just taken (adv 1), dipping at most 0.05 teeth, never a full tooth back
+    adv = 1 - 0.05 * Math.sin((frac - 10 / 12) / (2 / 12) * Math.PI);
   } else if (frac < 0.18) {
     const k = frac / 0.18;
     adv = 1 - (1 - k) * (1 - k) * (1 - k); // ease-out cubic snap
@@ -45,19 +47,6 @@ function palletAngle(t: number): number {
   const s = Math.sin(2 * Math.PI * BEAT_HZ * t + Math.PI / 2);
   return 0.14 * Math.tanh(5.5 * s);
 }
-// gear train: upstream of the escapement the stepping blurs into continuous rotation
-// (physically true — the step amplitude divides by the gear ratio). mean escape rate
-// is one tooth per half-beat; fourth wheel geared 1:10, third 1:12, center 1:12 again.
-function meanEscapeRate(): number { return -TOOTH * 2 * BEAT_HZ; } // rad/s
-function trainAngle(t: number, ratio: number, phase: number): number {
-  const base = meanEscapeRate() * ratio * t + phase;
-  // faint residual stepping — the tick shivers up the train at 1/ratio amplitude
-  const ph = 2 * BEAT_HZ * t;
-  const frac = ph - Math.floor(ph);
-  const step = frac < 0.18 ? Math.sin((frac / 0.18) * Math.PI) : 0;
-  return base + step * 0.004 * ratio * 40;
-}
-
 // --- camera choreography ------------------------------------------------------
 // one slow drift across the plate: wide establish of the train, then in toward the
 // escapement — escape wheel, pallet, balance — and a final hold on the breathing
@@ -183,9 +172,10 @@ export default class Escapement extends Scene {
     }
     if (this.pivots.escape_wheel) this.pivots.escape_wheel.rotation.z = escapeAngle(lt);
     if (this.pivots.pallet) this.pivots.pallet.rotation.z = palletAngle(lt);
-    if (this.pivots.fourth_wheel) this.pivots.fourth_wheel.rotation.z = trainAngle(lt, -0.5, 0.4);
-    if (this.pivots.third_wheel) this.pivots.third_wheel.rotation.z = trainAngle(lt, 5 / 12, 1.1);
-    if (this.pivots.center_wheel) this.pivots.center_wheel.rotation.z = trainAngle(lt, -5 / 16, 2.0);
+    const escA = escapeAngle(lt);
+    if (this.pivots.fourth_wheel) this.pivots.fourth_wheel.rotation.z = -0.5 * escA + 0.4;
+    if (this.pivots.third_wheel) this.pivots.third_wheel.rotation.z = (5 / 12) * escA + 1.1;
+    if (this.pivots.center_wheel) this.pivots.center_wheel.rotation.z = (-5 / 16) * escA + 2.0;
 
     // camera
     camPos(lt, this.tmp.a);

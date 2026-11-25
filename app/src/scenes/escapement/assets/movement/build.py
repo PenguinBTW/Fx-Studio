@@ -213,7 +213,7 @@ for i, (px, py) in enumerate(((0.24, 0.82), (0.30, 1.10))):
     cyl('pallet_jewel%d' % i, 0.028, 0.06, (px, py, 0.17), RUBY, part='pallet', verts=12)
 
 # --- jewel bearings: ruby donuts sitting in the plate under each arbor
-for i, (jx, jy) in enumerate(((-0.55, -0.45), (0.72, -0.72), (1.05, 0.28), (0.30, 0.95))):
+for i, (jx, jy) in enumerate(((-0.55, -0.45), (1.05, -0.15), (1.08, 1.00), (0.30, 0.95))):
     bpy.ops.mesh.primitive_torus_add(major_radius=0.075, minor_radius=0.028, major_segments=24, minor_segments=8, location=(jx, jy, 0.02))
     jw = bpy.context.object
     jw.name = 'jewel%d' % i
