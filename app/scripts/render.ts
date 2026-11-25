@@ -741,7 +741,7 @@ async function motion(page: Page) {
   if (textAnalysis.words.length === 0) console.log('[motion] Procedural scene mode: 0 active lyrics (lyric rules F01-F03, F10 inactive).');
 
   for (const f of frameMetrics) {
-    const fTexts = textProbes.filter((r) => r.frameIdx === f.n);
+    const fTexts = textProbes.filter((r) => r.frameIdx === f.n && r.kind !== 'mesh');
     (f as any).max_text_h = fTexts.length ? Math.max(...fTexts.map((r) => r.hPct)) : 0;
   }
 
@@ -1044,7 +1044,7 @@ async function motion(page: Page) {
   await Bun.write(path.join(outDir, 'summary.json'), JSON.stringify(summaryJson, null, 2));
   await Bun.write(path.join(outDir, 'findings.json'), JSON.stringify(findingsJson, null, 2));
   await Bun.write(path.join(outDir, 'frames.csv'), generateFramesCsv(frameMetrics));
-  await Bun.write(path.join(outDir, 'text.csv'), generateTextCsv(textProbes));
+  await Bun.write(path.join(outDir, 'text.csv'), generateTextCsv([...textProbes].sort((a, b) => a.frameIdx - b.frameIdx || a.cy - b.cy || a.cx - b.cx)));
   await Bun.write(path.join(outDir, 'events.json'), JSON.stringify(allEvents, null, 2));
 
   console.log(`\n[motion] Success! Telemetry written to: ${outDir}`);

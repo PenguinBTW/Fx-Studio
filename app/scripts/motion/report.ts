@@ -590,11 +590,11 @@ export function generateFramesCsv(frames: FrameMetrics[]): string {
 }
 
 export function generateTextCsv(records: TextProbeRecord[]): string {
-  const header = 'frameIdx,t,text,fontFamily,fontPx,fillStyle,globalAlpha,layerId,minX,minY,maxX,maxY,w,h,cx,cy,hPct,isStroke\n';
+  const header = 'frameIdx,t,text,fontFamily,fontPx,fillStyle,globalAlpha,layerId,minX,minY,maxX,maxY,w,h,cx,cy,hPct,isStroke,kind\n';
   let rows = '';
   for (const r of records) {
     const safeText = `"${r.text.replace(/"/g, '""')}"`;
-    rows += `${r.frameIdx},${r.t.toFixed(4)},${safeText},"${r.fontFamily}",${r.fontPx},"${r.fillStyle}",${r.globalAlpha.toFixed(3)},"${r.layerId}",${r.bbox[0].toFixed(1)},${r.bbox[1].toFixed(1)},${r.bbox[2].toFixed(1)},${r.bbox[3].toFixed(1)},${r.w.toFixed(1)},${r.h.toFixed(1)},${r.cx.toFixed(1)},${r.cy.toFixed(1)},${r.hPct.toFixed(2)},${r.isStroke ? 1 : 0}\n`;
+    rows += `${r.frameIdx},${r.t.toFixed(4)},${safeText},"${r.fontFamily}",${r.fontPx},"${r.fillStyle}",${r.globalAlpha.toFixed(3)},"${r.layerId}",${r.bbox[0].toFixed(1)},${r.bbox[1].toFixed(1)},${r.bbox[2].toFixed(1)},${r.bbox[3].toFixed(1)},${r.w.toFixed(1)},${r.h.toFixed(1)},${r.cx.toFixed(1)},${r.cy.toFixed(1)},${r.hPct.toFixed(2)},${r.isStroke ? 1 : 0},${r.kind ?? ''}\n`;
   }
   return header + rows;
 }
