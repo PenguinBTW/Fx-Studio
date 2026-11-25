@@ -17,9 +17,9 @@ function hash1(i: number, salt: number): number {
 }
 
 const N_STARS = 1500;
-const SEG = 64;
-const RATE = 0.014; // rad/s sky rotation — 0.42 rad sweep over 30s
-const AXIS = new THREE.Vector3(0.0, Math.sin(0.61), Math.cos(0.61)).normalize();
+const SEG = 180;
+const RATE = 0.0101; // rad/s — 15 deg (one hour) of rotation accumulated by ~26s
+const AXIS = new THREE.Vector3(0.0, Math.sin(0.61), -Math.cos(0.61)).normalize();
 
 interface Meteor { t0: number; dur: number; origin: THREE.Vector3; dir: THREE.Vector3; }
 
@@ -92,7 +92,7 @@ export default class Startrail extends Scene {
           float s = sin(ang);
           vec3 p = position;
           vec3 pr = p * c + cross(uAxis, p) * s + uAxis * dot(uAxis, p) * (1.0 - c);
-          vColor = color;
+          vColor = color * (0.12 + 0.88 * smoothstep(0.0, 0.08, uSweep));
           vec4 mv = modelViewMatrix * vec4(pr, 1.0);
           gl_PointSize = 2.6;
           gl_Position = projectionMatrix * mv;
@@ -172,7 +172,7 @@ export default class Startrail extends Scene {
     const ridgePts: [number, number][] = [];
     for (let i = 0; i <= 24; i++) {
       const x = -60 + (i / 24) * 120;
-      const y = -6 + Math.sin(i * 0.7) * 3.5 + Math.sin(i * 2.3 + 1.7) * 1.8 + hash1(i, 40) * 2.0;
+      const y = -2 + Math.sin(i * 0.7) * 3.5 + Math.sin(i * 2.3 + 1.7) * 1.8 + hash1(i, 40) * 2.0;
       ridgePts.push([x, y]);
     }
     for (const [x, y] of ridgePts) ridgeShape.lineTo(x, y);
@@ -181,7 +181,7 @@ export default class Startrail extends Scene {
     const ridgeGeo = new THREE.ShapeGeometry(ridgeShape);
     this.ridgeMat = new THREE.MeshBasicMaterial({ color: 0x020204 });
     this.ridgeMesh = new THREE.Mesh(ridgeGeo, this.ridgeMat);
-    this.ridgeMesh.position.set(0, 0, -55);
+    this.ridgeMesh.position.set(0, -4, -38);
     this.ridgeMesh.renderOrder = 1;
     this.world.add(this.ridgeMesh);
     this.disposables.push(ridgeGeo, this.ridgeMat);
@@ -192,14 +192,16 @@ export default class Startrail extends Scene {
   override render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
     const rr = this.ctx.renderer;
     const lt = f.t;
-    this.trailMat!.uniforms.uSweep.value = RATE * lt;
+    this.trailMat!.uniforms.uSweep.value = Math.min(RATE * lt, 0.262);
     this.meteorMat!.uniforms.uTime.value = lt;
 
     // LOCKED tripod — same frame every frame; rig used per the scene-optics rule
-    this.rig.orbit([0, 18, -60], 30, 0.05, 0.0);
+    this.rig.orbit([0, 6, -40], 26, 0.02, 0.0);
     const spec = this.rig.evalCam(0);
     this.rig.syncToThreeCamera(spec, this.cam);
-    this.cam.lookAt(0, 26, -80);
+    // aim just below the celestial pole: pole sits upper-center, ridge fills the bottom
+    const pole = AXIS.clone().multiplyScalar(60).add(this.cam.position);
+    this.cam.lookAt(pole.x - 4, pole.y - 9, pole.z);
 
     rr.setRenderTarget(out);
     rr.setClearColor(0x010103, 1);
