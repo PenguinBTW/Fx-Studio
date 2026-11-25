@@ -63,7 +63,7 @@ export default class DataGarden extends Scene {
         [23.93, 0.42], [25.82, 0.30], [24.07, 0.19], [6.21, 0.06],
       ];
       const [periodH, amp] = CONSTITUENTS[i % CONSTITUENTS.length];
-      const timeScale = 55 / 12.42;
+      const timeScale = 12 / 12.42;
       this.seeds.push({
         x: Math.cos(a) * rr2,
         z: Math.sin(a) * rr2,
