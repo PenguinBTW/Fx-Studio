@@ -18,7 +18,7 @@ function hash1(i: number, salt: number): number {
 
 const N_STARS = 1500;
 const SEG = 180;
-const RATE = 0.0101; // rad/s — 15 deg (one hour) of rotation accumulated by ~26s
+const RATE = 0.00936; // rad/s — 15 deg (one hour) of rotation accumulated by ~26s
 const AXIS = new THREE.Vector3(0.0, Math.sin(0.61), -Math.cos(0.61)).normalize();
 
 interface Meteor { t0: number; dur: number; origin: THREE.Vector3; dir: THREE.Vector3; }
