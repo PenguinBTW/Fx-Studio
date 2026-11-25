@@ -2,7 +2,6 @@
 
 Acoustics register: sound made visible. Chladni figures are the rare phenomenon where an invisible quantity (frequency) becomes exact geometry — pitch you can see. The catalog has no acoustics scene and no scene where mathematics manifests as physical granular behavior.
 
-Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
 
 ## mapping table
 | metaphor | materials | changes over time |
@@ -22,3 +21,5 @@ Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
 2. grain motion during transitions — the dance
 3. plate materiality — blackened steel, rim light
 4. void darkness beyond plate edges
+
+Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL

@@ -144,7 +144,6 @@ export default class Cymatics extends Scene {
     this.world.add(amb);
     this.disposables.push({ dispose: () => { this.keyLight?.dispose(); rim.dispose(); amb.dispose(); } });
 
-    this.ctx.sceneGraph.register({ id: 'plate', type: 'mesh', role: 'hero', opacity: 1 });
     this.rig.setLensMm(40);
   }
 
@@ -152,25 +151,19 @@ export default class Cymatics extends Scene {
     const rr = this.ctx.renderer;
     const lt = f.t;
 
-    // mode weights: grains migrate toward mode-k membership during its form window
-    let w0 = 0, w1 = 0, w2 = 0, chaos = 0;
-    // initial formation into mode 0
-    w0 = smoothstep(3.5, 9.0, lt);
-    // transitions
-    for (let k = 0; k < TRANSITIONS.length; k++) {
-      const tr = TRANSITIONS[k];
-      const dis = smoothstep(tr.dissolve[0], tr.dissolve[1], lt) * (1 - smoothstep(tr.form[0], tr.form[1], lt));
-      chaos = Math.max(chaos, dis);
-    }
-    // weight ladder
-    const t1 = smoothstep(TRANSITIONS[0].form[0], TRANSITIONS[0].form[1], lt);
-    const t2 = smoothstep(TRANSITIONS[1].form[0], TRANSITIONS[1].form[1], lt);
-    const t3 = smoothstep(TRANSITIONS[2].form[0], TRANSITIONS[2].form[1], lt);
-    // mode0 dominant until first transition completes, then mode1, then mode2
-    w0 = Math.max(0, smoothstep(3.5, 8.0, lt) - t1);
-    w1 = Math.max(0, t1 - t2);
-    w2 = Math.max(0, t2);
-    void t3;
+    // weight ladder: each figure forms, holds, then RELEASES toward scatter as it dissolves —
+    // the release is what makes grains visibly scatter before the next figure forms
+    const f0in = smoothstep(3.5, 8.0, lt);
+    const f0out = smoothstep(11.5, 14.0, lt);
+    const f1in = smoothstep(14.0, 17.0, lt);
+    const f1out = smoothstep(19.5, 22.0, lt);
+    const w0v = f0in * (1 - f0out);
+    const w1v = f1in * (1 - f1out);
+    const w2v = smoothstep(22.0, 25.0, lt);
+    const w0 = w0v, w1 = w1v, w2 = w2v;
+    // turbulence peaks mid-transition: strong when any figure is half-released
+    const bell = (x: number) => x * (1 - x) * 4;
+    const chaos = Math.max(bell(f0out), bell(f1out), bell(f1in) * 0.6, bell(smoothstep(22.0, 25.0, lt)) * 0.4);
     this.grainMat!.uniforms.uTime.value = lt;
     this.grainMat!.uniforms.uW0.value = w0;
     this.grainMat!.uniforms.uW1.value = w1;
@@ -182,7 +175,7 @@ export default class Cymatics extends Scene {
     const spec = this.rig.evalCam(lt);
     this.rig.syncToThreeCamera(spec, this.cam);
 
-    this.ctx.sceneGraph.syncTelemetry(lt);
+    this.publishBounds(lt);
     rr.setRenderTarget(out);
     rr.setClearColor(0x050608, 1);
     rr.clear(true, true, true);
@@ -192,9 +185,46 @@ export default class Cymatics extends Scene {
       exposure: 1.05,
       bloom: 0.18,
       vignette: 0.5,
-      depthFocusDist: 14,
+      depthFocusDist: 15.5,
       depthAperture: 5,
+      depthDof: { near: 0.1, far: 100 },
     } as PostOverrides;
+  }
+
+
+  private publishBounds(lt: number) {
+    // raw-scene telemetry rule: publish screen-space bounds of the hero plate to textProbes
+    const P = (window as any).__motion || (window as any).__pdoom;
+    if (!P || !P.textProbes) return;
+    const corners = [
+      new THREE.Vector3(-4, 0, -4), new THREE.Vector3(4, 0, -4),
+      new THREE.Vector3(4, 0, 4), new THREE.Vector3(-4, 0, 4),
+    ];
+    let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
+    for (const c of corners) {
+      const v = c.clone().project(this.cam);
+      const sx = (v.x * 0.5 + 0.5) * W;
+      const sy = (1 - (v.y * 0.5 + 0.5)) * H;
+      minX = Math.min(minX, sx); maxX = Math.max(maxX, sx);
+      minY = Math.min(minY, sy); maxY = Math.max(maxY, sy);
+    }
+    P.textProbes.push({
+      frameIdx: P.currentFrameIdx ?? 0,
+      t: lt,
+      text: 'plate',
+      fontFamily: 'Archivo, sans-serif',
+      fontPx: 24,
+      fillStyle: '#FFFFFF',
+      globalAlpha: 1,
+      layerId: 'scenegraph',
+      bbox: [minX, minY, maxX, maxY],
+      w: maxX - minX,
+      h: maxY - minY,
+      cx: (minX + maxX) / 2,
+      cy: (minY + maxY) / 2,
+      hPct: (24 / 1080) * 100,
+      isStroke: false,
+    });
   }
 
   override dispose() {
