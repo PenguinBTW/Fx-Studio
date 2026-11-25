@@ -1,0 +1,12 @@
+{
+  "project": "fernhollow",
+  "meta": {
+    "title": "Fernhollow: a forest floor at snail scale",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 30
+  },
+  "entries": [
+    { "scene": "fernhollow/fernhollow", "id": "fernhollow", "start": 0, "end": 30 }
+  ]
+}
