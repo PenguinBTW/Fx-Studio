@@ -116,7 +116,11 @@ export default class Geode extends Scene {
       const rv = new THREE.Vector3();
       for (let j = 0; j < rp.count; j++) {
         rv.fromBufferAttribute(rp as any, j);
-        rv.multiplyScalar(1 + (rockRng() - 0.5) * 0.5);
+        // displacement must be a pure function of position: polyhedron corners are
+        // duplicated per face, and independent jitter tears shared corners apart
+        const h = Math.sin(rv.x * 12.9898 + rv.y * 78.233 + rv.z * 37.719) * 43758.5453;
+        const jf = (h - Math.floor(h)) - 0.5;
+        rv.multiplyScalar(1 + jf * 0.5);
         (rp as any).setXYZ(j, rv.x, rv.y, rv.z);
       }
       rg.computeVertexNormals();
@@ -185,7 +189,9 @@ export default class Geode extends Scene {
       }
       c.mesh.visible = true;
       // orient +y along dir, scale length by growth; radius grows slightly too
-      c.mesh.position.copy(c.basePos);
+      // bases are buried into the matrix along the negative growth axis — crystals
+      // emerge from stone instead of floating at their nucleation point
+      c.mesh.position.copy(c.basePos).addScaledVector(c.dir, -c.length * 0.3);
       this.tmp.c.set(0, 1, 0);
       c.mesh.quaternion.setFromUnitVectors(this.tmp.c, c.dir);
       const len = c.length * (0.25 + 0.75 * g); // nuclei exist small, then extend
@@ -225,7 +231,7 @@ export default class Geode extends Scene {
     this.dof.render(rr, this.main.texture, this.main.depthTexture!, {
       enabled: true,
       focusDistance: focusD,
-      aperture: 0.05,
+      aperture: 0.14,
       maxRadius: 15,
       samples: 36,
       near: 0.05,
