@@ -1044,7 +1044,7 @@ async function motion(page: Page) {
   await Bun.write(path.join(outDir, 'summary.json'), JSON.stringify(summaryJson, null, 2));
   await Bun.write(path.join(outDir, 'findings.json'), JSON.stringify(findingsJson, null, 2));
   await Bun.write(path.join(outDir, 'frames.csv'), generateFramesCsv(frameMetrics));
-  await Bun.write(path.join(outDir, 'text.csv'), generateTextCsv(textProbes));
+  await Bun.write(path.join(outDir, 'text.csv'), generateTextCsv([...textProbes].sort((a, b) => a.frameIdx - b.frameIdx || a.cy - b.cy || a.cx - b.cx)));
   await Bun.write(path.join(outDir, 'events.json'), JSON.stringify(allEvents, null, 2));
 
   console.log(`\n[motion] Success! Telemetry written to: ${outDir}`);
