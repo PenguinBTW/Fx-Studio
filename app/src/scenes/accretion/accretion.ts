@@ -54,11 +54,13 @@ export default class Accretion extends Scene {
       uniforms: {
         uTime: { value: 0 },
         uGap: { value: 0 },   // gap-opening progress 0..1
+        uScale: { value: 1 },
       },
       vertexShader: `
         attribute vec4 aSeed;
         uniform float uTime;
         uniform float uGap;
+        uniform float uScale;
         varying float vBright;
         varying float vFade;
         void main() {
@@ -78,10 +80,10 @@ export default class Accretion extends Scene {
           float inGap = 1.0 - smoothstep(gapWidth, gapWidth + 0.12, gapDist);
           vFade = 1.0 - inGap * uGap * 0.92;
           // illumination: 1/r² starlight with per-grain variation
-          vBright = (0.35 + aSeed.w * 0.65) * 1.5 / (r * r);
+          vBright = (0.35 + aSeed.w * 0.65) * 1.4 / (r * r);
           vec4 mv = modelViewMatrix * vec4(p, 1.0);
           gl_Position = projectionMatrix * mv;
-          gl_PointSize = min((1.1 + aSeed.w * 1.8) * 320.0 / max(1.0, -mv.z * 60.0), 7.0);
+          gl_PointSize = min((1.1 + aSeed.w * 1.8) * uScale * 320.0 / max(1.0, -mv.z * 60.0), 7.0 * uScale);
         }`,
       fragmentShader: `
         varying float vBright;
@@ -92,7 +94,7 @@ export default class Accretion extends Scene {
           float a = (1.0 - smoothstep(0.12, 0.5, d)) * vBright * vFade;
           if (a < 0.004) discard;
           // starlight-white warming to dust-amber at radius
-          gl_FragColor = vec4(vec3(1.0, 0.82, 0.6) * a, a);
+          gl_FragColor = vec4(vec3(1.0, 0.82, 0.6), a);
         }`,
     });
     const dust = new THREE.Points(this.dustGeo, this.dustMat);
@@ -122,11 +124,12 @@ export default class Accretion extends Scene {
         uniform float uTime;
         void main() {
           float d = length(vUv);
-          float core = exp(-d * d * 38.0) * 1.5;
+          float core = exp(-d * d * 38.0) * 2.2;
           float halo = exp(-d * 3.2) * 0.35;
           float flicker = 1.0 + 0.05 * sin(uTime * 7.3) * sin(uTime * 3.1);
-          vec3 col = (core * vec3(1.0, 0.97, 0.92) + halo * vec3(1.0, 0.72, 0.42)) * flicker;
-          gl_FragColor = vec4(col, min(1.0, core + halo));
+          float edge = (1.0 - smoothstep(0.55, 0.95, abs(vUv.x))) * (1.0 - smoothstep(0.55, 0.95, abs(vUv.y)));
+          vec3 col = (core * vec3(1.0, 0.97, 0.92) + halo * vec3(1.0, 0.72, 0.42)) * flicker * edge;
+          gl_FragColor = vec4(col, min(1.0, (core + halo) * 0.55) * edge);
         }`,
     });
     this.coreMesh = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 3.4), this.coreMat);
@@ -161,7 +164,7 @@ export default class Accretion extends Scene {
           float body = exp(-d * d * 20.0) * 1.6;
           float haze = exp(-d * 2.6) * 0.3;
           vec3 col = (body * vec3(1.0, 0.85, 0.62) + haze * vec3(0.9, 0.6, 0.35)) * uForm;
-          gl_FragColor = vec4(col, min(1.0, (body + haze) * uForm));
+          gl_FragColor = vec4(col, min(1.0, (body + haze) * uForm * 0.55));
         }`,
     });
     this.clumpMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.clumpMat);
@@ -169,6 +172,7 @@ export default class Accretion extends Scene {
     this.clumpMesh.renderOrder = 2;
     this.world.add(this.clumpMesh);
 
+    this.rig.setLensMm(38);
     this.rig.handheld({ weight: 0.25, posAmp: 0.01, rotAmp: 0.0015, seed: 11 });
   }
 
@@ -185,6 +189,7 @@ export default class Accretion extends Scene {
     this.rig.syncToThreeCamera(camSpec, this.cam);
 
     this.dustMat!.uniforms.uTime.value = lt;
+    this.dustMat!.uniforms.uScale.value = out.width / 1920;
     this.dustMat!.uniforms.uGap.value = form;
     this.coreMat!.uniforms.uTime.value = lt;
     this.clumpMat!.uniforms.uTime.value = lt;
@@ -197,24 +202,13 @@ export default class Accretion extends Scene {
       : [CLUMP_R * 0.7, 0, 0];
     const focusD = this.rig.focusDistance(focusPt);
 
-    if (!this.main) {
-      this.main = new THREE.WebGLRenderTarget(out.width, out.height, {
-        type: THREE.HalfFloatType,
-        depthTexture: new THREE.DepthTexture(out.width, out.height, THREE.UnsignedInt248Type),
-      });
-    }
-    rr.setRenderTarget(this.main);
+    // no material in this scene writes depth — depth-DoF would be meaningless,
+    // and even disabled the pass costs an extra target + fullscreen copy.
+    // Render direct to output instead (documented all-additive pattern).
+    void focusD;
+    rr.setRenderTarget(out);
     rr.clear(true, true, true);
     rr.render(this.world, this.cam);
-    this.dof.render(rr, this.main.texture, this.main.depthTexture!, {
-      enabled: false,
-      focusDistance: Math.max(0.5, focusD),
-      aperture: 4,
-      maxRadius: 8,
-      samples: 16,
-      near: 0.05,
-      far: 200,
-    }, out);
     rr.resetState();
     return { exposure: 1.05, bloom: 0.0, vignette: 0.35 } as PostOverrides;
   }
