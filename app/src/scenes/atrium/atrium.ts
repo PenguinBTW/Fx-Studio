@@ -40,10 +40,14 @@ function camTarget(lt: number, camY: number, out: THREE.Vector3): THREE.Vector3 
   return out;
 }
 function focusAt(lt: number): number {
-  // near treads early, deep into the shaft mid, the oculus ring late
+  // near treads early, deep into the shaft mid; the finale is measured in render()
   if (lt < 12) return 2.2;
   if (lt < 22) return 2.2 + (4.5 - 2.2) * smoothstep(12, 18, lt);
-  return 4.5 + (6.0 - 4.5) * smoothstep(22, 27, lt);
+  return 4.5;
+}
+// finale focus weight — 0 until the oculus becomes the subject
+function ringWeight(lt: number): number {
+  return smoothstep(22, 27, lt);
 }
 
 export default class Atrium extends Scene {
@@ -167,7 +171,18 @@ export default class Atrium extends Scene {
     this.dust?.render(r, this.cam, rt, lt);
     this.dof.render(r, rt.texture, rt.depthTexture!, {
       enabled: true,
-      focusDistance: focusAt(lt),
+      focusDistance: (() => {
+        const base = focusAt(lt);
+        const w = ringWeight(lt);
+        if (w < 0.001) return base;
+        // closed-form measured distance to the oculus rim nearest the camera —
+        // both positions are f(lt), so the composition is still closed-form
+        const cx = this.cam.position.x, cy = this.cam.position.y, cz = this.cam.position.z;
+        const horiz = Math.hypot(cx, cz);
+        const rimX = cx / Math.max(horiz, 1e-6) * 1.35, rimZ = cz / Math.max(horiz, 1e-6) * 1.35;
+        const d = Math.hypot(cx - rimX, cy - 9.0, cz - rimZ);
+        return base + (d - base) * w;
+      })(),
       aperture: 5.0,
       maxRadius: 14,
       near: this.cam.near,
