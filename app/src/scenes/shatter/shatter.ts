@@ -210,8 +210,7 @@ export default class Shatter extends Scene {
       vignette: 0.5,
       depthFocusDist: this.focusDist,
       depthAperture: 5,
-      near: 0.1,
-      far: 100,
+      depthDof: { near: 0.1, far: 100 },
     } as PostOverrides;
   }
 
