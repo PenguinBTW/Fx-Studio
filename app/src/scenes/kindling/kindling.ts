@@ -194,6 +194,7 @@ export default class Kindling extends Scene {
         }`,
     });
     const sparks = new THREE.Points(sparkGeo, this.emberMat);
+    (this as any)._sparksRef = sparks;
     sparks.frustumCulled = false;
     sparks.position.set(0, 1.55, 0);
     this.stick.add(sparks);
@@ -226,6 +227,7 @@ export default class Kindling extends Scene {
         }`,
     });
     const smoke = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 3.0), this.smokeMat);
+    (this as any)._smokeRef = smoke;
     smoke.position.set(0, 3.0, 0);
     this.stick.add(smoke);
 
@@ -266,9 +268,17 @@ export default class Kindling extends Scene {
     // smoke: thin during burn, blooming at death
     this.smokeMat!.uniforms.uAmt.value = 0.25 * smoothstep(4, 8, lt) * (1 - smoothstep(20, 24, lt))
       + smoothstep(24, 28, lt);
-    (this as any)._charVal = smoothstep(5, 27, lt);
-    if ((this as any)._charU) (this as any)._charU.value = (this as any)._charVal;
+    const charV = smoothstep(5, 27, lt);
+    (this as any)._charVal = charV;
+    if ((this as any)._charU) (this as any)._charU.value = charV;
     if ((this as any)._emberU) (this as any)._emberU.value = 1.0 - smoothstep(24, 29, lt);
+    // the combustion front descends the stick as charring progresses — the flame rides it.
+    // tipness 1 = local +1.5; front tipness = 1-charV → local y
+    const frontY = ((1 - charV) - 0.5) * 3.0;
+    const flameY = Math.max(frontY + 0.15, -1.15);
+    this.flame!.position.y = flameY;
+    if ((this as any)._sparksRef) (this as any)._sparksRef.position.y = flameY - 0.13;
+    if ((this as any)._smokeRef) (this as any)._smokeRef.position.y = flameY + 1.4;
 
     // flame scale swells with life — bloom is bigger than steady state
     const fs = 0.42 + life * 0.4 + fl * 0.03 * life;
@@ -290,7 +300,7 @@ export default class Kindling extends Scene {
     this.cam.up.set(0, 1, 0);
     // frame on the flame heart, drifting up as smoke becomes the subject at death
     this.flame!.getWorldPosition(this.tmp.b);
-    this.tmp.b.y += 0.15 + smoothstep(22, 29, lt) * 0.18;
+    this.tmp.b.y += 0.02 + smoothstep(6, 10, lt) * 0.13 + smoothstep(22, 29, lt) * 0.18;
     this.cam.lookAt(this.tmp.b);
 
     // DoF on the flame heart — view-axis depth
