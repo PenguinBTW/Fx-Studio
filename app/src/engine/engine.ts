@@ -115,6 +115,11 @@ export class Engine {
 
   constructor(public canvas: HTMLCanvasElement, private makeTimeline?: ((lyrics?: Lyrics | null, audio?: AudioData | null, driver?: TimelineDriver) => TimelineEntry[]) | null) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true, preserveDrawingBuffer: true, powerPreference: 'high-performance' });
+    // shadow mapping is inert unless a light opts in with castShadow, so enabling it
+    // here costs nothing for shadowless scenes — but scenes that set castShadow on a
+    // light (and every mesh flag it) previously rendered with no shadows at all
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.setPixelRatio(1);
     this.renderer.setSize(PW, PH, false);
     this.renderer.autoClear = false;
