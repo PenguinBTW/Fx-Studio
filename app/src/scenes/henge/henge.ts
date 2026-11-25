@@ -31,6 +31,7 @@ export default class Henge extends Scene {
   private mistMat: THREE.ShaderMaterial | null = null;
   private mistMesh: THREE.Mesh | null = null;
   private shadowWasEnabled = false;
+  private shadowCaptured = false;
   private disposables: { dispose(): void }[] = [];
 
   override async init() {
@@ -122,6 +123,7 @@ export default class Henge extends Scene {
     this.mistMat = new THREE.ShaderMaterial({
       transparent: true,
       depthWrite: false,
+      side: THREE.DoubleSide,
       uniforms: { uMist: { value: 1 } },
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
       fragmentShader: `varying vec2 vUv;
@@ -143,7 +145,7 @@ export default class Henge extends Scene {
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
     const sc = this.sun.shadow.camera;
-    sc.left = -16; sc.right = 16; sc.top = 16; sc.bottom = -16; sc.far = 120;
+    sc.left = -22; sc.right = 22; sc.top = 22; sc.bottom = -22; sc.far = 220;
     this.sun.shadow.bias = -0.0006;
     this.world.add(this.sun);
     this.world.add(this.sun.target);
@@ -161,7 +163,7 @@ export default class Henge extends Scene {
     // day progress: 0 at 5s (sunrise) to 1 at 28.5s (sunset alignment)
     const day = smoothstep(5, 28.5, lt);
     // elevation: arcs to a low 32° noon — a winter's day, long shadows all day
-    const elev = Math.sin(day * Math.PI) * 0.52 + 0.015;
+    const elev = Math.sin(day * Math.PI) * 0.52 + 0.015 - 0.075 * (1.0 - smoothstep(3.5, 5, lt));
     // azimuth: rises in the east (+X slightly south), sets west... but the alignment
     // needs the sun ON the +X axis at the end — so the arc runs east(-X) to west(+X
     // through south). Sweep: az from -2.6 rad to +0.0 rad measured around Y.
@@ -182,7 +184,7 @@ export default class Henge extends Scene {
     const temp = 2600 + (1 - warmth) * 3500;
     const [kr, kg, kb] = blackbodyToLinearSRGB(temp);
     this.sun!.color.setRGB(kr, kg, kb);
-    this.sun!.intensity = 0.15 + dayness * 2.6;
+    this.sun!.intensity = 0.02 + dayness * 2.7;
     this.hemi!.intensity = 0.38 + dayness * 0.4;
 
     // sky uniforms
@@ -192,12 +194,12 @@ export default class Henge extends Scene {
     this.mistMat!.uniforms.uMist.value = 1.0 - smoothstep(6, 14, lt);
 
     // ---- camera: slow orbit holding the trilithon gap in frame ----
-    const yaw = 0.9 + lt * 0.012;
+    const yaw = Math.PI - Math.max(0, 29.2 - lt) * 0.03;
     this.rig.orbit([2.0, 1.4, 0], 18, 0.17 + 0.02 * Math.sin(lt * 0.1), yaw);
     const spec = this.rig.evalCam(lt);
     this.rig.syncToThreeCamera(spec, this.cam);
 
-    if (!this.shadowWasEnabled) this.shadowWasEnabled = rr.shadowMap.enabled;
+    if (!this.shadowCaptured) { this.shadowWasEnabled = rr.shadowMap.enabled; this.shadowCaptured = true; }
     rr.shadowMap.enabled = true;
     rr.shadowMap.needsUpdate = true;
 
