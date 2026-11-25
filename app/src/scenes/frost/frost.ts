@@ -45,6 +45,7 @@ export default class Frost extends Scene {
     // the pane: one large shader plane — the entire scene is this surface
     this._paneGeo = new THREE.PlaneGeometry(6, 3.4);
     this.paneMat = new THREE.ShaderMaterial({
+      transparent: true,
       uniforms: {
         uTime: { value: 0 },
         uDawn: { value: 0 },
@@ -115,7 +116,7 @@ export default class Frost extends Scene {
 
           // ---- condensation beads (pre-frost, evaporate as frost overtakes) --
           float beadField = noise(p * 85.0) * noise(p * 60.0 + 9.0);
-          float beads = smoothstep(0.48, 0.52, beadField) * 0.4 * (1.0 - frost) * (1.0 - smoothstep(6.0, 10.0, uTime));
+          float beads = smoothstep(0.48, 0.52, beadField) * 0.4 * (1.0 - frost) * (1.0 - smoothstep(frozenAt - 0.5, frozenAt - 0.1, front));
 
           // ---- lighting ---------------------------------------------------
           // night glass: dark reflective blue. dawn: backlit amber scattering
@@ -147,7 +148,8 @@ export default class Frost extends Scene {
           float rim = smoothstep(frozenAt - 0.05, frozenAt, front) * (1.0 - smoothstep(frozenAt, frozenAt + 0.05, front));
           col += vec3(0.6, 0.8, 1.0) * rim * (0.3 + uDawn * 0.6);
 
-          gl_FragColor = vec4(col, 1.0);
+          float alpha = clamp(frost * 0.9 + beads * 0.5 + 0.08, 0.0, 1.0);
+          gl_FragColor = vec4(col, alpha);
         }`,
     });
     const pane = new THREE.Mesh(this._paneGeo, this.paneMat);
@@ -189,7 +191,7 @@ export default class Frost extends Scene {
       focusDistance: Math.max(0.3, focusD),
       aperture: 4,
       maxRadius: 8,
-      samples: 32,
+      samples: 16,
       near: 0.02,
       far: 60,
     }, out);

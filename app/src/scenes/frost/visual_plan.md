@@ -14,4 +14,25 @@ Lighting: pure backlight — the sun never enters the frame, only its transmissi
 Composition: full-frame pane, edge-nucleated growth creating natural vignette structure.
 Motion: growth front + dawn rise + camera breath only — no cuts.
 
+
+
+## mapping table
+| abstract concept | physical visual |
+|---|---|
+| time compression | growth front visibly creeping — phase change made spatial |
+| cold | blue-steel palette, crystalline texture, stillness |
+| warmth returning | amber transmission through ice — light physically filtered by the mineral |
+| fragility/transience | feather edges, the melting-point thinness of the rim highlight |
+
+## anti-cliché audit
+- NOT a generic winter landscape with snowflakes — no snowfall cliché
+- NOT a macro stock-photo frost — the growth must MOVE, the transition is the subject
+- no lens flare, no bokeh balls, no cozy interior reveal
+
+## focal hierarchy
+1. the crystallizing rim (hero — always the sharpest, brightest element)
+2. dendrite vein structure inside frozen regions
+3. dawn color transformation of the whole pane
+4. condensation beads (opening act only), sparkle glints (seasoning)
+
 Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
