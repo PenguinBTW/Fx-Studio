@@ -305,10 +305,11 @@ export default class Monolith extends Scene {
         }
         if (!visible) continue;
         for (let k = 0; k < 8; k++) {
-          // clamp to the viewport: the probe is a screen-space diagnostic, so the box
-          // should bound what is actually visible, not geometry stretching off-frame
-          const sx = Math.max(0, Math.min(W, pts[k * 2]!));
-          const sy = Math.max(0, Math.min(H, pts[k * 2 + 1]!));
+          // true projected bounds, NOT clamped: analyzeTextProbes detects clipping by
+          // comparing the box against its own viewport intersection — clamping here
+          // would make clipping undetectable. Full-offscreen glyphs are already excluded.
+          const sx = pts[k * 2]!;
+          const sy = pts[k * 2 + 1]!;
           if (sx < minX) minX = sx;
           if (sy < minY) minY = sy;
           if (sx > maxX) maxX = sx;
