@@ -145,6 +145,19 @@ Instead of arbitrary colors, light procedural assemblies using real optical phys
 
 ---
 
+### 4.3 Closed-Form Height Fog & Aerial Perspective (`atmosphere.ts`)
+Depth cueing via exponential height fog — optical depth integrated ANALYTICALLY along
+each ray (no stepping, no noise, fully deterministic):
+```typescript
+import { fogTransmittance, applyAerialPerspective, ATMOSPHERE_GLSL } from '../../engine/atmosphere';
+const T = fogTransmittance(camY, targetY, dist, 0.02, 0.15);
+const c = applyAerialPerspective(objColor, y0, y1, dist, elevNorm, { baseDensity: 0.02, heightFalloff: 0.15 }, fogColor);
+```
+- Inscatter is Rayleigh-ordered: horizon brightens/warms slightly, zenith unchanged.
+- Inject `ATMOSPHERE_GLSL` into custom shaders for GPU fog consistent with the CPU planning math (same formula; float32-vs-float64 rounding means comparisons need a small tolerance, not bit equality).
+- `uniformEquivalentDensity(yRef, fog, distRef)` approximates standard-material FogExp2
+  (quadratic exponent — matched at a reference distance, documented in the API).
+
 ## 5. Twist-Free Dynamic Ribbons via Bishop Frames (`ribbon.ts`)
 
 Standard Three.js `TubeGeometry` suffers from catastrophic axis-flipping (gimbal lock and twisting) when paths loop or turn vertically. f(x) Studio uses **Bishop Rotation-Minimizing Frames (RMF)** to generate completely twist-free ribbons along 3D curves:
