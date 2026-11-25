@@ -56,11 +56,11 @@ export default class DataGarden extends Scene {
       const rr2 = 0.4 + 2.6 * Math.sqrt(i / ROD_COUNT);
       const a = i * golden;
       // real tidal harmonic constituents (period hours, relative equilibrium
-      // amplitude): M2, S2, N2, K2, K1, O1, P1, M4 — rods cycle through the table,
+      // amplitude): M2, S2, N2, K2, K1, O1, P1 — rods cycle through the table,
       // frequency scaled so the M2 tide completes ~0.5 cycles in 30s of screen time
       const CONSTITUENTS: [number, number][] = [
         [12.42, 1.00], [12.00, 0.47], [12.66, 0.19], [11.97, 0.13],
-        [23.93, 0.42], [25.82, 0.30], [24.07, 0.19], [6.21, 0.06],
+        [23.93, 0.42], [25.82, 0.30], [24.07, 0.19],
       ];
       const [periodH, amp] = CONSTITUENTS[i % CONSTITUENTS.length];
       const timeScale = 12 / 12.42;
