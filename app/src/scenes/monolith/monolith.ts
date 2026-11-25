@@ -33,7 +33,7 @@ function glyphMotion(lt: number, i: number): [number, number, number] {
   }
   const dt = lt - hit;
   // damped oscillation settling onto the plane — mass with a slightly soft mount
-  const bounce = 0.06 * Math.exp(-5.5 * dt) * Math.cos(26 * dt);
+  const bounce = 0.09 * Math.exp(-5.5 * dt) * Math.sin(26 * dt);
   const rock = 0.05 * Math.exp(-4.5 * dt) * Math.sin(21 * dt + i * 0.7);
   return [Math.max(0, bounce), rock, 1];
 }
@@ -97,8 +97,17 @@ export default class Monolith extends Scene {
   private keyLight: THREE.SpotLight | null = null;
   private rimLight: THREE.DirectionalLight | null = null;
   private tmp = { a: new THREE.Vector3(), b: new THREE.Vector3(), c: new THREE.Vector3() };
+  private probeBox = new THREE.Box3();
+
+  private prevShadowEnabled = false;
+  private prevShadowType: THREE.ShadowMapType | null = null;
 
   override init() {
+    const r = this.ctx.renderer;
+    this.prevShadowEnabled = r.shadowMap.enabled;
+    this.prevShadowType = r.shadowMap.type;
+    r.shadowMap.enabled = true;
+    r.shadowMap.type = THREE.PCFShadowMap;
     this.world.background = new THREE.Color(0x050403);
     this.world.fog = new THREE.FogExp2(0x050403, 0.028);
 
@@ -112,6 +121,15 @@ export default class Monolith extends Scene {
     this.world.add(ground);
 
     // the word: extruded bronze with clearcoat — heavy, machined, real
+    const bronzeMat = new THREE.MeshPhysicalMaterial({
+      color: 0x8a6540,
+      roughness: 0.42,
+      metalness: 0.85,
+      clearcoat: 0.6,
+      clearcoatRoughness: 0.3,
+      depthWrite: true,
+      depthTest: true,
+    });
     this.textGroup = createInWorldText(WORD, {
       size: SIZE,
       depth: 0.34,
@@ -120,12 +138,7 @@ export default class Monolith extends Scene {
       bevelSize: 0.03,
       bevelSegments: 4,
       letterSpacing: 0.14,
-      color: 0x8a6540,
-      roughness: 0.42,
-      metalness: 0.85,
-      clearcoat: 0.6,
-      clearcoatRoughness: 0.3,
-      physical: true,
+      material: bronzeMat,
       castShadow: true,
       receiveShadow: true,
     } as any);
@@ -192,7 +205,7 @@ export default class Monolith extends Scene {
       speed: 0.35,
       spread: 1.5,
       lifetime: 11.0,
-      gravity: 0,
+      gravity: [0, 0, 0] as any,
       turbulence: 0.35,
       size: 0.008,
       color: [1.0, 0.75, 0.45, 0.28],
@@ -259,6 +272,51 @@ export default class Monolith extends Scene {
     this.cam.lookAt(this.tmp.b);
     this.cam.updateMatrixWorld();
 
+    // telemetry: union screen-space bbox of the glyphs — invariant 5 of the raw-scene
+    // rules, so diagnostics can check the lettering for clipping/overlap
+    const P = (window as any).__motion;
+    if (P?.textProbes && P.recordText !== false) {
+      let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9, any = false;
+      const corner = this.tmp.c;
+      for (const gl of this.glyphs) {
+        this.probeBox.setFromObject(gl.mesh);
+        const b = this.probeBox;
+        for (let k = 0; k < 8; k++) {
+          corner.set(
+            k & 1 ? b.max.x : b.min.x,
+            k & 2 ? b.max.y : b.min.y,
+            k & 4 ? b.max.z : b.min.z,
+          ).project(this.cam);
+          const sx = (corner.x + 1) / 2 * W;
+          const sy = (1 - corner.y) / 2 * H;
+          if (sx < minX) minX = sx;
+          if (sy < minY) minY = sy;
+          if (sx > maxX) maxX = sx;
+          if (sy > maxY) maxY = sy;
+          any = true;
+        }
+      }
+      if (any) {
+        P.textProbes.push({
+          frameIdx: P.currentFrameIdx ?? 0,
+          t: f.t,
+          text: WORD,
+          fontFamily: 'extruded-3d',
+          fontPx: maxY - minY,
+          fillStyle: '#8a6540',
+          globalAlpha: 1,
+          layerId: 'inworld_text',
+          bbox: [minX, minY, maxX, maxY],
+          w: maxX - minX,
+          h: maxY - minY,
+          cx: (minX + maxX) / 2,
+          cy: (minY + maxY) / 2,
+          hPct: ((maxY - minY) / 1080) * 100,
+          isStroke: false,
+        });
+      }
+    }
+
     // present: world into depth RT, then physical DoF into out.
     // focus: before the arc, hold the word centre at its true axial depth; during the
     // rack, measure to the tracked letter — both endpoints are f(lt), so the composed
@@ -274,7 +332,7 @@ export default class Monolith extends Scene {
     const rackW = smoothstep(16, 17.5, lt) * (1 - smoothstep(23.5, 25, lt));
     const cx = focusX * rackW;
     const focusDist = (this.tmp.b.x - this.cam.position.x) * fwd.x * 0 +
-      ((cx - this.cam.position.x) * fwd.x + (0.85 - this.cam.position.y) * fwd.y + (0 - this.cam.position.z) * fwd.z);
+      ((cx - this.cam.position.x) * fwd.x + (0.85 - this.cam.position.y) * fwd.y + (0.38 - this.cam.position.z) * fwd.z);
     this.dof.render(r, rt.texture, rt.depthTexture!, {
       enabled: true,
       focusDistance: Math.max(0.3, focusDist),
@@ -289,6 +347,9 @@ export default class Monolith extends Scene {
   }
 
   override dispose() {
+    const r = this.ctx.renderer;
+    r.shadowMap.enabled = this.prevShadowEnabled;
+    if (this.prevShadowType !== null) r.shadowMap.type = this.prevShadowType;
     this.main?.dispose();
     this.dof.dispose();
     this.dust?.dispose();
