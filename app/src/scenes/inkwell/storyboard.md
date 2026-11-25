@@ -2,7 +2,6 @@
 
 A single drop of black ink falls into still backlit water. The plume descends, mushrooms, and blooms into slow domain-warped veining — diffusion as spectacle, the moment order becomes lace. 30s, single continuous shot.
 
-Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
 
 ## Beats
 - 0–3s: still water — luminous, empty, expectant. Surface glints.
@@ -16,3 +15,5 @@ Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
 - Position vector: near-static, slight drift and slow push-in — the ink provides all motion.
 - Focal point: the plume head while descending; the densest vein cluster after.
 - Movement language: patient, almost locked — scientific observation intimacy.
+
+Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL

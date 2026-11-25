@@ -54,6 +54,7 @@ export default class Inkwell extends Scene {
   override async init() {
     // luminous backlight volume behind the water
     this.bgMat = new THREE.ShaderMaterial({
+      depthWrite: false,
       uniforms: { uDensity: { value: 0 }, uTime: { value: 0 } },
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
       fragmentShader: `varying vec2 vUv;
@@ -64,7 +65,7 @@ export default class Inkwell extends Scene {
           float glow = 1.0 - length(vUv - 0.5) * 0.9;
           vec3 water = mix(vec3(0.10, 0.16, 0.19), vec3(0.55, 0.72, 0.75), glow);
           // faint surface glint band at the top, gone once ink rises
-          float glint = (1.0 - smoothstep(0.86, 0.98, vUv.y)) * smoothstep(0.80, 0.88, vUv.y);
+          float glint = (1.0 - smoothstep(0.74, 0.86, vUv.y)) * smoothstep(0.66, 0.74, vUv.y);
           water += glint * 0.2 * (1.0 - uDensity) * (0.7 + 0.3 * sin(uTime * 0.9 + vUv.x * 20.0));
           water *= 1.0 - uDensity * 0.75;
           gl_FragColor = vec4(water, 1.0);
@@ -125,7 +126,8 @@ export default class Inkwell extends Scene {
           float env = (1.0 - smoothstep(spread * 0.25, spread, r));
           // mushroom cap: toroidal density enhancement during 5-12s
           float capT = smoothstep(2.0, 5.0, fallT) * (1.0 - smoothstep(6.0, 12.0, fallT));
-          float ring = exp(-pow((r - spread * 0.55) * 7.0, 2.0)) * capT * step(0.0, q.y + 0.1);
+          float rd = (r - spread * 0.55) * 7.0;
+          float ring = exp(-rd * rd) * capT * step(0.0, q.y + 0.1);
           float density = clamp(env * (0.3 + vein * 1.15) + ring * vein * 1.1, 0.0, 1.0);
 
           // overall fade-in from the strike, plus global saturation at the end
@@ -153,7 +155,9 @@ export default class Inkwell extends Scene {
 
     // camera first — frame-order independence: near-static, slow push-in
     const push = smoothstep(0, 28, lt) * 0.5;
-    this.rig.orbit([0, -0.05, -1.2], 3.6 - push, 0.1 + lt * 0.002, 0.02 + lt * 0.004);
+    const fallTc = Math.max(0, lt - 3);
+    const headTrack = 0.3 - 0.55 * (1.0 - Math.exp(-fallTc * 0.55));
+    this.rig.orbit([0, headTrack, -1.2], 3.6 - push, 0.1 + lt * 0.002, 0.02 + lt * 0.004);
     const spec = this.rig.evalCam(lt);
     this.rig.syncToThreeCamera(spec, this.cam);
 

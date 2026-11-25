@@ -2,7 +2,6 @@
 
 Diffusion register: entropy made beautiful. A drop of ink in water is the canonical image of disorder spreading — but the transition is pure lace. The catalog has fluid as material (mercury) but nothing about mixing itself — the interface where order dissolves.
 
-Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
 
 ## mapping table
 | abstract concept | physical visual |
@@ -25,3 +24,5 @@ Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
 
 ## light
 Strong even backlight (the water glows), no key — the ink reads as near-black silhouette veining against luminous teal-white water. As density grows the backlight is swallowed — exposure falls gently.
+
+Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
