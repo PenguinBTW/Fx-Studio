@@ -49,7 +49,7 @@ export default class Strata extends Scene {
         float layerResist(vec2 p){
           // same banding as the fragment stage: hard layers resist, soft carve
           float warp = noise(p * 0.12) * 2.2;
-          float layerId = floor((p.y + warp) * 0.14);
+          float layerId = floor((p.y + 4.0 + warp) * 0.14);
           float lh = hash(vec2(layerId, 7.0));
           // cap layers (lh >= 0.9) resist strongly; bone softest
           return lh < 0.35 ? 1.0 : (lh < 0.65 ? 0.85 : (lh < 0.9 ? 1.15 : 0.3));
@@ -59,7 +59,9 @@ export default class Strata extends Scene {
           float rough = fbm(p * vec2(0.9, 0.5));
           // positive relief = intact rock surface variation; erosion CARVES below
           float r = gully * 0.4 + rough * 0.15;
-          float carve = (gully * 1.5 + rough * 0.5) * layerResist(p) * ero;
+          float cg = fbm((p + 7.3) * vec2(0.35, 0.06));
+          float cr = fbm((p + 7.3) * vec2(0.9, 0.5));
+          float carve = (cg * 1.5 + cr * 0.5) * layerResist(p) * ero;
           return r - carve;
         }
         void main(){
@@ -147,8 +149,8 @@ export default class Strata extends Scene {
           // fan mounds along the base, growing outward with erosion
           float fan = noise(vec2(pos.x * 0.18, 3.7));
           float grow = ero * (0.5 + fan);
-          pos.y += grow * 2.6 * (1.0 - abs(pos.z) / 6.0);
-          pos.z *= 1.0 + grow * 0.8;
+          pos.z += grow * 2.4 * (1.0 - abs(pos.y) / 6.0);
+          pos.y *= 1.0 + grow * 0.8;
           vNorm2 = vec3(0.0, 1.0, 0.0);
           vec4 wp = modelMatrix * vec4(pos, 1.0);
           vWPos2 = wp.xyz;
@@ -168,7 +170,7 @@ export default class Strata extends Scene {
     const screeGeo = new THREE.PlaneGeometry(70, 6, 110, 8);
     this.screeMesh = new THREE.Mesh(screeGeo, this.screeMat);
     this.screeMesh.rotation.x = -Math.PI / 2;
-    this.screeMesh.position.set(0, -12.8, 3);
+    this.screeMesh.position.set(0, -4.5, 1.5);
     this.world.add(this.screeMesh);
     this.disposables.push(screeGeo, this.screeMat);
 
