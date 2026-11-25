@@ -1,0 +1,12 @@
+{
+  "project": "geode",
+  "meta": {
+    "title": "Geode: crystalline formation in the dark",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 30
+  },
+  "entries": [
+    { "scene": "geode/geode", "id": "geode", "start": 0, "end": 30 }
+  ]
+}
