@@ -69,14 +69,15 @@ export default class Harmonograph extends Scene {
     for (const pen of PENS) {
       // sample the full curve once at init — static geometry, deterministic; the
       // reveal is a per-frame uniform cutoff, so evaluation stays closed-form
+      // sample from the pen's own start — before writeDelay penPos clamps to a constant,
+      // and duplicate points would degenerate the tube's tangents
       const positions = new Float32Array((STEPS + 1) * 3);
-      const times = new Float32Array(STEPS + 1);
       const v = new THREE.Vector3();
+      const t0 = pen.writeDelay;
       for (let i = 0; i <= STEPS; i++) {
-        const lt = (i / STEPS) * T_END;
+        const lt = t0 + (i / STEPS) * (T_END - t0);
         penPos(pen, lt, v);
         positions[i * 3] = v.x; positions[i * 3 + 1] = v.y; positions[i * 3 + 2] = v.z;
-        times[i] = lt;
       }
       // polyline → camera-facing ribbon strip built in the vertex shader is complex;
       // use a narrow TubeGeometry per pen instead, with custom time attribute
@@ -85,9 +86,16 @@ export default class Harmonograph extends Scene {
       const curve = new THREE.CatmullRomCurve3(pts);
       const tube = new THREE.TubeGeometry(curve, 900, 0.013, 6, false);
       // arc-time attribute: interpolate local time along the tube by uv.x
+      // TubeGeometry samples the path with getPointAt — uv.x is ARC-LENGTH fraction, not
+      // time. Map it back: curve parameter t (uniform over our time-uniform samples) via
+      // getUtoTmapping, then linearly to local time offset by the pen's start delay.
       const uv = tube.attributes.uv!;
       const timeAttr = new Float32Array(uv.count);
-      for (let i = 0; i < uv.count; i++) timeAttr[i] = uv.getX(i) * T_END;
+      const span = T_END - t0;
+      for (let i = 0; i < uv.count; i++) {
+        const ct = curve.getUtoTmapping(uv.getX(i), 0);
+        timeAttr[i] = t0 + ct * span;
+      }
       tube.setAttribute('aTime', new THREE.BufferAttribute(timeAttr, 1));
 
       const mat = new THREE.ShaderMaterial({
@@ -124,7 +132,7 @@ export default class Harmonograph extends Scene {
             if (wrote < 0.0) discard;
             float age = wrote / 30.0;
             // fresh ink is hot, older ink settles — long-exposure feel
-            float glow = 2.6 / (1.0 + age * 5.0);
+            float glow = 1.9 / (1.0 + age * 6.0);
             float h = fract(uHueShift + vTime / 30.0 * 1.15);
             vec3 col = spectral(h) * glow;
             gl_FragColor = vec4(col, 0.85);
@@ -138,7 +146,7 @@ export default class Harmonograph extends Scene {
       // pen tip: small hot sphere — emissive white-gold
       const tip = new THREE.Mesh(
         new THREE.SphereGeometry(0.03, 16, 12),
-        new THREE.MeshBasicMaterial({ color: new THREE.Color(4.0, 3.2, 2.0) }),
+        new THREE.MeshBasicMaterial({ color: new THREE.Color(2.8, 2.3, 1.5) }),
       );
       this.world.add(tip);
       this.tips.push({ mesh: tip, pen });
