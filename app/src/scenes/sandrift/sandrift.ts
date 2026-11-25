@@ -97,7 +97,7 @@ export default class Sandrift extends Scene {
         varying vec3 vN;
         varying vec3 vW;
         void main(){
-          vN = normalize(normalMatrix * normal);
+          vN = normalize(mat3(modelMatrix) * normal);
           vec4 w = modelMatrix * vec4(position, 1.0);
           vW = w.xyz;
           gl_Position = projectionMatrix * viewMatrix * w;
@@ -140,10 +140,15 @@ export default class Sandrift extends Scene {
     const posArr = new Float32Array(N * 3); // dummy — real position computed in shader
     const seeds = new Float32Array(N * 4);
     for (let i = 0; i < N; i++) {
-      seeds[i * 4] = Math.random();
-      seeds[i * 4 + 1] = Math.random();
-      seeds[i * 4 + 2] = Math.random();
-      seeds[i * 4 + 3] = Math.random();
+      // deterministic hash seeds — the engine invariant demands identical frames across exports
+      const h1 = Math.sin(i * 127.1) * 43758.5453;
+      const h2 = Math.sin(i * 311.7) * 12543.21;
+      const h3 = Math.sin(i * 74.7) * 24634.63;
+      const h4 = Math.sin(i * 269.5) * 32231.78;
+      seeds[i * 4] = h1 - Math.floor(h1);
+      seeds[i * 4 + 1] = h2 - Math.floor(h2);
+      seeds[i * 4 + 2] = h3 - Math.floor(h3);
+      seeds[i * 4 + 3] = h4 - Math.floor(h4);
     }
     const grainGeo = new THREE.BufferGeometry();
     grainGeo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
