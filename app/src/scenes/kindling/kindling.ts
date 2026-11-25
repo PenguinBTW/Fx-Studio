@@ -41,7 +41,10 @@ export default class Kindling extends Scene {
     rr.shadowMap.enabled = true;
 
     // near-black void — faint cool fill so unlit shapes barely read
-    this.world.add(new THREE.HemisphereLight(0x101822, 0x030202, 0.14));
+    this.world.add(new THREE.HemisphereLight(0x2a3848, 0x0a0806, 0.9));
+    const moon = new THREE.DirectionalLight(0x4a5a70, 1.2);
+    moon.position.set(-2.5, 3, -1.5);
+    this.world.add(moon);
 
     // the fire light: flickering point at the flame heart — THE light source of the scene
     this.fireLight = new THREE.PointLight(0xff8844, 0, 9, 2.0);
@@ -302,7 +305,7 @@ export default class Kindling extends Scene {
     // camera: slow drift-in with a slight arc, macro on the flame
     const k = smoothstep(0, 30, lt);
     const az = 0.5 + lt * 0.035;
-    const rad = 2.9 - k * 0.9;
+    const rad = 2.1 - k * 0.7;
     const cy = 0.4 + Math.sin(lt * 0.11) * 0.15 - k * 0.1;
     this.cam.position.set(Math.sin(az) * rad, cy, Math.cos(az) * rad);
     this.cam.up.set(0, 1, 0);
