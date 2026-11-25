@@ -6,12 +6,11 @@ Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
 
 ## Beats
 - 0–4s: the flat sheet, raking warm light, paper grain visible. Stillness.
-- 4–8s: first fold — the sheet halved lengthwise (spine crease), halves rising like a closing book then settling flat.
-- 8–13s: corner folds — the two top corners sweep down to the centerline, forming the point.
-- 13–18s: second corner folds — edges to centerline again, sharpening the dart.
-- 18–22s: wing folds — the body folds in half, wings press down into final dihedral. The dart rests, complete.
-- 22–24s: hesitation — a breath of nothing. The plane trembles almost imperceptibly.
-- 24–30s: liftoff — the dart rises, banks into a wide climbing spiral, dwindles into the dark.
+- 4–8s: spine rehearsal — the sheet halves lengthwise, rising like a closing book, then settles back flat: the crease is made.
+- 8–12s: corner folds — both top corners sweep down to the centerline, forming the point.
+- 14–16.5s: the halve — the sheet folds backward along the spine; the dart silhouette stands complete.
+- 18–22s: hesitation — a breath of nothing. The plane trembles almost imperceptibly.
+- 22–30s: liftoff — the dart rises, banks nose-first into a climbing spiral, dwindles into the dark.
 
 ## Camera specification
 - Lens: 50mm-normal feel; aperture f/2.0-ish (engine aperture 7) for tactile macro-adjacent intimacy on a tabletop scale.
