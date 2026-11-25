@@ -29,15 +29,19 @@ function camTarget(lt: number, out: THREE.Vector3): THREE.Vector3 {
   out.set(-0.5 + 1.3 * k, 0.13 + 0.03 * Math.sin(lt * 0.17 + 2.0), -0.15);
   return out;
 }
-// rack focus: deep → snail → spore field → snail (storyboard beats)
-function focusAt(lt: number, camZ: number): number {
-  const snailD = 0.9, farD = 3.2;
-  if (lt < 4) return farD;
-  if (lt < 10) return farD + (snailD - farD) * smoothstep(4, 9, lt);
-  if (lt < 18) return snailD;
-  if (lt < 24) return snailD + (farD - snailD) * smoothstep(18, 21.5, lt);
-  return farD + (snailD - farD) * smoothstep(24, 27, lt);
+// rack focus weights: deep → snail → spore field → snail (storyboard beats).
+// When the snail is the subject the focus distance is MEASURED closed-form from the
+// camera/snail positions — both are f(lt), so the composition of the two is still
+// closed-form; a constant nominal distance defocuses the snail as the dolly creeps.
+function snailWeight(lt: number): number {
+  if (lt < 4) return 0;
+  if (lt < 10) return smoothstep(4, 9, lt);
+  if (lt < 18) return 1;
+  if (lt < 24) return 1 - smoothstep(18, 21.5, lt);
+  return smoothstep(24, 27, lt);
 }
+const DEEP_FOCUS = 3.2;
+
 // snail glide along the log: pauses at the end, closed-form position
 function snailX(lt: number): number {
   const go = smoothstep(4.5, 24, lt);
@@ -134,7 +138,7 @@ export default class Fernhollow extends Scene {
 
     // spores: analytical particle emitters scattered through the hollow — the GPU
     // evaluates positions closed-form in the vertex shader (zero CPU per-frame state)
-    this.spores = new AnalyticalParticles(4096, 4242);
+    this.spores = new AnalyticalParticles(4096, 4242, { depthWrite: true });
     const spots: [number, number, number][] = [
       [-1.1, 0.35, -0.7], [-0.2, 0.5, -1.0], [0.8, 0.4, -0.8], [1.3, 0.55, -0.5],
       [-0.5, 0.3, 0.3], [0.5, 0.45, 0.25], [0.0, 0.7, -0.4],
@@ -219,7 +223,12 @@ export default class Fernhollow extends Scene {
     this.spores?.render(r, this.cam, rt, lt);
     this.dof.render(r, rt.texture, rt.depthTexture!, {
       enabled: true,
-      focusDistance: focusAt(lt, this.cam.position.z),
+      focusDistance: (() => {
+        const w = snailWeight(lt);
+        if (w < 0.001 || !this.snail) return DEEP_FOCUS;
+        const d = this.cam.position.distanceTo(this.snail.position);
+        return DEEP_FOCUS + (d - DEEP_FOCUS) * w;
+      })(),
       aperture: 10.0,
       maxRadius: 18,
       near: this.cam.near,
@@ -233,6 +242,8 @@ export default class Fernhollow extends Scene {
   override dispose() {
     this.main?.dispose();
     this.dof.dispose();
+    this.spores?.dispose();
+    this.snailInst?.dispose?.();
     this.world.traverse((o: any) => {
       o.geometry?.dispose?.();
       const m = o.material;

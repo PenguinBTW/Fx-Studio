@@ -126,7 +126,7 @@ export class AnalyticalParticles {
   private attrs: THREE.InstancedBufferAttribute[];
   private count = 0;
 
-  constructor(public readonly capacity = 4096, private readonly seed = 1337) {
+  constructor(public readonly capacity = 4096, private readonly seed = 1337, opts?: { depthWrite?: boolean }) {
     this.geo = new THREE.InstancedBufferGeometry();
 
     // Quad covering [-1, 1] with z=0 and itemSize: 3 (eliminates boundingSphere NaN)
@@ -171,7 +171,7 @@ export class AnalyticalParticles {
         gravity: { value: new THREE.Vector3(0, -0.4, 0) },
       },
       transparent: true,
-      depthWrite: false,
+      depthWrite: opts?.depthWrite ?? false,
       depthTest: true,
       blending: THREE.CustomBlending,
       blendEquation: THREE.AddEquation,
