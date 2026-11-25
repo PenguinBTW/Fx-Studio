@@ -108,8 +108,8 @@ export default class Cloudfall extends Scene {
             p.x -= uTime * 0.22;
             p.y += sin(uTime * 0.13 + uSeed) * 0.3;
             float n = noise(p) * 0.55 + noise(p * 2.3 + 5.0) * 0.3 + noise(p * 5.1) * 0.15;
-            float edge = smoothstep(0.0, 0.18, vUv.x) * smoothstep(1.0, 0.82, vUv.x)
-                       * smoothstep(0.0, 0.3, vUv.y) * smoothstep(1.0, 0.7, vUv.y);
+            float edge = smoothstep(0.0, 0.18, vUv.x) * (1.0 - smoothstep(0.82, 1.0, vUv.x))
+                       * smoothstep(0.0, 0.3, vUv.y) * (1.0 - smoothstep(0.7, 1.0, vUv.y));
             float d = smoothstep(0.32, 0.75, n) * edge * uAlpha;
             gl_FragColor = vec4(vec3(0.92, 0.88, 0.86), d);
           }`,
@@ -129,7 +129,7 @@ export default class Cloudfall extends Scene {
 
     // camera: slow push into the fog bank — sheets pass through the lens plane
     const k = smoothstep(0, 30, lt);
-    this.cam.position.set(Math.sin(lt * 0.05) * 0.8, 1.7 + k * 0.5, 6 - k * 5.5);
+    this.cam.position.set(Math.sin(lt * 0.05) * 0.8, 1.7 + k * 0.5, 6 - k * 8.5);
     this.tmp.b.set(0, 1.4, this.cam.position.z - 8);
     this.cam.up.set(0, 1, 0);
     this.cam.lookAt(this.tmp.b);
