@@ -56,28 +56,32 @@ export default class Mobile extends Scene {
   private redPaddlePos = new THREE.Vector3();
   private centroid = new THREE.Vector3();
   private paddleMeshes: THREE.Mesh[] = [];
+  private redPaddle: THREE.Mesh | null = null;
 
   override async init() {
     this.world.background = new THREE.Color(0x060607);
 
     const rodMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1c, roughness: 0.55, metalness: 0.8 });
-    const wireMat = new THREE.MeshBasicMaterial({ color: 0x0d0d0f });
-    const paddleMat = (c: number) => new THREE.MeshPhysicalMaterial({
-      color: c, roughness: 0.32, metalness: 0.05, clearcoat: 0.6, clearcoatRoughness: 0.35,
+    const wireMat = new THREE.MeshBasicMaterial({ color: 0x232326 });
+    const paddleMat = (c: number) => new THREE.MeshStandardMaterial({
+      color: c, roughness: 0.3, metalness: 0.15,
       side: THREE.DoubleSide,
     });
     this.disposables.push(rodMat, wireMat);
 
     // museum spot: key light high-left, faint cool fill so blacks don't crush to zero
-    const spot = new THREE.SpotLight(0xfff2e0, 90, 60, Math.PI / 5.5, 0.45, 1.4);
-    spot.position.set(-6, 12, 4);
+    const spot = new THREE.SpotLight(0xfff2e0, 400, 80, Math.PI / 3.8, 0.5, 1.1);
+    spot.position.set(-5, 11, 5);
     spot.target.position.set(0, 2.5, 0);
     this.world.add(spot, spot.target);
-    const fill = new THREE.HemisphereLight(0x2a3140, 0x0a0a0c, 0.5);
+    const fill = new THREE.HemisphereLight(0x3a4356, 0x08080a, 1.1);
     this.world.add(fill);
+    const rim = new THREE.DirectionalLight(0xdde4f0, 1.8);
+    rim.position.set(6, 4, -7);
+    this.world.add(rim);
 
     const mkWire = (len: number): THREE.Mesh => {
-      const g = new THREE.CylinderGeometry(0.008, 0.008, len, 5);
+      const g = new THREE.CylinderGeometry(0.012, 0.012, len, 5);
       this.disposables.push(g);
       const m = new THREE.Mesh(g, wireMat);
       m.position.y = -len / 2;
@@ -91,10 +95,10 @@ export default class Mobile extends Scene {
     // build 4 tiers, bottom-up assembly: each tier = horizontal rod,
     // paddle hanging off the left end, next sub-mobile off the right end
     const tierSpec = [
-      { len: 4.6, period: 17, drop: 1.1 },
-      { len: 3.8, period: 23, drop: 0.95 },
-      { len: 3.0, period: 29, drop: 0.8 },
-      { len: 2.3, period: 37, drop: 0.7 },
+      { len: 4.2, period: 17, drop: 0.55 },
+      { len: 3.4, period: 23, drop: 0.5 },
+      { len: 2.7, period: 29, drop: 0.45 },
+      { len: 2.1, period: 37, drop: 0.4 },
     ];
 
     let childGroup: THREE.Group | null = null;
@@ -105,7 +109,7 @@ export default class Mobile extends Scene {
       const group = new THREE.Group();
 
       // rod: pivot at 40% from left — asymmetric balance
-      const rodGeo = new THREE.CylinderGeometry(0.02, 0.02, len, 8);
+      const rodGeo = new THREE.CylinderGeometry(0.03, 0.03, len, 8);
       this.disposables.push(rodGeo);
       const rod = new THREE.Mesh(rodGeo, rodMat);
       rod.rotation.z = Math.PI / 2;
@@ -129,6 +133,7 @@ export default class Mobile extends Scene {
       paddle.rotation.x = 0.12 + i * 0.05;
       group.add(paddle);
       this.paddleMeshes.push(paddle);
+      if (i === 0) this.redPaddle = paddle;
 
       // child sub-mobile hangs from RIGHT end
       if (childGroup) {
@@ -142,14 +147,14 @@ export default class Mobile extends Scene {
 
       tiersTopDown.unshift({ group, period, phase: i * 1.7, swayAmp: 0.05 + i * 0.02, swayPeriod: 11 + i * 6 });
       childGroup = group;
-      childDrop = drop + scales[i] * 1.4;
+      childDrop = drop + scales[i] * 0.9;
     }
 
     // ceiling suspension wire
-    const topWire = mkWire(3.2);
-    topWire.position.set(0, 6.2, 0);
+    const topWire = mkWire(3.0);
+    topWire.position.set(0, 7.8, 0);
     this.world.add(topWire);
-    childGroup!.position.set(0, 3.0, 0);
+    childGroup!.position.set(0, 4.6, 0);
     this.world.add(childGroup!);
     TIERS.length = 0;
     TIERS.push(...tiersTopDown);
@@ -157,7 +162,7 @@ export default class Mobile extends Scene {
     // floor: barely-visible dark plane catching a whisper of spot spill
     const floorGeo = new THREE.CircleGeometry(20, 48);
     this.disposables.push(floorGeo);
-    const floorMat = new THREE.MeshStandardMaterial({ color: 0x0b0b0d, roughness: 0.9, metalness: 0 });
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0x0c0c0e, roughness: 0.92, metalness: 0 });
     this.disposables.push(floorMat);
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
@@ -175,7 +180,7 @@ export default class Mobile extends Scene {
 
     // measure hero points in world space for camera targeting
     this.world.updateMatrixWorld(true);
-    this.paddleMeshes[0].getWorldPosition(this.redPaddlePos);
+    (this.redPaddle ?? this.paddleMeshes[0]).getWorldPosition(this.redPaddlePos);
     this.centroid.set(0, 0, 0);
     for (const p of this.paddleMeshes) {
       const wp = new THREE.Vector3();
@@ -188,9 +193,10 @@ export default class Mobile extends Scene {
     const rev = smoothstep(0, 6, lt);
     const settle = smoothstep(22, 27, lt);
     const target = new THREE.Vector3().lerpVectors(this.redPaddlePos, this.centroid, rev);
-    const radius = 4 + 5 * rev - 0.8 * settle;
+    target.y += 0.6 * rev;
+    const radius = 4.5 + 6.5 * rev - 0.5 * settle;
     const yaw = 0.35 + lt * 0.045 * (1 - settle * 0.8);
-    const pitch = 0.10 + 0.06 * Math.sin(lt * 0.11);
+    const pitch = -0.06 + 0.04 * Math.sin(lt * 0.11);
     this.rig.setLensMm(52);
     this.rig.orbit([target.x, target.y - (1.0 - rev * 0.6), target.z], radius, pitch, yaw);
     const spec = this.rig.evalCam(lt);
