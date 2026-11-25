@@ -56,7 +56,7 @@ float ringH(vec2 p, float i, float t) {
   float decay = (1.0 - age / life);
   decay *= decay;
   float size = 0.6 + 0.7 * hash1(i * 7.0 + g);  // drop momentum → ring scale
-  return envelope * decay * size * 0.028 * sin((d - r) * 34.0 / (1.0 + age * 2.0));
+  return envelope * decay * size * 0.085 * sin((d - r) * 34.0 / (1.0 + age * 2.0));
 }
 
 float heightAt(vec2 p, float t) {
@@ -78,15 +78,17 @@ void main() {
   vec3 V = normalize(uCamPos - vWorld);
   vec3 L = normalize(uLightPos - vWorld);
   // wet asphalt: dark base, specular from the streetlight — rings catch it as moving arcs
-  vec3 base = vec3(0.012, 0.014, 0.02);
+  vec3 base = vec3(0.006, 0.007, 0.011);
   vec3 R = reflect(-L, n);
-  float spec = pow(max(dot(R, V), 0.0), 140.0);
+  float spec = pow(max(dot(R, V), 0.0), 60.0);
   vec3 warm = vec3(1.0, 0.72, 0.38);
   // broad sheen where the surface faces the light
   float sheen = pow(max(dot(R, V), 0.0), 8.0) * 0.10;
-  vec3 col = base + warm * (spec * 2.4 + sheen);
+  vec3 col = base + warm * (spec * 3.5 + sheen);
   // faint cool ambient sky reflection on flat water
-  col += vec3(0.015, 0.02, 0.035) * max(n.y, 0.0);
+  col += vec3(0.004, 0.005, 0.009) * max(n.y, 0.0);
+  float dist = length(uCamPos - vWorld);
+  col *= exp(-dist * 0.09) * 1.35;
   gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -108,7 +110,7 @@ void main() {
   // intensity gates visibility: fraction of streaks active
   vFade = step(fract(aSeed.y * 7.31), uIntensity * 0.8 + 0.15);
   vec3 off = vec3(x - 6.0, y - 1.0, z - 6.0);
-  vec4 mv = modelViewMatrix * vec4(off + position * vec3(0.012, 0.28, 0.012), 1.0);
+  vec4 mv = modelViewMatrix * vec4(off + position * vec3(0.02, 0.42, 0.02), 1.0);
   gl_Position = projectionMatrix * mv;
 }
 `;
