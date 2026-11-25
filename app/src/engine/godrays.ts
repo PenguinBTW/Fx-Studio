@@ -89,31 +89,45 @@ export function shaftRaySegment(shaft: Shaft, rayO: V3, rayD: V3): [number, numb
 export function shaftInscatter(
   shaft: Shaft,
   rayO: V3,
-  rayD: V3,
+  rayD: V3, // MUST be unit length — ray parameters are world distances throughout
   fog: { baseDensity: number; heightFalloff: number } | null,
   edgeSoftness = 0.15,
+  maxDepth?: number, // clamp integration to the first opaque surface along the ray
 ): [number, number, number] {
   const seg = shaftRaySegment(shaft, rayO, rayD);
   if (!seg) return [0, 0, 0];
-  const [t0, t1] = seg;
+  let [t0, t1] = seg;
+  if (maxDepth !== undefined) t1 = Math.min(t1, maxDepth); // never integrate past opaque surfaces
+  if (t1 <= t0) return [0, 0, 0];
   const pathLen = t1 - t0;
+  // weight profile along the segment: radial cosine density × axial depletion.
+  // Simpson quadrature (endpoints + midpoint) — closed-form deterministic, and crucially
+  // NOT single-midpoint: as a camera enters the shaft the entry endpoint weight is
+  // evaluated honestly instead of reapplying a brighter midpoint over the whole path.
+  const w = (t: number): number => {
+    const p: V3 = [rayO[0] + rayD[0] * t, rayO[1] + rayD[1] * t, rayO[2] + rayD[2] * t];
+    const co = sub(p, shaft.apex);
+    const axial = dot(co, shaft.dir);
+    const radial = Math.sqrt(Math.max(0, dot(co, co) - axial * axial));
+    const coneR = Math.max(1e-9, axial * Math.sqrt(1 - shaft.cosAngle * shaft.cosAngle) / shaft.cosAngle);
+    const rr = Math.min(1, radial / coneR);
+    const edge = Math.pow(0.5 + 0.5 * Math.cos(Math.PI * rr), Math.max(0.05, edgeSoftness / 0.15));
+    const axialFade = 1 - Math.min(1, Math.max(0, axial) / shaft.length) * 0.6;
+    return edge * axialFade;
+  };
   const tm = (t0 + t1) / 2;
+  const integral = ((w(t0) + 4 * w(tm) + w(t1)) / 6) * pathLen;
   const mid: V3 = [rayO[0] + rayD[0] * tm, rayO[1] + rayD[1] * tm, rayO[2] + rayD[2] * tm];
-  const co = sub(mid, shaft.apex);
-  const axial = dot(co, shaft.dir);
-  const radial = Math.sqrt(Math.max(0, dot(co, co) - axial * axial));
-  const coneR = Math.max(1e-9, axial * Math.sqrt(1 - shaft.cosAngle * shaft.cosAngle) / shaft.cosAngle);
-  const rr = Math.min(1, radial / coneR);
-  const edge = rr < 1 - edgeSoftness ? 1 : (1 - rr) / edgeSoftness;
-  const axialFade = 1 - Math.min(1, Math.max(0, axial) / shaft.length) * 0.6;
   let T = 1;
   if (fog) T = fogTransmittance(rayO[1], mid[1], tm, fog.baseDensity, fog.heightFalloff);
-  const L = shaft.density * pathLen * edge * axialFade * T;
+  const L = shaft.density * integral * T;
   return [shaft.color[0] * L, shaft.color[1] * L, shaft.color[2] * L];
 }
 
 /** GLSL chunk mirroring shaftRaySegment — same formula, float32 rounding differs. */
 export const SHAFT_GLSL = /* glsl */ `
+// full interval logic mirroring the TS shaftRaySegment — including cap-facing rays
+// (both quadratic intervals kept through axial clipping) and the linear a≈0 solve
 vec2 shaftRaySegment(vec3 apex, vec3 dir, float cosAngle, float len, vec3 ro, vec3 rd) {
   vec3 co = ro - apex;
   float cos2 = cosAngle * cosAngle;
@@ -122,30 +136,48 @@ vec2 shaftRaySegment(vec3 apex, vec3 dir, float cosAngle, float len, vec3 ro, ve
   float a = dv * dv - cos2 * dot(rd, rd);
   float b = 2.0 * (dv * cov - cos2 * dot(rd, co));
   float c = cov * cov - cos2 * dot(co, co);
-  // simplified finite-interval solve for shader use (transverse rays): positive q inside
+  // axial bounds
+  float lo = -1e30, hi = 1e30;
+  if (abs(dv) < 1e-12) {
+    if (cov < 0.0 || cov > len) return vec2(-1.0);
+  } else {
+    float ta0 = (0.0 - cov) / dv;
+    float ta1 = (len - cov) / dv;
+    lo = min(ta0, ta1); hi = max(ta0, ta1);
+  }
+  float bestT0 = 1e30, bestT1 = -1e30;
   float disc = b * b - 4.0 * a * c;
-  if (abs(a) < 1e-12 || disc < 0.0) {
-    if (abs(a) < 1e-12 && c > 0.0) {
-      // axis-parallel inside case: bounded by axial clip only
-    } else if (a > 0.0 && disc < 0.0) {
-      // q positive everywhere: bounded by axial clip only
+  // candidate inside-intervals (q > 0): up to two, evaluated pairwise
+  float i0a = -1e30, i1a = -1e30, i0b = -1e30, i1b = -1e30; float nb = 0.0;
+  if (abs(a) < 1e-12) {
+    if (abs(b) < 1e-12) {
+      if (c > 0.0) { i0a = -1e30; i1a = 1e30; }
     } else {
-      // fall through to general — handled by host shader if needed
+      float r = -c / b;
+      if (b > 0.0) { i0a = r; i1a = 1e30; } else { i0a = -1e30; i1a = r; }
+    }
+  } else if (disc < 0.0) {
+    if (a > 0.0) { i0a = -1e30; i1a = 1e30; }
+  } else {
+    float sq = sqrt(max(disc, 0.0));
+    float r0 = (-b - sq) / (2.0 * a);
+    float r1 = (-b + sq) / (2.0 * a);
+    if (r0 > r1) { float tt = r0; r0 = r1; r1 = tt; }
+    if (a > 0.0) {
+      i0a = -1e30; i1a = r0; i0b = r1; i1b = 1e30; nb = 1.0;
+    } else {
+      i0a = r0; i1a = r1;
     }
   }
-  float sq = sqrt(max(disc, 0.0));
-  float r0 = (-b - sq) / (2.0 * a);
-  float r1 = (-b + sq) / (2.0 * a);
-  if (r0 > r1) { float tt = r0; r0 = r1; r1 = tt; }
-  float s0 = a < 0.0 ? r0 : r1;
-  float s1 = a < 0.0 ? r1 : 1e9;
-  float ta0 = (0.0 - cov) / dv;
-  float ta1 = (len - cov) / dv;
-  float lo = min(ta0, ta1), hi = max(ta0, ta1);
-  if (abs(dv) < 1e-12) { lo = 0.0; hi = 1e9; if (cov < 0.0 || cov > len) return vec2(-1.0); }
-  float t0 = max(max(s0, lo), 0.0);
-  float t1 = min(s1, hi);
-  if (t1 <= t0) return vec2(-1.0);
-  return vec2(t0, t1);
+  for (int k = 0; k < 2; k++) {
+    float s0 = k == 0 ? i0a : i0b;
+    float s1 = k == 0 ? i1a : i1b;
+    if (k == 1 && nb < 0.5) break;
+    float t0 = max(max(s0, lo), 0.0);
+    float t1 = min(s1, hi);
+    if (t1 > t0 && t0 < bestT0) { bestT0 = t0; bestT1 = t1; }
+  }
+  if (bestT1 <= bestT0 || bestT0 >= 1e29) return vec2(-1.0);
+  return vec2(bestT0, min(bestT1, 1e29));
 }
 `;
