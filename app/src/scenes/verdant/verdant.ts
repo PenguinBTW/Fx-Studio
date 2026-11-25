@@ -76,7 +76,8 @@ function leafPoint(u: number, v: number, len: number, wid: number, fold: number,
   const spineAng = curl * 2.4 * u;
   const spineR = len / (1 + curl * 1.6);
   const sy = spineR * Math.sin((1 - curl * 0.4) * u * 1.35);
-  const sz = -spineR * (1 - Math.cos((1 - curl * 0.4) * u * 1.35)) * (curl > 0.02 ? 1 : 0) - curl * 0.18 * len * u * u;
+  const curlK = curl < 0.08 ? curl / 0.08 : 1;
+  const sz = -spineR * (1 - Math.cos((1 - curl * 0.4) * u * 1.35)) * curlK - curl * 0.18 * len * u * u;
   // laminar surface: v folds symmetric about midrib
   const side = Math.abs(v);
   const foldDrop = (1 - Math.cos(side * Math.PI * 0.5)) * halfW * Math.cos(fold);
@@ -130,7 +131,7 @@ function makeLeafMaterial(): THREE.ShaderMaterial {
     vertexShader: /* glsl */ `
       varying vec3 vN; varying vec3 vWPos; varying vec2 vUv;
       void main() {
-        vN = normalize(normalMatrix * normal);
+        vN = normalize(mat3(modelMatrix) * normal);
         vec4 wp = modelMatrix * vec4(position, 1.0);
         vWPos = wp.xyz;
         vUv = uv;
@@ -235,13 +236,19 @@ export default class Verdant extends Scene {
     this.world.add(sun, front, fill);
 
     // seed husk: half-buried sphere, static — the anchor of the shot
-    const husk = new THREE.Mesh(
-      new THREE.SphereGeometry(0.22, 24, 18),
-      new THREE.MeshStandardMaterial({ color: 0x8a7148, roughness: 0.85 }),
-    );
-    husk.scale.set(1, 0.72, 1);
-    husk.position.set(0, -0.06, 0);
-    this.world.add(husk);
+    // seed husk as two half-shells — they crack apart when the shoot emerges
+    const huskMat = new THREE.MeshStandardMaterial({ color: 0x8a7148, roughness: 0.85, side: THREE.DoubleSide });
+    for (const side of [-1, 1]) {
+      const half = new THREE.Mesh(
+        new THREE.SphereGeometry(0.22, 24, 18, side < 0 ? Math.PI / 2 : -Math.PI / 2, Math.PI),
+        huskMat,
+      );
+      half.scale.set(1, 0.72, 1);
+      half.position.set(0, -0.06, 0);
+      half.userData.side = side;
+      this.world.add(half);
+      (this as any)['husk' + (side < 0 ? 'L' : 'R')] = half;
+    }
 
     // soil line: dark disc floor catching the backlight rim
     const floor = new THREE.Mesh(
@@ -260,8 +267,24 @@ export default class Verdant extends Scene {
     const lt = f.t;
     const rr = this.ctx.renderer;
 
+    // husk crack: shells part and tilt outward as the shoot emerges
+    const crack = smoothstep(T_CRACK, T_CRACK + 3.5, lt);
+    for (const key of ['huskL', 'huskR'] as const) {
+      const half = (this as any)[key] as THREE.Mesh | undefined;
+      if (half) {
+        const side = half.userData.side as number;
+        half.position.x = side * crack * 0.09;
+        half.rotation.z = side * crack * 0.45;
+      }
+    }
+
     // --- regenerate growing geometry as pure f(t)
     const g = stemGrowth(lt);
+    if (this.stemMesh) this.stemMesh.visible = g > 0.001;
+    if (this.cotyL) this.cotyL.visible = cotyOpen(lt) > 0.001 && g > 0.001;
+    if (this.cotyR) this.cotyR.visible = cotyOpen(lt) > 0.001 && g > 0.001;
+    if (this.leafMesh) this.leafMesh.visible = leafUnfurl(lt) > 0.001 && g > 0.001;
+    if (this.tendrilMesh) this.tendrilMesh.visible = tendrilReach(lt) > 0.001 && g > 0.001;
     if (g > 0.001) {
       const curve = stemCurve(lt);
       const geom = tubeAlong(curve, 0.024, 0.013);
@@ -284,7 +307,7 @@ export default class Verdant extends Scene {
         const nodeF = 0.55;
         const node = curve.getPointAt(nodeF);
         const openAngle = 0.15 + co * 1.35; // rad apart from vertical cluster
-        const sizeC = 0.46 + 0.22 * smoothstep(T_COTY, T_COTY + 4, lt);
+        const sizeC = 0.36 + 0.16 * smoothstep(T_COTY, T_COTY + 4, lt);
         for (const side of [-1, 1]) {
           const fold = 0.35 + (1 - co) * 1.6; // folded when young — pi/2-ish shut
           const geo = buildLeafGeometry(sizeC, sizeC * 0.62, Math.PI - fold, 0.12, 14, 8);
@@ -364,11 +387,11 @@ export default class Verdant extends Scene {
     // nearly holds still. focus racks from the seed to the rising tip.
     const k = smoothstep(0, 30, lt);
     const az = 0.35 + 0.3 * k;
-    const radius = 1.9 - 0.72 * k;
+    const radius = 2.05 - 0.62 * k;
     const camH = 0.55 + 0.75 * smoothstep(6, 24, lt);
     this.cam.position.set(radius * Math.sin(az), camH, radius * Math.cos(az));
     // look at a point that rises with the seedling
-    const lookRise = 1.72 * smoothstep(5, 22, lt);
+    const lookRise = 1.62 * smoothstep(5, 22, lt);
     this.tmp.b.set(0.12 + 0.1 * k, 0.08 + lookRise, 0);
     this.cam.up.set(0, 1, 0);
     this.cam.lookAt(this.tmp.b);
@@ -376,12 +399,13 @@ export default class Verdant extends Scene {
     const focusD = this.tmp.c.copy(this.tmp.b).sub(this.cam.position).length();
 
     if (!this.main) {
-      this.main = new THREE.WebGLRenderTarget(W, H, {
+      this.main = new THREE.WebGLRenderTarget(out.width, out.height, {
         type: THREE.HalfFloatType,
-        depthTexture: new THREE.DepthTexture(W, H, THREE.UnsignedInt248Type),
+        depthTexture: new THREE.DepthTexture(out.width, out.height, THREE.UnsignedInt248Type),
       });
     }
     rr.setRenderTarget(this.main);
+    rr.clear(true, true, true);
     rr.render(this.world, this.cam);
 
     this.dof.render(rr, this.main.texture, this.main.depthTexture!, {
@@ -390,7 +414,10 @@ export default class Verdant extends Scene {
       aperture: 0.06,
       maxRadius: 16,
       samples: 36,
+      near: 0.05,
+      far: 60,
     }, out);
+    rr.resetState();
     return {};
   }
 
@@ -399,6 +426,13 @@ export default class Verdant extends Scene {
     rr.shadowMap.enabled = (this as any)._prevShadow ?? false;
     rr.shadowMap.type = (this as any)._prevType ?? THREE.PCFShadowMap;
     this.main?.dispose();
+    this.dof.dispose();
+    for (const m of [this.stemMesh, this.cotyL, this.cotyR, this.leafMesh, this.tendrilMesh]) {
+      m?.geometry.dispose();
+    }
+    this.leafMat.dispose();
+    this.stemMat.dispose();
+    this.tendrilMat.dispose();
     super.dispose();
   }
 }
