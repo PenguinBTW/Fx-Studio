@@ -69,8 +69,8 @@ export default class Atrium extends Scene {
     key.shadow.bias = -0.001;
 
     key.target.position.set(0, 0, 0);
-    const fill = new THREE.HemisphereLight(0x7a8698, 0x38302a, 0.85);
-    const bounce = new THREE.DirectionalLight(0x9a8a6e, 0.7);
+    const fill = new THREE.HemisphereLight(0x7a8698, 0x453c32, 1.05);
+    const bounce = new THREE.DirectionalLight(0x9a8a6e, 0.95);
     bounce.position.set(-3, 2, -2);
     this.world.add(key, key.target, fill, bounce);
 
