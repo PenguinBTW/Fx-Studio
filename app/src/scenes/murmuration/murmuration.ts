@@ -51,11 +51,21 @@ interface Bird {
   lane: number;     // streamer lane offset
 }
 
+// analytic integral of the breathing shear rate: integral_0^t [1.35 - 0.7*r0*(0.72 +
+// 0.28*sin(0.5 s + w))] ds — closed-form, never retroactive
+function orbitAngle(b: Bird, t: number): number {
+  const r0 = b.r0;
+  const mean = 1.35 - 0.7 * r0 * 0.72;
+  const oscAmp = 0.7 * r0 * 0.28;
+  // integral of oscAmp*sin(0.5 s + w) ds = oscAmp * 2 * (cos(w) - cos(0.5 t + w))
+  const integrated = mean * t + oscAmp * 2 * (Math.cos(b.wobble) - Math.cos(0.5 * t + b.wobble));
+  return b.theta0 + b.speed * integrated;
+}
+
 function birdOffset(b: Bird, t: number, axes: THREE.Vector3, out: THREE.Vector3): THREE.Vector3 {
   // orbital angle advances with shear: outer birds slower
   const r = b.r0 * (0.72 + 0.28 * Math.sin(t * 0.5 + b.wobble));
-  const shear = 1.35 - r * 0.7;
-  const th = b.theta0 + t * b.speed * shear;
+  const th = orbitAngle(b, t);
   // inclined orbit plane per bird — gives the flock thickness and internal flow
   const cp = Math.cos(b.phi0), sp = Math.sin(b.phi0);
   const ox = Math.cos(th) * r;
@@ -185,17 +195,31 @@ export default class Murmuration extends Scene {
         // vortex column: top stays high (visible against the ember band), base
         // narrows toward the roost — the pour is the money shot, don't hide it
         const funnelY = 1.6 + b.lane * 5.8 - funnelK * (1.1 - b.lane * 1.8);
-        const funnelR = (0.5 + b.lane * 2.8) * (1 - funnelK * 0.35);
+        const funnelR = (0.5 + b.lane * 2.8) * (1 - funnelK * 0.5);
         const fa = b.theta0 + lt * (2.2 + b.speed);
         const fx = 1.2 + Math.cos(fa) * funnelR;
-        const fz = -11.5 + Math.sin(fa) * funnelR;
+        const fz = -13.8 - funnelK * 1.2 + Math.sin(fa) * funnelR;
         const fy = funnelY + 0.8;
         this.tmp.c.lerpVectors(this.tmp.c, this.tmp.d.set(fx - cen.x, fy - cen.y, fz - cen.z), funnelK);
       }
       this.dummy.position.set(cen.x + this.tmp.c.x, cen.y + this.tmp.c.y, cen.z + this.tmp.c.z);
-      // orient along instantaneous motion direction — approximate with orbital tangent
-      const th = b.theta0 + lt * b.speed * (1.35 - b.r0 * 0.7);
-      this.dummy.rotation.set(0, -th + Math.PI / 2, Math.sin(th * 2) * 0.3);
+      // orient along the actual direction of travel: re-evaluate the same closed-form
+      // offset a fraction of a second ahead and face along the delta — correct in
+      // every act (ribbon, gathered orbit, vortex), no mode-specific approximation
+      birdOffset(b, lt + 0.06, axes, this.tmp.d);
+      if (funnelK > 0.001) {
+        const funnelY2 = 1.6 + b.lane * 5.8 - funnelK * (1.1 - b.lane * 1.8);
+        const funnelR2 = (0.5 + b.lane * 2.8) * (1 - funnelK * 0.5);
+        const fa2 = b.theta0 + (lt + 0.06) * (2.2 + b.speed);
+        this.tmp.d.lerpVectors(this.tmp.d, new THREE.Vector3(
+          1.2 + Math.cos(fa2) * funnelR2 - cen.x,
+          funnelY2 + 0.8 - cen.y,
+          -13.8 - funnelK * 1.2 + Math.sin(fa2) * funnelR2 - cen.z,
+        ), funnelK);
+      }
+      const yaw = Math.atan2(this.tmp.d.x - this.tmp.c.x, this.tmp.d.z - this.tmp.c.z);
+      const th = orbitAngle(b, lt);
+      this.dummy.rotation.set(0, yaw, Math.sin(th * 2) * 0.3);
       const sc = 0.85 + b.r0 * 0.5;
       this.dummy.scale.setScalar(sc);
       this.dummy.updateMatrix();
@@ -220,6 +244,14 @@ export default class Murmuration extends Scene {
   }
 
   override dispose() {
+    this.world.traverse((o: any) => {
+      if (o.isMesh || o.isInstancedMesh) {
+        o.geometry?.dispose?.();
+        const m = o.material;
+        if (Array.isArray(m)) m.forEach((x) => x?.dispose?.());
+        else m?.dispose?.();
+      }
+    });
     this.inst?.dispose();
     super.dispose();
   }
