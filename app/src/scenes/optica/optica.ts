@@ -65,7 +65,7 @@ export default class Optica extends Scene {
       flatShading: true,
     });
     this.gem = new THREE.Mesh(gemGeo, gemMat);
-    this.gem.position.set(0, 0.51, 0);
+    this.gem.position.set(0, 0.44, 0);
     this.gem.castShadow = true;
     this.world.add(this.gem);
 
@@ -107,9 +107,9 @@ export default class Optica extends Scene {
         // spectral palette: wavelength-ish violet->red across fan coordinate s in 0..1
         vec3 spectrum(float s){
           vec3 c = vec3(0.0);
-          c.r = smoothstep(0.35, 0.65, s) * 1.1 + smoothstep(0.0, 0.12, 1.0 - s) * 0.35;
+          c.r = smoothstep(0.35, 0.65, s) * 1.1 + (1.0 - smoothstep(0.0, 0.12, s)) * 0.35;
           c.g = (1.0 - abs(s - 0.5) * 2.4) * 0.9;
-          c.b = smoothstep(0.65, 0.35, s) * 1.2;
+          c.b = (1.0 - smoothstep(0.35, 0.65, s)) * 1.2;
           return max(c, vec3(0.0));
         }
         void main(){
