@@ -235,7 +235,7 @@ export function spatializeSource(
       const gDist = distGainSmoother.next();
       const gOcc = occlusionSmoother.next();
       const gVel = velGainSmoother.next();
-      cutoffSmoother.next();
+      const cutoffNow = cutoffSmoother.next();
 
       // Overall master modulation & distance gain
       const totalGain = gDist * gVel;
@@ -248,9 +248,17 @@ export function spatializeSource(
       // The SVF allpass identity is lp + k·bp + hp = input — omitting the bandpass term
       // (as lp + hp·g did) leaves a notch at the cutoff even when fully unoccluded,
       // sweeping through the audible band as the source recedes. k = 1/Q.
+      //
+      // Air absorption: the high band must ALSO attenuate with distance even when unoccluded —
+      // at gOcc = 1 the allpass identity reconstructs the input exactly, so without a distance
+      // term the carefully computed cutoff shapes nothing. gAir is the cutoff's own normalized
+      // position in the absorption range: 1 up close (full reconstruction) → 0 at maximum
+      // distance (only the lowpassed band survives) — one coherent state, no new constants.
       const kOcc = 1.0 / 0.7071;
-      const filteredL = lpL + gOcc * (hpL + kOcc * bpL);
-      const filteredR = lpR + gOcc * (hpR + kOcc * bpR);
+      const airSpan = Math.max(1.0, distanceLpfHz[0] - distanceLpfHz[1]);
+      const gAir = Math.min(1.0, Math.max(0.0, (cutoffNow - distanceLpfHz[1]) / airSpan));
+      const filteredL = lpL + gOcc * gAir * (hpL + kOcc * bpL);
+      const filteredR = lpR + gOcc * gAir * (hpR + kOcc * bpR);
 
       // Apply panning and distance
       output[inIdx] = filteredL * gPanL * totalGain;
