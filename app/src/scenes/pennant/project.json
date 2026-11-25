@@ -1,0 +1,12 @@
+{
+  "project": "pennant",
+  "meta": {
+    "title": "Pennant: silk cloth in wind",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 30
+  },
+  "entries": [
+    { "scene": "pennant/pennant", "id": "pennant", "start": 0, "end": 30 }
+  ]
+}
