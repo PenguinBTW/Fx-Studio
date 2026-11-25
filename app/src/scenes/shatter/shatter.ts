@@ -21,7 +21,7 @@ const N_SHARDS = 26;
 const PLATE_R = 3.0;
 const IMPACT = new THREE.Vector2(0.8, 0.5);
 const STRIKE_T = 3.0;
-const CRACK_SPEED = 2.2; // units/s — the front crosses the plate in ~1.4s
+const CRACK_SPEED = 3.4; // units/s — the front crosses the plate in ~1.4s
 
 interface Shard {
   mesh: THREE.Mesh;
@@ -80,11 +80,13 @@ export default class Shatter extends Scene {
           if (best !== s) continue;
           cellPts.push(new THREE.Vector2(cx, cy));
           // corner-shared jitter: adjacent cells jitter identical corners — seams stay sealed
-          const cornerKeys: [number, number][] = [[ri, si], [ri, si + 1], [ri + 1, si + 1], [ri + 1, si]];
+          const cornerKeys: [number, number][] = [[ri, si], [ri, (si + 1) % SECTORS], [ri + 1, (si + 1) % SECTORS], [ri + 1, si]];
           const v = (q: [number, number], cornerIdx: number) => {
             const [cr, cs] = cornerKeys[cornerIdx];
-            const jx = (hash1(cr * 131 + cs, 40) - 0.5) * 0.03;
-            const jy = (hash1(cr * 131 + cs, 41) - 0.5) * 0.03;
+            // jitter fades to zero at the center ring — the shared center must stay one point
+            const radScale = Math.min(1, cr / 2);
+            const jx = (hash1(cr * 131 + cs, 40) - 0.5) * 0.03 * radScale;
+            const jy = (hash1(cr * 131 + cs, 41) - 0.5) * 0.03 * radScale;
             return [q[0] + jx, q[1] + jy, 0];
           };
           const [p0, p1, p2, p3] = [v(quad[0], 0), v(quad[1], 1), v(quad[2], 2), v(quad[3], 3)];
@@ -151,6 +153,7 @@ export default class Shatter extends Scene {
     this.world.add(amb);
     this.disposables.push({ dispose: () => { this.keyLight?.dispose(); this.rimLight?.dispose(); amb.dispose(); } });
 
+    this.ctx.sceneGraph.register({ id: 'plate', type: 'mesh', role: 'hero', opacity: 1 });
     this.rig.setLensMm(38);
   }
 
@@ -192,6 +195,7 @@ export default class Shatter extends Scene {
     const spec = this.rig.evalCam(lt);
     this.rig.syncToThreeCamera(spec, this.cam);
 
+    this.ctx.sceneGraph.syncTelemetry(lt);
     rr.setRenderTarget(out);
     rr.setClearColor(0x08090c, 1);
     rr.clear(true, true, true);
@@ -204,8 +208,8 @@ export default class Shatter extends Scene {
       exposure: 1.0 + flash,
       bloom: 0.25 + flash * 0.5,
       vignette: 0.5,
-      focusDistance: this.focusDist,
-      aperture: 5,
+      depthFocusDist: this.focusDist,
+      depthAperture: 5,
     } as PostOverrides;
   }
 
