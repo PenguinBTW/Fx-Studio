@@ -158,6 +158,17 @@ const c = applyAerialPerspective(objColor, y0, y1, dist, elevNorm, { baseDensity
 - `uniformEquivalentDensity(yRef, fog, distRef)` approximates standard-material FogExp2
   (quadratic exponent — matched at a reference distance, documented in the API).
 
+### 4.4 Analytic Light Shafts / Godrays (`godrays.ts`)
+Crepuscular shafts as closed-form cone volumes — NOT screen-space radial blur
+(determinism contract: exact f(geometry), resolution-independent, no extra pass):
+```typescript
+import { shaftInscatter, SHAFT_GLSL, type Shaft } from '../../engine/godrays';
+const L = shaftInscatter(shaft, camPos, rayDir, { baseDensity: 0.02, heightFalloff: 0.15 });
+// composes with atmosphere: inscatter attenuated by closed-form fog transmittance
+```
+- Cone–ray intersection exact (sign-analyzed quadratic, handles inside-start/axis cases).
+- Soft radial edge + axial depletion falloff; tint with blackbody colors per §4.2.
+
 ## 5. Twist-Free Dynamic Ribbons via Bishop Frames (`ribbon.ts`)
 
 Standard Three.js `TubeGeometry` suffers from catastrophic axis-flipping (gimbal lock and twisting) when paths loop or turn vertically. f(x) Studio uses **Bishop Rotation-Minimizing Frames (RMF)** to generate completely twist-free ribbons along 3D curves:
