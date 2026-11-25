@@ -1,0 +1,7 @@
+{
+  "project": "shatter",
+  "meta": { "title": "shatter", "aspectRatio": "16:9", "fps": 60, "duration": 30 },
+  "entries": [
+    { "scene": "shatter/shatter", "id": "shatter", "start": 0, "end": 30 }
+  ]
+}
