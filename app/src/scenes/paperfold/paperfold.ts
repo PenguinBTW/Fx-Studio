@@ -211,15 +211,19 @@ export default class Paperfold extends Scene {
     const pos = new THREE.Vector3(px, py, pz);
     // orientation: nose along velocity (finite difference of the closed form — still deterministic)
     const eps = 0.02;
-    const gt2 = Math.max(0, t + eps - 22);
-    const phi2 = gt2 * 0.8 * g;
-    const r2 = 1.5 * g * smoothstep(0, 2.5, gt2);
-    const climb2 = gt2 * gt2 * 0.07 * g;
-    const ahead = new THREE.Vector3(
-      Math.sin(phi2) * r2,
-      climb2 + Math.sin(gt2 * 2.2) * 0.03 * g,
-      (1 - Math.cos(phi2)) * r2 * 0.8 - gt2 * 0.4 * g,
-    );
+    const posAt = (tt: number): THREE.Vector3 => {
+      const gg = smoothstep(22, 24.5, tt);
+      const tg = Math.max(0, tt - 22);
+      const ph = tg * 0.8 * gg;
+      const rr2 = 1.5 * gg * smoothstep(0, 2.5, tg);
+      const cl = tg * tg * 0.07 * gg;
+      return new THREE.Vector3(
+        Math.sin(ph) * rr2,
+        cl + Math.sin(tg * 2.2) * 0.03 * gg,
+        (1 - Math.cos(ph)) * rr2 * 0.8 - tg * 0.4 * gg,
+      );
+    };
+    const ahead = posAt(t + eps);
     const vel = ahead.sub(pos);
     const quat = new THREE.Quaternion();
     if (vel.lengthSq() > 1e-8 && g > 0.001) {
