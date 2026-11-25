@@ -2,7 +2,6 @@
 
 Transformation made physical: flatness becoming flight. The register the catalog lacks — topology change, paper as a material with memory. Anti-fantasist honesty: the folds are real kinematic rotations about real crease lines, not a morph.
 
-Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
 
 ## mapping table
 | abstract concept | physical visual |
@@ -27,3 +26,5 @@ Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
 
 ## light
 Single warm tungsten key (3200K, spectral) high left, dim cool fill; dark void backdrop. Crease shadows carry the fold readability. During flight the key light dims slightly — the plane glides into the dark.
+
+Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL

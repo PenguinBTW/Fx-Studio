@@ -68,11 +68,11 @@ function transformPoint(
     const b = transformPoint(f.cx + f.dx, f.cy + f.dy, t, folds, k);
     const dir: [number, number, number] = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
     p = rotateAboutLine(p, a, dir, ang);
-    layers++;
+    layers += (k + 1);
   }
   // paper has thickness: each fold layer rides slightly above the one beneath,
   // along the sheet normal — kills the z-fighting shimmer in stacked regions
-  p[2] += layers * 0.0018;
+  p[2] += layers * 0.0007;
   return p;
 }
 
@@ -106,27 +106,28 @@ export default class Paperfold extends Scene {
     // F1: spine crease rehearsal — right half rises and settles back (4–8s)
     const a1 = (t: number) => 2.4 * up(4, 5.5, t) * down(6.5, 8, t) * 0; // placeholder replaced below
     void a1;
-    const spineRehearse = (t: number) => 2.4 * (smoothstep(4, 5.5, t) - smoothstep(6.5, 8, t));
+    const spineRehearse = (t: number) => -2.4 * (smoothstep(4, 5.5, t) - smoothstep(6.5, 8, t));
     // corner folds 1: crease nose(0,0.7) -> edge(±0.5, 0.1), flat fold π
     const corner1 = (t: number) => Math.PI * smoothstep(8, 10.5, t);
+    const corner1L = (t: number) => -Math.PI * smoothstep(8, 10.5, t);
     void corner1;
     // halving backward along spine (18–20.5s)
     const halve = (t: number) => -Math.PI * smoothstep(14, 16.5, t);
 
-    const dR1 = norm2(0.5, -0.6), dL1 = norm2(-0.5, -0.6);
+    const dR1 = norm2(0.5, -0.5), dL1 = norm2(-0.5, -0.5);
     this.folds = [
       // spine rehearsal — crease x=0, right half (cross>0 with d=(0,1) means x<0... test: cross2((0,1), v) = -vx → positive side is x<0) so side=-1 moves x>0
       { cx: 0, cy: 0, dx: 0, dy: 1, side: -1, angle: spineRehearse },
       // right corner 1: corner point (0.5, 0.7) — cross2(dR1, v-c) at that point: d=(0.64,-0.77), r=(0.5,0): 0.64*0+0.77*0.5 > 0 → positive side moves
       { cx: 0, cy: 0.7, dx: dR1[0], dy: dR1[1], side: 1, angle: corner1 },
       // left corner 1: mirror — corner (-0.5, 0.7): d=(-0.64,-0.77), r=(-0.5,0): cross = (-0.64)*0 - (-0.77)(-0.5) < 0 → negative side moves
-      { cx: 0, cy: 0.7, dx: dL1[0], dy: dL1[1], side: -1, angle: corner1 },
+      { cx: 0, cy: 0.7, dx: dL1[0], dy: dL1[1], side: -1, angle: corner1L },
       // halve backward: same crease as spine, x>0 moves (side -1)
       { cx: 0, cy: 0, dx: 0, dy: 1, side: -1, angle: halve },
     ];
 
     // ---- sheet mesh: grid in local XY (x across [-0.5,0.5], y along [-0.7,0.7]) ----
-    const SX = 26, SY = 36;
+    const SX = 52, SY = 72;
     const geo = new THREE.PlaneGeometry(1.0, 1.4, SX, SY);
     const posAttr = geo.getAttribute('position') as THREE.BufferAttribute;
     this.flatXY = new Float32Array(posAttr.count * 2);
@@ -210,9 +211,9 @@ export default class Paperfold extends Scene {
     const pos = new THREE.Vector3(px, py, pz);
     // orientation: nose along velocity (finite difference of the closed form — still deterministic)
     const eps = 0.02;
-    const phi2 = Math.max(0, t + eps - 24) * 0.8 * g;
-    const r2 = 1.5 * g * Math.min(1, Math.max(0, t + eps - 24) / 2.5);
     const gt2 = Math.max(0, t + eps - 22);
+    const phi2 = gt2 * 0.8 * g;
+    const r2 = 1.5 * g * Math.min(1, gt2 / 2.5);
     const climb2 = gt2 * gt2 * 0.07 * g;
     const ahead = new THREE.Vector3(
       Math.sin(phi2) * r2,
