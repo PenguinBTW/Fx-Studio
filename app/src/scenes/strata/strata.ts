@@ -18,6 +18,8 @@ export default class Strata extends Scene {
   private wallMat: THREE.ShaderMaterial | null = null;
   private wallMesh: THREE.Mesh | null = null;
   private sun: THREE.DirectionalLight | null = null;
+  private screeMat: THREE.ShaderMaterial | null = null;
+  private screeMesh: THREE.Mesh | null = null;
   private disposables: { dispose(): void }[] = [];
 
   override async init() {
@@ -44,13 +46,21 @@ export default class Strata extends Scene {
           for(int k=0;k<4;k++){ v += a*noise(p); p *= 2.1; a *= 0.5; }
           return v;
         }
+        float layerResist(vec2 p){
+          // same banding as the fragment stage: hard layers resist, soft carve
+          float warp = noise(p * 0.12) * 2.2;
+          float layerId = floor((p.y + warp) * 0.14);
+          float lh = hash(vec2(layerId, 7.0));
+          // cap layers (lh >= 0.9) resist strongly; bone softest
+          return lh < 0.35 ? 1.0 : (lh < 0.65 ? 0.85 : (lh < 0.9 ? 1.15 : 0.3));
+        }
         float relief(vec2 p, float ero){
-          // base wall face with strata-dependent erosion:
-          // gullies incise more as ero grows; high-freq roughness grows too
           float gully = fbm(p * vec2(0.35, 0.06));
           float rough = fbm(p * vec2(0.9, 0.5));
-          float r = gully * (0.4 + ero * 1.5) + rough * (0.15 + ero * 0.5);
-          return r;
+          // positive relief = intact rock surface variation; erosion CARVES below
+          float r = gully * 0.4 + rough * 0.15;
+          float carve = (gully * 1.5 + rough * 0.5) * layerResist(p) * ero;
+          return r - carve;
         }
         void main(){
           vec3 pos = position;
@@ -117,6 +127,51 @@ export default class Strata extends Scene {
     this.world.add(this.wallMesh);
     this.disposables.push(geo, this.wallMat);
 
+    // ---- scree: talus fans at the wall base, growing with the erosion clock ----
+    this.screeMat = new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 }, uSunDir: { value: new THREE.Vector3(-0.5, 0.35, 0.8).normalize() } },
+      vertexShader: `
+        varying vec3 vNorm2;
+        varying vec3 vWPos2;
+        uniform float uTime;
+        float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+        float noise(vec2 p){
+          vec2 i = floor(p); vec2 f = fract(p);
+          f = f*f*(3.0-2.0*f);
+          return mix(mix(hash(i), hash(i+vec2(1,0)), f.x),
+                     mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), f.x), f.y);
+        }
+        void main(){
+          vec3 pos = position;
+          float ero = smoothstep(5.0, 24.0, uTime);
+          // fan mounds along the base, growing outward with erosion
+          float fan = noise(vec2(pos.x * 0.18, 3.7));
+          float grow = ero * (0.5 + fan);
+          pos.y += grow * 2.6 * (1.0 - abs(pos.z) / 6.0);
+          pos.z *= 1.0 + grow * 0.8;
+          vNorm2 = vec3(0.0, 1.0, 0.0);
+          vec4 wp = modelMatrix * vec4(pos, 1.0);
+          vWPos2 = wp.xyz;
+          gl_Position = projectionMatrix * viewMatrix * wp;
+        }`,
+      fragmentShader: `
+        varying vec3 vNorm2;
+        varying vec3 vWPos2;
+        uniform vec3 uSunDir;
+        void main(){
+          vec3 col = vec3(0.5, 0.39, 0.27);
+          float nl = max(0.0, dot(normalize(vNorm2), uSunDir));
+          vec3 lit = col * (vec3(1.0, 0.82, 0.6) * 1.4 * nl + vec3(0.35, 0.4, 0.52) * 0.5);
+          gl_FragColor = vec4(lit, 1.0);
+        }`,
+    });
+    const screeGeo = new THREE.PlaneGeometry(70, 6, 110, 8);
+    this.screeMesh = new THREE.Mesh(screeGeo, this.screeMat);
+    this.screeMesh.rotation.x = -Math.PI / 2;
+    this.screeMesh.position.set(0, -12.8, 3);
+    this.world.add(this.screeMesh);
+    this.disposables.push(screeGeo, this.screeMat);
+
     this.rig.setLensMm(42);
   }
 
@@ -124,12 +179,12 @@ export default class Strata extends Scene {
     const rr = this.ctx.renderer;
     const lt = f.t;
     this.wallMat!.uniforms.uTime.value = lt;
+    this.screeMat!.uniforms.uTime.value = lt;
     // survey drift along the wall face
     const drift = -6 + lt * 0.4;
-    this.rig.orbit([drift, 3, 0], 26, 0.06, Math.sin(lt * 0.05) * 0.03);
+    this.rig.orbit([drift, 4, 0], 26, 0.06, Math.sin(lt * 0.05) * 0.03);
     const spec = this.rig.evalCam(lt);
     this.rig.syncToThreeCamera(spec, this.cam);
-    this.cam.lookAt(drift, 4, 0);
     rr.setRenderTarget(out);
     rr.setClearColor(0x0d0f14, 1);
     rr.clear(true, true, true);
