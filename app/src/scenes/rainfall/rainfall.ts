@@ -33,6 +33,20 @@ uniform vec3 uLightPos;
 uniform vec3 uCamPos;
 
 float hash1(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+
+// storm envelope — mirrors the TS smoothstep ladder exactly, so a ring's spawn
+// gate can be frozen at its BIRTH intensity: intensity at spawn decides whether
+// the ring exists at all, and it then lives its full expansion regardless of
+// later storm changes (no mid-life popping)
+float ss(float a, float b, float x) {
+  float u = clamp((x - a) / (b - a), 0.0, 1.0);
+  return u * u * (3.0 - 2.0 * u);
+}
+float stormAt(float t) {
+  float build = ss(2.0, 9.0, t);
+  float ease = ss(20.0, 28.0, t);
+  return 0.25 + 0.75 * build * (1.0 - ease) - 0.1 * ease;
+}
 vec2 hash2(float n) { return fract(sin(vec2(n * 127.1, n * 311.7)) * 43758.5453); }
 
 // ring wavelet height contribution of drop i at world xz position p, time t
@@ -44,9 +58,9 @@ float ringH(vec2 p, float i, float t) {
   float birth = (g - hash1(i * 3.7) * 5.0) * life;
   float age = t - birth;
   if (age < 0.0 || age > life) return 0.0;
-  // spawn gate: only a fraction of drops active, scaled by intensity
+  // spawn gate frozen at birth-time intensity — see stormAt
   float gate = hash1(i + g * 17.0);
-  if (gate > uIntensity * 0.85 + 0.1) return 0.0;
+  if (gate > stormAt(birth) * 0.85 + 0.1) return 0.0;
   vec2 c = (hash2(i + g * 31.0) - 0.5) * 14.0;
   float d = length(p - c);
   float r = age * 1.9;                    // ring expansion speed
@@ -201,6 +215,17 @@ export default class Rainfall extends Scene {
     const ease = smoothstep(20, 28, lt);
     const intensity = 0.25 + 0.75 * build * (1 - ease) - 0.1 * ease;
 
+    // camera first — uniforms must read the CURRENT frame's camera position
+    const radius = 7 - 1.5 * smoothstep(0, 30, lt);
+    const yaw = 0.5 + lt * 0.02;
+    this.rig.setLensMm(50);
+    this.rig.orbit([0.5, 0.2, 0.5], radius, 0.24, yaw);
+    const spec = this.rig.evalCam(lt);
+    this.rig.syncToThreeCamera(spec, this.cam);
+    const fwd = new THREE.Vector3();
+    this.cam.getWorldDirection(fwd);
+    this.focusDist = Math.max(0.5, new THREE.Vector3(0.5, 0.2, 0.5).sub(this.cam.position).dot(fwd));
+
     if (this.surfMat) {
       this.surfMat.uniforms.uTime.value = lt;
       this.surfMat.uniforms.uIntensity.value = intensity;
@@ -210,15 +235,6 @@ export default class Rainfall extends Scene {
       this.rainMat.uniforms.uTime.value = lt;
       this.rainMat.uniforms.uIntensity.value = intensity;
     }
-
-    // camera: low glancing push-in over the pool, very slow yaw
-    const radius = 7 - 1.5 * smoothstep(0, 30, lt);
-    const yaw = 0.5 + lt * 0.02;
-    this.rig.setLensMm(50);
-    this.rig.orbit([0.5, 0.2, 0.5], radius, 0.24, yaw);
-    const spec = this.rig.evalCam(lt);
-    this.rig.syncToThreeCamera(spec, this.cam);
-    this.focusDist = this.cam.position.distanceTo(new THREE.Vector3(0.5, 0.2, 0.5));
 
     const rr = this.ctx.renderer;
     rr.setRenderTarget(out);
