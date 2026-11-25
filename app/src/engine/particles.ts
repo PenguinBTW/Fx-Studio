@@ -217,7 +217,7 @@ export class AnalyticalParticles {
     const col = opts.color ?? [1, 0.4, 0.1, 0.8];
     const glow = opts.glow ?? 1.5;
 
-    if (opts.gravity) {
+    if (opts.gravity !== undefined) {
       const cur = this.mat.uniforms.gravity.value as THREE.Vector3;
       if ((cur.x !== 0 || cur.y !== -0.4 || cur.z !== 0) &&
           (cur.x !== opts.gravity[0] || cur.y !== opts.gravity[1] || cur.z !== opts.gravity[2])) {
