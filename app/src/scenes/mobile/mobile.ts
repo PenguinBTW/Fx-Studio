@@ -80,17 +80,16 @@ export default class Mobile extends Scene {
     rim.position.set(6, 4, -7);
     this.world.add(rim);
 
+    // wire meshes are centered at origin; placement must hang them DOWN len/2 from the attachment point
     const mkWire = (len: number): THREE.Mesh => {
       const g = new THREE.CylinderGeometry(0.012, 0.012, len, 5);
       this.disposables.push(g);
-      const m = new THREE.Mesh(g, wireMat);
-      m.position.y = -len / 2;
-      return m;
+      return new THREE.Mesh(g, wireMat);
     };
 
     // palette: red, yellow, blue, black, white — Calder primaries
-    const palette = [0xc22215, 0xe8a812, 0x1c4d8f, 0x111114, 0xe8e4da];
-    const scales = [1.05, 0.8, 0.9, 0.7, 0.75];
+    const palette = [0xc22215, 0xe8a812, 0x1c4d8f, 0x111114, 0xb8b4aa];
+    const scales = [1.05, 0.8, 0.9, 0.7, 0.6];
 
     // build 4 tiers, bottom-up assembly: each tier = horizontal rod,
     // paddle hanging off the left end, next sub-mobile off the right end
@@ -99,6 +98,7 @@ export default class Mobile extends Scene {
       { len: 3.4, period: 23, drop: 0.5 },
       { len: 2.7, period: 29, drop: 0.45 },
       { len: 2.1, period: 37, drop: 0.4 },
+      { len: 1.5, period: 43, drop: 0.35 },
     ];
 
     let childGroup: THREE.Group | null = null;
@@ -119,7 +119,7 @@ export default class Mobile extends Scene {
       // paddle hangs from LEFT end of rod
       const leftX = rod.position.x - len / 2;
       const wireL = mkWire(drop);
-      wireL.position.set(leftX, 0, 0);
+      wireL.position.set(leftX, -drop / 2, 0);
       group.add(wireL);
 
       const shape = blobShape(i * 3 + 1, scales[i]);
@@ -139,7 +139,7 @@ export default class Mobile extends Scene {
       if (childGroup) {
         const rightX = rod.position.x + len / 2;
         const wireR = mkWire(childDrop);
-        wireR.position.set(rightX, 0, 0);
+        wireR.position.set(rightX, -childDrop / 2, 0);
         group.add(wireR);
         childGroup.position.set(rightX, -childDrop, 0);
         group.add(childGroup);
@@ -152,7 +152,7 @@ export default class Mobile extends Scene {
 
     // ceiling suspension wire
     const topWire = mkWire(3.0);
-    topWire.position.set(0, 7.8, 0);
+    topWire.position.set(0, 7.8 - 1.5, 0);
     this.world.add(topWire);
     childGroup!.position.set(0, 4.6, 0);
     this.world.add(childGroup!);
@@ -195,13 +195,15 @@ export default class Mobile extends Scene {
     const target = new THREE.Vector3().lerpVectors(this.redPaddlePos, this.centroid, rev);
     target.y += 0.6 * rev;
     const radius = 4.5 + 6.5 * rev - 0.5 * settle;
-    const yaw = 0.35 + lt * 0.045 * (1 - settle * 0.8);
+    const yaw = 0.35 + lt * 0.028;
     const pitch = -0.06 + 0.04 * Math.sin(lt * 0.11);
     this.rig.setLensMm(52);
-    this.rig.orbit([target.x, target.y - (1.0 - rev * 0.6), target.z], radius, pitch, yaw);
+    this.rig.orbit([target.x, target.y - 0.25 * (1 - rev), target.z], radius, pitch, yaw);
     const spec = this.rig.evalCam(lt);
     this.rig.syncToThreeCamera(spec, this.cam);
-    this.focusDist = this.cam.position.distanceTo(target);
+    const fwd = new THREE.Vector3();
+    this.cam.getWorldDirection(fwd);
+    this.focusDist = Math.max(0.5, target.clone().sub(this.cam.position).dot(fwd));
 
     const rr = this.ctx.renderer;
     rr.setRenderTarget(out);
