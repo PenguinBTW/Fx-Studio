@@ -245,6 +245,7 @@ export default class Fulmen extends Scene {
         uniforms: {
           uFlash: { value: 0 },    // return-stroke envelope for THIS bolt
           uLeader: { value: 0 },   // stepped leader progress 0..1
+          uDecay: { value: 1 },    // post-stroke channel brightness decay
         },
         vertexShader: `
           attribute float aU;
@@ -261,9 +262,11 @@ export default class Fulmen extends Scene {
           varying float vDepth;
           uniform float uFlash;
           uniform float uLeader;
+          uniform float uDecay;
           void main(){
-            // stepped leader: faint channel visible only below the step front
-            float leaderVis = step(vU, uLeader) * 0.16;
+            // stepped leader: faint channel visible below the step front, brightness
+            // decaying after the stroke — position cutoff does not retreat
+            float leaderVis = step(vU, uLeader) * 0.16 * uDecay;
             // return stroke: the whole channel erupts; branches dimmer
             float stroke = uFlash * (vDepth < 0.5 ? 1.0 : 0.6);
             float vis = leaderVis * (vDepth < 0.5 ? 1.0 : 0.3) + stroke;
@@ -408,10 +411,9 @@ export default class Fulmen extends Scene {
         if (dt < 0 || dt > 0.9) continue;
         be += (k === 0 ? 1.0 : 0.55) * Math.exp(-dt * 9.0) * smoothstep(0, 0.02, dt);
       }
-      // leader channel decays after the stroke — re-ionizes implicitly via uFlash at re-strikes
-      let chan = lp;
-      if (lt > s.t0) chan *= Math.exp(-(lt - s.t0) * 3.0);
-      mat.uniforms.uLeader.value = chan;
+      // step-front position is monotonic; brightness decays after the stroke
+      mat.uniforms.uLeader.value = lp;
+      mat.uniforms.uDecay.value = lt > s.t0 ? Math.exp(-(lt - s.t0) * 3.0) : 1.0;
       mat.uniforms.uFlash.value = be;
     }
 
