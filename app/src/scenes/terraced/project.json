@@ -1,0 +1,6 @@
+{
+  "project": "terraced",
+  "entries": [
+    { "scene": "terraced/terraced", "id": "terraced", "start": 0, "end": 18 }
+  ]
+}
