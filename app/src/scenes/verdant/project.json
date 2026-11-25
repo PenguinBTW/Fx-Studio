@@ -1,0 +1,12 @@
+{
+  "project": "verdant",
+  "meta": {
+    "title": "Verdant: a pea seedling in time-compressed growth",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 30
+  },
+  "entries": [
+    { "scene": "verdant/verdant", "id": "verdant", "start": 0, "end": 30 }
+  ]
+}
