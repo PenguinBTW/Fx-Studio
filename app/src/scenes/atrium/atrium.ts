@@ -56,7 +56,7 @@ export default class Atrium extends Scene {
     const project = this.ctx.project ?? 'atrium';
     const rr = this.ctx.renderer;
     rr.shadowMap.enabled = true;
-    rr.shadowMap.type = THREE.PCFSoftShadowMap;
+    rr.shadowMap.type = THREE.PCFShadowMap;
 
     // lighting: sun through the oculus is a steep warm key, shade is cool and low
     const key = new THREE.DirectionalLight(0xffe4b8, 4.5);
@@ -108,7 +108,7 @@ export default class Atrium extends Scene {
         speed: 0.05,
         spread: 0.9,
         lifetime: 9.0,
-        gravity: [0, -0.006, 0],
+        gravity: [0, -0.004, 0],
         turbulence: 0.35,
         size: 0.008,
         color: [1.0, 0.93, 0.78, 0.4],
@@ -124,7 +124,7 @@ export default class Atrium extends Scene {
       speed: 0.03,
       spread: 2.6,
       lifetime: 12.0,
-      gravity: [0, 0, 0],
+      gravity: [0, -0.004, 0],
       turbulence: 0.5,
       size: 0.006,
       color: [0.7, 0.68, 0.6, 0.14],
