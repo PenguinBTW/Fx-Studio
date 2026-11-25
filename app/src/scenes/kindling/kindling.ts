@@ -280,7 +280,7 @@ export default class Kindling extends Scene {
     const flameHalf = 0.8 * (0.42 + life * 0.4);
     const flameY = frontY + flameHalf;
     this.flame!.position.y = flameY;
-    if ((this as any)._sparksRef) (this as any)._sparksRef.position.y = flameY - 0.13;
+    if ((this as any)._sparksRef) (this as any)._sparksRef.position.y = frontY + 0.1;
     if ((this as any)._smokeRef) (this as any)._smokeRef.position.y = flameY + 1.4;
 
     // flame scale swells with life — bloom is bigger than steady state
