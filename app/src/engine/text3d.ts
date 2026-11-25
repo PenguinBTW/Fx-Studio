@@ -50,6 +50,7 @@ export class ExtrudedText {
 
     const group = new THREE.Group();
     let currentX = 0;
+    let inkX = 0; // advance edge after the last non-space glyph — spaces aren't ink
     let wordIdx = 0;
     let prevSpace = false;
 
@@ -97,10 +98,13 @@ export class ExtrudedText {
       }
 
       currentX += size * (adv + letterSpacing);
+      if (info) inkX = currentX - size * letterSpacing;
     }
 
-    // Center child meshes horizontally around origin
-    const totalWidth = currentX - size * letterSpacing;
+    // Center child meshes horizontally around origin — measure to the last INK
+    // glyph's advance edge: trailing spaces are not ink, and counting them
+    // visibly shifts centered text off-center
+    const totalWidth = inkX;
     for (const child of group.children) {
       child.position.x -= totalWidth / 2;
       child.userData.glyph.base = [child.position.x, child.position.y, child.position.z];
@@ -154,14 +158,41 @@ export class ExtrudedText {
       m.position.set(g.base[0], g.base[1] + (motion === 'slide-up' ? (1 - p) * -slide : 0), g.base[2]);
       m.scale.setScalar(motion === 'scale-pop' ? 0.3 + 0.7 * p : 1);
       if (motion === 'fade' || motion === 'slide-up') {
-        if (!m.userData.fadeMat) {
-          const src = Array.isArray(m.material) ? m.material[0]! : m.material;
-          const mat = src.clone();
-          mat.transparent = true;
-          m.userData.fadeMat = mat;
-          m.material = mat;
+        const fullyIn = p >= 1;
+        if (fullyIn) {
+          // rejoin the opaque pass with the original material(s) — staying transparent=true
+          // forever keeps finished glyphs out of depth-sorted opaque rendering for the rest
+          // of the shot. Dispose the fade clones too: once detached they are invisible to
+          // scene cleanup, which only disposes attached materials. A backward scrub
+          // recreates them below (one clone per glyph, rare).
+          if (m.userData.fadeMat) {
+            const fms = Array.isArray(m.userData.fadeMat) ? m.userData.fadeMat : [m.userData.fadeMat];
+            for (const fm of fms) (fm as THREE.Material).dispose();
+            m.userData.fadeMat = null;
+          }
+          if (m.userData.origMat) m.material = m.userData.origMat;
+        } else {
+          if (!m.userData.fadeMat) {
+            const src = m.material;
+            m.userData.origMat = src;
+            // clone per-entry so face/side material arrays survive the round trip;
+            // each clone remembers its source opacity so the fade lands exactly on it
+            const cloneOne = (mm: THREE.Material) => {
+              const c = mm.clone();
+              c.transparent = true;
+              c.userData.origOpacity = mm.opacity;
+              return c;
+            };
+            m.userData.fadeMat = Array.isArray(src) ? src.map(cloneOne) : cloneOne(src as THREE.Material);
+          }
+          m.material = m.userData.fadeMat;
+          const fms = Array.isArray(m.material) ? m.material : [m.material];
+          for (const fm of fms) {
+            // fade toward the material's OWN opacity, not 1 — translucent text must not
+            // snap darker when the original material is restored at completion
+            (fm as THREE.Material).opacity = ((fm.userData.origOpacity as number | undefined) ?? 1) * p;
+          }
         }
-        (m.material as THREE.Material).opacity = p;
       }
     });
   }
