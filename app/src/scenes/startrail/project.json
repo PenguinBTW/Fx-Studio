@@ -1,0 +1,7 @@
+{
+  "project": "startrail",
+  "meta": { "title": "startrail", "aspectRatio": "16:9", "fps": 60, "duration": 30 },
+  "entries": [
+    { "scene": "startrail/startrail", "id": "startrail", "start": 0, "end": 30 }
+  ]
+}
