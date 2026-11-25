@@ -55,16 +55,16 @@ export default class Kindling extends Scene {
       sh.uniforms.uChar = { value: 0 };
       (this as any)._charU = sh.uniforms.uChar;
       sh.fragmentShader = ('uniform float uChar;\nvarying vec3 vObjPos;\n' + sh.fragmentShader)
-        .replace('#include <color_fragment>', `
-          #include <color_fragment>
+        .replace('#include <emissivemap_fragment>', `
+          #include <emissivemap_fragment>
           // charring: blacken from the tip downward as uChar advances, with a glowing ember edge
-          float tipness = clamp(-vObjPos.y / 1.5 + 0.5, 0.0, 1.0);
+          float tipness = clamp(vObjPos.y / 1.5 * 0.5 + 0.5, 0.0, 1.0);
           float char = smoothstep(uChar - 0.12, uChar, tipness);
           vec3 charcoal = vec3(0.03, 0.02, 0.02);
           diffuseColor.rgb = mix(diffuseColor.rgb, charcoal, char);
           // ember line right at the char front
           float ember = (1.0 - smoothstep(0.0, 0.09, abs(tipness - uChar))) * step(0.01, uChar);
-          diffuseColor.rgb += vec3(1.0, 0.32, 0.05) * ember * 0.9;
+          totalEmissiveRadiance += vec3(1.0, 0.32, 0.05) * ember * 1.4;
         `);
       sh.vertexShader = ('varying vec3 vObjPos;\n' + sh.vertexShader)
         .replace('#include <begin_vertex>', '#include <begin_vertex>\n vObjPos = position;');
@@ -81,7 +81,7 @@ export default class Kindling extends Scene {
       new THREE.SphereGeometry(0.075, 12, 10),
       new THREE.MeshStandardMaterial({ color: 0x7a1f18, roughness: 0.9 }),
     );
-    head.position.set(0, 0.42, 0);
+    head.position.set(0, 1.52, 0);
     this.stick.add(head);
 
     // --- the flame: billboard plane, SDF teardrop distorted by noise — layered
@@ -146,9 +146,9 @@ export default class Kindling extends Scene {
     });
     this.flame = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 1.6), this.flameMat);
     // flame base sits at the match head
-    this.flame.position.set(0, 0.5, 0);
+    this.flame.position.set(0, 1.55, 0);
     this.stick.add(this.flame);
-    this.flame.position.set(0.0, 0.62, 0);
+    this.flame.position.set(0.0, 1.68, 0);
 
     // --- sparks: tiny points lofting in convection spirals — closed-form helix paths
     const sparkN = 26;
@@ -190,9 +190,9 @@ export default class Kindling extends Scene {
         }`,
     });
     const sparks = new THREE.Points(sparkGeo, this.emberMat);
-    sparks.position.set(0, 0.5, 0);
+    sparks.frustumCulled = false;
+    sparks.position.set(0, 1.55, 0);
     this.stick.add(sparks);
-    sparks.position.set(0, 0.5, 0);
 
     // --- smoke wisp: ribbon curling up from the tip — visible mostly at death
     this.smokeMat = new THREE.ShaderMaterial({
@@ -222,7 +222,7 @@ export default class Kindling extends Scene {
         }`,
     });
     const smoke = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 3.0), this.smokeMat);
-    smoke.position.set(0, 1.8, 0);
+    smoke.position.set(0, 3.0, 0);
     this.stick.add(smoke);
 
     // table hint: large dim surface catching the flicker
@@ -262,7 +262,8 @@ export default class Kindling extends Scene {
     // smoke: thin during burn, blooming at death
     this.smokeMat!.uniforms.uAmt.value = 0.25 * smoothstep(4, 8, lt) * (1 - smoothstep(20, 24, lt))
       + smoothstep(24, 28, lt);
-    (this as any)._charU && ((this as any)._charU.value = smoothstep(5, 27, lt));
+    (this as any)._charVal = smoothstep(5, 27, lt);
+    if ((this as any)._charU) (this as any)._charU.value = (this as any)._charVal;
 
     // flame scale swells with life — bloom is bigger than steady state
     const fs = 0.42 + life * 0.4 + fl * 0.03 * life;
