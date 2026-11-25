@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { ViewportSpace } from './viewport';
 import { type Cam } from './camera3d';
-import { clamp, noise1, TAU, type V3 } from './util';
+import { clamp, hash, noise1, TAU, type V3 } from './util';
 import { W, H } from './gl';
 
 export type CameraMode = 'perspective' | 'isometric' | 'orthographic';
@@ -16,6 +16,27 @@ export interface CameraWaypoint {
   target: V3;           // look-at target
   roll?: number;        // roll angle in radians (default: 0)
   focalLength?: number; // mm (if < 300) or screen px (if >= 300)
+}
+
+/**
+ * Continuous handheld operator layer — distinct from trauma impulses (event-driven
+ * decay bursts): handheld is persistent multi-band noise with the classic operator
+ * frequency signature (slow body sway + fast muscle tremor). Strictly closed-form
+ * f(t): value noise at fixed frequencies, no integration, zero drift.
+ */
+export interface HandheldOpts {
+  /** Master strength 0..1 (default 1). */
+  weight?: number;
+  /** Positional sway amplitude in world units (default 0.02 — ~2cm operator drift). */
+  posAmp?: number;
+  /** Rotational micro pan/tilt amplitude in radians (default 0.004). */
+  rotAmp?: number;
+  /** Roll amplitude in radians (default rotAmp × 0.35). */
+  rollAmp?: number;
+  /** Cadence scaling — 1 is natural operator timing (default 1). */
+  speed?: number;
+  /** Deterministic seed for independent takes (default 0). */
+  seed?: number;
 }
 
 export interface TraumaImpulse {
@@ -189,6 +210,37 @@ export class CameraRig {
   /**
    * Register a deterministic trauma impulse at timestamp t0 (decays exponentially)
    */
+  private handheldCfg: Required<HandheldOpts> | null = null;
+  private _hhTarget: V3 | null = null;
+
+  /**
+   * Enable the continuous handheld operator layer. Composable on any path:
+   * evaluated inside evalCam after waypoints, before basis construction.
+   */
+  handheld(opts: HandheldOpts = {}): this {
+    const rotAmp = opts.rotAmp ?? 0.004;
+    this.handheldCfg = {
+      weight: opts.weight ?? 1,
+      posAmp: opts.posAmp ?? 0.02,
+      rotAmp,
+      rollAmp: opts.rollAmp ?? rotAmp * 0.35,
+      speed: opts.speed ?? 1,
+      seed: opts.seed ?? 0,
+    };
+    return this;
+  }
+
+  /** Multi-band operator noise: drift (0.43 Hz) + sway (1.7 Hz) + tremor (11.3 Hz),
+   *  amplitude-weighted 0.55/0.30/0.15 — the measured handheld frequency signature.
+   *  Each axis uses a decorrelated seed offset. Pure closed form. */
+  private static hn(t: number, seed: number): number {
+    return (
+      noise1(t * 0.43, seed) * 0.55 +
+      noise1(t * 1.7, seed + 31) * 0.3 +
+      noise1(t * 11.3, seed + 67) * 0.15
+    );
+  }
+
   addTrauma(amount: number, t0 = 0, decay = 1.5): this {
     if (amount <= 0) return this;
     this.impulses.push({ t0, intensity: amount, decay: Math.max(1e-4, decay) });
@@ -322,10 +374,45 @@ export class CameraRig {
       roll += noise1(t * 29.0, 104) * shakeRot;
     }
 
+    // Continuous handheld operator layer: positional sway on the camera and rotational
+    // micro-noise as a look-at offset scaled by focus distance (small-angle rotation).
+    // In world axes — at milliradian amplitudes the view-axis component reads as the
+    // micro focus-breathing real operators produce. Closed-form, no drift.
+    if (this.handheldCfg && this.handheldCfg.weight > 0) {
+      const hc = this.handheldCfg;
+      const ts = t * hc.speed;
+      const w = hc.weight;
+      // channels are seed·1024 + axis·128 apart so different seeds never share a
+      // motion curve (plain +101/+202 collided: seed 0's X was seed 101's Y)
+      // pre-mix the seed through hash() — raw multiplication collides mod 2^32
+      // inside hash's truncation (seeds 0 and 4194304 produced identical motion)
+      const sb = hash(hc.seed) * 4294967296;
+      p[0] += CameraRig.hn(ts, sb + 101) * hc.posAmp * w;
+      p[1] += CameraRig.hn(ts, sb + 202) * hc.posAmp * w;
+      p[2] += CameraRig.hn(ts, sb + 303) * hc.posAmp * 0.6 * w;
+      const tdx = this.target[0] - p[0], tdy = this.target[1] - p[1], tdz = this.target[2] - p[2];
+      const focusDist = Math.hypot(tdx, tdy, tdz) || 1;
+      // overhead damping: near-vertical views degenerate the up-reference cutoff —
+      // undamped rotational noise can push Fw across |Fw.y|=0.99 and flip the basis
+      // between frames. Physically, operator pan/tilt vanishes around a vertical
+      // axis anyway: scale by the horizontal fraction squared.
+      const flatF2 = Math.min(1, (tdx * tdx + tdz * tdz) / (focusDist * focusDist));
+      const rotScale = flatF2 * flatF2;
+      this._hhTarget = [
+        this.target[0] + CameraRig.hn(ts, sb + 404) * hc.rotAmp * focusDist * w * rotScale,
+        this.target[1] + CameraRig.hn(ts, sb + 505) * hc.rotAmp * focusDist * w * rotScale,
+        this.target[2] + CameraRig.hn(ts, sb + 606) * hc.rotAmp * focusDist * 0.5 * w * rotScale,
+      ];
+      roll += CameraRig.hn(ts, sb + 707) * hc.rollAmp * w;
+    } else {
+      this._hhTarget = null;
+    }
+    const effTarget = this._hhTarget ?? this.target;
+
     // Compute Forward unit vector towards target (guard coincident pos==target)
-    const dx = this.target[0] - p[0];
-    const dy = this.target[1] - p[1];
-    const dz = this.target[2] - p[2];
+    const dx = effTarget[0] - p[0];
+    const dy = effTarget[1] - p[1];
+    const dz = effTarget[2] - p[2];
     const rawLen = Math.hypot(dx, dy, dz);
     if (rawLen < 1e-6 && !this._degenerateWarned) {
       // Coincident waypoint — hold +Z forward to avoid zero-basis NaN.
