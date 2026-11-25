@@ -194,7 +194,6 @@ export default class Shatter extends Scene {
     const spec = this.rig.evalCam(lt);
     this.rig.syncToThreeCamera(spec, this.cam);
 
-    this.publishBounds(lt);
     rr.setRenderTarget(out);
     rr.setClearColor(0x08090c, 1);
     rr.clear(true, true, true);
@@ -213,41 +212,6 @@ export default class Shatter extends Scene {
     } as PostOverrides;
   }
 
-
-  private publishBounds(lt: number) {
-    // raw-scene telemetry rule: publish screen-space bounds of the hero plate to textProbes
-    const P = (window as any).__motion || (window as any).__pdoom;
-    if (!P || !P.textProbes) return;
-    const corners = [
-      new THREE.Vector3(-3, -3, 0), new THREE.Vector3(3, -3, 0),
-      new THREE.Vector3(3, 3, 0), new THREE.Vector3(-3, 3, 0),
-    ];
-    let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
-    for (const c of corners) {
-      const v = c.clone().project(this.cam);
-      const sx = (v.x * 0.5 + 0.5) * W;
-      const sy = (1 - (v.y * 0.5 + 0.5)) * H;
-      minX = Math.min(minX, sx); maxX = Math.max(maxX, sx);
-      minY = Math.min(minY, sy); maxY = Math.max(maxY, sy);
-    }
-    P.textProbes.push({
-      frameIdx: P.currentFrameIdx ?? 0,
-      t: lt,
-      text: 'plate',
-      fontFamily: 'Archivo, sans-serif',
-      fontPx: 24,
-      fillStyle: '#FFFFFF',
-      globalAlpha: 1,
-      layerId: 'scenegraph',
-      bbox: [minX, minY, maxX, maxY],
-      w: maxX - minX,
-      h: maxY - minY,
-      cx: (minX + maxX) / 2,
-      cy: (minY + maxY) / 2,
-      hPct: (24 / 1080) * 100,
-      isStroke: false,
-    });
-  }
 
   override dispose() {
     for (const d of this.disposables) d.dispose();
