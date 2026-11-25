@@ -16,7 +16,9 @@ import { smoothstep } from '../../engine/util';
 function camPos(lt: number, out: THREE.Vector3): THREE.Vector3 {
   const k = smoothstep(0.5, 28.5, lt);
   const angle = 2.2 + k * Math.PI * 1.05;
-  const radius = 2.6 - 0.55 * Math.sin(k * Math.PI);
+  // inside the open well — the tread band spans r 1.9..3.55, so the camera must stay
+  // within r_in or it slices through slabs as it rises
+  const radius = 1.62 - 0.28 * Math.sin(k * Math.PI);
   out.set(
     radius * Math.cos(angle),
     0.9 + 5.6 * k,
@@ -31,9 +33,9 @@ function camTarget(lt: number, camY: number, out: THREE.Vector3): THREE.Vector3 
   const angle = 2.2 + k * Math.PI * 1.05 + 0.9; // ahead of the camera around the curve
   const radius = 1.4;
   out.set(
-    radius * Math.cos(angle) * (1 - smoothstep(20, 28, lt)),
+    radius * Math.cos(angle) * (1 - 0.55 * smoothstep(20, 28, lt)),
     camY + 0.6 + 2.6 * smoothstep(16, 28, lt),
-    radius * Math.sin(angle) * (1 - smoothstep(20, 28, lt)),
+    radius * Math.sin(angle) * (1 - 0.55 * smoothstep(20, 28, lt)),
   );
   return out;
 }
@@ -48,6 +50,9 @@ export default class Atrium extends Scene {
   private cam = new THREE.PerspectiveCamera(52, W / H, 0.08, 80);
   private world = new THREE.Scene();
   private dust: AnalyticalParticles | null = null;
+  private shellInst: any = null;
+  private shellRoot: THREE.Object3D | null = null;
+  private keyLight: THREE.DirectionalLight | null = null;
   private dof = new DepthDoFPass();
   private main: THREE.WebGLRenderTarget | null = null;
   private tmp = { a: new THREE.Vector3(), b: new THREE.Vector3() };
@@ -60,7 +65,8 @@ export default class Atrium extends Scene {
 
     // lighting: sun through the oculus is a steep warm key, shade is cool and low
     const key = new THREE.DirectionalLight(0xffe4b8, 4.5);
-    key.position.set(4.5, 10, 2.4);
+    this.keyLight = key;
+    key.position.set(1.6, 12, 0.9);
     key.castShadow = true;
     key.shadow.mapSize.set(2048, 2048);
     key.shadow.camera.left = -6; key.shadow.camera.right = 6;
@@ -78,6 +84,8 @@ export default class Atrium extends Scene {
     const shellAsset = resolveAsset('atrium_shell', project);
     const shell = await GLTFManager.instantiate(shellAsset.url, {});
     shell.root.traverse((o: any) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    this.shellInst = shell;
+    this.shellRoot = shell.root;
     this.world.add(shell.root);
 
 
@@ -174,6 +182,13 @@ export default class Atrium extends Scene {
     this.main?.dispose();
     this.dof.dispose();
     this.dust?.dispose();
+    // cache-shared shell resources are owned by the GLTF cache, not the scene —
+    // instance teardown only; disposing them here would fight other/future instances
+    if (this.shellRoot) this.world.remove(this.shellRoot);
+    this.shellInst?.dispose?.();
+    // the renderer outlives the scene (engine.reload) — release the shadow target explicitly
+    const sm: any = this.keyLight?.shadow?.map;
+    sm?.dispose?.();
     this.world.traverse((o: any) => {
       o.geometry?.dispose?.();
       const m = o.material;
