@@ -1,0 +1,7 @@
+{
+  "project": "inkwell",
+  "meta": { "title": "inkwell", "aspectRatio": "16:9", "fps": 60, "duration": 30 },
+  "entries": [
+    { "scene": "inkwell/inkwell", "id": "inkwell", "start": 0, "end": 30 }
+  ]
+}
