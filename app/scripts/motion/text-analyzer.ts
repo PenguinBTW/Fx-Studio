@@ -73,6 +73,9 @@ export function analyzeTextProbes(
   windowTo: number,
   fps = 60
 ): TextAnalysisResult {
+  // Mesh hero-object probes are diagnostics-visualization only, not typography —
+  // exclude before every text rule (clipping, collision, size, lyric join)
+  records = records.filter((r) => r.kind !== 'mesh');
   // Sort records by frameIdx then y/x
   records.sort((a, b) => a.frameIdx - b.frameIdx || a.cy - b.cy || a.cx - b.cx);
 

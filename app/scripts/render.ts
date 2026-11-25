@@ -741,7 +741,7 @@ async function motion(page: Page) {
   if (textAnalysis.words.length === 0) console.log('[motion] Procedural scene mode: 0 active lyrics (lyric rules F01-F03, F10 inactive).');
 
   for (const f of frameMetrics) {
-    const fTexts = textProbes.filter((r) => r.frameIdx === f.n);
+    const fTexts = textProbes.filter((r) => r.frameIdx === f.n && r.kind !== 'mesh');
     (f as any).max_text_h = fTexts.length ? Math.max(...fTexts.map((r) => r.hPct)) : 0;
   }
 

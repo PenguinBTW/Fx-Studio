@@ -334,6 +334,10 @@ export interface TextProbeRecord {
   cy: number;
   hPct: number;
   isStroke?: boolean;
+  // 'mesh' probes report hero-object bounds for diagnostics visualization
+  // (onion centroids, presence) but are NOT typography — text-analysis rules
+  // (F01-F10 clipping/collision/size metrics) must ignore them
+  kind?: 'text' | 'mesh';
 }
 
 export interface TextRun {
