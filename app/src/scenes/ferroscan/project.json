@@ -1,0 +1,7 @@
+{
+  "project": "ferroscan",
+  "meta": { "title": "ferroscan", "aspectRatio": "16:9", "fps": 60, "duration": 30 },
+  "entries": [
+    { "scene": "ferroscan/ferroscan", "id": "ferroscan", "start": 0, "end": 30 }
+  ]
+}
