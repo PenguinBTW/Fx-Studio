@@ -1,0 +1,19 @@
+{
+ "id": "floor",
+ "version": 1,
+ "source": "build.py",
+ "budgets": {
+  "tris": 90000,
+  "textureMB": 0
+ },
+ "parts": {
+  "ground": "ground",
+  "ring": "ring",
+  "log": "log",
+  "web": "web",
+  "ferns": "ferns",
+  "blades": "blades",
+  "trunks": "trunks",
+  "litter": "litter"
+ }
+}

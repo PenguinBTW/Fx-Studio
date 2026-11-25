@@ -1,0 +1,39 @@
+{
+  "project": "mushring",
+  "meta": {
+    "title": "mushring",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 20
+  },
+  "entries": [
+    {
+      "scene": "mushring/mushring",
+      "id": "ring-edge",
+      "start": 0,
+      "end": 5,
+      "caption": { "fig": "01", "text": "THE RING AT DUSK", "dur": 3.8 }
+    },
+    {
+      "scene": "mushring/mushring",
+      "id": "web-dew",
+      "start": 5,
+      "end": 11,
+      "caption": { "fig": "02", "text": "DEW ON SILK", "dur": 4.2 }
+    },
+    {
+      "scene": "mushring/mushring",
+      "id": "fireflies",
+      "start": 11,
+      "end": 16,
+      "caption": { "fig": "03", "text": "LIGHTS ON THE FLOOR", "dur": 3.8 }
+    },
+    {
+      "scene": "mushring/mushring",
+      "id": "settle",
+      "start": 16,
+      "end": 20,
+      "caption": { "fig": "04", "text": "A SMALL KINGDOM", "dur": 3.4 }
+    }
+  ]
+}
