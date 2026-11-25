@@ -260,7 +260,8 @@ export default class Soapfilm extends Scene {
     const fx0 = b1x0 * (1 - focusBlend) + (0.4 - b2t0 * 0.05) * focusBlend;
     const fy0 = b1y0 * (1 - focusBlend) + (-0.4 + b2t0 * 0.13) * focusBlend;
     const fz0 = b1z0 * (1 - focusBlend) + 0.3 * focusBlend;
-    const rad0 = 3.1 + smoothstep(POP_T - 2, POP_T + 2, lt) * 0.7 - k0 * 0.3;
+    const popWide = smoothstep(POP_T - 2, POP_T + 2, lt) * (1.0 - smoothstep(POP_T + 4, POP_T + 8, lt));
+    const rad0 = 3.1 + popWide * 0.7 - k0 * 0.3;
     this.cam.position.set(fx0 + Math.sin(az0) * rad0, fy0 + 0.25 + Math.sin(lt * 0.1) * 0.1, fz0 + Math.cos(az0) * rad0);
     this.cam.up.set(0, 1, 0);
     this.cam.lookAt(fx0, fy0, fz0);
@@ -301,7 +302,9 @@ export default class Soapfilm extends Scene {
 
     const fwd = this.cam.getWorldDirection(new THREE.Vector3());
     // focus on the FILM SURFACE, not the center — subtract the bubble radius along the view axis
-    const focusR = (1 - focusBlend) * 1.0 + focusBlend * 0.65;
+    const birthScale = birth1 * (1 - focusBlend) + b2grow * focusBlend;
+    const popExpand = (1 - focusBlend) * (1.0 + smoothstep(POP_T, POP_T + 0.45, lt) * 0.4) + focusBlend;
+    const focusR = ((1 - focusBlend) * 1.0 + focusBlend * 0.65) * birthScale * popExpand;
     const focusD = new THREE.Vector3(fx0, fy0, fz0).sub(this.cam.position).dot(fwd) - focusR;
 
     if (!this.main) {
