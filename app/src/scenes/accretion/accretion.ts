@@ -8,7 +8,6 @@
 import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { W, H } from '../../engine/gl';
-import { DepthDoFPass } from '../../engine/dof';
 import { smoothstep } from '../../engine/util';
 import { CameraRig } from '../../engine/rig';
 
@@ -19,7 +18,6 @@ export default class Accretion extends Scene {
   private cam = new THREE.PerspectiveCamera(38, W / H, 0.05, 200);
   private world = new THREE.Scene();
   private rig = new CameraRig('perspective');
-  private dof = new DepthDoFPass();
   private main: THREE.WebGLRenderTarget | null = null;
   private dustMat: THREE.ShaderMaterial | null = null;
   private dustGeo: THREE.BufferGeometry | null = null;
@@ -195,17 +193,9 @@ export default class Accretion extends Scene {
     this.clumpMat!.uniforms.uTime.value = lt;
     this.clumpMat!.uniforms.uForm.value = form;
 
-    // focus: the clump once formed, the bright mid-band before
-    const ctheta = 1.8 + CLUMP_W * lt;
-    const focusPt: [number, number, number] = form > 0.4
-      ? [Math.cos(ctheta) * CLUMP_R, 0, Math.sin(ctheta) * CLUMP_R]
-      : [CLUMP_R * 0.7, 0, 0];
-    const focusD = this.rig.focusDistance(focusPt);
-
     // no material in this scene writes depth — depth-DoF would be meaningless,
     // and even disabled the pass costs an extra target + fullscreen copy.
     // Render direct to output instead (documented all-additive pattern).
-    void focusD;
     rr.setRenderTarget(out);
     rr.clear(true, true, true);
     rr.render(this.world, this.cam);
@@ -221,6 +211,5 @@ export default class Accretion extends Scene {
     this.clumpMesh?.geometry.dispose();
     this.clumpMat?.dispose();
     this.main?.dispose();
-    this.dof.dispose?.();
   }
 }
