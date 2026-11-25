@@ -681,7 +681,12 @@ async function motion(page: Page) {
 
   for (let i = 0; i < frameCount; i++) {
     const fBuf = frames480[i]!;
-    const curT = from + i / fps;
+    const meta0 = frameMeta[i];
+    // exact render time: the bridge renders integer frame indices n/fps starting at
+    // round(from*fps) — NOT from+i/fps. When --from is not frame-aligned, attributing
+    // from+i/fps mis-times every frame by up to half a frame, biasing hit-response
+    // windows, cut classification, and every t0/t1 in the report.
+    const curT = typeof meta0?.t === 'number' ? meta0.t : (Math.round(from * fps) + i) / fps;
     const luma = computeLuma(fBuf, 480, 270);
     lumas.push(luma);
 
@@ -745,9 +750,16 @@ async function motion(page: Page) {
   if (tl) {
     for (const e of tl) {
       if (e.start >= from && e.start <= to) {
-        const cutIdx = Math.round((e.start - from) * fps);
+        // first frame showing post-cut content: frames render at n/fps and content
+        // switches at exactly e.start, so the straddling pair is [idx-1, idx] where
+        // idx = ceil(cutT·fps). Nearest-frame rounding can land BEFORE the cut and
+        // would compare two pre-cut frames — classifying lead-in motion as the cut.
+        const cutIdx = Math.ceil(e.start * fps - 1e-9) - Math.round(from * fps);
         let diff = 0;
-        let cutType: 'hard' | 'soft' | 'flash' = 'soft';
+        // 'unknown' when the straddling pair falls outside the captured frames (cut at the
+        // very edge of --to): recording 'soft' with zero difference would fabricate a
+        // measurement the window never took.
+        let cutType: 'hard' | 'soft' | 'flash' | 'unknown' = 'unknown';
 
         if (cutIdx > 0 && cutIdx < frameCount) {
           const lPrev = lumas[cutIdx - 1]!, lCur = lumas[cutIdx]!;
@@ -968,7 +980,7 @@ async function motion(page: Page) {
       whenToOpen: `Detailed sub-second visual evolution around ${ev.label}`,
     });
 
-    const evIdx = Math.max(0, Math.min(frameCount - 1, Math.round((ev.t - from) * fps)));
+    const evIdx = Math.max(0, Math.min(frameCount - 1, Math.round(ev.t * fps) - Math.round(from * fps)));
     const i0 = Math.max(0, evIdx - 2), i1 = evIdx, i2 = Math.min(frameCount - 1, evIdx + 2);
     const rgbDataUrl = await renderRgbTimeComposite(page, lumas[i0]!, lumas[i1]!, lumas[i2]!);
     const rgbName = `rgbtime_${ev.label}.png`;
