@@ -1,0 +1,31 @@
+{
+  "id": "orrery",
+  "version": 2,
+  "model": "model.glb",
+  "source": "build.py",
+  "budgets": {
+    "tris": 280000,
+    "textureMB": 2
+  },
+  "parts": {
+    "base": "base",
+    "column": "column",
+    "cup": "cup",
+    "sun": "sun",
+    "gear_0": "gear_0",
+    "gear_1": "gear_1",
+    "gear_2": "gear_2",
+    "ring_0": "ring_0",
+    "ring_1": "ring_1",
+    "ring_2": "ring_2",
+    "arm_0": "arm_0",
+    "arm_1": "arm_1",
+    "arm_2": "arm_2",
+    "planet_0": "planet_0",
+    "planet_1": "planet_1",
+    "planet_2": "planet_2",
+    "gear_3": "gear_3",
+    "prop_lens": "prop_lens",
+    "prop_caliper": "prop_caliper"
+  }
+}

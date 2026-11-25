@@ -596,6 +596,9 @@ export interface DeclarativeSceneDef {
   setup?: (ctx: SceneContext) => void | Promise<void>;
   /** Synchronous closed-form evaluation f(t) executed per sub-frame */
   render: (ctx: SceneContext, f: Frame, out: THREE.WebGLRenderTarget) => PostOverrides | void;
+  /** Optional teardown for scene-owned GPU resources the DSL can't see
+   * (env maps, generated textures, shadow targets). Runs before scene3D disposal. */
+  dispose?: (ctx: SceneContext) => void;
 }
 
 /**
@@ -704,6 +707,7 @@ export function defineScene(def: DeclarativeSceneDef): SceneClass {
 
     override dispose(): void {
       if (this.sc) {
+        def.dispose?.(this.sc);
         this.sc.dispose();
       }
     }
