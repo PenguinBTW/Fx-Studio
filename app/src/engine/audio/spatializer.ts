@@ -215,7 +215,8 @@ export function spatializeSource(
     occlusionSmoother.setTarget(targetOcclusion);
     velGainSmoother.setTarget(targetVelGain);
 
-    // Update filter cutoff
+    // Filter coefficients update at block rate from the smoother's current
+    // value — the smoother itself advances per-sample inside the loop.
     svfL.setCutoffAndQ(cutoffSmoother.getValue(), 0.7071);
     svfR.setCutoffAndQ(cutoffSmoother.getValue(), 0.7071);
 
@@ -225,23 +226,39 @@ export function spatializeSource(
       const inL = sourcePcm[inIdx] ?? 0;
       const inR = sourcePcm[inIdx + 1] ?? 0;
 
-      // Advance smoothers
+      // Advance smoothers — including the cutoff smoother, which previously
+      // was never advanced inside the sample loop: its value stayed frozen at
+      // the initial 20 kHz forever, so distance-based air absorption filtering
+      // silently never engaged no matter how far the source moved.
       const gPanL = panSmootherL.next();
       const gPanR = panSmootherR.next();
       const gDist = distGainSmoother.next();
       const gOcc = occlusionSmoother.next();
       const gVel = velGainSmoother.next();
+      const cutoffNow = cutoffSmoother.next();
 
       // Overall master modulation & distance gain
       const totalGain = gDist * gVel;
 
       // Air absorption & occlusion filtering
-      const { lp: lpL, hp: hpL } = svfL.process(inL);
-      const { lp: lpR, hp: hpR } = svfR.process(inR);
+      const { lp: lpL, hp: hpL, bp: bpL } = svfL.process(inL);
+      const { lp: lpR, hp: hpR, bp: bpR } = svfR.process(inR);
 
-      // Recombine with occlusion shelf: lows pass through untouched, highs are attenuated by gOcc
-      const filteredL = lpL + hpL * gOcc;
-      const filteredR = lpR + hpR * gOcc;
+      // Recombine with occlusion shelf: lows pass through untouched, highs are attenuated by gOcc.
+      // The SVF allpass identity is lp + k·bp + hp = input — omitting the bandpass term
+      // (as lp + hp·g did) leaves a notch at the cutoff even when fully unoccluded,
+      // sweeping through the audible band as the source recedes. k = 1/Q.
+      //
+      // Air absorption: the high band must ALSO attenuate with distance even when unoccluded —
+      // at gOcc = 1 the allpass identity reconstructs the input exactly, so without a distance
+      // term the carefully computed cutoff shapes nothing. gAir is the cutoff's own normalized
+      // position in the absorption range: 1 up close (full reconstruction) → 0 at maximum
+      // distance (only the lowpassed band survives) — one coherent state, no new constants.
+      const kOcc = 1.0 / 0.7071;
+      const airSpan = Math.max(1.0, distanceLpfHz[0] - distanceLpfHz[1]);
+      const gAir = Math.min(1.0, Math.max(0.0, (cutoffNow - distanceLpfHz[1]) / airSpan));
+      const filteredL = lpL + gOcc * gAir * (hpL + kOcc * bpL);
+      const filteredR = lpR + gOcc * gAir * (hpR + kOcc * bpR);
 
       // Apply panning and distance
       output[inIdx] = filteredL * gPanL * totalGain;
