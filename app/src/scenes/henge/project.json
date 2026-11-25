@@ -1,0 +1,7 @@
+{
+  "project": "henge",
+  "meta": { "title": "henge", "aspectRatio": "16:9", "fps": 60, "duration": 30 },
+  "entries": [
+    { "scene": "henge/henge", "id": "henge", "start": 0, "end": 30 }
+  ]
+}
