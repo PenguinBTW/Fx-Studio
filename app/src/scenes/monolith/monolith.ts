@@ -358,7 +358,7 @@ export default class Monolith extends Scene {
     const rackW = smoothstep(16, 17.5, lt) * (1 - smoothstep(23.5, 25, lt));
     const cx = focusX * rackW;
     const focusDist = (this.tmp.b.x - this.cam.position.x) * fwd.x * 0 +
-      ((cx - this.cam.position.x) * fwd.x + (0.85 - this.cam.position.y) * fwd.y + (-0.15 - this.cam.position.z) * fwd.z);
+      ((cx - this.cam.position.x) * fwd.x + (0.85 - this.cam.position.y) * fwd.y + (0.39 - this.cam.position.z) * fwd.z);
     this.dof.render(r, rt.texture, rt.depthTexture!, {
       enabled: true,
       focusDistance: Math.max(0.3, focusDist),
