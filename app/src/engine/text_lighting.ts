@@ -175,6 +175,7 @@ export function applyInWorldLighting(target: THREE.Object3D, opts: InWorldLighti
       } else if ((opts.physical || opts.clearcoat !== undefined) && !(mesh.material instanceof THREE.MeshPhysicalMaterial)) {
         // physical features were requested but the mesh carries a plain standard material:
         // mutating it in place can never deliver clearcoat, so replace it wholesale
+        const prior = mesh.material as THREE.MeshStandardMaterial;
         mesh.material = new THREE.MeshPhysicalMaterial({
           color: opts.color ?? 0xe8e4da,
           roughness: opts.roughness ?? 0.3,
@@ -186,7 +187,9 @@ export function applyInWorldLighting(target: THREE.Object3D, opts: InWorldLighti
           envMapIntensity: opts.envMapIntensity ?? 1.0,
           depthWrite,
           depthTest,
+          side: prior.side,
         });
+        prior.dispose();
       } else {
         const mat = mesh.material as THREE.MeshStandardMaterial;
         if (opts.color !== undefined) mat.color.set(opts.color as any);
