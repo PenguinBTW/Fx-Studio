@@ -1,0 +1,37 @@
+{
+  "id": "forge",
+  "version": 1,
+  "model": "model.glb",
+  "source": "build.py",
+  "budgets": {
+    "tris": 260000,
+    "textureMB": 2
+  },
+  "parts": {
+    "floor": "floor",
+    "wall_b": "wall_b",
+    "wall_l": "wall_l",
+    "lintel": "lintel",
+    "post_0": "post_0",
+    "post_1": "post_1",
+    "window": "window",
+    "hearth": "hearth",
+    "coals": "coals",
+    "embers": "embers",
+    "stump": "stump",
+    "anvil": "anvil",
+    "workpiece": "workpiece",
+    "hammer": "hammer",
+    "rack": "rack",
+    "tongs_0": "tongs_0",
+    "tongs_1": "tongs_1",
+    "hham_0": "hham_0",
+    "hham_1": "hham_1",
+    "hham_2": "hham_2",
+    "tub": "tub",
+    "water": "water",
+    "apron": "apron",
+    "stool": "stool",
+    "shoes": "shoes"
+  }
+}
