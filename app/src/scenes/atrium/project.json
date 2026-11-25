@@ -1,0 +1,12 @@
+{
+  "project": "atrium",
+  "meta": {
+    "title": "Atrium: light descending a concrete spiral",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 30
+  },
+  "entries": [
+    { "scene": "atrium/atrium", "id": "atrium", "start": 0, "end": 30 }
+  ]
+}
