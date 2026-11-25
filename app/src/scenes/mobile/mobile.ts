@@ -193,8 +193,8 @@ export default class Mobile extends Scene {
     const rev = smoothstep(0, 6, lt);
     const settle = smoothstep(22, 27, lt);
     const target = new THREE.Vector3().lerpVectors(this.redPaddlePos, this.centroid, rev);
-    target.y += 0.6 * rev;
-    const radius = 4.5 + 6.5 * rev - 0.5 * settle;
+    target.y += 0.9 * rev;
+    const radius = 4.5 + 7.5 * rev - 0.5 * settle;
     const yaw = 0.35 + lt * 0.028;
     const pitch = -0.06 + 0.04 * Math.sin(lt * 0.11);
     this.rig.setLensMm(52);
