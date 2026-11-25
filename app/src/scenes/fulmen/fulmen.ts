@@ -113,6 +113,9 @@ export default class Fulmen extends Scene {
   private rainMat: THREE.ShaderMaterial | null = null;
   private flashLight: THREE.PointLight | null = null;
   private terrainMat: THREE.MeshStandardMaterial | null = null;
+  private _skyMesh: THREE.Mesh | null = null;
+  private _terrainMesh: THREE.Mesh | null = null;
+  private _cloudMeshes: THREE.Mesh[] = [];
 
   override async init() {
     const rr = this.ctx.renderer;
@@ -133,7 +136,8 @@ export default class Fulmen extends Scene {
           gl_FragColor = vec4(mix(horizon, zenith, smoothstep(-0.1, 0.5, h)), 1.0);
         }`,
     });
-    this.world.add(new THREE.Mesh(new THREE.SphereGeometry(300, 24, 12), skyMat));
+    this._skyMesh = new THREE.Mesh(new THREE.SphereGeometry(300, 24, 12), skyMat);
+    this.world.add(this._skyMesh);
 
     this.world.add(new THREE.HemisphereLight(0x101828, 0x050505, 0.25));
 
@@ -151,6 +155,7 @@ export default class Fulmen extends Scene {
     this.terrainMat = new THREE.MeshStandardMaterial({ color: 0x0a0c10, roughness: 1 });
     const terrain = new THREE.Mesh(tgeo, this.terrainMat);
     terrain.position.set(0, 0, -40);
+    this._terrainMesh = terrain;
     this.world.add(terrain);
 
     // ---- the thunderhead: layered noise billboards, internally lit ---------
@@ -197,8 +202,8 @@ export default class Fulmen extends Scene {
           float n2 = fbm(uv * 2.3 - vec2(uTime * 0.005, 0.0));
           float density = smoothstep(0.35, 0.75, n * 0.7 + n2 * 0.4);
           // soft edges
-          float edge = smoothstep(0.0, 0.25, vUv.x) * smoothstep(1.0, 0.75, vUv.x)
-                     * smoothstep(0.0, 0.3, vUv.y) * smoothstep(1.0, 0.6, vUv.y);
+          float edge = smoothstep(0.0, 0.25, vUv.x) * (1.0 - smoothstep(0.75, 1.0, vUv.x))
+                     * smoothstep(0.0, 0.3, vUv.y) * (1.0 - smoothstep(0.6, 1.0, vUv.y));
           density *= edge;
           // internal illumination: sheet flicker lights the volume diffusely,
           // the main flash lights it pointwise around the bolt top
@@ -218,16 +223,16 @@ export default class Fulmen extends Scene {
       const cm = new THREE.Mesh(cg, this.cloudMat);
       cm.position.set((layer - 1) * 8, 30 + layer * 3, -55 - layer * 14);
       cm.renderOrder = 2 + layer;
-      (this as any)[`_cloud${layer}`] = cm;
+      this._cloudMeshes.push(cm);
       this.world.add(cm);
     }
 
     // ---- bolts: cylinders per segment with additive plasma shader ----------
     // bolt anchors: cloud base (~y 22) to terrain (~y 0), spread in x
     const anchors = [
-      { from: new THREE.Vector3(-6, 24, -38), to: new THREE.Vector3(-8, 0.5, -30) },
-      { from: new THREE.Vector3(9, 23, -42), to: new THREE.Vector3(11, 0.5, -33) },
-      { from: new THREE.Vector3(-1, 25, -35), to: new THREE.Vector3(1, 0.5, -27) },
+      { from: new THREE.Vector3(-6, 24, -38), to: new THREE.Vector3(-8, -3.0, -30) },
+      { from: new THREE.Vector3(9, 23, -42), to: new THREE.Vector3(11, -3.0, -33) },
+      { from: new THREE.Vector3(-1, 25, -35), to: new THREE.Vector3(1, -3.0, -27) },
     ];
     for (let bi = 0; bi < anchors.length; bi++) {
       const segs = buildBolt(bi + 1, anchors[bi]!.from, anchors[bi]!.to);
@@ -362,9 +367,10 @@ export default class Fulmen extends Scene {
         varying float vA;
         void main(){
           vec2 uv = gl_PointCoord - 0.5;
-          float d = length(uv) * 2.0;
-          float disc = 1.0 - smoothstep(0.2, 1.0, d);
-          float alpha = disc * vA;
+          // streak: thin horizontally, extended vertically
+          float dx = 1.0 - smoothstep(0.0, 0.14, abs(uv.x));
+          float dy = 1.0 - smoothstep(0.1, 0.5, abs(uv.y));
+          float alpha = dx * dy * vA;
           if (alpha < 0.008) discard;
           gl_FragColor = vec4(vec3(0.6, 0.7, 0.9) * alpha, alpha);
         }`,
@@ -402,7 +408,10 @@ export default class Fulmen extends Scene {
         if (dt < 0 || dt > 0.9) continue;
         be += (k === 0 ? 1.0 : 0.55) * Math.exp(-dt * 9.0) * smoothstep(0, 0.02, dt);
       }
-      mat.uniforms.uLeader.value = lp;
+      // leader channel decays after the stroke — re-ionizes implicitly via uFlash at re-strikes
+      let chan = lp;
+      if (lt > s.t0) chan *= Math.exp(-(lt - s.t0) * 3.0);
+      mat.uniforms.uLeader.value = chan;
       mat.uniforms.uFlash.value = be;
     }
 
@@ -410,8 +419,22 @@ export default class Fulmen extends Scene {
     this.cloudMat!.uniforms.uFlash.value = flash;
     this.cloudMat!.uniforms.uSheet.value = sheet;
     this.rainMat!.uniforms.uTime.value = lt;
-    this.rainMat!.uniforms.uFlash.value = flash;
+    this.rainMat!.uniforms.uFlash.value = flash + sheet * 0.6;
     this.flashLight!.intensity = flash * 260 + sheet * 10;
+    // active bolt: the one with the strongest current stroke envelope
+    let bestBi = 0, bestE = 0;
+    for (let bi = 0; bi < STRIKES.length; bi++) {
+      const s = STRIKES[bi]!;
+      let be2 = 0;
+      for (const tt of [s.t0, ...s.restrikes]) {
+        const dt = lt - tt;
+        if (dt >= 0 && dt <= 0.9) be2 += Math.exp(-dt * 9.0);
+      }
+      if (be2 > bestE) { bestE = be2; bestBi = bi; }
+    }
+    const anchor = [new THREE.Vector3(-6, 24, -38), new THREE.Vector3(9, 23, -42), new THREE.Vector3(-1, 25, -35)][bestBi]!;
+    this.flashLight!.position.set(anchor.x, 12, anchor.z + 4);
+    this.cloudMat!.uniforms.uBoltPos.value.copy(anchor);
 
     // camera: slow wide push-in on the storm, slight drift; pulls back at the end
     const k = smoothstep(0, 30, lt);
@@ -448,6 +471,12 @@ export default class Fulmen extends Scene {
   }
 
   override dispose() {
+    const rr = this.ctx.renderer;
+    rr.shadowMap.enabled = (this as any)._prevShadow ?? true;
+    this._skyMesh?.geometry.dispose();
+    (this._skyMesh?.material as THREE.Material | undefined)?.dispose();
+    this._terrainMesh?.geometry.dispose();
+    for (const cm of this._cloudMeshes) cm.geometry.dispose();
     this.main?.dispose();
     this.cloudMat?.dispose();
     this.rainMat?.dispose();
