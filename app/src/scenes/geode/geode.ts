@@ -231,7 +231,7 @@ export default class Geode extends Scene {
     this.dof.render(rr, this.main.texture, this.main.depthTexture!, {
       enabled: true,
       focusDistance: focusD,
-      aperture: 0.14,
+      aperture: 6.0,
       maxRadius: 15,
       samples: 36,
       near: 0.05,
