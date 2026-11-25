@@ -1,0 +1,12 @@
+{
+  "project": "datagarden",
+  "meta": {
+    "title": "Data Garden: information-art tide sculpture",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 30
+  },
+  "entries": [
+    { "scene": "datagarden/datagarden", "id": "datagarden", "start": 0, "end": 30 }
+  ]
+}
