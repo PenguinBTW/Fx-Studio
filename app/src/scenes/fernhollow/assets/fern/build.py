@@ -21,7 +21,7 @@ def spine(i):
 
 spine_pts = [spine(i) for i in range(N)]
 # rachis as thin ribbon
-w = 0.012
+w = 0.016
 for i in range(N):
     x, y, z = spine_pts[i]
     verts += [(x - w, y, z), (x + w, y, z)]
@@ -36,7 +36,7 @@ for i in range(4, N - 2):
     # direction along spine
     x2, y2, z2 = spine_pts[min(i + 1, N - 1)]
     dy, dz = y2 - y, z2 - z
-    L = 0.16 * math.sin(math.pi * min(1.0, t * 1.25)) * (1 - t * 0.55) + 0.02
+    L = 0.30 * math.sin(math.pi * min(1.0, t * 1.25)) * (1 - t * 0.55) + 0.03
     for side in (-1, 1):
         # leaflet as a 3-segment tapered blade angled outward/forward
         base = len(verts)
@@ -46,7 +46,7 @@ for i in range(4, N - 2):
             px = x + side * L * st
             py = y + dy * 2.0 * st * tilt + 0.02 * st
             pz = z + dz * 2.0 * st * tilt - 0.12 * st * st
-            hw = 0.018 * (1 - st) * (0.5 + 0.5 * math.sin(math.pi * min(1, st * 3)))
+            hw = 0.030 * (1 - st) * (0.5 + 0.5 * math.sin(math.pi * min(1, st * 3)))
             verts += [(px, py - hw, pz), (px, py + hw, pz)]
         for s in range(3):
             a = base + s * 2
@@ -68,7 +68,7 @@ bpy.ops.object.modifier_apply(modifier="solid")
 mat = bpy.data.materials.new("fern_green")
 mat.use_nodes = True
 bsdf = mat.node_tree.nodes["Principled BSDF"]
-bsdf.inputs["Base Color"].default_value = (0.18, 0.32, 0.10, 1.0)
+bsdf.inputs["Base Color"].default_value = (0.10, 0.22, 0.06, 1.0)
 bsdf.inputs["Roughness"].default_value = 0.75
 obj.data.materials.append(mat)
 

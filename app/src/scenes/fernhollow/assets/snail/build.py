@@ -20,12 +20,12 @@ def uv_sphere(name, loc, scale, mat, seg=24, rings=16):
 body_mat = bpy.data.materials.new("snail_body")
 body_mat.use_nodes = True
 b = body_mat.node_tree.nodes["Principled BSDF"]
-b.inputs["Base Color"].default_value = (0.42, 0.33, 0.22, 1.0)
-b.inputs["Roughness"].default_value = 0.45
+b.inputs["Base Color"].default_value = (0.30, 0.23, 0.15, 1.0)
+b.inputs["Roughness"].default_value = 0.25
 shell_mat = bpy.data.materials.new("snail_shell")
 shell_mat.use_nodes = True
 s = shell_mat.node_tree.nodes["Principled BSDF"]
-s.inputs["Base Color"].default_value = (0.55, 0.38, 0.18, 1.0)
+s.inputs["Base Color"].default_value = (0.38, 0.22, 0.09, 1.0)
 s.inputs["Roughness"].default_value = 0.3
 
 # body: elongated soft foot + head, along +Y, foot flat on z=0

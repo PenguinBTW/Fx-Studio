@@ -60,9 +60,9 @@ export default class Fernhollow extends Scene {
     const r = this.ctx.renderer;
 
     // lighting: low warm key (canopy sun), cool shade fill, faint green bounce
-    const key = new THREE.DirectionalLight(0xf5c873, 2.6);
+    const key = new THREE.DirectionalLight(0xffc25e, 3.4);
     key.position.set(-2.5, 3.2, 1.4);
-    const fill = new THREE.DirectionalLight(0x3a4a3f, 0.9);
+    const fill = new THREE.DirectionalLight(0x2e4147, 0.8);
     fill.position.set(2.0, 1.2, -1.5);
     const bounce = new THREE.HemisphereLight(0x4a6b3a, 0x1c2418, 0.7);
     this.world.add(key, fill, bounce);
@@ -71,7 +71,7 @@ export default class Fernhollow extends Scene {
     const groundGeo = new THREE.PlaneGeometry(14, 8, 64, 32);
     const gp = groundGeo.attributes.position!;
     const col = new Float32Array(gp.count * 3);
-    const moss = new THREE.Color(0x2e4a2c), soil = new THREE.Color(0x2a2018);
+    const moss = new THREE.Color(0x243d20), soil = new THREE.Color(0x1d150e);
     for (let i = 0; i < gp.count; i++) {
       const x = gp.getX(i), y = gp.getY(i);
       const n = 0.5 + 0.5 * Math.sin(x * 3.1 + Math.sin(y * 2.3) * 1.7) * Math.cos(y * 4.3 + x);
@@ -91,11 +91,11 @@ export default class Fernhollow extends Scene {
     const logGeo = new THREE.CylinderGeometry(0.09, 0.11, 3.4, 20, 8);
     const lp = logGeo.attributes.position!;
     const lc = new Float32Array(lp.count * 3);
-    const bark = new THREE.Color(0x4a3626), mossTop = new THREE.Color(0x3d5c2e);
+    const bark = new THREE.Color(0x2e2015), mossTop = new THREE.Color(0x2a4420);
     for (let i = 0; i < lp.count; i++) {
       const ny = lp.getY(i), nz = lp.getZ(i);
       const up = Math.max(0, nz / 0.1);
-      const n = 0.5 + 0.5 * Math.sin(ny * 8.0 + nz * 22.0);
+      const n = 0.5 + 0.5 * Math.sin(ny * 13.0 + nz * 31.0) * Math.sin(ny * 5.0 - nz * 17.0);
       const c = bark.clone().lerp(mossTop, up * (0.4 + 0.6 * n));
       lc[i * 3] = c.r; lc[i * 3 + 1] = c.g; lc[i * 3 + 2] = c.b;
     }
@@ -110,9 +110,9 @@ export default class Fernhollow extends Scene {
     const fernInst = await GLTFManager.instantiate(fernAsset.url, {});
     const placements: [number, number, number, number, number][] = [
       // x, z, scale, yaw, phase
-      [-1.2, -0.7, 1.15, 0.4, 0.0], [-0.4, -1.0, 1.3, 1.1, 1.3], [0.6, -0.9, 1.05, 2.2, 2.6],
-      [1.4, -0.6, 1.2, 2.9, 0.7], [-0.9, 0.5, 0.9, -0.6, 1.9], [0.9, 0.45, 1.0, -2.4, 3.1],
-      [0.0, -1.3, 1.45, 1.7, 4.2],
+      [-1.2, -0.9, 0.62, 0.4, 0.0], [-0.4, -1.3, 0.72, 1.1, 1.3], [0.6, -1.1, 0.58, 2.2, 2.6],
+      [1.4, -0.8, 0.66, 2.9, 0.7], [-0.9, 0.6, 0.5, -0.6, 1.9], [0.9, 0.55, 0.55, -2.4, 3.1],
+      [0.0, -1.6, 0.8, 1.7, 4.2],
     ];
     for (const [x, z, s, yaw, phase] of placements) {
       const obj: THREE.Object3D = fernInst.root.clone(true);
@@ -129,7 +129,6 @@ export default class Fernhollow extends Scene {
     const snailAsset = resolveAsset('snail', project);
     this.snailInst = await GLTFManager.instantiate(snailAsset.url, {});
     this.snail = this.snailInst.root as THREE.Group;
-    this.snail.rotation.y = 0; // faces +Y in model space; log runs along X → rotate to +X
     this.snail.rotation.y = -Math.PI / 2;
     if (this.snail) this.world.add(this.snail);
 
@@ -158,7 +157,7 @@ export default class Fernhollow extends Scene {
 
     // volumetric canopy shafts: additive analytic light planes slanted with the key light
     const shaftMat = new THREE.MeshBasicMaterial({
-      color: 0xf5c873, transparent: true, opacity: 0.05, blending: THREE.AdditiveBlending,
+      color: 0xf5c873, transparent: true, opacity: 0.11, blending: THREE.AdditiveBlending,
       depthWrite: false, side: THREE.DoubleSide,
     });
     for (let i = 0; i < 3; i++) {
@@ -172,7 +171,7 @@ export default class Fernhollow extends Scene {
     // backdrop canopy: dark blurred mass far behind
     const canopy = new THREE.Mesh(
       new THREE.PlaneGeometry(16, 7),
-      new THREE.MeshBasicMaterial({ color: 0x141c10 }),
+      new THREE.MeshBasicMaterial({ color: 0x1d2b14 }),
     );
     canopy.position.set(0, 2.2, -4.5);
     this.world.add(canopy);
@@ -225,7 +224,7 @@ export default class Fernhollow extends Scene {
       maxRadius: 18,
       near: this.cam.near,
       far: this.cam.far,
-      samples: 24,
+      samples: 12,
     }, out);
     r.resetState();
     return { bloom: 0.35, vignette: 0.3 };
