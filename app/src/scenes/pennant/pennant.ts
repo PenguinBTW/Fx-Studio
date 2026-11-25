@@ -164,7 +164,7 @@ export default class Pennant extends Scene {
     this.dof.render(rr, this.main.texture, this.main.depthTexture!, {
       enabled: true,
       focusDistance: focusD,
-      aperture: 0.035,
+      aperture: 4.0,
       maxRadius: 10,
       samples: 36,
       near: 0.05,
