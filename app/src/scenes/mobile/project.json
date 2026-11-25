@@ -1,0 +1,7 @@
+{
+  "project": "mobile",
+  "meta": { "title": "mobile", "aspectRatio": "16:9", "fps": 60, "duration": 30 },
+  "entries": [
+    { "scene": "mobile/mobile", "id": "mobile", "start": 0, "end": 30 }
+  ]
+}
