@@ -1,0 +1,7 @@
+{
+  "project": "sandrift",
+  "meta": { "title": "sandrift", "aspectRatio": "16:9", "fps": 60, "duration": 30 },
+  "entries": [
+    { "scene": "sandrift/sandrift", "id": "sandrift", "start": 0, "end": 30 }
+  ]
+}
