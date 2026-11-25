@@ -240,7 +240,7 @@ export default class Verdant extends Scene {
     const huskMat = new THREE.MeshStandardMaterial({ color: 0x8a7148, roughness: 0.85, side: THREE.DoubleSide });
     for (const side of [-1, 1]) {
       const half = new THREE.Mesh(
-        new THREE.SphereGeometry(0.22, 24, 18, side < 0 ? Math.PI / 2 : -Math.PI / 2, Math.PI),
+        new THREE.SphereGeometry(0.22, 24, 18, side < 0 ? -Math.PI / 2 : Math.PI / 2, Math.PI),
         huskMat,
       );
       half.scale.set(1, 0.72, 1);
@@ -429,6 +429,11 @@ export default class Verdant extends Scene {
     this.dof.dispose();
     for (const m of [this.stemMesh, this.cotyL, this.cotyR, this.leafMesh, this.tendrilMesh]) {
       m?.geometry.dispose();
+    }
+    for (const key of ['huskL', 'huskR']) {
+      const half = (this as any)[key] as THREE.Mesh | undefined;
+      half?.geometry.dispose();
+      (half?.material as THREE.Material | undefined)?.dispose();
     }
     this.leafMat.dispose();
     this.stemMat.dispose();
