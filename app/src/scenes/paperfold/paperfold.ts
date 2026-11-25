@@ -203,7 +203,7 @@ export default class Paperfold extends Scene {
     const gt = Math.max(0, t - 22);
     // climbing spiral: angular advance, expanding radius, steady climb
     const phi = gt * 0.8 * g;
-    const r = 1.5 * g * Math.min(1, gt / 2.5);
+    const r = 1.5 * g * smoothstep(0, 2.5, gt);
     const climb = gt * gt * 0.07 * g;
     const px = Math.sin(phi) * r;
     const pz = (1 - Math.cos(phi)) * r * 0.8 - gt * 0.4 * g;
@@ -213,7 +213,7 @@ export default class Paperfold extends Scene {
     const eps = 0.02;
     const gt2 = Math.max(0, t + eps - 22);
     const phi2 = gt2 * 0.8 * g;
-    const r2 = 1.5 * g * Math.min(1, gt2 / 2.5);
+    const r2 = 1.5 * g * smoothstep(0, 2.5, gt2);
     const climb2 = gt2 * gt2 * 0.07 * g;
     const ahead = new THREE.Vector3(
       Math.sin(phi2) * r2,

@@ -19,7 +19,7 @@ Transformation made physical: flatness becoming flight. The register the catalog
 - no celebratory golden light at completion — the plane leaves into darkness, ambiguity intact
 
 ## focal hierarchy
-1. the active fold — whichever crease is moving (brightest, sharpest)
+1. the nose tip — sharpest structural reference throughout; the moving crease reads through motion, not focus
 2. paper grain and edge thinness — materiality second
 3. the dart silhouette at rest — the reward shape
 4. the glide — small in frame, diminishing, final
