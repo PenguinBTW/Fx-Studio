@@ -1,0 +1,12 @@
+{
+  "project": "optica",
+  "meta": {
+    "title": "Optica: spectral caustics through a rotating crystal",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 30
+  },
+  "entries": [
+    { "scene": "optica/optica", "id": "optica", "start": 0, "end": 30 }
+  ]
+}
