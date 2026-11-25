@@ -145,5 +145,30 @@ ok(sun.target.parent === sun && i2.lights.length === 1, 'directional light targe
 i2.setMorph('Smile', 0.5, 'face');
 ok(near(m2.morphTargetInfluences![0]!, 0.5) && near(m3.morphTargetInfluences![0]!, 0), 'setMorph scoped to a part');
 
+// material isolation: envMapIntensity overrides must not cross-contaminate instances
+{
+  const sharedMat = new THREE.MeshStandardMaterial({ name: 'Shared' });
+  const mA = new THREE.Mesh(geom.clone(), sharedMat);
+  const rootAB = new THREE.Group();
+  rootAB.add(mA);
+  const assetScene = { animations: [], scene: rootAB } as any;
+  // simulate a second instance via an independent clone the way GLTFAsset.instantiate does
+  const iA = new GLTFInstance(assetScene, rootAB.clone(true), { envMapIntensity: 0.2 } as any);
+  // note: instances share the same material object unless the constructor clones it
+  const iB = new GLTFInstance(assetScene, rootAB.clone(true), { envMapIntensity: 1.5 } as any);
+  const matA = iA.meshes[0]!.material as THREE.MeshStandardMaterial;
+  const matB = iB.meshes[0]!.material as THREE.MeshStandardMaterial;
+  ok(matA !== matB && near(matA.envMapIntensity, 0.2) && near(matB.envMapIntensity, 1.5), 'envMapIntensity instances are isolated');
+  ok(near(sharedMat.envMapIntensity, 1.0), 'master material untouched by instance overrides');
+  let disposeFired = 0;
+  for (const m of iA.ownedMaterials) {
+    const orig = m.dispose.bind(m);
+    m.dispose = () => { disposeFired++; orig(); };
+  }
+  const ownedBefore = iA.ownedMaterials.length;
+  iA.dispose();
+  ok(ownedBefore > 0 && disposeFired === ownedBefore && iA.ownedMaterials.length === 0, 'instance clones disposed exactly once');
+}
+
 console.log(failed ? `\n${failed} asset test(s) FAILED` : '\nall asset tests passed');
 if (failed) process.exit(1);
