@@ -226,7 +226,11 @@ export default class Fernhollow extends Scene {
       focusDistance: (() => {
         const w = snailWeight(lt);
         if (w < 0.001 || !this.snail) return DEEP_FOCUS;
-        const d = this.cam.position.distanceTo(this.snail.position);
+        // DoF depth is along the camera forward axis, not Euclidean range
+        const fwd = new THREE.Vector3();
+        this.cam.getWorldDirection(fwd);
+        const off = this.snail.position.clone().sub(this.cam.position);
+        const d = off.dot(fwd);
         return DEEP_FOCUS + (d - DEEP_FOCUS) * w;
       })(),
       aperture: 10.0,
