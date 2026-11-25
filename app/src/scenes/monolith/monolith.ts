@@ -301,7 +301,7 @@ export default class Monolith extends Scene {
           ).project(this.cam);
           pts[k * 2] = (corner.x + 1) / 2 * W;
           pts[k * 2 + 1] = (1 - corner.y) / 2 * H;
-          if (corner.z < 1 && pts[k * 2]! > -W * 0.1 && pts[k * 2]! < W * 1.1 && pts[k * 2 + 1]! > -H * 0.1 && pts[k * 2 + 1]! < H * 1.1) visible = true;
+          if (corner.z < 1 && pts[k * 2]! > 0 && pts[k * 2]! < W && pts[k * 2 + 1]! > 0 && pts[k * 2 + 1]! < H) visible = true;
         }
         if (!visible) continue;
         for (let k = 0; k < 8; k++) {
