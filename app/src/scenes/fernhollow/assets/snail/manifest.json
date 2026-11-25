@@ -1,0 +1,4 @@
+{
+  "parts": { "body": "body", "head": "head", "shell": "shell", "stalkL": "stalkL", "stalkR": "stalkR" },
+  "clips": { "glide": { "loop": true } }
+}
