@@ -21,8 +21,8 @@ const HALF = 4.0; // plate half-width
 
 // Chladni figures on a square: cos(nπx)cos(mπy) − cos(mπx)cos(nπy); nodal lines where zero
 function chladni(n: number, m: number, x: number, y: number): number {
-  const a = Math.cos(n * Math.PI * x / HALF / 2) * Math.cos(m * Math.PI * y / HALF / 2);
-  const b = Math.cos(m * Math.PI * x / HALF / 2) * Math.cos(n * Math.PI * y / HALF / 2);
+  const a = Math.cos(n * Math.PI * x / HALF) * Math.cos(m * Math.PI * y / HALF);
+  const b = Math.cos(m * Math.PI * x / HALF) * Math.cos(n * Math.PI * y / HALF);
   return a - b;
 }
 
