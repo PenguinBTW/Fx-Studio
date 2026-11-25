@@ -83,7 +83,7 @@ export default class Harmonograph extends Scene {
       const pts: THREE.Vector3[] = [];
       for (let i = 0; i <= STEPS; i += 4) pts.push(new THREE.Vector3(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]));
       const curve = new THREE.CatmullRomCurve3(pts);
-      const tube = new THREE.TubeGeometry(curve, 900, 0.015, 6, false);
+      const tube = new THREE.TubeGeometry(curve, 900, 0.013, 6, false);
       // arc-time attribute: interpolate local time along the tube by uv.x
       const uv = tube.attributes.uv!;
       const timeAttr = new Float32Array(uv.count);
