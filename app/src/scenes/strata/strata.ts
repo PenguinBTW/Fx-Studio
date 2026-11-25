@@ -147,11 +147,18 @@ export default class Strata extends Scene {
           vec3 pos = position;
           float ero = smoothstep(5.0, 24.0, uTime);
           // fan mounds along the base, growing outward with erosion
-          float fan = noise(vec2(pos.x * 0.18, 3.7));
-          float grow = ero * (0.5 + fan);
-          pos.z += grow * 2.4 * (1.0 - abs(pos.y) / 6.0);
+          float fanH(vec2 q, float e2){
+            float f2 = noise(vec2(q.x * 0.18, 3.7));
+            float g2 = e2 * (0.5 + f2);
+            return g2 * 2.4 * (1.0 - abs(q.y) / 6.0);
+          }
+          float h0 = fanH(pos.xy, ero);
+          pos.z += h0;
           pos.y *= 1.0 + grow * 0.8;
-          vNorm2 = vec3(0.0, 1.0, 0.0);
+          float eps2 = 0.4;
+          float hx = fanH(pos.xy + vec2(eps2, 0.0), ero) - h0;
+          // slope normal in the plane's local frame (z is up post-rotation)
+          vNorm2 = normalize(vec3(-hx / eps2, 0.35, 1.0));
           vec4 wp = modelMatrix * vec4(pos, 1.0);
           vWPos2 = wp.xyz;
           gl_Position = projectionMatrix * viewMatrix * wp;
