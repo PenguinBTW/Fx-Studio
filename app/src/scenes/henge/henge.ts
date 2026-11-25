@@ -143,7 +143,7 @@ export default class Henge extends Scene {
     // ---- the sun clock ----
     this.sun = new THREE.DirectionalLight(0xffffff, 2.0);
     this.sun.castShadow = true;
-    this.sun.shadow.mapSize.set(2048, 2048);
+    this.sun.shadow.mapSize.set(4096, 4096);
     const sc = this.sun.shadow.camera;
     sc.left = -22; sc.right = 22; sc.top = 22; sc.bottom = -22; sc.far = 220;
     this.sun.shadow.bias = -0.0006;
