@@ -98,6 +98,7 @@ export default class Monolith extends Scene {
   private rimLight: THREE.DirectionalLight | null = null;
   private tmp = { a: new THREE.Vector3(), b: new THREE.Vector3(), c: new THREE.Vector3() };
   private probeBox = new THREE.Box3();
+  private probeScratch = new Float32Array(16);
 
   private prevShadowEnabled = false;
   private prevShadowType: THREE.ShadowMapType | null = null;
@@ -287,20 +288,24 @@ export default class Monolith extends Scene {
         // including them inflates the union box and pulls the onion-skin trail's
         // center into empty space
         let visible = false;
-        const pts: [number, number][] = [];
+        // reuse flat scratch — no per-corner tuple allocations in a probed export
+        const pts = this.probeScratch;
         for (let k = 0; k < 8; k++) {
           corner.set(
             k & 1 ? b.max.x : b.min.x,
             k & 2 ? b.max.y : b.min.y,
             k & 4 ? b.max.z : b.min.z,
           ).project(this.cam);
-          const sx = (corner.x + 1) / 2 * W;
-          const sy = (1 - corner.y) / 2 * H;
-          pts.push([sx, sy]);
-          if (corner.z < 1 && sx > -W * 0.1 && sx < W * 1.1 && sy > -H * 0.1 && sy < H * 1.1) visible = true;
+          pts[k * 2] = (corner.x + 1) / 2 * W;
+          pts[k * 2 + 1] = (1 - corner.y) / 2 * H;
+          if (corner.z < 1 && pts[k * 2]! > -W * 0.1 && pts[k * 2]! < W * 1.1 && pts[k * 2 + 1]! > -H * 0.1 && pts[k * 2 + 1]! < H * 1.1) visible = true;
         }
         if (!visible) continue;
-        for (const [sx, sy] of pts) {
+        for (let k = 0; k < 8; k++) {
+          // clamp to the viewport: the probe is a screen-space diagnostic, so the box
+          // should bound what is actually visible, not geometry stretching off-frame
+          const sx = Math.max(0, Math.min(W, pts[k * 2]!));
+          const sy = Math.max(0, Math.min(H, pts[k * 2 + 1]!));
           if (sx < minX) minX = sx;
           if (sy < minY) minY = sy;
           if (sx > maxX) maxX = sx;
