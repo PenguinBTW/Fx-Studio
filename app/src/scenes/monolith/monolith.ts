@@ -275,12 +275,19 @@ export default class Monolith extends Scene {
     // telemetry: union screen-space bbox of the glyphs — invariant 5 of the raw-scene
     // rules, so diagnostics can check the lettering for clipping/overlap
     const P = (window as any).__motion;
-    if (P?.textProbes && P.recordText !== false) {
+    // gate on P.probe like the engine's own text does — otherwise the paused preview
+    // loop, which never clears the probe array, leaks a record per rendered frame
+    if (P?.probe && P?.textProbes && P.recordText !== false) {
       let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9, any = false;
       const corner = this.tmp.c;
       for (const gl of this.glyphs) {
         this.probeBox.setFromObject(gl.mesh);
         const b = this.probeBox;
+        // skip glyphs fully outside the frame (e.g. still falling above the top):
+        // including them inflates the union box and pulls the onion-skin trail's
+        // center into empty space
+        let visible = false;
+        const pts: [number, number][] = [];
         for (let k = 0; k < 8; k++) {
           corner.set(
             k & 1 ? b.max.x : b.min.x,
@@ -289,6 +296,11 @@ export default class Monolith extends Scene {
           ).project(this.cam);
           const sx = (corner.x + 1) / 2 * W;
           const sy = (1 - corner.y) / 2 * H;
+          pts.push([sx, sy]);
+          if (corner.z < 1 && sx > -W * 0.1 && sx < W * 1.1 && sy > -H * 0.1 && sy < H * 1.1) visible = true;
+        }
+        if (!visible) continue;
+        for (const [sx, sy] of pts) {
           if (sx < minX) minX = sx;
           if (sy < minY) minY = sy;
           if (sx > maxX) maxX = sx;
