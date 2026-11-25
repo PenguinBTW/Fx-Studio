@@ -411,7 +411,7 @@ export default class Verdant extends Scene {
     this.dof.render(rr, this.main.texture, this.main.depthTexture!, {
       enabled: true,
       focusDistance: focusD,
-      aperture: 0.06,
+      aperture: 5.0,
       maxRadius: 16,
       samples: 36,
       near: 0.05,
