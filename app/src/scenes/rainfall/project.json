@@ -1,0 +1,7 @@
+{
+  "project": "rainfall",
+  "meta": { "title": "rainfall", "aspectRatio": "16:9", "fps": 60, "duration": 30 },
+  "entries": [
+    { "scene": "rainfall/rainfall", "id": "rainfall", "start": 0, "end": 30 }
+  ]
+}
