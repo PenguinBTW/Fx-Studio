@@ -1,0 +1,12 @@
+{
+  "project": "harmonograph",
+  "meta": {
+    "title": "Harmonograph: light drawing mathematics",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 30
+  },
+  "entries": [
+    { "scene": "harmonograph/harmonograph", "id": "harmonograph", "start": 0, "end": 30 }
+  ]
+}
