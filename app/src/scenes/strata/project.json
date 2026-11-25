@@ -1,0 +1,7 @@
+{
+  "project": "strata",
+  "meta": { "title": "strata", "aspectRatio": "16:9", "fps": 60, "duration": 30 },
+  "entries": [
+    { "scene": "strata/strata", "id": "strata", "start": 0, "end": 30 }
+  ]
+}
