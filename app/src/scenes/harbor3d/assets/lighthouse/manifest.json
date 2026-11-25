@@ -1,0 +1,3 @@
+{ "id": "lighthouse", "version": 1, "source": "build.py",
+  "budgets": { "tris": 140000, "textureMB": 0 },
+  "parts": { "rock": "rock", "tower": "tower", "rail": "rail", "lantern": "lantern" } }

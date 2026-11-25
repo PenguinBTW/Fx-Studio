@@ -1,0 +1,39 @@
+{
+  "project": "harbor3d",
+  "meta": {
+    "title": "Harborlight: The Lamp Keeps Turning",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 20.0
+  },
+  "entries": [
+    {
+      "scene": "harbor3d/harbor3d",
+      "id": "act-open",
+      "start": 0.0,
+      "end": 5.0,
+      "caption": { "fig": "01", "text": "A STACK IN THE DARK", "dur": 2.6 }
+    },
+    {
+      "scene": "harbor3d/harbor3d",
+      "id": "act-sweep",
+      "start": 5.0,
+      "end": 10.0,
+      "caption": { "fig": "02", "text": "THE BEAM COMES AROUND", "dur": 2.6 }
+    },
+    {
+      "scene": "harbor3d/harbor3d",
+      "id": "act-detail",
+      "start": 10.0,
+      "end": 15.0,
+      "caption": { "fig": "03", "text": "STONE, IRON, GLASS", "dur": 2.6 }
+    },
+    {
+      "scene": "harbor3d/harbor3d",
+      "id": "act-settle",
+      "start": 15.0,
+      "end": 20.0,
+      "caption": { "fig": "04", "text": "IT KEEPS TURNING", "dur": 2.6 }
+    }
+  ]
+}
