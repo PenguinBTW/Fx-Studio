@@ -49,7 +49,9 @@ export default class Biolume extends Scene {
   private tentMat: THREE.ShaderMaterial | null = null;
   private plankMat: THREE.ShaderMaterial | null = null;
   private snowMat: THREE.ShaderMaterial | null = null;
-  private glowLight: THREE.PointLight | null = null;
+  private _waterMesh: THREE.Mesh | null = null;
+  private _plankGeo: THREE.BufferGeometry | null = null;
+  private _snowGeo: THREE.BufferGeometry | null = null;
   private tmp = { a: new THREE.Vector3(), b: new THREE.Vector3() };
 
   override async init() {
@@ -68,7 +70,8 @@ export default class Biolume extends Scene {
           gl_FragColor = vec4(col, 1.0);
         }`,
     });
-    this.world.add(new THREE.Mesh(new THREE.SphereGeometry(120, 32, 16), waterMat));
+    this._waterMesh = new THREE.Mesh(new THREE.SphereGeometry(120, 32, 16), waterMat);
+    this.world.add(this._waterMesh);
 
     // faint ambient — barely anything; most light is biological
     this.world.add(new THREE.HemisphereLight(0x0a2030, 0x020408, 0.15));
@@ -90,7 +93,7 @@ export default class Biolume extends Scene {
 
     this.bellMat = new THREE.ShaderMaterial({
       transparent: true,
-      depthWrite: false,
+      depthWrite: true,
       side: THREE.DoubleSide,
       blending: THREE.AdditiveBlending,
       uniforms: {
@@ -199,9 +202,6 @@ export default class Biolume extends Scene {
     }
     this.world.add(this.jelly);
 
-    // internal light the jelly casts on itself/ — biological cyan
-    this.glowLight = new THREE.PointLight(0x2ac8e0, 1.4, 6, 2);
-    this.jelly.add(this.glowLight);
 
     // ---- plankton: 1400 GPU points, drift + flash cascades ---------------
     const NP = 1400;
@@ -254,7 +254,7 @@ export default class Biolume extends Scene {
           float waveT = fract(uTime / 2.1);
           float waveR = waveT * 2.1 * 1.2;
           float ring = 1.0 - smoothstep(0.0, 0.5, abs(d - waveR));
-          float cascade = ring * smoothstep(0.15, 0.0, waveT) * step(0.4, aSeed.z);
+          float cascade = ring * (1.0 - smoothstep(0.0, 0.75, waveT)) * step(0.4, aSeed.z);
           vFlash = max(spont, cascade * 2.2);
           vDim = 0.05 + aSeed.z * 0.05;
           vec4 mv = modelViewMatrix * vec4(p, 1.0);
@@ -276,6 +276,7 @@ export default class Biolume extends Scene {
           gl_FragColor = vec4(col * alpha, alpha);
         }`,
     });
+    this._plankGeo = pgeo;
     const plank = new THREE.Points(pgeo, this.plankMat);
     plank.frustumCulled = false; // positions are GPU-computed
     this.world.add(plank);
@@ -326,6 +327,7 @@ export default class Biolume extends Scene {
           gl_FragColor = vec4(col * alpha, alpha);
         }`,
     });
+    this._snowGeo = sgeo;
     const snow = new THREE.Points(sgeo, this.snowMat);
     snow.frustumCulled = false;
     this.world.add(snow);
@@ -346,7 +348,6 @@ export default class Biolume extends Scene {
     this.plankMat!.uniforms.uTime.value = lt;
     this.plankMat!.uniforms.uJelly.value.copy(this.tmp.a);
     this.snowMat!.uniforms.uTime.value = lt;
-    this.glowLight!.intensity = (0.7 + pulse * 1.3) * smoothstep(4, 5.5, lt);
 
     // camera: slow drift-orbit keeping the jelly off-center-left, macro intimacy.
     // before the jelly rises (t<4) the camera drifts through plankton space.
@@ -355,7 +356,7 @@ export default class Biolume extends Scene {
     const rad = 3.4 - k * 1.1;
     const cx = Math.sin(az) * rad + this.tmp.a.x * 0.5;
     const cz = Math.cos(az) * rad + this.tmp.a.z * 0.5;
-    const cy = this.tmp.a.y + 0.35 + Math.sin(lt * 0.13) * 0.12;
+    const cy = this.tmp.a.y + 0.35 + Math.sin(lt * 0.13) * 0.12 + (1.0 - smoothstep(0, 6, lt)) * 1.1;
     this.cam.position.set(cx, cy, cz);
     this.cam.up.set(0, 1, 0);
     // look at the jelly heart, slightly above center — tentacles read below
@@ -390,6 +391,10 @@ export default class Biolume extends Scene {
   }
 
   override dispose() {
+    this._waterMesh?.geometry.dispose();
+    (this._waterMesh?.material as THREE.Material | undefined)?.dispose();
+    this._plankGeo?.dispose();
+    this._snowGeo?.dispose();
     this.bellGeo?.dispose();
     this.bellMat?.dispose();
     this.tentMat?.dispose();
