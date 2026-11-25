@@ -1,0 +1,14 @@
+{
+  "id": "brook",
+  "version": 1,
+  "source": "build.py",
+  "budgets": { "tris": 120000, "textureMB": 0 },
+  "parts": {
+    "bridge": "bridge",
+    "ferns": "ferns",
+    "bed": "bed",
+    "banks": "banks",
+    "stones": "stones",
+    "trees": "trees"
+  }
+}
