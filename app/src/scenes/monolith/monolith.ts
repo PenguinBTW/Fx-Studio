@@ -103,6 +103,7 @@ export default class Monolith extends Scene {
   private probeBox = new THREE.Box3();
   private probeScratch = new Float32Array(16);
   private probeFrustum = new THREE.Frustum();
+  private probeMat = new THREE.Matrix4();
 
   private prevShadowEnabled = false;
   private prevShadowType: THREE.ShadowMapType | null = null;
@@ -283,9 +284,8 @@ export default class Monolith extends Scene {
     // gate on P.probe like the engine's own text does — otherwise the paused preview
     // loop, which never clears the probe array, leaks a record per rendered frame
     if (P?.probe && P?.textProbes && P.recordText !== false) {
-      this.probeFrustum.setFromProjectionMatrix(
-        new THREE.Matrix4().multiplyMatrices(this.cam.projectionMatrix, this.cam.matrixWorldInverse),
-      );
+      this.probeMat.multiplyMatrices(this.cam.projectionMatrix, this.cam.matrixWorldInverse);
+      this.probeFrustum.setFromProjectionMatrix(this.probeMat);
       let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9, any = false;
       const corner = this.tmp.c;
       for (const gl of this.glyphs) {
