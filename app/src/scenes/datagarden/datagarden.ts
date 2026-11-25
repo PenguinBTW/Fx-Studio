@@ -55,11 +55,20 @@ export default class DataGarden extends Scene {
     for (let i = 0; i < ROD_COUNT; i++) {
       const rr2 = 0.4 + 2.6 * Math.sqrt(i / ROD_COUNT);
       const a = i * golden;
+      // real tidal harmonic constituents (period hours, relative equilibrium
+      // amplitude): M2, S2, N2, K2, K1, O1, P1, M4 — rods cycle through the table,
+      // frequency scaled so the M2 tide completes ~0.5 cycles in 30s of screen time
+      const CONSTITUENTS: [number, number][] = [
+        [12.42, 1.00], [12.00, 0.47], [12.66, 0.19], [11.97, 0.13],
+        [23.93, 0.42], [25.82, 0.30], [24.07, 0.19], [6.21, 0.06],
+      ];
+      const [periodH, amp] = CONSTITUENTS[i % CONSTITUENTS.length];
+      const timeScale = 55 / 12.42;
       this.seeds.push({
         x: Math.cos(a) * rr2,
         z: Math.sin(a) * rr2,
-        base: 0.35 + rng() * 1.6,          // constituent amplitude — the data
-        freq: 0.4 + rng() * 1.6,           // constituent angular speed
+        base: 0.35 + amp * 1.5,
+        freq: (2 * Math.PI) / (periodH * timeScale),
         phase: rng() * Math.PI * 2,
         hue: rng(),
       });
@@ -85,7 +94,8 @@ export default class DataGarden extends Scene {
       const s = this.seeds[i];
       const breathe = 0.72 + 0.28 * Math.sin(lt * s.freq + s.phase);
       const dist = Math.hypot(s.x, s.z);
-      const pulse = Math.exp(-Math.pow((dist - waveT * 0.55) * 2.2, 2)) * 0.9;
+      const pulseEnv = smoothstep(0, 1.2, waveT) * (1 - smoothstep(8.2, 10, waveT));
+      const pulse = Math.exp(-Math.pow((dist - waveT * 0.55) * 2.2, 2)) * 0.9 * pulseEnv;
       const h = s.base * breathe + pulse;
       const ease = smoothstep(0, 1.5, lt);
       this.dummy.position.set(s.x, 0, s.z);
@@ -136,6 +146,7 @@ export default class DataGarden extends Scene {
   override dispose() {
     const rr = this.ctx.renderer;
     rr.shadowMap.enabled = (this as any)._prevShadow ?? false;
+    this.rods?.dispose();
     this.main?.dispose();
     this.dof.dispose();
     this.world.traverse((o: any) => {
