@@ -7,8 +7,9 @@ import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { W, H, FSPass } from '../../engine/gl';
 import { smoothstep } from '../../engine/util';
+import { orbitPosition } from '../../engine/rig';
 
-const M = 14; // droplets
+const M = 11; // droplets
 
 // deterministic per-index hash in [0,1)
 function hash(i: number, salt: number): number {
@@ -18,16 +19,20 @@ function hash(i: number, salt: number): number {
 
 interface Drop { spawn: number; hit: number; ox: number; oz: number; }
 const DROPS: Drop[] = [];
-for (let i = 0; i < M; i++) {
-  const spawn = 0.9 + i * 1.45 + hash(i, 1) * 0.35;
-  DROPS.push({
-    spawn,
-    hit: spawn + 1.1, // constant-duration fall, tuned so the drop meets the pool top
-    ox: (hash(i, 2) - 0.5) * 1.0,
-    oz: (hash(i, 3) - 0.5) * 1.0,
-  });
+{
+  // cadence stretches toward the end — the settling beat per the storyboard
+  let spawn = 0.9;
+  for (let i = 0; i < M; i++) {
+    DROPS.push({
+      spawn,
+      hit: spawn + 1.1, // constant-duration fall, tuned so the drop meets the pool top
+      ox: (hash(i, 2) - 0.5) * 1.0,
+      oz: (hash(i, 3) - 0.5) * 1.0,
+    });
+    spawn += 1.15 + i * 0.18 + hash(i, 1) * 0.2;
+  }
 }
-const FALL_H = 2.7;   // detach height above the pool centre
+const FALL_H = 1.9;   // detach height — low enough that the swell reads inside the frame
 const DROP_R = 0.21;
 const MERGE_T = 0.7;  // absorption duration
 
@@ -67,7 +72,8 @@ float sminMeta(float a, float b, float k) {
 
 float map(vec3 p) {
   // central pool: sphere with a decaying directional surface ripple
-  float rip = uWobble * sin(6.0 * atan(p.z, p.x) + uWobPhase) * 0.5
+  float horiz = clamp(length(p.xz) / max(length(p), 1e-4), 0.0, 1.0);
+  float rip = uWobble * sin(6.0 * atan(p.z, p.x) + uWobPhase) * 0.5 * horiz
             + uWobble * 0.5 * sin(4.0 * p.y + uWobPhase * 1.7);
   float d = length(p) - uPoolR - rip * 0.035;
   for (int i = 0; i < ${M}; i++) {
@@ -93,9 +99,9 @@ vec3 envColor(vec3 r) {
   // near-black studio void with a faint cool floor bounce
   vec3 base = mix(vec3(0.012, 0.013, 0.018), vec3(0.002, 0.002, 0.004), smoothstep(-0.4, 0.5, up));
   // horizontal softbox stripes — the classic liquid-metal reflection language
-  float strip1 = smoothstep(0.08, 0.0, abs(r.y - 0.35)) * max(r.x * -0.5 + 0.5, 0.0);
+  float strip1 = (1.0 - smoothstep(0.0, 0.08, abs(r.y - 0.35))) * max(r.x * -0.5 + 0.5, 0.0);
   base += vec3(0.9, 0.85, 0.8) * strip1 * 1.4;
-  float strip2 = smoothstep(0.05, 0.0, abs(r.y + 0.15)) * max(r.x * 0.5 + 0.5, 0.0);
+  float strip2 = (1.0 - smoothstep(0.0, 0.05, abs(r.y + 0.15))) * max(r.x * 0.5 + 0.5, 0.0);
   base += vec3(0.2, 0.3, 0.55) * strip2 * 0.9;
   // warm key blob high to the left
   vec3 keyDir = normalize(vec3(-0.45, 0.72, 0.45));
@@ -204,10 +210,10 @@ export default class Mercury extends Scene {
     const settle = smoothstep(24, 30, lt);
     const rad = 5.3 - 0.9 * push - 0.2 * settle;
     const height = 1.35 - 0.5 * orb + 0.2 * settle;
-    const cx = Math.sin(yaw) * rad;
-    const cz = Math.cos(yaw) * rad;
+    const pitch = Math.asin(Math.min(1, height / rad));
+    const [ox, oy, oz] = orbitPosition([0, 0, 0], rad, pitch, yaw);
     const tremor = impulse(lt, 26) * 0.02;
-    const camPos = new THREE.Vector3(cx + tremor * 0.6, height + tremor, cz);
+    const camPos = new THREE.Vector3(ox + tremor * 0.6, oy + tremor, oz);
     const target = new THREE.Vector3(0, 0.55 - 0.25 * smoothstep(18, 30, lt), 0);
     const fwd = target.clone().sub(camPos).normalize();
     const right = new THREE.Vector3().crossVectors(fwd, new THREE.Vector3(0, 1, 0)).normalize();
