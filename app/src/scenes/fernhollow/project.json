@@ -1,0 +1,9 @@
+{
+  "name": "fernhollow",
+  "fps": 60,
+  "duration": 30,
+  "resolution": [1920, 1080],
+  "entries": [
+    { "id": "fernhollow", "src": "./fernhollow.ts", "start": 0, "end": 30 }
+  ]
+}
