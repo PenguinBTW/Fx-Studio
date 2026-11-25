@@ -1,0 +1,7 @@
+{
+  "project": "accretion",
+  "meta": { "title": "accretion", "aspectRatio": "16:9", "fps": 60, "duration": 30 },
+  "entries": [
+    { "scene": "accretion/accretion", "id": "accretion", "start": 0, "end": 30 }
+  ]
+}
