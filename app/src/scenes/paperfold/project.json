@@ -1,0 +1,7 @@
+{
+  "project": "paperfold",
+  "meta": { "title": "paperfold", "aspectRatio": "16:9", "fps": 60, "duration": 30 },
+  "entries": [
+    { "scene": "paperfold/paperfold", "id": "paperfold", "start": 0, "end": 30 }
+  ]
+}
