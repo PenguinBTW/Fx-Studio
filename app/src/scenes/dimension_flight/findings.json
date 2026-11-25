@@ -1,0 +1,23 @@
+{
+  "project": "dimension_flight",
+  "audit_timestamp": "2026-11-24T04:00:00Z",
+  "note": "Loaded by `bun scripts/render.ts motion` (scene-dir findings.json). Keys are RULE-t0-t1 windows in hundredths of a second — ordinal-free, so re-audits at any width/fps that flag the same windows match automatically. Bare rule names are rejected by the loader; every waiver cites its exact window per the waiver protocol.",
+  "governed_rules": ["F11", "F12"],
+  "waivers": {
+    "F11-120-193": "Dawn river-valley sunrise is the intended bright hero light of beat 1",
+    "F11-4527-4840": "Aether glowstone gate sequence is intentionally luminous",
+    "F11-5660-5807": "Skyroot golden canopy flyby is the intended bright beat 11",
+    "F11-6440-6447": "Deep Dark arch sculk pulse — brief cyan flash is the seam design",
+    "F11-7773-8113": "Sift finale soul-tide rise is the intended luminous climax",
+    "F12-20-893": "Overworld dawn palette is an intentional per-world grade, not default swatches",
+    "F12-900-1693": "Portal dive + nether entry uses the film's crimson grade",
+    "F12-1700-3293": "Nether lava/basalt world uses its own crimson-ember palette",
+    "F12-3340-3347": "End void dive transitions to the violet End grade",
+    "F12-3520-4760": "End island/chorus sequence uses the violet End palette",
+    "F12-4833-4833": "Glowstone portal flash is the designed seam accent",
+    "F12-4847-5093": "Aether entry uses the pastel aether palette",
+    "F12-6800-8187": "Sift meadows/ravine/great-tree finale uses the salmon-teal sift palette",
+    "F12-3250-3417": "Post-fix verification window: End void violet grade as intended",
+    "F12-3457-3543": "Post-fix verification window: End void violet grade as intended"
+  }
+}

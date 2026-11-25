@@ -10,11 +10,11 @@ import { makeSky, envFromSky, disposeEnv, islandGeometry, pbr, makeMotes, makeSu
 const SKY = /* glsl */ `
 vec3 skyColor(vec3 d) {
   float n = fbm(d * 2.2 + vec3(0.0, 0.0, t * 0.004)), m = fbm(d * 5.0 + n * 1.5);
-  vec3 c = vec3(0.006, 0.003, 0.014);
-  c += vec3(0.05, 0.016, 0.095) * smoothstep(0.5, 0.9, n) * (0.5 + m);
-  c += vec3(0.02, 0.09, 0.10) * smoothstep(0.55, 0.9, m) * smoothstep(0.4, 0.7, n);
+  vec3 c = vec3(0.011, 0.006, 0.026);
+  c += vec3(0.07, 0.024, 0.13) * smoothstep(0.42, 0.88, n) * (0.5 + m);
+  c += vec3(0.025, 0.11, 0.125) * smoothstep(0.5, 0.88, m) * smoothstep(0.35, 0.7, n);
   vec3 g = floor(d * 900.0); float h = bh31(g);
-  c += vec3(1.3, 1.15, 1.6) * step(0.9982, h) * (0.2 + 0.8 * fract(h * 731.0)) * (0.7 + 0.3 * sin(t * 2.0 + h * 90.0));
+  c += vec3(1.3, 1.15, 1.6) * step(0.9970, h) * (0.2 + 0.8 * fract(h * 731.0)) * (0.7 + 0.3 * sin(t * 2.0 + h * 90.0));
   vec3 g2 = floor(d * 260.0); float h2 = bh31(g2 + 17.0);
   c += vec3(1.6, 1.4, 2.0) * step(0.9994, h2) * 1.3;
   return c;
