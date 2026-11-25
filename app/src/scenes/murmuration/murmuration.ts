@@ -58,7 +58,7 @@ function orbitAngle(b: Bird, t: number): number {
   const mean = 1.35 - 0.7 * r0 * 0.72;
   const oscAmp = 0.7 * r0 * 0.28;
   // integral of oscAmp*sin(0.5 s + w) ds = oscAmp * 2 * (cos(w) - cos(0.5 t + w))
-  const integrated = mean * t + oscAmp * 2 * (Math.cos(b.wobble) - Math.cos(0.5 * t + b.wobble));
+  const integrated = mean * t + oscAmp * 2 * (Math.cos(0.5 * t + b.wobble) - Math.cos(b.wobble));
   return b.theta0 + b.speed * integrated;
 }
 
@@ -82,7 +82,7 @@ export default class Murmuration extends Scene {
   private birds: Bird[] = [];
   private main: THREE.WebGLRenderTarget | null = null;
   private dummy = new THREE.Object3D();
-  private tmp = { a: new THREE.Vector3(), b: new THREE.Vector3(), c: new THREE.Vector3(), d: new THREE.Vector3() };
+  private tmp = { a: new THREE.Vector3(), b: new THREE.Vector3(), c: new THREE.Vector3(), d: new THREE.Vector3(), e: new THREE.Vector3() };
 
   override async init() {
     // --- dusk sky: gradient dome with a low sun band in the west
@@ -211,11 +211,12 @@ export default class Murmuration extends Scene {
         const funnelY2 = 1.6 + b.lane * 5.8 - funnelK * (1.1 - b.lane * 1.8);
         const funnelR2 = (0.5 + b.lane * 2.8) * (1 - funnelK * 0.5);
         const fa2 = b.theta0 + (lt + 0.06) * (2.2 + b.speed);
-        this.tmp.d.lerpVectors(this.tmp.d, new THREE.Vector3(
+        this.tmp.e.set(
           1.2 + Math.cos(fa2) * funnelR2 - cen.x,
           funnelY2 + 0.8 - cen.y,
           -13.8 - funnelK * 1.2 + Math.sin(fa2) * funnelR2 - cen.z,
-        ), funnelK);
+        );
+        this.tmp.d.lerpVectors(this.tmp.d, this.tmp.e, funnelK);
       }
       const yaw = Math.atan2(this.tmp.d.x - this.tmp.c.x, this.tmp.d.z - this.tmp.c.z);
       const th = orbitAngle(b, lt);
