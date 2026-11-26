@@ -454,7 +454,7 @@ export default class ThresholdZ5Motel extends Scene {
     });
     this.tenant.add(this.tenantInst.root);
     this.tenant.scale.setScalar(0.62);
-    this.tenant.rotation.y = Math.PI;
+    this.tenant.rotation.y = Math.PI - 0.55;
     this.tenant.position.set(0.05, 0, -21.6);
     // Rim/fill lights live in scene space (not inside the translated Tenant group):
     // cool edge light separates the mirror/head and hanging arms, warm motel bounce
@@ -493,7 +493,7 @@ export default class ThresholdZ5Motel extends Scene {
       const tell = smooth((t - 120.45) / 0.8);
       this.tenant.rotation.z = 0.035 * tell;
       const head = this.tenantInst?.parts.get('head');
-      if (head) head.rotation.z = 0.26 * tell;
+      if (head) head.rotation.z = 0.52 * tell;
     }
 
     // Lint bats at the sconce for 0.6 s during beat 5.3.

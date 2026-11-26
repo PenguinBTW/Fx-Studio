@@ -205,7 +205,7 @@ export default class ThresholdZ7Cathedral extends Scene {
     const tex = new THREE.CanvasTexture(canvas);
     tex.colorSpace = THREE.SRGBColorSpace;
     this.disposables.push(tex);
-    const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.48, metalness: 0.04, emissive: 0x1a1008, emissiveIntensity: 0.16, map: tex });
+    const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.48, metalness: 0.04, emissive: 0x1a1008, emissiveIntensity: 0.38, map: tex });
     this.disposables.push(mat);
     return mat;
   }
@@ -511,9 +511,25 @@ export default class ThresholdZ7Cathedral extends Scene {
             : this.sphere(this.s, 0.09 + 0.025 * hash(i), [0, -20, 0], m, [1, 0.72, 0.88]);
       const side = i % 2 ? -1 : 1;
       const start = new THREE.Vector3(side * (11 + hash(i) * 2), 0.7 + hash(i * 2) * 1.6, -8 - hash(i * 3) * 16);
-      const end = new THREE.Vector3((hash(i * 4) - 0.5) * 0.9, 0.5 + hash(i * 5) * 3.0, -16.6 + (hash(i * 6) - 0.5) * 0.42);
+      // Directional anatomy chains: spine pieces rise in order, rib pieces plate the torso,
+      // limb pieces run down each side, and head/coin pieces finish the silhouette.
+      let end: THREE.Vector3;
+      if (i < 8) {
+        end = new THREE.Vector3((hash(i * 4) - 0.5) * 0.10, 0.72 + i * 0.31, -16.62);
+      } else if (i < 14) {
+        const j = i - 8;
+        end = new THREE.Vector3((j % 2 ? -1 : 1) * (0.12 + 0.08 * (j % 3)), 2.12 + j * 0.17, -16.58 + (j % 2) * 0.08);
+      } else if (i < 24) {
+        const j = i - 14;
+        const side = j % 2 ? -1 : 1;
+        const step = Math.floor(j / 2);
+        end = new THREE.Vector3(side * (0.34 + step * 0.075), 2.72 - step * 0.32, -16.52 + step * 0.10);
+      } else {
+        const j = i - 24;
+        end = new THREE.Vector3((hash(i * 4) - 0.5) * 0.26, 3.28 + j * 0.15, -16.60);
+      }
       this.assembly.push({ mesh: piece, start, end, seed: hash(i * 9) });
-      piece.scale.multiplyScalar(2.5);
+      piece.scale.multiplyScalar(3.0);
       piece.visible = false;
     }
     const assemblyLight = new THREE.PointLight(0x8fd7ff, 8.5, 12.5, 1.25);
@@ -949,10 +965,16 @@ export default class ThresholdZ7Cathedral extends Scene {
       a.mesh.visible = showPieces;
       if (!showPieces) continue;
       const u = clamp(asm * 1.25 - a.seed * 0.25);
-      const arc = Math.sin(Math.PI * u) * (1.5 + a.seed);
-      a.mesh.position.copy(a.start).lerp(a.end, u);
-      a.mesh.position.y += arc;
-      a.mesh.rotation.set(t * (1 + a.seed), t * 1.7, t * 0.8);
+      const gather = smooth(u / 0.46);
+      const rise = smooth((u - 0.34) / 0.66);
+      const floorY = lerp(a.start.y, 0.24 + a.seed * 0.08, gather);
+      a.mesh.position.set(
+        lerp(a.start.x, a.end.x, gather),
+        lerp(floorY, a.end.y, rise) + Math.sin(Math.PI * u) * 0.22,
+        lerp(a.start.z, a.end.z, gather),
+      );
+      const stepSpin = Math.floor(u * 5) / 5;
+      a.mesh.rotation.set(stepSpin * (1 + a.seed) * 3.2, stepSpin * 4.4, stepSpin * 2.1);
     }
 
     this.machineBodies.visible = !exactReplay;
@@ -974,19 +996,38 @@ export default class ThresholdZ7Cathedral extends Scene {
         z = pursuitZ;
         x = lerp(1.2, -1.25 + 0.22 * Math.sin(t * 1.9), chaseK);
       }
-      const burst = hash(Math.floor(t * 3.3)) > 0.45 ? 1 : 0;
-      this.tenant.position.set(x, 0, z);
-      this.tenant.rotation.z = 0.12 * burst + 0.05 * Math.sin(t * 2.2);
-      this.tenant.rotation.y = t >= 168 ? lerp(Math.PI, 0, chaseK) : Math.PI;
+      // Stop-start predator language: a 30 deg head-tilt tell, then one fast 0.3 s
+      // burst into the next held pose. During pursuit the same pose steps become a
+      // four-beat all-fours gallop rather than continuous toylike swaying.
+      const cycle = 1.55;
+      const step = Math.floor(t / cycle);
+      const phase = t - step * cycle;
+      const poseA = hash(step * 7.13) - 0.5;
+      const poseB = hash((step + 1) * 7.13) - 0.5;
+      const burstU = smooth((phase - 0.82) / 0.3);
+      const heldPose = lerp(poseA, poseB, burstU);
+      const tell = smooth((phase - 0.48) / 0.2) * (1 - smooth((phase - 0.82) / 0.18));
+      const beatClock = t * 5.2;
+      const beat = Math.floor(beatClock) % 4;
+      const beatFrac = beatClock - Math.floor(beatClock);
+      const beatShapes = [-0.7, 0.35, 0.8, -0.25];
+      const beatNow = beatShapes[beat]!;
+      const beatNext = beatShapes[(beat + 1) % 4]!;
+      const gallopShape = lerp(beatNow, beatNext, smooth(beatFrac / 0.35));
+      const gallop = t >= 168 ? gallopShape : 0;
+      this.tenant.position.set(x, t >= 168 ? 0.035 * Math.abs(gallop) : 0, z);
+      this.tenant.rotation.x = t >= 168 ? -0.08 + 0.025 * gallop : 0;
+      this.tenant.rotation.z = 0.045 * heldPose + (t >= 168 ? 0.018 * gallop : 0);
+      this.tenant.rotation.y = t >= 168 ? lerp(Math.PI - 0.55, 0, chaseK) : Math.PI - 0.55;
       const reach = smooth((t - 172.4) / 0.8) * (1 - smooth((t - 174.0) / 0.5));
       const revealScale = t < 168 ? 1.18 : lerp(1.18, 1, chaseK);
       this.tenant.scale.set(revealScale * (1 + reach * 0.12), revealScale, revealScale * (1 + reach * 0.35));
       const head = this.tenantInst?.parts.get('head');
       const armL = this.tenantInst?.parts.get('arm_l');
       const armR = this.tenantInst?.parts.get('arm_r');
-      if (head) head.rotation.z = 0.18 * burst + 0.04 * Math.sin(Math.floor(t * 3.3) * 1.7);
-      if (armL) armL.rotation.x = 0.08 * burst;
-      if (armR) armR.rotation.x = -0.06 * burst;
+      if (head) head.rotation.z = 0.52 * tell + 0.08 * heldPose;
+      if (armL) armL.rotation.x = -0.05 + 0.13 * heldPose + (t >= 168 ? 0.16 * gallop : 0);
+      if (armR) armR.rotation.x = 0.04 - 0.11 * heldPose - (t >= 168 ? 0.13 * gallop : 0);
     }
 
     const revealLight = smooth((t - 165.45) / 0.25) * (1 - smooth((t - 168.02) / 0.22));

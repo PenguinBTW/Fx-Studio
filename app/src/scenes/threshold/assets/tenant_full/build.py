@@ -9,7 +9,7 @@ from _bl import *
 reset()
 R = random.Random(4177)
 
-TILE = mat('TenantPoolTile', (0.58, 0.82, 0.80), 0.22, metal=0.04)
+TILE = mat('TenantPoolTile', (0.34, 0.55, 0.52), 0.28, metal=0.03)
 GROUT = mat('TenantTileGrout', (0.025, 0.045, 0.045), 0.72)
 PAPER = mat('TenantPaper', (0.64, 0.54, 0.36), 0.84)
 PAPER_DARK = mat('TenantPaperEdge', (0.31, 0.22, 0.13), 0.9)
@@ -23,9 +23,10 @@ try:
     GLASS.surface_render_method = 'DITHERED'
 except Exception:
     pass
-BALL_RED = mat('TenantBallRed', (0.65, 0.025, 0.018), 0.28)
-BALL_YELLOW = mat('TenantBallYellow', (0.86, 0.55, 0.025), 0.3)
-BALL_BLUE = mat('TenantBallBlue', (0.018, 0.18, 0.62), 0.26)
+BALL_RED = mat('TenantBallRed', (0.22, 0.012, 0.008), 0.42)
+BALL_YELLOW = mat('TenantBallYellow', (0.32, 0.16, 0.01), 0.46)
+BALL_BLUE = mat('TenantBallBlue', (0.008, 0.045, 0.16), 0.42)
+BALL_DARK = mat('TenantBallDark', (0.035, 0.028, 0.026), 0.48)
 BLACK = mat('TenantFaceSlot', (0.002, 0.003, 0.003), 0.92)
 RUBBER = mat('TenantDarkRubber', (0.012, 0.01, 0.009), 0.8)
 
@@ -73,7 +74,7 @@ for i, z in enumerate((3.76, 3.86, 3.96)):
     for j in range(25):
         a = j / 24 * math.tau
         pts.append((math.cos(a) * 0.118, 0.16 + math.sin(a) * 0.102, z))
-    add(curve(f'head_grout_ring_{i}', pts, 0.004, GROUT, cyclic=True), head_g, 'head_grout')
+    add(curve(f'head_grout_ring_{i}', pts, 0.0065, GROUT, cyclic=True), head_g, 'head_grout')
 for i, x in enumerate((-0.055, 0.0, 0.055)):
     pts = []
     for j in range(19):
@@ -81,8 +82,8 @@ for i, x in enumerate((-0.055, 0.0, 0.055)):
         z = 3.73 + u * 0.27
         y = 0.16 + math.sin(u * math.pi) * 0.104
         pts.append((x, y, z))
-    add(curve(f'head_grout_vertical_{i}', pts, 0.0035, GROUT), head_g, 'head_grout')
-add(box('head_black_face_slot', (0.038, 0.012, 0.13), (0, 0.274, 3.87), BLACK, bev=0.004, rot=(math.radians(4), 0, 0)), head_g, 'face_slot')
+    add(curve(f'head_grout_vertical_{i}', pts, 0.0055, GROUT), head_g, 'head_grout')
+add(box('head_black_face_slot', (0.052, 0.014, 0.16), (0, 0.274, 3.87), BLACK, bev=0.004, rot=(math.radians(4), 0, 0)), head_g, 'face_slot')
 
 # Felt neck segments, deliberately visible as stacked wrong material.
 neck_g = group('neck_control', upper, 'neck', (0, 0.06, 3.02))
@@ -93,12 +94,17 @@ for i in range(4):
 
 # Ribcage: bent vending-machine glass front with visible coils, shelves, frames, and rattling coins.
 rib_g = group('ribcage_control', upper, 'ribcage', (0, 0, 2.78))
-add(box('ribcage_backplate', (0.68, 0.16, 1.08), (0, -0.02, 2.78), DARK_METAL, bev=0.035, rot=(math.radians(-4), 0, 0)), rib_g)
-add(box('ribcage_glass_front', (0.58, 0.025, 0.92), (0, 0.105, 2.79), GLASS, bev=0.018, rot=(math.radians(-4), 0, 0)), rib_g, 'glass_front')
+add(box('ribcage_backplate_upper', (0.62, 0.15, 0.48), (-0.025, -0.025, 3.04), DARK_METAL, bev=0.03, rot=(math.radians(-10), math.radians(2), math.radians(2.5))), rib_g)
+add(box('ribcage_backplate_mid', (0.58, 0.15, 0.38), (0.035, -0.015, 2.73), DARK_METAL, bev=0.028, rot=(math.radians(2), math.radians(-2.5), math.radians(-2))), rib_g)
+add(box('ribcage_backplate_lower', (0.52, 0.14, 0.42), (-0.035, -0.005, 2.43), DARK_METAL, bev=0.026, rot=(math.radians(9), math.radians(3), math.radians(-4))), rib_g)
+add(box('ribcage_inner_occluding_darkness', (0.52, 0.024, 0.78), (0, 0.045, 2.77), BLACK, bev=0.012, rot=(math.radians(-4), 0, 0)), rib_g, 'inner_darkness')
+add(box('ribcage_glass_front', (0.54, 0.024, 0.35), (-0.02, 0.112, 3.05), GLASS, bev=0.014, rot=(math.radians(-13), math.radians(2), math.radians(3))), rib_g, 'glass_front')
+add(box('ribcage_glass_front_mid', (0.51, 0.024, 0.31), (0.025, 0.122, 2.76), GLASS, bev=0.012, rot=(math.radians(1), math.radians(-3), math.radians(-2.5))), rib_g, 'glass_front')
+add(box('ribcage_glass_front_lower', (0.45, 0.024, 0.34), (-0.04, 0.108, 2.47), GLASS, bev=0.012, rot=(math.radians(12), math.radians(4), math.radians(-5))), rib_g, 'glass_front')
 for x in (-0.33, 0.33):
-    add(box(f'ribcage_side_frame_{x}', (0.055, 0.09, 1.08), (x, 0.075, 2.78), CHROME, bev=0.012), rib_g, 'door_frame')
+    add(box(f'ribcage_side_frame_{x}', (0.055, 0.09, 1.08), (x, 0.075, 2.78), CHROME, bev=0.012, rot=(0, 0, math.radians(3 if x < 0 else -4))), rib_g, 'door_frame')
 for z in (2.27, 3.29):
-    add(box(f'ribcage_horizontal_frame_{z}', (0.68, 0.09, 0.055), (0, 0.075, z), CHROME, bev=0.012), rib_g, 'door_frame')
+    add(box(f'ribcage_horizontal_frame_{z}', (0.68, 0.09, 0.055), (0, 0.075, z), CHROME, bev=0.012, rot=(0, 0, math.radians(2 if z < 2.8 else -2))), rib_g, 'door_frame')
 for shelf in range(5):
     z = 2.43 + shelf * 0.17
     add(box(f'ribcage_shelf_{shelf}', (0.55, 0.18, 0.025), (0, 0.02, z), CHROME, bev=0.006), rib_g, 'shelves')
@@ -138,32 +144,44 @@ for i in range(9):
             (R.uniform(-0.24, 0.24), 0.14, R.uniform(1.9, 2.15)), PAPER_DARK,
             rot=(R.uniform(-0.3, 0.3), R.uniform(-0.3, 0.3), R.uniform(-0.8, 0.8))), pelvis_g, 'torn_seams')
 
-# Arms are longer than legs: fused toy balls over chrome coil cores. Controls let the scene burst/twitch them.
+# Arms are longer than legs: fused toy balls over chrome coil cores. They arc forward
+# and sag to the floor as one interpenetrating mass, with the left arm planted lower
+# than the right so the resting silhouette is asymmetric rather than a robot stack.
 def build_ball_arm(side):
     sx = -1 if side == 'l' else 1
     arm_g = group(f'arm_{side}_control', upper, f'arm_{side}', (sx * 0.38, 0.02, 3.23))
     upper_g = group_local(f'arm_{side}_upper_control', arm_g, f'arm_{side}_upper')
     lower_g = group_local(f'arm_{side}_lower_control', arm_g, f'arm_{side}_lower', (sx * 0.26, 0.09, -0.81))
     centers = []
-    for i in range(22):
-        u = i / 21
-        x = sx * (0.38 + 0.24 * math.sin(u * math.pi * 0.72) + 0.05 * u)
-        y = 0.02 + 0.18 * u
-        z = 3.23 - 1.55 * u
+    count = 30
+    for i in range(count):
+        u = i / (count - 1)
+        if side == 'l':
+            x = sx * (0.38 + 0.18 * math.sin(u * math.pi) + 0.08 * u)
+            y = 0.02 + 1.35 * (u ** 1.24) - 0.10 * math.sin(u * math.pi)
+            z = 3.23 - 3.02 * u + 0.13 * math.sin(u * math.pi)
+        else:
+            x = sx * (0.38 + 0.27 * math.sin(u * math.pi * 0.84) + 0.03 * u)
+            y = 0.02 + 0.92 * (u ** 1.16) - 0.04 * math.sin(u * math.pi)
+            z = 3.23 - 2.38 * u + 0.25 * math.sin(u * math.pi)
         centers.append((x, y, z))
-    # Chrome core follows the whole arm.
-    add(curve(f'arm_{side}_coil_core', centers, 0.024, CHROME), upper_g, 'coil_core')
-    mats = [BALL_RED, BALL_YELLOW, BALL_BLUE]
+    add(curve(f'arm_{side}_fused_rubber_mass', centers, 0.072, RUBBER), upper_g, 'melted_seams')
+    add(curve(f'arm_{side}_coil_core', centers, 0.027, CHROME), upper_g, 'coil_core')
+    mats = [BALL_RED, BALL_DARK, BALL_DARK, BALL_YELLOW, BALL_DARK, BALL_BLUE, BALL_DARK, BALL_DARK]
     for i, c in enumerate(centers):
         u = i / (len(centers) - 1)
-        radius = 0.105 - 0.038 * u + R.uniform(-0.006, 0.006)
+        radius = 0.125 - 0.045 * u + R.uniform(-0.007, 0.007)
+        # Aggressive overlap reads as melted/fused mass rather than a chain of separate beads.
         ob = sphere(f'arm_{side}_fused_ball_{i}', radius, c, mats[(i + (0 if side == 'l' else 1)) % 3],
-                    scale=(1.0, 0.92, 1.0), segments=32, rings=16)
-        add(ob, upper_g if i < 11 else lower_g, 'ball_pit_shell')
-        # melted plastic seam between selected balls
+                    scale=(1.08, 0.9 + 0.12 * hash(i), 1.04), segments=32, rings=16)
+        add(ob, upper_g if i < 15 else lower_g, 'ball_pit_shell')
         if i % 3 == 1:
-            add(torus(f'arm_{side}_melted_seam_{i}', radius * 0.92, 0.006, c, RUBBER,
-                      rot=(math.radians(90), 0, 0), major_segments=24, minor_segments=5), upper_g if i < 11 else lower_g, 'melted_seams')
+            add(torus(f'arm_{side}_melted_seam_{i}', radius * 0.9, 0.007, c, RUBBER,
+                      rot=(math.radians(90), 0, 0), major_segments=24, minor_segments=5), upper_g if i < 15 else lower_g, 'melted_seams')
+        if i in (5, 11, 18):
+            # Sagging melted blobs bridge neighbouring balls and remove the toylike gaps.
+            add(sphere(f'arm_{side}_sag_mass_{i}', radius * 0.82, (c[0], c[1] - 0.025, c[2] - 0.055), RUBBER,
+                       scale=(0.9, 0.62, 1.35), segments=24, rings=12), upper_g if i < 15 else lower_g, 'melted_seams')
     return arm_g, lower_g, centers[-1]
 
 arm_l_g, arm_l_lower_g, wrist_l = build_ball_arm('l')
@@ -206,24 +224,40 @@ def build_leg(side):
     for i in range(6):
         z = 1.84 - i * 0.16
         x = sx * (0.18 + 0.018 * i)
-        ob = box(f'leg_{side}_upper_tile_{i}', (0.19, 0.17, 0.18), (x, -0.02 + 0.012 * i, z), TILE if i % 2 == 0 else PAPER,
+        ybend = -0.02 + 0.012 * i + (0.10 if side == 'l' else -0.06) * (i / 5)
+        ob = box(f'leg_{side}_upper_tile_{i}', (0.22, 0.20, 0.23), (x, ybend, z), TILE if i % 2 == 0 else PAPER,
                  bev=0.012, rot=(0.02 * i, 0.03 * sx, 0.025 * sx * i))
         add(ob, upper_g, 'stacked_tiles')
     for i in range(6):
         z = 0.94 - i * 0.14
         x = sx * (0.28 + 0.01 * i)
-        ob = box(f'leg_{side}_lower_tile_{i}', (0.16, 0.15, 0.17), (x, 0.04 + 0.012 * i, z), TILE if i % 2 else PAPER,
+        ybend = 0.04 + 0.012 * i + (0.20 if side == 'l' else -0.10) * (i / 5)
+        ob = box(f'leg_{side}_lower_tile_{i}', (0.20, 0.18, 0.22), (x, ybend, z), TILE if i % 2 else PAPER,
                  bev=0.01, rot=(-0.025 * i, -0.02 * sx, -0.018 * sx * i))
         add(ob, lower_g, 'stacked_tiles')
         if i % 2 == 0:
             add(box(f'leg_{side}_grout_slip_{i}', (0.17, 0.012, 0.018), (x, 0.125 + 0.012 * i, z), GROUT,
                     rot=(0, 0, 0.05 * sx)), lower_g, 'cracked_grout')
-    foot = box(f'foot_{side}', (0.22, 0.38, 0.12), (sx * 0.31, 0.17, 0.08), PAPER_DARK, bev=0.018, rot=(0, 0.05 * sx, 0))
+    foot = box(f'foot_{side}', (0.22, 0.38, 0.12), (sx * 0.31, 0.17 + (0.24 if side == 'l' else -0.12), 0.08), PAPER_DARK, bev=0.018, rot=(0, 0.05 * sx, 0))
     add(foot, lower_g, f'foot_{side}')
     return leg_g
 
 build_leg('l')
 build_leg('r')
+
+# Static predator posture: hunched forward, head low, ribcage pitched into the
+# fluorescents, slight sideways imbalance. These rotations remain on parent control
+# nodes so scene-level stop-start rotations compose instead of replacing the silhouette.
+rib_g.rotation_euler[0] = math.radians(-22)
+rib_g.rotation_euler[1] = math.radians(3.5)
+spine_g.rotation_euler[0] = math.radians(-24)
+spine_g.rotation_euler[1] = math.radians(2.5)
+neck_g.rotation_euler[0] = math.radians(-25)
+neck_g.rotation_euler[1] = math.radians(-3)
+head_g.rotation_euler[0] = math.radians(-18)
+head_g.rotation_euler[1] = math.radians(-5)
+head_g.scale = (0.78, 0.78, 0.78)
+pelvis_g.rotation_euler[0] = math.radians(5)
 
 # Collage patches over shoulders, ribs and hips: torn paper, cracked tiles and melted plastic transitions.
 patch_mats = [TILE, PAPER, FELT, CHROME]
@@ -247,5 +281,27 @@ for i in range(56):
         ob = box(f'patch_plate_{i}', (R.uniform(0.035, 0.09), R.uniform(0.008, 0.022), R.uniform(0.04, 0.12)), loc,
                  patch_mats[i % len(patch_mats)], bev=0.003, rot=(R.uniform(-0.4, 0.4), R.uniform(-0.4, 0.4), R.uniform(-0.8, 0.8)))
     add(ob, par, 'patchwork')
+
+# Bake a continuous forward sag into the finished mesh transforms. The amount grows
+# with height, so the torso/head cantilever forward while the feet stay planted; this
+# is silhouette craft rather than animation state and survives the GLB export.
+bpy.context.view_layer.update()
+for ob in list(bpy.data.objects):
+    if ob.type != 'MESH':
+        continue
+    zc = ob.matrix_world.translation.z
+    if zc <= 1.85:
+        continue
+    u = max(0.0, min(1.0, (zc - 1.85) / 1.9))
+    forward_sag = 0.58 * (u ** 1.45)
+    downward_sag = 0.30 * (u ** 1.7)
+    ob.matrix_world = mathutils.Matrix.Translation((0, forward_sag, -downward_sag)) @ ob.matrix_world
+    # Pull the head and felt neck down into the torso silhouette. A hunched predator's
+    # head is carried low in front of the ribcage, not balanced upright like a balloon.
+    if ob.name.startswith('head_'):
+        ob.matrix_world = mathutils.Matrix.Translation((0, 0.24, -0.44)) @ ob.matrix_world
+    elif ob.name.startswith('neck_'):
+        ob.matrix_world = mathutils.Matrix.Translation((0, 0.14, -0.24)) @ ob.matrix_world
+bpy.context.view_layer.update()
 
 export(HERE)
