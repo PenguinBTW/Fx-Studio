@@ -15,6 +15,9 @@ FELT = mat('TenantFelt', (0.19, 0.045, 0.028), 0.95)
 BALL_RED = mat('TenantBallRed', (0.55, 0.025, 0.018), 0.32)
 BALL_BLUE = mat('TenantBallBlue', (0.02, 0.17, 0.48), 0.28)
 RUBBER = mat('TenantDarkRubber', (0.018, 0.015, 0.013), 0.78)
+CHROME_BRIGHT = mat('TenantChromeBright', (0.48, 0.54, 0.58), 0.13, metal=0.96)
+CHROME_OILY = mat('TenantChromeOily', (0.075, 0.09, 0.105), 0.36, metal=0.88)
+GRIME = mat('TenantGrimeSeams', (0.012, 0.009, 0.006), 0.96)
 
 root = empty('tenant_arm_root')
 # Children are parented before the export-axis rotation so their inverse matrices do not cancel it.
@@ -45,6 +48,14 @@ for i, (a, b, radius, material) in enumerate(segments):
     ob.rotation_mode = 'QUATERNION'
     ob.rotation_quaternion = direction.to_track_quat('Z', 'Y')
     add(ob, f'arm_segment_{i}')
+    # Hard grime/material-break collars interrupt the smooth tube silhouette.
+    for band_i, frac in enumerate((0.34, 0.67)):
+        px, py, pz = ax + dx * frac, ay + dy * frac, az + dz * frac
+        band_mat = GRIME if band_i == 0 else (FELT if i == 0 else TILE if i == 1 else PAPER)
+        band = cyl(f'arm_segment_{i}_break_{band_i}', radius * 1.055, 0.018, (px, py, pz), band_mat, verts=40, bev=0.002)
+        band.rotation_mode = 'QUATERNION'
+        band.rotation_quaternion = direction.to_track_quat('Z', 'Y')
+        add(band, 'patchwork')
 
 # Patchwork plates/balls fused onto the arm: readable materials even in silhouette.
 patch_mats = [TILE, PAPER, FELT, CHROME]
@@ -80,8 +91,26 @@ for finger in range(5):
         x = fan_x[finger] * u + math.sin(u * coils * math.tau) * coil_amp
         y = fan_y[finger] * u + math.cos(u * coils * math.tau) * coil_amp
         pts.append((base[0] + x, base[1] + y, base[2] + z))
-    ob = curve(f'finger_coil_{finger}', pts, 0.0145, CHROME)
-    add(ob, f'finger_{finger}')
+    # Segmented vending coil: alternating bright/oily metal and scavenged material
+    # breaks keep the fingers mechanically segmented instead of reading as latex tubing.
+    for seg in range(10):
+        a = seg * 8
+        b = min(79, a + 8)
+        piece_pts = pts[a:b + 1]
+        if len(piece_pts) < 2: continue
+        if seg in (3, 7):
+            piece_mat = TILE if (finger + seg) % 2 == 0 else PAPER
+        elif seg % 3 == 1:
+            piece_mat = CHROME_OILY
+        elif seg % 3 == 2:
+            piece_mat = CHROME_BRIGHT
+        else:
+            piece_mat = CHROME
+        ob = curve(f'finger_coil_{finger}_{seg}', piece_pts, 0.0145, piece_mat)
+        add(ob, f'finger_{finger}')
+    for joint_i in range(1, 5):
+        jp = pts[joint_i * 16]
+        add(sphere(f'finger_joint_{finger}_{joint_i}', 0.0175, jp, GRIME if joint_i % 2 else CHROME_OILY, scale=(1.0, 0.72, 1.0), segments=20, rings=10), f'finger_{finger}')
     tip = pts[-1]
     add(sphere(f'finger_tip_{finger}', 0.023, tip, CHROME, scale=(0.75, 0.75, 1.3), segments=28, rings=14), f'finger_{finger}')
 
