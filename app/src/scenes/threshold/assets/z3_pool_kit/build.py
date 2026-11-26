@@ -4,14 +4,16 @@ sys.dont_write_bytecode=True
 HERE=os.path.dirname(os.path.abspath(__file__));sys.path.insert(0,os.path.dirname(HERE))
 from _bl import *
 reset()
-TILE=mat('pool_tile_ivory',(.62,.72,.68),.32);GROUT=mat('pool_grout_dark',(.08,.14,.14),.82);BLUE=mat('waterline_tile_blue',(.03,.25,.48),.28);METAL=mat('wet_galvanized_metal',(.32,.38,.38),.3,metal=.65);LIGHT=mat('pool_skylight',(.65,.9,.95),.2,emit=(.5,.8,.9),strength=.6)
+TILE=mat('pool_tile_ivory',(.62,.72,.68),.32);GROUT=mat('pool_grout_dark',(.18,.29,.29),.82);BLUE=mat('waterline_tile_blue',(.03,.25,.48),.28);METAL=mat('wet_galvanized_metal',(.32,.38,.38),.3,metal=.65);LIGHT=mat('pool_skylight',(.65,.9,.95),.2,emit=(.5,.8,.9),strength=.6)
 def root(n,x):r=empty(n,(x,0,0));r['fx_part']=n;return r
 def add(o,r):o.location.x-=r.location.x;o.parent=r;return o
 def tile_panel(x):
  r=root('tiled_wall_panel_root',x);add(box('tile_panel_core',(1.8,.10,1.8),(x,0,.9),TILE,.018,2),r)
- for i in range(7):add(box('tile_vertical_grout',(.012,.008,1.72),(x-.78+i*.26,-.055,.9),GROUT,.001),r)
- for i in range(7):add(box('tile_horizontal_grout',(1.72,.008,.012),(x,-.055,.12+i*.26),GROUT,.001),r)
+ for i in range(7):add(box('tile_vertical_grout',(.006,.008,1.72),(x-.78+i*.26,-.055,.9),GROUT,.001),r)
+ for i in range(7):add(box('tile_horizontal_grout',(1.72,.008,.006),(x,-.055,.12+i*.26),GROUT,.001),r)
  add(box('waterline_mosaic',(1.78,.018,.12),(x,-.061,1.28),BLUE,.004),r)
+ for i in range(5):add(box('tile_back_vertical',(.008,.008,1.70),(x-.65+i*.325,.055,.9),GROUT,.001),r)
+ for i in range(5):add(box('tile_back_horizontal',(1.70,.008,.008),(x,.055,.22+i*.325),GROUT,.001),r)
  return r
 def pillar(x):
  r=root('tiled_pillar_root',x);add(box('pillar_core',(.44,.44,2.8),(x,0,1.4),TILE,.025,3),r)

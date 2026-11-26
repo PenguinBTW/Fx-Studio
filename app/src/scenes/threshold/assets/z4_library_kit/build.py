@@ -4,7 +4,7 @@ sys.dont_write_bytecode=True
 HERE=os.path.dirname(os.path.abspath(__file__));sys.path.insert(0,os.path.dirname(HERE))
 from _bl import *
 reset()
-PAPER=mat('aged_page_ivory',(.68,.61,.45),.86);PAPER2=mat('compressed_page_edge',(.48,.41,.29),.9);EDGE=mat('dark_page_edge',(.25,.19,.11),.88);WOOD=mat('dark_library_wood',(.16,.075,.025),.66);BRASS=mat('aged_brass',(.45,.28,.055),.32,metal=.55);INK=mat('ink_dark',(.025,.018,.012),.92);RED=mat('bookmark_red',(.42,.025,.018),.7);GREEN=mat('lamp_green_glass',(.025,.22,.08),.28,emit=(.01,.12,.03),strength=.25)
+PAPER=mat('aged_page_ivory',(.68,.61,.45),.86);PAPER2=mat('compressed_page_edge',(.58,.49,.34),.9);EDGE=mat('dark_page_edge',(.38,.29,.17),.86);WOOD=mat('dark_library_wood',(.16,.075,.025),.66);BRASS=mat('aged_brass',(.45,.28,.055),.32,metal=.55);INK=mat('ink_dark',(.025,.018,.012),.92);RED=mat('bookmark_red',(.42,.025,.018),.7);GREEN=mat('lamp_green_glass',(.025,.22,.08),.28,emit=(.01,.12,.03),strength=.25)
 def root(n,x):r=empty(n,(x,0,0));r['fx_part']=n;return r
 def add(o,r):o.location.x-=r.location.x;o.parent=r;return o
 

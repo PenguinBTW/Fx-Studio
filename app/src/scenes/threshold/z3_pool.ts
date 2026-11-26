@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { resolveAsset } from '../../engine/assets';
 import { thresholdPost } from './sensor_post';
 import { addFlashlight, applyFpCamera, basic, box, clamp, cyl, disposeTree, hash, mat, plane, smooth, sph, updateFlashlight, type CamKey } from './z1_scene_util';
@@ -43,6 +44,8 @@ export default class ThresholdZ3Pool extends Scene {
   private mirrorlingReflection!: GLTFInstance;
   private poolKit!: GLTFInstance;
   private propPack!: GLTFInstance;
+  private envReady = false;
+  private chromeEnv: THREE.Texture | null = null;
 
   override async init() {
     const resolved = resolveAsset('threshold/z3_mirrorling');
@@ -52,6 +55,12 @@ export default class ThresholdZ3Pool extends Scene {
     this.poolKit = await GLTFManager.instantiate(kitResolved.url, { ...kitResolved.manifest.load, castShadow: true, receiveShadow: true });
     this.propPack = await GLTFManager.instantiate(packResolved.url, { ...packResolved.manifest.load, castShadow: true, receiveShadow: true });
     this.mirrorlingReflection = await GLTFManager.instantiate(resolved.url, { ...resolved.manifest.load, castShadow: false, receiveShadow: false });
+    this.mirrorlingAsset.root.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      mats.forEach((m) => { const mm = m as THREE.MeshStandardMaterial; if (/chrome|tile_highlight/.test(mm.name)) mm.envMapIntensity = 1.65; });
+    });
     this.mirrorlingAsset.root.visible = false;
     this.mirrorlingReflection.root.visible = false;
     this.mirrorlingReflection.root.scale.y = -1;
@@ -70,7 +79,7 @@ export default class ThresholdZ3Pool extends Scene {
     this.s.add(new THREE.HemisphereLight(0x9ff7ff, 0x09272f, 0.75));
     const tileA = mat(0xbfe7e7, 0.22);
     const tileB = mat(0x78cbd2, 0.18);
-    const grout = mat(0x356d72, 0.75);
+    const grout = mat(0x5b8587, 0.78);
     const metal = mat(0x617678, 0.28, 0.55);
     const chrome = mat(0xd8f4f2, 0.22, 0.28, 0x102c30, 0.12);
     const dark = mat(0x071014, 0.9);
@@ -84,7 +93,7 @@ export default class ThresholdZ3Pool extends Scene {
     box(this.s, 'z3_wall_r', [0.18, 5.5, 31], [4.1, 2.4, -7], tileA);
     box(this.s, 'z3_wall_end', [8.2, 5.5, 0.18], [0, 2.4, -22.6], tileB);
     box(this.s, 'z3_ceiling', [8.2, 0.16, 31], [0, 4.7, -7], grout);
-    for (let x = -4; x <= 4; x += 0.5) box(this.s, `z3_tile_v_${x}`, [0.012, 0.012, 30], [x, 0.015, -7], grout);
+    for (let x = -4; x <= 4; x += 0.5) box(this.s, `z3_tile_v_${x}`, [0.007, 0.007, 30], [x, 0.015, -7], grout);
     for (let z = -22; z <= 8; z += 0.5) {
       box(this.s, `z3_tile_h_l_${z}`, [0.012, 0.012, 0.45], [-4.0, 2.1, z], grout);
       box(this.s, `z3_tile_h_r_${z}`, [0.012, 0.012, 0.45], [4.0, 2.1, z], grout);
@@ -93,8 +102,8 @@ export default class ThresholdZ3Pool extends Scene {
     // and a continuous pool-edge gutter so the volume reads as a natatorium rather than a parking garage.
     for (const side of [-1, 1]) {
       const x = side * 3.995;
-      for (let y = 0.65; y <= 4.15; y += 0.5) box(this.s, `z3_wall_grout_h_${side}_${y.toFixed(1)}`, [0.018, 0.018, 29.5], [x, y, -7], grout);
-      for (let z = -21.5; z <= 7; z += 0.75) box(this.s, `z3_wall_grout_v_${side}_${z.toFixed(2)}`, [0.018, 3.55, 0.018], [x, 2.35, z], grout);
+      for (let y = 0.65; y <= 4.15; y += 0.5) box(this.s, `z3_wall_grout_h_${side}_${y.toFixed(1)}`, [0.008, 0.008, 29.5], [x, y, -7], grout);
+      for (let z = -21.5; z <= 7; z += 0.75) box(this.s, `z3_wall_grout_v_${side}_${z.toFixed(2)}`, [0.008, 3.55, 0.008], [x, 2.35, z], grout);
       box(this.s, `z3_mosaic_waterline_${side}`, [0.022, 0.18, 29.5], [side * 3.985, 1.06, -7], mat(0x126eab, 0.28));
       box(this.s, `z3_pool_edge_gutter_${side}`, [0.24, 0.075, 27.5], [side * 3.78, 0.49, -6.3], mat(0xe7f2ed, 0.34));
       box(this.s, `z3_gutter_shadow_${side}`, [0.08, 0.045, 27.5], [side * 3.64, 0.475, -6.3], mat(0x061c22, 0.7));
@@ -117,16 +126,16 @@ export default class ThresholdZ3Pool extends Scene {
       box(this.s, `z3_column_mosaic_r_${z}`, [0.51, 0.16, 0.51], [3.72, 1.16, z], mat(0x126eab, 0.3));
     }
     // water plane and lane-rope/pipe details
-    this.waterMat = mat(0x1a8c9d, 0.04, 0.18, 0x073f4a, 0.28) as THREE.MeshStandardMaterial;
-    this.waterMat.transparent = true; this.waterMat.opacity = 0.46; this.waterMat.depthWrite = false;
+    this.waterMat = mat(0x1b8fa0, 0.025, 0.28, 0x073f4a, 0.18) as THREE.MeshStandardMaterial;
+    this.waterMat.transparent = true; this.waterMat.opacity = 0.34; this.waterMat.depthWrite = false;
     const wc = document.createElement('canvas'); wc.width = wc.height = 256;
     const wg = wc.getContext('2d')!;
-    wg.fillStyle = 'rgba(20,120,135,0.35)'; wg.fillRect(0, 0, 256, 256);
-    wg.strokeStyle = 'rgba(190,255,250,0.55)'; wg.lineWidth = 2;
+    wg.fillStyle = 'rgba(20,120,135,0.24)'; wg.fillRect(0, 0, 256, 256);
+    wg.strokeStyle = 'rgba(190,255,250,0.20)'; wg.lineWidth = 1;
     for (let y = 8; y < 256; y += 18) {
       wg.beginPath();
       for (let x = 0; x <= 256; x += 8) {
-        const yy = y + Math.sin(x * 0.08 + y * 0.31) * 4 + Math.sin(x * 0.19 + y) * 1.5;
+        const yy = y + Math.sin(x * 0.08 + y * 0.31) * 1.4 + Math.sin(x * 0.19 + y) * 0.55;
         if (x === 0) wg.moveTo(x, yy); else wg.lineTo(x, yy);
       }
       wg.stroke();
@@ -243,13 +252,30 @@ export default class ThresholdZ3Pool extends Scene {
   }
 
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
+    if (!this.envReady) {
+      const pmrem = new THREE.PMREMGenerator(this.ctx.renderer);
+      this.chromeEnv = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+      pmrem.dispose();
+      const applyChromeEnv = (root: THREE.Object3D) => root.traverse((o) => {
+        const mesh = o as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        mats.forEach((m) => {
+          const mm = m as THREE.MeshStandardMaterial;
+          if (/chrome|tile_highlight/.test(mm.name)) { mm.envMap = this.chromeEnv; mm.envMapIntensity = 1.65; mm.needsUpdate = true; }
+        });
+      });
+      applyChromeEnv(this.mirrorlingAsset.root);
+      applyChromeEnv(this.mirrorlingReflection.root);
+      this.envReady = true;
+    }
     const t = f.t;
     applyFpCamera(this.cam, KEYS, t, out.width / out.height);
     updateFlashlight(this.flash.light, this.flash.target, this.cam, t, 0.38, t > 73 ? 0.16 : 0.04);
     // deterministic surface shimmer and drifting floaters
-    this.water.position.y = 0.45 + Math.sin(t * 1.8) * 0.008;
+    this.water.position.y = 0.45 + Math.sin(t * 1.8) * 0.002;
     if (this.waterMat.map) { this.waterMat.map.offset.set((t * 0.012) % 1, (t * 0.018) % 1); }
-    this.waterMat.emissiveIntensity = 0.35 + Math.sin(t * 2.4) * 0.08;
+    this.waterMat.emissiveIntensity = 0.18 + Math.sin(t * 2.4) * 0.025;
     this.surfaceLeaves.forEach((l, i) => {
       const bp = l.userData.basePos as THREE.Vector3;
       l.position.x = bp.x + Math.sin(t * 0.25 + i) * 0.11;
@@ -295,7 +321,7 @@ export default class ThresholdZ3Pool extends Scene {
 
     const underwater = smooth(79.15, 80, t);
     this.s.fog = new THREE.FogExp2(underwater > 0.4 ? 0x061c22 : 0x0b4652, 0.055 + underwater * 0.22);
-    this.waterMat.opacity = 0.58 - underwater * 0.2;
+    this.waterMat.opacity = 0.42 - underwater * 0.16;
 
     const gl = this.ctx.renderer;
     gl.setRenderTarget(out); gl.setClearColor(underwater > 0.4 ? 0x03151a : 0x08262d, 1); gl.clear(true, true, true); gl.render(this.s, this.cam); gl.resetState();

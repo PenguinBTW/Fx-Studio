@@ -68,7 +68,10 @@ def toy_phone(x):
  for sx in (-.065,.065):
   add(sphere('toy_phone_eye',.035,(x+sx,-.115,.12),WHITE,segments=16),r)
   add(sphere('toy_phone_pupil',.014,(x+sx,-.143,.12),DARK,segments=10),r)
- for i in range(4): add(cyl('toy_phone_dial_hole',.014,.008,(x-.055+i*.037,-.128,.045),DARK,rot=(math.pi/2,0,0),verts=10),r)
+ add(cyl('toy_phone_rotary_dial',.072,.012,(x,-.132,.045),CREAM,rot=(math.pi/2,0,0),verts=28),r)
+ for i in range(8):
+  a=i*math.tau/8;add(cyl('toy_phone_dial_hole',.010,.014,(x+math.cos(a)*.043,-.141,.045+math.sin(a)*.043),DARK,rot=(math.pi/2,0,0),verts=10),r)
+ for i in range(5):add(torus('toy_phone_cord_loop',.018,.004,(x+.19,-.02+i*.026,.19-i*.025),DARK,major_segments=14,minor_segments=5),r)
  return r
 
 def toy_car(x):

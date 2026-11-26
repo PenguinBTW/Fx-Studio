@@ -206,8 +206,17 @@ export default class ThresholdZ2Playroom extends Scene {
       if (/^z2_(tunnel_rib_|tunnel_grout_ring_|toy_piano|jack_in_box|xylophone|ball_cart|music_box|ballerina|block_)/.test(o.name)) o.visible = false;
     });
     this.toyPhone.visible = false;
-    for (let i = 0; i < 10; i++) {
-      this.cloneProp(this.playroomKit, 'padded_wall_panel_root', [-13.2 + i * 2.9, 0, i % 2 ? -10.31 : 10.31], i % 2 ? 0 : Math.PI, 1, `z2_wall_panel_asset_${i}`);
+    const padColors = [0xd96a55, 0xe7c85f, 0x78a8d8, 0x82bd7f, 0xe7dfca];
+    for (const side of [-1, 1]) for (let i = 0; i < 24; i++) {
+      const panel = this.cloneProp(this.playroomKit, 'padded_wall_panel_root', [-14.0 + i * 1.22, 0, side * 10.31], side < 0 ? 0 : Math.PI, 1, `z2_wall_panel_asset_${side}_${i}`);
+      const tint = padColors[(i + (side > 0 ? 2 : 0)) % padColors.length]!;
+      panel?.traverse((o) => {
+        const mesh = o as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        const mm = (mesh.material as THREE.MeshStandardMaterial).clone();
+        if (mm.name === 'foam_vinyl_ivory') mm.color.setHex(tint);
+        mesh.material = mm;
+      });
     }
     this.cloneProp(this.playroomKit, 'climbing_frame_module_root', [-5.7, 0, -4.7], 0, 1, 'z2_climbing_frame_asset');
     this.cloneProp(this.playroomKit, 'net_panel_root', [-4.2, 1.15, -3.52], 0, 1, 'z2_net_panel_asset');

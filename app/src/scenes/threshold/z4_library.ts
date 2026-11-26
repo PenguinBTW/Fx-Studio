@@ -38,6 +38,7 @@ export default class ThresholdZ4Library extends Scene {
   private motes: THREE.Mesh[] = [];
   private gapGlow!: THREE.MeshStandardMaterial;
   private lamps: THREE.PointLight[] = [];
+  private archivistLight!: THREE.PointLight;
   private moths: THREE.Group[] = [];
   private mothWings: THREE.Mesh[] = [];
   private ledgerLines: THREE.Mesh[] = [];
@@ -57,9 +58,9 @@ export default class ThresholdZ4Library extends Scene {
     this.archivistAsset.root.visible = false;
     this.s.add(this.archivistAsset.root);
     this.s.background = new THREE.Color(0x090806);
-    this.s.fog = new THREE.FogExp2(0x211c13, 0.055);
+    this.s.fog = new THREE.FogExp2(0x241e14, 0.038);
     this.flash = addFlashlight(this.s);
-    this.s.add(new THREE.AmbientLight(0x6b5f47, 0.28));
+    this.s.add(new THREE.AmbientLight(0x8b7a59, 0.48));
     const paper = mat(0xd8cdb1, 0.82);
     const paper2 = mat(0xb8ac8d, 0.9);
     const edge = mat(0x8c7c5d, 0.88);
@@ -89,7 +90,7 @@ export default class ThresholdZ4Library extends Scene {
     }
     // scattered paper drifts and loose sheets
     for (let i = 0; i < 55; i++) {
-      const p = plane(this.s, `z4_loose_page_${i}`, 0.22 + hash(i) * 0.12, 0.3 + hash(i + 1) * 0.1, [(hash(i) - 0.5) * 4.2, 0.012 + hash(i + 2) * 0.05, -1 + hash(i + 3) * 25], i % 2 ? paper : paper2, [-Math.PI / 2 + (hash(i + 4) - 0.5) * 0.25, 0, hash(i + 5) * 6]);
+      const p = plane(this.s, `z4_loose_page_${i}`, 0.22 + hash(i) * 0.12, 0.3 + hash(i + 1) * 0.1, [(hash(i) - 0.5) * 4.2, 0.004 + hash(i + 2) * 0.012, -1 + hash(i + 3) * 25], i % 2 ? paper : paper2, [-Math.PI / 2 + (hash(i + 4) - 0.5) * 0.08, 0, hash(i + 5) * 6]);
       p.receiveShadow = true;
     }
     // librarian desk, self-writing ledger, lamps, bookmark flags
@@ -101,6 +102,9 @@ export default class ThresholdZ4Library extends Scene {
       const p = plane(this.s, `z4_ledger_page_${i}`, 0.32, 0.45, [-0.16 + i * 0.08, 0.915 + i * 0.004, 6], paper, [-Math.PI / 2, 0, (i - 2) * 0.035]);
       this.ledgerPages.push(p);
     }
+    this.archivistLight = new THREE.PointLight(0xffd7a0, 0, 6.5, 1.7);
+    this.archivistLight.position.set(0, 2.8, 5.0);
+    this.s.add(this.archivistLight);
     for (const x of [-0.7, 0.7]) {
       cyl(this.s, `z4_lamp_stem_${x}`, 0.025, 0.55, [x, 1.12, 5.75], brass);
       sph(this.s, `z4_lamp_shade_${x}`, 0.16, [x, 1.42, 5.75], mat(0x245c37, 0.35, 0.1, 0x1d5c31, 0.7), 18).scale.y = 0.55;
@@ -166,7 +170,8 @@ export default class ThresholdZ4Library extends Scene {
     for (const side of [-1, 1]) {
       for (let bay = 0; bay < 22; bay++) {
         const z = 0.5 + bay * 1.1;
-        this.cloneProp(this.libraryKit, 'paper_stack_bay_root', [side * (2.45 + hash(bay) * 0.14), 0, z], side < 0 ? 0 : Math.PI, 1, `z4_stack_bay_asset_${side}_${bay}`);
+        const bayAsset = this.cloneProp(this.libraryKit, 'paper_stack_bay_root', [side * (2.45 + hash(bay) * 0.14), 0, z], side < 0 ? 0 : Math.PI, 1, `z4_stack_bay_asset_${side}_${bay}`);
+        if (bayAsset) (side < 0 ? this.leftStacks : this.rightStacks).push(bayAsset);
       }
     }
     this.cloneProp(this.libraryKit, 'reading_desk_root', [0, 0, 6], 0, 1, 'z4_reading_desk_asset');
@@ -182,6 +187,11 @@ export default class ThresholdZ4Library extends Scene {
     this.cloneProp(this.paperProps, 'tied_scroll_root', [1.55, 0.82, 6.2], 0.7, 1, 'z4_scroll_asset');
     this.cloneProp(this.libraryKit, 'library_ladder_root', [-1.75, 0, 16.5], 0.08, 1, 'z4_ladder_asset');
     for (let i = 0; i < 4; i++) this.cloneProp(this.libraryKit, 'hanging_lantern_root', [(i % 2 ? 1.4 : -1.4), 2.9, 4 + i * 5.2], 0, 1, `z4_lantern_asset_${i}`);
+    for (let i = 0; i < 4; i++) {
+      const l = new THREE.PointLight(0xffcf88, 0.85, 7.5, 1.6);
+      l.position.set(i % 2 ? 1.4 : -1.4, 3.25, 4 + i * 5.2);
+      this.s.add(l);
+    }
     this.cloneProp(this.libraryKit, 'spiral_paper_stair_root', [1.65, 0, 19.5], -0.3, 1, 'z4_spiral_stair_asset');
     for (let i = 0; i < 5; i++) this.cloneProp(this.libraryKit, 'hinged_stack_wall_root', [i % 2 ? -2.1 : 2.1, 0, 9 + i * 2.5], i % 2 ? 0.15 : -0.15, 1, `z4_hinged_wall_asset_${i}`);
     for (let i = 0; i < 7; i++) this.cloneProp(this.paperProps, 'letters_string_root', [(i % 2 ? -1.9 : 1.9), 2.4 + hash(i) * 0.8, 3 + i * 2.8], i % 2 ? Math.PI / 2 : -Math.PI / 2, 1, `z4_letters_asset_${i}`);
@@ -280,6 +290,7 @@ export default class ThresholdZ4Library extends Scene {
     // archivist reveal, page fan and arms extension
     this.archivist.visible = false;
     const reveal = smooth(94.2, 95.4, t);
+    this.archivistLight.intensity = 2.1 * reveal * (1 - smooth(98.0, 99.0, t));
     this.archivistAsset.root.visible = t > 94.2;
     this.archivistAsset.root.scale.setScalar(0.64 + reveal * 0.52);
     this.archivistAsset.root.position.y = 0.02 + (1 - reveal) * 0.45;
@@ -305,8 +316,16 @@ export default class ThresholdZ4Library extends Scene {
     // canyon closes like a book after 99
     const close = smooth(97.0, 103.7, t);
     const closeCurve = close;
-    this.leftStacks.forEach((g) => { g.position.x = -2.45 + closeCurve * 1.45; g.rotation.y = closeCurve * 0.18; });
-    this.rightStacks.forEach((g) => { g.position.x = 2.45 - closeCurve * 1.45; g.rotation.y = -closeCurve * 0.18; });
+    this.leftStacks.forEach((g) => {
+      if (g.userData.baseX === undefined) { g.userData.baseX = g.position.x; g.userData.baseRotY = g.rotation.y; }
+      g.position.x = (g.userData.baseX as number) + closeCurve * 1.45;
+      g.rotation.y = (g.userData.baseRotY as number) + closeCurve * 0.18;
+    });
+    this.rightStacks.forEach((g) => {
+      if (g.userData.baseX === undefined) { g.userData.baseX = g.position.x; g.userData.baseRotY = g.rotation.y; }
+      g.position.x = (g.userData.baseX as number) - closeCurve * 1.45;
+      g.rotation.y = (g.userData.baseRotY as number) - closeCurve * 0.18;
+    });
     this.gapGlow.emissiveIntensity = 4 + smooth(99, 104, t) * 7;
 
     const endBlack = smooth(104.55, 105.0, t);
