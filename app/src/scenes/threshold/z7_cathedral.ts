@@ -257,7 +257,10 @@ export default class ThresholdZ7Cathedral extends Scene {
           this.tmpP.set(x, y, z);
           this.tmpQ.identity();
           const heroCovered = side === -1 && r <= 2 && lev === 0;
-          this.tmpS.set(heroCovered ? 0.0001 : 1 + 0.05 * hash(k), heroCovered ? 0.0001 : 1, heroCovered ? 0.0001 : 0.9 + 0.14 * hash(k * 2));
+          const missing = hash(k * 23.1 + 4.7) > 0.948;
+          const damaged = hash(k * 17.9 + 1.3) > 0.86;
+          const hidden = heroCovered || missing;
+          this.tmpS.set(hidden ? 0.0001 : (1 + 0.05 * hash(k)) * (damaged ? 0.93 : 1), hidden ? 0.0001 : damaged ? 0.86 : 1, hidden ? 0.0001 : 0.9 + 0.14 * hash(k * 2));
           this.tmpM.compose(this.tmpP, this.tmpQ, this.tmpS);
           this.machineBodies.setMatrixAt(k, this.tmpM);
           this.tmpP.set(x - side * 0.48, y + 0.05, z);
@@ -265,13 +268,13 @@ export default class ThresholdZ7Cathedral extends Scene {
           this.machineFronts.setMatrixAt(k, this.tmpM);
           const fx = x - side * 0.54;
           const fy = y + 0.05;
-          setFramePiece(fx, fy + 0.86, z, 0.08, 0.075, 2.05, heroCovered);
-          setFramePiece(fx, fy - 0.86, z, 0.08, 0.075, 2.05, heroCovered);
-          setFramePiece(fx, fy, z - 0.98, 0.08, 1.78, 0.07, heroCovered);
-          setFramePiece(fx, fy, z + 0.98, 0.08, 1.78, 0.07, heroCovered);
-          setFramePiece(fx - side * 0.012, fy - 0.28, z, 0.045, 0.035, 1.72, heroCovered);
-          setFramePiece(fx - side * 0.012, fy + 0.25, z, 0.045, 0.035, 1.72, heroCovered);
-          setFramePiece(fx - side * 0.012, fy + 0.68, z, 0.045, 0.03, 1.72, heroCovered);
+          setFramePiece(fx, fy + 0.86, z, 0.08, 0.075, 2.05, hidden);
+          setFramePiece(fx, fy - 0.86, z, 0.08, 0.075, 2.05, hidden);
+          setFramePiece(fx, fy, z - 0.98, 0.08, 1.78, 0.07, hidden);
+          setFramePiece(fx, fy, z + 0.98, 0.08, 1.78, 0.07, hidden);
+          setFramePiece(fx - side * 0.012, fy - 0.28, z, 0.045, 0.035, 1.72, hidden);
+          setFramePiece(fx - side * 0.012, fy + 0.25, z, 0.045, 0.035, 1.72, hidden);
+          setFramePiece(fx - side * 0.012, fy + 0.68, z, 0.045, 0.03, 1.72, hidden);
           this.machineData.push({ x, y, z, seed: hash(k * 3.7) });
           k++;
         }
@@ -522,8 +525,12 @@ export default class ThresholdZ7Cathedral extends Scene {
       }
       if (t >= 170.1 && t <= 173.4) on *= 0.06;
       const flick = 0.88 + 0.12 * hash(Math.floor(t * 8) + i);
-      frontColor.setRGB(0.08 + on * 0.55 * flick, 0.12 + on * 0.75 * flick, 0.18 + on * 1.0 * flick);
-      bodyColor.setRGB(0.05 + on * 0.08, 0.065 + on * 0.1, 0.085 + on * 0.14);
+      const brightness = 0.48 + 0.72 * hash(i * 11.7 + 2.0);
+      const broken = hash(i * 19.3 + 8.0) > 0.84 ? 0.12 : 1;
+      const hue = hash(i * 5.1) - 0.5;
+      const level = on * flick * brightness * broken;
+      frontColor.setRGB(0.06 + level * (0.48 + hue * 0.08), 0.1 + level * (0.68 + hue * 0.04), 0.15 + level * (0.94 - hue * 0.08));
+      bodyColor.setRGB(0.05 + level * 0.06, 0.065 + level * 0.08, 0.085 + level * 0.11);
       this.machineFronts.setColorAt(i, frontColor);
       this.machineBodies.setColorAt(i, bodyColor);
     }

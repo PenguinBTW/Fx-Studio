@@ -180,10 +180,10 @@ export default class ThresholdZ5Motel extends Scene {
 
     const carpet = this.mat(0x351820, 0.32);
     const carpetTeal = this.mat(0x153a38, 0.42);
-    const wall = this.mat(0x5c4a39, 0.78);
+    const wall = this.mat(0x695442, 0.76, 0, 0x080403, 0.12);
     const ceiling = this.mat(0x403b35, 0.82);
     const doorMat = this.mat(0x4b2418, 0.55);
-    const trim = this.mat(0x241912, 0.65);
+    const trim = this.mat(0x302117, 0.62, 0, 0x180b05, 0.22);
     const brass = this.mat(0xa57328, 0.38, 0.65);
     const dark = this.mat(0x070808, 0.8);
     const orange = this.mat(0xff8a26, 0.35, 0, 0xff6a18, 1.8);
@@ -289,7 +289,7 @@ export default class ThresholdZ5Motel extends Scene {
       const on = i !== 4;
       this.box(this.s, [0.2, 0.18, 0.28], [side * 1.44, 1.82, z], on ? orange : dark);
       if (on) {
-        const l = new THREE.PointLight(0xff8a2a, 0.9, 7, 1.8);
+        const l = new THREE.PointLight(0xff8a2a, 1.35, 8.5, 1.7);
         l.position.set(side * 1.25, 1.75, z);
         this.s.add(l);
       }
@@ -378,7 +378,7 @@ export default class ThresholdZ5Motel extends Scene {
 
     this.s.add(this.flash.group);
 
-    const ambient = new THREE.AmbientLight(0x273040, 0.42);
+    const ambient = new THREE.AmbientLight(0x273040, 0.58);
     this.s.add(ambient);
   }
 

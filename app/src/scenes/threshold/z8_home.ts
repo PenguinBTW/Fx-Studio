@@ -140,10 +140,17 @@ export default class ThresholdZ8Home extends Scene {
     const officeGlow = this.mat(0xc9b26a, 0.55, 0, 0xc9ffb0, 0.5);
     this.box(this.s, [0.025, 0.24, 1.22], [-1.34, 1.02, -4.3], officeGlow);
 
-    // Golden sun shafts as translucent angled planes.
-    const shaftMat = new THREE.MeshBasicMaterial({ color: 0xffb45e, transparent: true, opacity: 0.11, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
-    this.disposables.push(shaftMat);
-    for (let i = 0; i < 4; i++) this.box(this.s, [0.03, 1.2, 2.8], [-0.8 + i * 0.35, 1.25, -4.2 + i * 0.12], shaftMat, [0.18, 0.35, -0.55]);
+    // Golden-hour sun reads as floor/wall light patches plus dust, not floating rectangles.
+    const sunPatchMat = new THREE.MeshBasicMaterial({ color: 0xffb45e, transparent: true, opacity: 0.2, blending: THREE.AdditiveBlending, depthWrite: false });
+    this.disposables.push(sunPatchMat);
+    for (let i = 0; i < 4; i++) {
+      this.box(this.s, [0.42 + i * 0.08, 0.006, 0.72], [-0.72 + i * 0.34, 0.055, -4.35 + i * 0.18], sunPatchMat, [0, -0.32, 0]);
+    }
+    const dustMat = new THREE.MeshBasicMaterial({ color: 0xffd89a, transparent: true, opacity: 0.48, blending: THREE.AdditiveBlending, depthWrite: false });
+    this.disposables.push(dustMat);
+    for (let i = 0; i < 26; i++) {
+      this.sphere(this.s, 0.006 + 0.004 * hash(i * 3), [-1.0 + hash(i) * 1.2, 0.9 + hash(i * 2) * 1.15, -4.8 + hash(i * 5) * 1.15], dustMat);
+    }
 
     // Family photos on the left wall: each frame contains an empty zone colour, no people.
     const frameMat = this.mat(0x2b190f, 0.5);
