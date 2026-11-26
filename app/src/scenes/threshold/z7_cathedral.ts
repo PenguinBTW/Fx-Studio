@@ -352,7 +352,7 @@ export default class ThresholdZ7Cathedral extends Scene {
     const bodyGeo = new THREE.BoxGeometry(0.86, 2.2, 2.55);
     const frontGeo = new THREE.BoxGeometry(0.08, 1.65, 1.9);
     const bodyMat = new THREE.MeshStandardMaterial({ color: 0x161b22, roughness: 0.38, metalness: 0.6 });
-    const frontMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const frontMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.58, depthWrite: false });
     this.disposables.push(bodyGeo, frontGeo, bodyMat, frontMat);
     this.machineBodies = new THREE.InstancedMesh(bodyGeo, bodyMat, count);
     this.machineFronts = new THREE.InstancedMesh(frontGeo, frontMat, count);
@@ -431,7 +431,7 @@ export default class ThresholdZ7Cathedral extends Scene {
           const missing = hash(machineIndex * 23.1 + 4.7) > 0.948;
           const damaged = hash(machineIndex * 17.9 + 1.3) > 0.86;
           const z0 = wallZ(r, lev);
-          const x0 = wallX(side, r, lev) - side * 0.56;
+          const x0 = wallX(side, r, lev) - side * 0.36;
           const y0 = 1.1 + lev * 2.45;
           for (let shelf = 0; shelf < 3; shelf++) for (let col = 0; col < 5; col++) {
             const empty = heroCovered || missing || damaged || hash(machineIndex * 7.3 + shelf * 5 + col) > 0.9;

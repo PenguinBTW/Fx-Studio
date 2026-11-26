@@ -9,6 +9,7 @@ import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import beigePhoneUrl from './assets/beige_phone/model.glb?url';
 import z8HomeKitUrl from './assets/z8_home_kit/model.glb?url';
 import { buildOfficeLoopSet, type OfficeLoopSet } from './office_loop_set';
+import { hermite1D, type ScalarKey } from './motion';
 
 const clamp = (x: number, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -25,9 +26,9 @@ const KEYS: PoseKey[] = [
   { t: 206.0, p: [0, 1.65, -3.1], yaw: 20, pitch: 0, fov: 69 },
   { t: 208.0, p: [0.15, 1.65, -4.6], yaw: 26, pitch: 0, fov: 68 },
   { t: 210.0, p: [0.35, 1.65, -5.3], yaw: 38, pitch: 0, fov: 66 },
-  { t: 212.0, p: [0.58, 1.65, -5.75], yaw: 74, pitch: -2, fov: 66 },
-  { t: 214.0, p: [0.68, 1.65, -5.9], yaw: 54, pitch: -4, fov: 60 },
-  { t: 216.0, p: [0.66, 1.65, -5.95], yaw: 74, pitch: -2, fov: 64 },
+  { t: 212.0, p: [0.58, 1.65, -5.75], yaw: 74, pitch: -7, fov: 66 },
+  { t: 214.0, p: [0.68, 1.65, -5.9], yaw: 54, pitch: -10, fov: 60 },
+  { t: 216.0, p: [0.66, 1.65, -5.95], yaw: 74, pitch: -5, fov: 64 },
   { t: 218.0, p: [0.66, 1.65, -5.95], yaw: 68, pitch: 0, fov: 70 },
   { t: 220.0, p: [0.7, 1.65, -6.1], yaw: 76, pitch: 0, fov: 74 },
   { t: 222.0, p: [0.95, 1.65, -6.45], yaw: 88, pitch: 0, fov: 74 },
@@ -50,6 +51,20 @@ function poseAt(t: number, gait?: GaitName) {
 
 function z8Gait(t: number): GaitName {
   return (t >= 199 && t < 210) || t >= 222 ? 'walk' : 'still';
+}
+
+const APPROACH_KEYS = KEYS.slice(7, 15);
+const APPROACH_X: ScalarKey[] = APPROACH_KEYS.map((k) => [k.t, k.p[0]]);
+const APPROACH_Z: ScalarKey[] = APPROACH_KEYS.map((k) => [k.t, k.p[2]]);
+function z8PoseAt(t: number, gait?: GaitName) {
+  const pose = poseAt(t, gait);
+  if (t < APPROACH_KEYS[0]!.t || t > APPROACH_KEYS[APPROACH_KEYS.length - 1]!.t) return pose;
+  const pos: [number, number, number] = [hermite1D(t, APPROACH_X), pose.pos[1], hermite1D(t, APPROACH_Z)];
+  return {
+    ...pose,
+    pos,
+    target: [pos[0] + pose.forward[0], pos[1] + pose.forward[1], pos[2] + pose.forward[2]] as [number, number, number],
+  };
 }
 
 export default class ThresholdZ8Home extends Scene {
@@ -284,6 +299,25 @@ export default class ThresholdZ8Home extends Scene {
     this.handle.rotation.z = Math.PI / 2;
     this.s.add(this.doorGroup);
 
+    // Close-range right-wall domestic detail: wainscot rail, wallpaper seams, scuffs and
+    // a small enamel house-number plaque keep the phone/door payoff from landing on blank beige.
+    const plaqueCanvas = document.createElement('canvas');
+    plaqueCanvas.width = 128; plaqueCanvas.height = 64;
+    const pg = plaqueCanvas.getContext('2d')!;
+    pg.fillStyle = '#263b42'; pg.fillRect(0, 0, 128, 64);
+    pg.strokeStyle = '#c49a54'; pg.lineWidth = 5; pg.strokeRect(5, 5, 118, 54);
+    pg.fillStyle = '#eadfc6'; pg.font = 'bold 34px monospace'; pg.textAlign = 'center'; pg.textBaseline = 'middle'; pg.fillText('17', 64, 34);
+    const plaqueTex = new THREE.CanvasTexture(plaqueCanvas);
+    plaqueTex.colorSpace = THREE.SRGBColorSpace;
+    const plaqueMat = new THREE.MeshStandardMaterial({ map: plaqueTex, roughness: 0.42, metalness: 0.08, emissive: 0x1a1208, emissiveIntensity: 0.18 });
+    this.disposables.push(plaqueTex, plaqueMat);
+    this.box(this.doorGroup, [0.018, 0.16, 0.32], [-0.055, 1.52, 0.43], plaqueMat);
+    const wallTrim = this.mat(0x4a3122, 0.72);
+    const wallScuff = this.mat(0x6f452e, 0.9);
+    this.box(this.s, [0.018, 0.055, 4.6], [1.335, 0.86, -5.55], wallTrim);
+    for (let i = 0; i < 6; i++) this.box(this.s, [0.016, 1.75, 0.018], [1.332, 1.42, -3.6 - i * 0.72], i % 2 ? wallTrim : wallScuff);
+    for (let i = 0; i < 5; i++) this.box(this.s, [0.017, 0.08 + hash(i) * 0.16, 0.08 + hash(i * 2) * 0.22], [1.329, 0.55 + hash(i * 3) * 1.2, -4.1 - i * 0.58], wallScuff, [0, 0, (hash(i) - 0.5) * 0.25]);
+
     // Production beige phone as the wall-mounted final variant. The desk-phone axes are
     // remapped so the face/receiver point into the hallway and the keypad descends vertically.
     const phoneMount = cloneHomePart('wall_phone_mount');
@@ -336,7 +370,7 @@ export default class ThresholdZ8Home extends Scene {
     this.disposables.push(cordGeo);
     this.payoffReceiver.visible = false;
     this.s.add(this.payoffReceiver);
-    const phoneRim = new THREE.PointLight(0xffc17a, 0.65, 1.6, 1.7);
+    const phoneRim = new THREE.PointLight(0xffc17a, 0.38, 1.6, 1.7);
     phoneRim.position.set(0.72, 1.42, -5.48);
     this.s.add(phoneRim);
 
@@ -358,7 +392,7 @@ export default class ThresholdZ8Home extends Scene {
 
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
     const t = f.t;
-    const pose = poseAt(t, z8Gait(t));
+    const pose = z8PoseAt(t, z8Gait(t));
     applyFirstPersonCamera(this.cam, pose, out.width / out.height);
     const dir = new THREE.Vector3(...pose.forward);
 
@@ -400,8 +434,8 @@ export default class ThresholdZ8Home extends Scene {
     const beam = beamStateAt(t, threat);
     // At the wall-phone payoff the beam is inches from the wall; soften only this close-range
     // adapter window so the handset/cord silhouette remains readable instead of washing to white.
-    if (t >= 210 && t < 214.5) beam.intensity *= 0.24;
-    this.flash.update(pose, t, beam, (time) => poseAt(time, z8Gait(time)).forward);
+    if (t >= 210 && t < 214.5) beam.intensity *= 0.07;
+    this.flash.update(pose, t, beam, (time) => z8PoseAt(time, z8Gait(time)).forward);
 
     const rr = this.ctx.renderer;
     rr.setRenderTarget(out);

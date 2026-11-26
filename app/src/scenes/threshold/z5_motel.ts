@@ -9,6 +9,7 @@ import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import tenantFullUrl from './assets/tenant_full/model.glb?url';
 import lintUrl from './assets/lint/model.glb?url';
 import z5MotelKitUrl from './assets/z5_motel_kit/model.glb?url';
+import { hermite1D, type ScalarKey } from './motion';
 
 const clamp = (x: number, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -53,6 +54,19 @@ function z5Gait(t: number): GaitName {
   if ((t >= 105 && t < 114.5) || (t >= 120.6 && t < 122.4)) return 'walk';
   if (t >= 122.4 && t < 130) return 'holdBreath';
   return 'still';
+}
+
+const CORRIDOR_X: ScalarKey[] = KEYS.slice(0, 6).map((k) => [k.t, k.p[0]]);
+const CORRIDOR_Z: ScalarKey[] = KEYS.slice(0, 6).map((k) => [k.t, k.p[2]]);
+function z5PoseAt(t: number, gait?: GaitName) {
+  const pose = poseAt(t, gait);
+  if (t < KEYS[0]!.t || t > KEYS[5]!.t) return pose;
+  const pos: [number, number, number] = [hermite1D(t, CORRIDOR_X), pose.pos[1], hermite1D(t, CORRIDOR_Z)];
+  return {
+    ...pose,
+    pos,
+    target: [pos[0] + pose.forward[0], pos[1] + pose.forward[1], pos[2] + pose.forward[2]] as [number, number, number],
+  };
 }
 
 export default class ThresholdZ5Motel extends Scene {
@@ -112,7 +126,7 @@ export default class ThresholdZ5Motel extends Scene {
   }
 
 
-  private motelPrintMaterial() {
+  private motelPrintMaterial(seed = 0) {
     const canvas = document.createElement('canvas');
     canvas.width = 128;
     canvas.height = 128;
@@ -134,6 +148,19 @@ export default class ThresholdZ5Motel extends Scene {
     }
     g.fillStyle = 'rgba(67,35,18,0.58)';
     g.beginPath(); g.ellipse(82, 94, 24, 12, -0.25, 0, Math.PI * 2); g.fill();
+    if (seed % 3 === 1) {
+      g.fillStyle = '#b9a989'; g.fillRect(10, 10, 108, 108);
+      g.fillStyle = 'rgba(44,60,62,0.62)'; g.fillRect(14, 60, 100, 42);
+      g.fillStyle = 'rgba(137,78,43,0.72)'; g.beginPath(); g.arc(87, 39, 15, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = 'rgba(24,35,38,0.75)'; g.lineWidth = 3;
+      for (let y = 68; y < 100; y += 9) { g.beginPath(); g.moveTo(15, y); g.lineTo(113, y + (y % 2 ? 2 : -2)); g.stroke(); }
+    } else if (seed % 3 === 2) {
+      g.fillStyle = '#ad956f'; g.fillRect(10, 10, 108, 108);
+      g.fillStyle = 'rgba(70,34,25,0.72)'; g.beginPath(); g.moveTo(18, 98); g.lineTo(64, 22); g.lineTo(110, 98); g.closePath(); g.fill();
+      g.fillStyle = 'rgba(217,190,132,0.55)'; g.fillRect(28, 76, 72, 12);
+      g.strokeStyle = 'rgba(31,22,18,0.72)'; g.lineWidth = 3;
+      g.strokeRect(24, 28, 80, 72);
+    }
     g.fillStyle = 'rgba(31,23,18,0.5)';
     for (let i = 0; i < 32; i++) g.fillRect(Math.floor(hash(i * 2) * 126), Math.floor(hash(i * 3) * 126), 2, 1);
     const tex = new THREE.CanvasTexture(canvas);
@@ -291,21 +318,21 @@ export default class ThresholdZ5Motel extends Scene {
     const wallpaperStripeB = this.mat(0x40362b, 0.88);
     const stainMat = this.mat(0x1b1712, 0.96);
     const frameMat = this.mat(0x392718, 0.65);
-    const printMat = this.motelPrintMaterial();
+    const printMats = [0, 1, 2].map((seed) => this.motelPrintMaterial(seed));
     for (const side of [-1, 1]) {
       const x = side * 1.515;
       for (let i = 0; i < 16; i++) {
         const z = -8.6 - i * 0.66;
         this.box(this.s, [0.018, 2.05, 0.035], [x, 1.28, z], i % 2 ? wallpaperStripe : wallpaperStripeB);
       }
-      for (const [z, y, w, h] of [[-16.15, 1.42, 0.48, 0.58], [-17.68, 1.38, 0.72, 0.82], [-18.86, 1.47, 0.56, 0.68], [-19.76, 1.38, 0.58, 0.72], [-20.65, 1.38, 0.42, 0.52]] as const) {
+      for (const [pi, [z, y, w, h]] of ([[-16.15, 1.42, 0.48, 0.58], [-17.68, 1.38, 0.72, 0.82], [-18.86, 1.47, 0.56, 0.68], [-19.76, 1.38, 0.58, 0.72], [-20.65, 1.38, 0.42, 0.52]] as const).entries()) {
         this.box(this.s, [0.035, h, w], [x - side * 0.018, y, z], frameMat);
-        this.box(this.s, [0.04, h - 0.1, w - 0.1], [x - side * 0.038, y, z], printMat);
+        this.box(this.s, [0.04, h - 0.1, w - 0.1], [x - side * 0.038, y, z], printMats[(pi + (side > 0 ? 1 : 0)) % 3]!);
         this.box(this.s, [0.043, 0.08, 0.12], [x - side * 0.045, y - h * 0.12, z + w * 0.12], stainMat);
       }
-      for (const [z, y] of [[-10.4, 1.42], [-12.78, 1.46], [-14.35, 1.46]] as const) {
+      for (const [pi, [z, y]] of ([[-10.4, 1.42], [-12.78, 1.46], [-14.35, 1.46]] as const).entries()) {
         this.box(this.s, [0.035, 0.62, 0.5], [x - side * 0.018, y, z], frameMat);
-        this.box(this.s, [0.04, 0.5, 0.38], [x - side * 0.038, y, z], printMat);
+        this.box(this.s, [0.04, 0.5, 0.38], [x - side * 0.038, y, z], printMats[(pi + 2 + (side > 0 ? 1 : 0)) % 3]!);
         this.box(this.s, [0.043, 0.11, 0.15], [x - side * 0.045, y - 0.12, z + 0.08], stainMat);
       }
       for (let i = 0; i < 7; i++) {
@@ -369,6 +396,10 @@ export default class ThresholdZ5Motel extends Scene {
       line.userData.seed = hash(i * 7);
       this.rainLines.push(line);
     }
+
+    const corridorFill = new THREE.PointLight(0xff7d32, 0.68, 15, 1.9);
+    corridorFill.position.set(0, 2.05, -8.5);
+    this.s.add(corridorFill);
 
     // Sodium sconces, one broken/dark near room 217.
     for (let i = 0; i < 6; i++) {
@@ -476,7 +507,7 @@ export default class ThresholdZ5Motel extends Scene {
 
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
     const t = f.t;
-    const pose = poseAt(t, z5Gait(t));
+    const pose = z5PoseAt(t, z5Gait(t));
     applyFirstPersonCamera(this.cam, pose, out.width / out.height);
     const dir = new THREE.Vector3(...pose.forward);
 
@@ -485,7 +516,7 @@ export default class ThresholdZ5Motel extends Scene {
     const threat = t >= 114.2 && t < 124.0 ? 0.95 : 0.2;
     const baseBeam = beamStateAt(t, threat);
     const beam = { ...baseBeam, intensity: beamOn ? baseBeam.intensity : 0, dead: !beamOn || baseBeam.dead };
-    this.flash.update(pose, t, beam, (time) => poseAt(time, z5Gait(time)).forward);
+    this.flash.update(pose, t, beam, (time) => z5PoseAt(time, z5Gait(time)).forward);
 
     // Tenant partial reveal and head-tilt tell.
     this.tenant.visible = t >= 120.45 && t < 121.65;

@@ -5,6 +5,9 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { buildOfficeLoopSet, type OfficeLoopSet } from './office_loop_set';
 
 const hash = (n: number) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
+const clamp = (x: number, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const smooth = (x: number) => { const u = clamp(x); return u * u * (3 - 2 * u); };
+
 
 export default class ThresholdEndscreen extends Scene {
   private s = new THREE.Scene();
@@ -21,11 +24,16 @@ export default class ThresholdEndscreen extends Scene {
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
     const t = f.t;
     // Exact Z1 beat-1.1 pose/framing: eye height, opening camera, hero desk six metres ahead.
-    this.cam.position.set(0, 1.65, 0);
+    // Not frozen: a few millimetres of deterministic breathing drift keep the final
+    // loop alive without disturbing the approved end-slot composition.
+    const breath = Math.sin((t - 225) * Math.PI * 2 * 0.19) * 0.009 + Math.sin((t - 225) * Math.PI * 2 * 0.071) * 0.006;
+    const driftX = Math.sin((t - 225) * Math.PI * 2 * 0.047) * 0.014;
+    const driftZ = Math.sin((t - 225) * Math.PI * 2 * 0.031 + 0.8) * 0.012;
+    this.cam.position.set(driftX, 1.65 + breath, driftZ);
     this.cam.fov = 74;
     this.cam.aspect = out.width / out.height;
     this.cam.updateProjectionMatrix();
-    this.cam.lookAt(0, 1.35, -6);
+    this.cam.lookAt(driftX * 0.35, 1.35 + breath * 0.55, -6 + driftZ * 0.2);
 
     // The phone keeps ringing, quieter each cycle; the detailed receiver gives the motion a visible payoff.
     const ringIndex = Math.floor((t - 225) / 4.0);
@@ -36,7 +44,10 @@ export default class ThresholdEndscreen extends Scene {
       this.office.receiver.rotation.z = ring * 0.045;
     }
     const fade = Math.min(1, Math.max(0, (t - 225) / 10));
-    this.office?.tubeMats.forEach((m, i) => { m.emissiveIntensity = (1.75 + 0.25 * hash(Math.floor(t * 4) + i * 7)) * (1 - fade * 0.38); });
+    const powerPhase = (t - 225) % 3.7;
+    const powerSag = smooth((powerPhase - 2.58) / 0.07) * (1 - smooth((powerPhase - 2.92) / 0.24));
+    const powerLevel = 1 - powerSag * 0.52;
+    this.office?.tubeMats.forEach((m, i) => { m.emissiveIntensity = (1.75 + 0.25 * hash(Math.floor(t * 4) + i * 7)) * (1 - fade * 0.38) * powerLevel; });
 
     const rr = this.ctx.renderer;
     rr.setRenderTarget(out);
