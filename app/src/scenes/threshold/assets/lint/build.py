@@ -38,7 +38,8 @@ for side in (-1, 1):
         (side * 0.061, -0.003, 0.006),
         (side * 0.045, -0.003, -0.012),
     ]
-    add(curve(f'wing_stitch_{side}', seam_pts, 0.00065, THREAD), f'wing_{side}')
+    stitch = curve(f'wing_stitch_{side}', seam_pts, 0.00065, THREAD)
+    parent(stitch, wing)
 
 # Button eyes and thread crosses.
 for side in (-1, 1):
@@ -54,6 +55,7 @@ for side in (-1, 1):
 
 # Macro felt scales: overlapping flattened pills across the wings and back. They are
 # deliberately geometric fibres/scales rather than texture noise so the close-up silhouette holds.
+wing_by_side = { -1: bpy.data.objects.get('wing_-1'), 1: bpy.data.objects.get('wing_1') }
 for i in range(60):
     side = -1 if i % 2 == 0 else 1
     row = (i // 2) % 10
@@ -64,7 +66,10 @@ for i in range(60):
     sc = sphere(f'felt_scale_{i}', 0.0024, (x, y, z), FELT_EDGE if i % 3 else FELT, scale=(1.8, 0.32, 0.72), segments=10, rings=5)
     sc.rotation_euler[1] = math.radians(side * (18 + row * 2))
     sc.rotation_euler[2] = math.radians(side * -10)
-    add(sc, 'body')
+    if abs(x) > 0.018 and wing_by_side.get(side):
+        parent(sc, wing_by_side[side])
+    else:
+        add(sc, 'body')
 
 # Sparse felt fuzz: short stitches radiating from the body, deliberately geometric.
 for i in range(24):
