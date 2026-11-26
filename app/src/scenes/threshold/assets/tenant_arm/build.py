@@ -77,10 +77,10 @@ for finger in range(5):
         x = spread * 0.06 * u + math.sin(u * coils * math.tau) * 0.018 * (1 - 0.25*u)
         y = math.cos(u * coils * math.tau) * 0.018 * (1 - 0.25*u)
         pts.append((base[0] + x, base[1] + y, base[2] + z))
-    ob = curve(f'finger_coil_{finger}', pts, 0.0085, CHROME)
+    ob = curve(f'finger_coil_{finger}', pts, 0.0125, CHROME)
     add(ob, f'finger_{finger}')
     tip = pts[-1]
-    add(sphere(f'finger_tip_{finger}', 0.018, tip, CHROME, scale=(0.75, 0.75, 1.3), segments=28, rings=14), f'finger_{finger}')
+    add(sphere(f'finger_tip_{finger}', 0.023, tip, CHROME, scale=(0.75, 0.75, 1.3), segments=28, rings=14), f'finger_{finger}')
 
 # Loose coins trapped inside the arm collage.
 for i in range(9):
