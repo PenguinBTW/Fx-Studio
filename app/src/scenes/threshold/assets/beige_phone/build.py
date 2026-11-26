@@ -45,7 +45,7 @@ for i in range(7):
     x = -0.079 + u * 0.158
     z = 0.126 + math.sin(u * math.pi) * 0.011
     receiver_path.append((x, 0.029, z))
-handle = add(curve('receiver_continuous_grip', receiver_path, 0.0128, BEIGE, resolution=2))
+handle = add(curve('receiver_continuous_grip', receiver_path, 0.0152, BEIGE, resolution=2))
 parent(handle, receiver_root)
 # flattened central palm grip gives the tube a handset-like wider middle without breaking continuity
 palm = add(sphere('receiver_palm_grip', 0.028, (0, 0.029, 0.137), BEIGE, scale=(1.65, 0.43, 0.42), segments=18, rings=9))

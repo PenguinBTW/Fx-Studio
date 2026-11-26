@@ -94,8 +94,8 @@ upper=empty('slide_mouth_upper_root',(0,-.38,.13)); upper.parent=root
 lower=empty('slide_mouth_lower_root',(0,-.38,-.16)); lower.parent=root
 for side,rootobj,zsign in [('upper',upper,1),('lower',lower,-1)]:
     for j in range(6):
-        yy=-.34-j*.095; zz=zsign*(.12+j*.035+(j/5)**2*.12)
-        panel=cube(f'slide_mouth_{side}_panel_{j+1}',(0,yy,zz),(.62-j*.025,.13,.075),yellow,bevel=.035,rot=(zsign*(.12+j*.08),0,0))
+        yy=-.34-j*.074; zz=zsign*(.12+j*.035+(j/5)**2*.12)
+        panel=cube(f'slide_mouth_{side}_panel_{j+1}',(0,yy,zz),(.66-j*.018,.15,.112),yellow,bevel=.035,rot=(zsign*(.12+j*.08),0,0))
         panel.parent=rootobj; panel.matrix_parent_inverse=rootobj.matrix_world.inverted()
     # side rails make the slide silhouette unmistakable
     for x in (-.31,.31):

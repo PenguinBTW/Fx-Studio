@@ -71,7 +71,7 @@ export default class ThresholdZ3Pool extends Scene {
       const remap = (m: THREE.Material) => {
         const hit = mirrorlingMatCache.get(m);
         if (hit) return hit;
-        const mm = new THREE.MeshPhysicalMaterial({ color: (m as THREE.MeshStandardMaterial).color.clone(), roughness: 0.16, metalness: 0.0, clearcoat: 0.9, clearcoatRoughness: 0.08 });
+        const mm = new THREE.MeshPhysicalMaterial({ color: (m as THREE.MeshStandardMaterial).color.clone(), roughness: 0.16, metalness: 0.0, clearcoat: 0.72, clearcoatRoughness: 0.12 });
         mm.name = m.name;
         if (/aqua_chrome_tile/.test(mm.name)) { mm.color.setHex(0xd8eeee); mm.roughness = 0.15; }
         if (/pale_tile_highlight/.test(mm.name)) { mm.color.setHex(0xf0f5e9); mm.roughness = 0.12; }
@@ -93,7 +93,7 @@ export default class ThresholdZ3Pool extends Scene {
     });
     // Ceramic limb volume overlay: the GLB supplies the teardrop head, torso, joints and fingers;
     // these continuous tiled sleeves guarantee the limbs read as the same ceramic being at film distance.
-    const limbTile = new THREE.MeshPhysicalMaterial({ color: 0xd8eeee, roughness: 0.15, metalness: 0.0, clearcoat: 0.9, clearcoatRoughness: 0.08, envMapIntensity: 0.9 });
+    const limbTile = new THREE.MeshPhysicalMaterial({ color: 0xd8eeee, roughness: 0.15, metalness: 0.0, clearcoat: 0.74, clearcoatRoughness: 0.12, envMapIntensity: 0.65 });
     const limbGrout = new THREE.MeshStandardMaterial({ color: 0x334d50, roughness: 0.7, metalness: 0.0 });
     const addLimbCylinder = (name: string, a: [number, number, number], b: [number, number, number], r1: number, r2: number, material: THREE.Material) => {
       const va = new THREE.Vector3(...a), vb = new THREE.Vector3(...b);
@@ -157,8 +157,8 @@ export default class ThresholdZ3Pool extends Scene {
       }
     });
     this.s.add(this.mirrorlingAsset.root, this.mirrorlingReflection.root);
-    const glazeKey = new THREE.PointLight(0xdfffff, 0.72, 3.8, 2); glazeKey.position.set(0.55, 2.15, 0.85); this.mirrorlingAsset.root.add(glazeKey);
-    const glazeRim = new THREE.PointLight(0x7fd7e8, 0.48, 3.2, 2); glazeRim.position.set(-0.65, 1.35, -0.65); this.mirrorlingAsset.root.add(glazeRim);
+    const glazeKey = new THREE.PointLight(0xdfffff, 0.48, 3.8, 2); glazeKey.position.set(0.55, 2.15, 0.85); this.mirrorlingAsset.root.add(glazeKey);
+    const glazeRim = new THREE.PointLight(0x7fd7e8, 0.28, 3.2, 2); glazeRim.position.set(-0.65, 1.35, -0.65); this.mirrorlingAsset.root.add(glazeRim);
     this.s.background = new THREE.Color(0x08262d);
     this.s.fog = new THREE.FogExp2(0x0b4652, 0.055);
     this.flash = addFlashlight(this.s);
@@ -195,11 +195,11 @@ export default class ThresholdZ3Pool extends Scene {
       box(this.s, `z3_gutter_shadow_${side}`, [0.08, 0.045, 27.5], [side * 3.64, 0.475, -6.3], mat(0x061c22, 0.7));
     }
     // age variation over the modular tile system: mineral tide marks, damp drips, missing/chipped tiles.
-    const mineral = basic(0x6f5c39, 0.24), damp = basic(0x071c22, 0.22), chipMat = mat(0x20363a, 0.82);
+    const mineral = basic(0x6f5c39, 0.24), damp = basic(0x071c22, 0.13), chipMat = mat(0x20363a, 0.82);
     for (const side of [-1, 1]) {
       const x = side * 3.972;
       box(this.s, `z3_mineral_tide_${side}`, [0.012, 0.055, 28.5], [x, 0.72, -7], mat(0x6f5c39, 0.9));
-      for (let i = 0; i < 18; i++) {
+      for (let i = 0; i < 10; i++) {
         const z = -20.5 + hash(i * 4.3 + side) * 26.5, y = 0.9 + hash(i * 7.1) * 2.9;
         if (i % 3 === 0) plane(this.s, `z3_wall_damp_drip_${side}_${i}`, 0.055 + hash(i) * 0.07, 0.35 + hash(i + 2) * 0.95, [x - side * 0.006, y, z], damp, [0, side < 0 ? Math.PI / 2 : -Math.PI / 2, 0]);
         else box(this.s, `z3_chipped_tile_${side}_${i}`, [0.018, 0.11 + hash(i) * 0.13, 0.16 + hash(i + 1) * 0.18], [x - side * 0.012, y, z], chipMat);
@@ -284,7 +284,7 @@ export default class ThresholdZ3Pool extends Scene {
     const pc = document.createElement('canvas'); pc.width = 256; pc.height = 512;
     const pg = pc.getContext('2d')!; pg.clearRect(0, 0, 256, 512);
     for (let y = 0; y < 512; y += 3) {
-      const wobble = Math.sin(y * 0.055) * 4.5 + Math.sin(y * 0.151 + 1.2) * 2.2;
+      const wobble = Math.sin(y * 0.055) * 7.5 + Math.sin(y * 0.151 + 1.2) * 3.8 + Math.sin(y * 0.31) * 1.4;
       pg.drawImage(baseRefl, 0, y, 256, 3, wobble, y, 256, 3);
     }
     pg.strokeStyle = 'rgba(135,230,224,0.11)'; pg.lineWidth = 1;
@@ -302,7 +302,7 @@ export default class ThresholdZ3Pool extends Scene {
     this.playerReflection.renderOrder = 4; this.playerReflection.visible = false;
     const bc = document.createElement('canvas'); bc.width = 256; bc.height = 256;
     const bg = bc.getContext('2d')!; bg.clearRect(0, 0, 256, 256);
-    for (let i = 0; i < 18; i++) {
+    for (let i = 0; i < 10; i++) {
       const x = 45 + hash(i * 2.7) * 165, y = 55 + hash(i * 4.1) * 145;
       const rx = 12 + hash(i) * 30, ry = 3 + hash(i + 2) * 9;
       const bgrad = bg.createRadialGradient(0, 0, 0, 0, 0, rx);
@@ -370,7 +370,7 @@ export default class ThresholdZ3Pool extends Scene {
     box(this.s, 'z3_step_edge_light', [7.4, 0.035, 0.04], [0, 0.51, 5.15], this.stepGlow);
     cyl(this.s, 'z3_life_ring', 0.32, 0.06, [3.5, 0.52, -6.5], mat(0xffffff, 0.5), [Math.PI / 2, 0, 0], 32);
     box(this.s, 'z3_life_ring_band', [0.16, 0.07, 0.08], [3.5, 0.55, -6.18], mat(0xe34b38, 0.45));
-    for (let i = 0; i < 18; i++) {
+    for (let i = 0; i < 10; i++) {
       const l = plane(this.s, `z3_leaf_${i}`, 0.12, 0.05, [-3.3 + hash(i) * 6.6, 0.47, -18 + hash(i + 2) * 22], leaf, [-Math.PI / 2, 0, hash(i) * 6]);
       l.userData.basePos = l.position.clone(); this.surfaceLeaves.push(l);
     }
@@ -493,7 +493,7 @@ export default class ThresholdZ3Pool extends Scene {
     const reflPlayer = smooth(58.35, 58.75, t) * (1 - smooth(61.0, 61.55, t));
     this.playerReflection.visible = reflPlayer > 0.015;
     this.beamReflection.visible = reflPlayer > 0.015;
-    this.playerReflectionMat.opacity = 0.68 * reflPlayer;
+    this.playerReflectionMat.opacity = 0.48 * reflPlayer;
     this.beamReflectionMat.opacity = 0.50 * reflPlayer;
     if (reflPlayer > 0) {
       const fwdX = this.cam.position.x, fwdZ = this.cam.position.z - 1.55;

@@ -171,9 +171,9 @@ export default class ThresholdZ1Office extends Scene {
         } else if (/purple_vein/.test(mm.name)) {
           mm.color.setHex(0x551047); mm.emissive.setHex(0x250029); mm.emissiveIntensity = 0.18; mm.roughness = 0.42;
         } else if (/tile_skin_warm_grey/.test(mm.name)) {
-          mm.color.setHex(0x6f5c50); mm.roughness = 0.72; mm.map = breatherSkinTex; mm.roughnessMap = breatherSkinTex; mm.bumpMap = breatherSkinTex; mm.bumpScale = 0.022;
+          mm.color.setHex(0xa47d68); mm.roughness = 0.66; mm.emissive.setHex(0x1a0905); mm.emissiveIntensity = 0.12; mm.map = breatherSkinTex; mm.roughnessMap = breatherSkinTex; mm.bumpMap = breatherSkinTex; mm.bumpScale = 0.022;
         } else if (/tile_skin_pressure_edges/.test(mm.name)) {
-          mm.color.setHex(0x927866); mm.roughness = 0.66; mm.map = breatherSkinTex; mm.roughnessMap = breatherSkinTex; mm.bumpMap = breatherSkinTex; mm.bumpScale = 0.018;
+          mm.color.setHex(0xc09479); mm.roughness = 0.58; mm.emissive.setHex(0x1d0b06); mm.emissiveIntensity = 0.10; mm.map = breatherSkinTex; mm.roughnessMap = breatherSkinTex; mm.bumpMap = breatherSkinTex; mm.bumpScale = 0.018;
         } else if (/cracked_nail_yellow/.test(mm.name)) {
           mm.color.setHex(0xb98f32); mm.roughness = 0.42; mm.map = breatherPadTex; mm.bumpMap = breatherPadTex; mm.bumpScale = 0.007;
         } else if (/suction_pad_pale/.test(mm.name)) {
@@ -211,6 +211,7 @@ export default class ThresholdZ1Office extends Scene {
     this.s.background = new THREE.Color(0x050505);
     this.s.fog = new THREE.FogExp2(0x111008, 0.026);
     this.flash = addFlashlight(this.s);
+    const breatherUnderfill = new THREE.PointLight(0xffc2a0, 0.85, 4.2, 2); breatherUnderfill.position.set(0, 1.65, -5.65); this.s.add(breatherUnderfill);
     this.s.add(new THREE.AmbientLight(0x9a9278, 0.43));
 
     const carpet = surfaceMat('carpet', 0x756947, 0.94, 18);

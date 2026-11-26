@@ -136,6 +136,13 @@ export default class ThresholdZ2Playroom extends Scene {
       }
     }
 
+    // broad age damage crosses panel boundaries; several pads are missing or misaligned rather than merely dirty.
+    for (let i = 0; i < 9; i++) {
+      const north = i % 2 === 0, z = north ? -10.395 : 10.395;
+      plane(this.s, `z2_large_boundary_stain_${i}`, 1.0 + hash(i) * 1.5, 0.5 + hash(i + 1) * 1.1, [-11 + hash(i * 2.7) * 22, 1.1 + hash(i * 4.1) * 3.4, z], basic(0x2d2118, 0.18), [0, north ? 0 : Math.PI, (hash(i + 6) - 0.5) * 0.35]);
+      if (i < 5) box(this.s, `z2_missing_padding_backing_${i}`, [0.75, 0.48, 0.025], [-10 + i * 4.8, 2.0 + hash(i) * 2.2, z], mat(0x62594d, 0.88));
+    }
+
     // skylights
     for (let i = 0; i < 3; i++) {
       const m = mat(0xffffff, 0.2, 0, 0xffffff, 1.1) as THREE.MeshStandardMaterial;
@@ -411,7 +418,9 @@ export default class ThresholdZ2Playroom extends Scene {
       this.dummy.position.set(b.x + (dx / dist) * parting, b.y + bulge + trail, b.z + (dz / dist) * parting);
       this.dummy.rotation.set(hash(i) * 3, hash(i + 1) * 3, hash(i + 2) * 3);
       const deflate = hash(i * 9.13);
-      this.dummy.scale.set(0.88 + hash(i * 4.7) * 0.28, deflate < 0.08 ? 0.46 + deflate * 2.5 : 0.88 + hash(i * 6.1) * 0.24, 0.88 + hash(i * 5.3) * 0.28);
+      const voidNoise = Math.sin(b.x * 1.37 + b.z * 0.71) + Math.sin(b.x * 0.53 - b.z * 1.91);
+      const voidCompress = voidNoise < -1.18 ? 0.28 : 1;
+      this.dummy.scale.set((0.88 + hash(i * 4.7) * 0.28) * voidCompress, (deflate < 0.08 ? 0.46 + deflate * 2.5 : 0.88 + hash(i * 6.1) * 0.24) * voidCompress, (0.88 + hash(i * 5.3) * 0.28) * voidCompress);
       this.dummy.updateMatrix();
       this.balls.setMatrixAt(i, this.dummy.matrix);
     }

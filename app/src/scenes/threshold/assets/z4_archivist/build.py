@@ -65,7 +65,7 @@ for i in range(12):
     if i%3==0:
         cube(f'torso_page_{i+1:02d}_tear',(x+.22*(1 if i%2 else -1),y-.022,1.82),(.055,.006,.11),ink,rot=(0,ang,0),bevel=.002).parent=spine
 # blank face page and folded brow/cheek planes
-face=cube('blank_face_page',(0,-.09,2.55),(.58,.035,.74),paperhi,bevel=.018); face.parent=root
+face=cube('blank_face_page',(0,-.09,2.55),(.43,.035,.66),paperhi,bevel=.018); face.parent=root
 cube('face_left_fold',(-.28,-.082,2.55),(.045,.04,.68),paper2,rot=(0,0,-.08),bevel=.006).parent=root
 cube('face_right_fold',(.28,-.082,2.55),(.045,.04,.68),paper2,rot=(0,0,.08),bevel=.006).parent=root
 cube('face_brow_fold',(0,-.105,2.9),(.55,.035,.045),paper2,rot=(.08,0,0),bevel=.006).parent=root
