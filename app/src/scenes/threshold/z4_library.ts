@@ -144,7 +144,7 @@ export default class ThresholdZ4Library extends Scene {
       const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.repeat.set(-1, -1); tex.offset.set(1, 1);
       const mm = new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.9, polygonOffset: true, polygonOffsetFactor: -1 });
       const line = new THREE.Mesh(new THREE.PlaneGeometry(0.27, 0.052), mm);
-      line.position.set(0.18, 0.944 + li * 0.002, 5.86 + li * 0.072); line.rotation.x = -Math.PI / 2;
+      line.position.set(0.18, 0.944 + li * 0.002, 5.86 + li * 0.072); line.rotation.x = -Math.PI / 2; line.userData.basePos = line.position.clone();
       line.rotation.z = (li - 1.5) * 0.012;
       line.name = line.userData.fx_entity = `z4_ledger_ink_line_${li}`; line.visible = false; this.s.add(line); this.ledgerLines.push(line);
     });
@@ -285,7 +285,14 @@ export default class ThresholdZ4Library extends Scene {
       m.position.y = bp.y + Math.sin(t * 0.35 + i) * 0.055;
       m.position.x = bp.x + Math.cos(t * 0.27 + i * 2) * 0.04;
     });
-    this.ledgerLines.forEach((l, i) => { l.visible = t > ([84.0, 86.4, 88.0, 91.65][i] ?? 99); });
+    this.ledgerLines.forEach((l, i) => {
+      l.visible = t > ([84.0, 86.4, 88.0, 91.65][i] ?? 99);
+      const u = smooth(86 + i * 0.6, 86.8 + i * 0.6, t);
+      const bp = l.userData.basePos as THREE.Vector3;
+      l.position.set(bp.x - u * 0.012, bp.y + u * 0.018, bp.z);
+      l.rotation.x = -Math.PI / 2 + u * 0.16;
+      l.rotation.z = (i - 1.5) * 0.012 + u * 0.18;
+    });
     this.moths.forEach((m, i) => {
       const bp = m.userData.basePos as THREE.Vector3;
       const active = i === 0 ? (t > 80.4 && t < 82.2) : t < 94;
@@ -300,7 +307,8 @@ export default class ThresholdZ4Library extends Scene {
     // ledger writes itself: pages lift one by one, ink lines emerge as thin dark strips
     this.ledgerPages.forEach((p, i) => {
       const u = smooth(86 + i * 0.6, 86.8 + i * 0.6, t);
-      p.rotation.z = (i - 2) * 0.035 + u * 0.65;
+      p.rotation.x = -Math.PI / 2 + u * 0.16;
+      p.rotation.z = (i - 2) * 0.035 + u * 0.18;
     });
     // lamps buzz and one gutters
     this.lamps.forEach((l, i) => { l.intensity = 1.4 * (hash(Math.floor(t * 10) + i * 20) < (i ? 0.16 : 0.04) ? 0.25 : 1); });

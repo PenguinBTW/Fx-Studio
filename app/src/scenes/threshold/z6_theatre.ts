@@ -54,6 +54,7 @@ export default class ThresholdZ6Theatre extends Scene {
   private curtainL!: THREE.Mesh;
   private curtainR!: THREE.Mesh;
   private lint = new THREE.Group();
+  private lintWings: THREE.Mesh[] = [];
   private lintInst?: GLTFInstance;
   private theatreKit?: GLTFInstance;
   private tableau = new THREE.Group();
@@ -310,7 +311,21 @@ export default class ThresholdZ6Theatre extends Scene {
     const lintButton = this.mat(0x070403, 0.22, 0, 0x090302, 0.18);
     const lintThread = this.mat(0x090504, 0.86);
     for (const side of [-1, 1]) {
-      this.sphere(this.lint, 0.028, [side * 0.034, -0.002, -0.006], lintWingMat, [1.65, 0.12, 0.86]);
+      const broadWing = this.sphere(this.lint, 0.028, [side * 0.034, -0.002, -0.006], lintWingMat, [1.65, 0.12, 0.86]);
+      broadWing.userData.side = side;
+      this.lintWings.push(broadWing);
+      for (let vein = 0; vein < 3; vein++) {
+        const spread = (vein - 1) * 0.018;
+        const pts = [
+          new THREE.Vector3(side * 0.006, 0.001, 0.006),
+          new THREE.Vector3(side * (0.026 + vein * 0.006), 0.004, -0.008 + spread),
+          new THREE.Vector3(side * (0.052 + vein * 0.005), 0.002, -0.022 + spread * 0.7),
+        ];
+        const vgeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 6, 0.00045, 5, false);
+        const vmesh = new THREE.Mesh(vgeo, lintThread);
+        this.lint.add(vmesh);
+        this.disposables.push(vgeo);
+      }
       for (let scallop = 0; scallop < 4; scallop++) {
         this.sphere(this.lint, 0.009, [side * (0.018 + scallop * 0.014), -0.006, -0.029 - scallop * 0.002], lintWingEdge, [1.2, 0.16, 0.8]);
       }
@@ -399,6 +414,11 @@ export default class ThresholdZ6Theatre extends Scene {
       const wr = this.lintInst?.parts.get('wing_r');
       if (wl) wl.rotation.z = (landed ? 0.34 : 0.28) + flap;
       if (wr) wr.rotation.z = -(landed ? 0.34 : 0.28) - flap;
+      this.lintWings.forEach((wing) => {
+        const side = wing.userData.side as number;
+        const settle = landed ? smooth((t - 141.5) / 1.4) : 1;
+        wing.rotation.z = side * (0.08 + 0.18 * settle + 0.025 * Math.sin(st * 2.4 + side));
+      });
       this.lint.rotation.y = t < 143.5 ? -0.75 : -0.3 + 0.18 * Math.sin(st * 5);
     }
 
