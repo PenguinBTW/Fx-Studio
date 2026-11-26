@@ -5,6 +5,8 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { evalFirstPerson, applyFirstPersonCamera, type FPKey, type GaitName } from './fp_cam';
 import { FlashlightRig, beamStateAt } from './flashlight';
 import { thresholdPost } from './sensor_post';
+import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
+import vendingMachinesUrl from './assets/z7_vending_machines/model.glb?url';
 
 const clamp = (x: number, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -59,7 +61,10 @@ export default class ThresholdZ7Cathedral extends Scene {
   private flash = new FlashlightRig();
   private machineBodies!: THREE.InstancedMesh;
   private machineFronts!: THREE.InstancedMesh;
+  private machineFrames!: THREE.InstancedMesh;
   private machineData: { x: number; y: number; z: number; seed: number }[] = [];
+  private heroMachinesL?: GLTFInstance;
+  private heroMachinesR?: GLTFInstance;
   private tenant = new THREE.Group();
   private reachArm = new THREE.Group();
   private lint = new THREE.Group();
@@ -172,7 +177,7 @@ export default class ThresholdZ7Cathedral extends Scene {
     this.s.add(this.reachArm);
   }
 
-  override init() {
+  override async init() {
     this.s.background = new THREE.Color(0x020407);
     this.s.fog = new THREE.FogExp2(0x020407, 0.012);
 
@@ -200,7 +205,18 @@ export default class ThresholdZ7Cathedral extends Scene {
     this.machineFronts = new THREE.InstancedMesh(frontGeo, frontMat, count);
     this.machineBodies.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(count * 3), 3);
     this.machineFronts.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(count * 3), 3);
+    const frameGeo = new THREE.BoxGeometry(1, 1, 1);
+    const frameMat = new THREE.MeshStandardMaterial({ color: 0x080d13, roughness: 0.42, metalness: 0.68 });
+    this.disposables.push(frameGeo, frameMat);
+    this.machineFrames = new THREE.InstancedMesh(frameGeo, frameMat, count * 7);
     let k = 0;
+    let frameIndex = 0;
+    const setFramePiece = (x: number, y: number, z: number, sx: number, sy: number, sz: number, hidden: boolean) => {
+      this.tmpP.set(x, y, z);
+      this.tmpS.set(hidden ? 0.0001 : sx, hidden ? 0.0001 : sy, hidden ? 0.0001 : sz);
+      this.tmpM.compose(this.tmpP, this.tmpQ, this.tmpS);
+      this.machineFrames.setMatrixAt(frameIndex++, this.tmpM);
+    };
     for (const side of [-1, 1]) {
       for (let r = 0; r < rows; r++) {
         for (let lev = 0; lev < levels; lev++) {
@@ -209,12 +225,22 @@ export default class ThresholdZ7Cathedral extends Scene {
           const x = side * (14.4 + 0.25 * hash(lev * 13 + r));
           this.tmpP.set(x, y, z);
           this.tmpQ.identity();
-          this.tmpS.set(1 + 0.05 * hash(k), 1, 0.9 + 0.14 * hash(k * 2));
+          const heroCovered = side === -1 && r <= 2 && lev === 0;
+          this.tmpS.set(heroCovered ? 0.0001 : 1 + 0.05 * hash(k), heroCovered ? 0.0001 : 1, heroCovered ? 0.0001 : 0.9 + 0.14 * hash(k * 2));
           this.tmpM.compose(this.tmpP, this.tmpQ, this.tmpS);
           this.machineBodies.setMatrixAt(k, this.tmpM);
           this.tmpP.set(x - side * 0.48, y + 0.05, z);
           this.tmpM.compose(this.tmpP, this.tmpQ, this.tmpS);
           this.machineFronts.setMatrixAt(k, this.tmpM);
+          const fx = x - side * 0.54;
+          const fy = y + 0.05;
+          setFramePiece(fx, fy + 0.86, z, 0.08, 0.075, 2.05, heroCovered);
+          setFramePiece(fx, fy - 0.86, z, 0.08, 0.075, 2.05, heroCovered);
+          setFramePiece(fx, fy, z - 0.98, 0.08, 1.78, 0.07, heroCovered);
+          setFramePiece(fx, fy, z + 0.98, 0.08, 1.78, 0.07, heroCovered);
+          setFramePiece(fx - side * 0.012, fy - 0.28, z, 0.045, 0.035, 1.72, heroCovered);
+          setFramePiece(fx - side * 0.012, fy + 0.25, z, 0.045, 0.035, 1.72, heroCovered);
+          setFramePiece(fx - side * 0.012, fy + 0.68, z, 0.045, 0.03, 1.72, heroCovered);
           this.machineData.push({ x, y, z, seed: hash(k * 3.7) });
           k++;
         }
@@ -222,7 +248,8 @@ export default class ThresholdZ7Cathedral extends Scene {
     }
     this.machineBodies.instanceMatrix.needsUpdate = true;
     this.machineFronts.instanceMatrix.needsUpdate = true;
-    this.s.add(this.machineBodies, this.machineFronts);
+    this.machineFrames.instanceMatrix.needsUpdate = true;
+    this.s.add(this.machineBodies, this.machineFronts, this.machineFrames);
 
     // Upside-down ceiling machine hints 60 m overhead.
     for (let z = -12; z > -190; z -= 9) {
@@ -305,6 +332,30 @@ export default class ThresholdZ7Cathedral extends Scene {
     this.box(this.s, [1.7, 2.3, 1.0], [0, 1.15, -170], chrome);
     this.box(this.s, [1.1, 0.18, 0.04], [0, 1.65, -169.45], new THREE.MeshBasicMaterial({ color: 0x9fdcff }));
 
+    // Full-detail hero vending-machine family near the first wall walk. The instanced
+    // walls carry the 200m cathedral scale; these GLB machines supply close-range door
+    // edges, product slots, coils, keypads, flaps and damage/wear readable in the beam.
+    const [heroL, heroR] = await Promise.all([
+      GLTFManager.instantiate(vendingMachinesUrl, { castShadow: true, receiveShadow: true }),
+      GLTFManager.instantiate(vendingMachinesUrl, { castShadow: true, receiveShadow: true }),
+    ]);
+    this.heroMachinesL = heroL;
+    this.heroMachinesR = heroR;
+    for (const inst of [heroL, heroR]) {
+      const modules = inst.parts.get('variant_modules');
+      if (modules) modules.visible = false;
+      this.s.add(inst.root);
+    }
+    heroL.root.position.set(-14.2, 0, -5.5);
+    heroL.root.rotation.y = Math.PI / 2;
+    heroR.root.position.set(14.2, 0, -12.5);
+    heroR.root.rotation.y = -Math.PI / 2;
+    const heroLightL = new THREE.PointLight(0x72c9ff, 0.75, 5.5, 1.6);
+    heroLightL.position.set(-13.2, 1.7, -5.7);
+    const heroLightR = new THREE.PointLight(0x72c9ff, 0.45, 5.5, 1.6);
+    heroLightR.position.set(13.2, 1.7, -12.7);
+    this.s.add(heroLightL, heroLightR);
+
     // Lint with warm relight glow.
     const lintBody = this.mat(0x704222, 0.98);
     const lintWing = this.mat(0x9a6035, 0.98);
@@ -351,6 +402,13 @@ export default class ThresholdZ7Cathedral extends Scene {
 
     // Machine wave and chase darkness are pure timeline functions.
     this.updateMachineWave(t, this.cam.position.z);
+    const heroOn = smooth((t - 154.0) / 0.35) * (t >= 168 && t < 176 ? 1 - smooth((-this.cam.position.z - 3) / 8) : 1);
+    for (const inst of [this.heroMachinesL, this.heroMachinesR]) {
+      const cold = inst?.materials.get('ColdMachineLight') as THREE.MeshStandardMaterial | undefined;
+      const warm = inst?.materials.get('WarmProductLabel') as THREE.MeshStandardMaterial | undefined;
+      if (cold) cold.emissiveIntensity = 5.5 * heroOn;
+      if (warm) warm.emissiveIntensity = 0.45 * heroOn;
+    }
 
     // Assembly cascade: debris rolls inward and stacks into the full Tenant.
     const asm = smooth((t - 163) / 5);
@@ -437,8 +495,11 @@ export default class ThresholdZ7Cathedral extends Scene {
 
   override dispose() {
     this.flash.dispose();
+    this.heroMachinesL?.dispose();
+    this.heroMachinesR?.dispose();
     for (const d of this.disposables) d.dispose();
     this.machineBodies?.dispose();
     this.machineFronts?.dispose();
+    this.machineFrames?.dispose();
   }
 }
