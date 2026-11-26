@@ -4,6 +4,7 @@ import type * as THREE from 'three';
 import type { Frame, PostOverrides } from '../engine/scene';
 import type { Transition, TransitionAPI, TransitionCtx } from '../engine/transition';
 import { FSPass } from '../engine/gl';
+import { smoothstep } from '../engine/util';
 
 export type ThresholdTransitionMode = 'blackout' | 'exposure' | 'tunnel' | 'ink' | 'pageSlam' | 'staticFelt' | 'doorPush' | 'lightFall';
 
@@ -195,7 +196,7 @@ const BODY: Record<ThresholdTransitionMode, string> = {
 export class ThresholdShaderTransition implements Transition {
   private pass: FSPass;
 
-  constructor(private ctx: TransitionCtx, mode: ThresholdTransitionMode) {
+  constructor(private ctx: TransitionCtx, private mode: ThresholdTransitionMode) {
     this.pass = new FSPass(`
       uniform sampler2D texA;
       uniform sampler2D texB;
@@ -220,6 +221,12 @@ export class ThresholdShaderTransition implements Transition {
     this.ctx.renderer.resetState();
     // Scene post fades/flashes are global post parameters, not per-texture effects. Suppress them
     // inside the seam; each THRESHOLD transition owns its black/white/fibre treatment here.
-    return { flash: 0, fade: 0 };
+    // Exposure carries the outgoing office flash for the first instants of T1 instead
+    // of cutting it off at the seam boundary; the shader whiteout is already rising,
+    // so this bridge removes the one-frame black hole without extending the seam.
+    const flashCarry = this.mode === 'exposure'
+      ? smoothstep(29.35, 30.0, _f.t) * 1.8 * (1 - smoothstep(0, 0.18, api.u))
+      : 0;
+    return { flash: flashCarry, fade: 0 };
   }
 }
