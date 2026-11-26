@@ -106,6 +106,12 @@ for i in range(18):
     sgn=-1 if i<9 else 1; j=i%9
     x=sgn*(.18+j*.018); z=1.92-j*.035; y=-.02+random.uniform(-.025,.025)
     cube(f'shoulder_loose_strip_{i+1:02d}',(x,y,z),(.025,.014,.34+random.uniform(-.04,.08)),paper2,rot=(random.uniform(-.12,.12),random.uniform(-.1,.1),sgn*(.12+j*.025)),bevel=.003).parent=root
+# Preserve authored world-space placement for children of non-root control empties.
+# Blender parenting otherwise reinterprets their authored coordinates in the control's
+# local frame, doubling the spine/arm offsets and exploding the canonical pose.
+for o in bpy.data.objects:
+    if o.parent and o.parent.name in {'spine_control','arm_l_root','arm_r_root'}:
+        o.matrix_parent_inverse=o.parent.matrix_world.inverted()
 # export
 bpy.ops.object.select_all(action='SELECT')
 out=os.path.join(HERE,'model.glb')

@@ -1,0 +1,86 @@
+{
+  "project": "w2preview",
+  "size": [
+    1280,
+    720
+  ],
+  "fps": 60,
+  "entries": [
+    {
+      "scene": "w2preview/asset_turntable",
+      "id": "z1_ceiling_breather_flash",
+      "start": 0,
+      "end": 18,
+      "params": {
+        "asset": "z1_ceiling_breather"
+      }
+    },
+    {
+      "scene": "w2preview/asset_turntable",
+      "id": "z2_pit_swimmer_flash",
+      "start": 18,
+      "end": 36,
+      "params": {
+        "asset": "z2_pit_swimmer"
+      }
+    },
+    {
+      "scene": "w2preview/asset_turntable",
+      "id": "z3_mirrorling_flash",
+      "start": 36,
+      "end": 54,
+      "params": {
+        "asset": "z3_mirrorling"
+      }
+    },
+    {
+      "scene": "w2preview/asset_turntable",
+      "id": "z4_archivist_flash",
+      "start": 54,
+      "end": 72,
+      "params": {
+        "asset": "z4_archivist"
+      }
+    },
+    {
+      "scene": "w2preview/asset_turntable",
+      "id": "z1_ceiling_breather_silhouette",
+      "start": 72,
+      "end": 90,
+      "params": {
+        "asset": "z1_ceiling_breather",
+        "silhouette": true
+      }
+    },
+    {
+      "scene": "w2preview/asset_turntable",
+      "id": "z2_pit_swimmer_silhouette",
+      "start": 90,
+      "end": 108,
+      "params": {
+        "asset": "z2_pit_swimmer",
+        "silhouette": true
+      }
+    },
+    {
+      "scene": "w2preview/asset_turntable",
+      "id": "z3_mirrorling_silhouette",
+      "start": 108,
+      "end": 126,
+      "params": {
+        "asset": "z3_mirrorling",
+        "silhouette": true
+      }
+    },
+    {
+      "scene": "w2preview/asset_turntable",
+      "id": "z4_archivist_silhouette",
+      "start": 126,
+      "end": 144,
+      "params": {
+        "asset": "z4_archivist",
+        "silhouette": true
+      }
+    }
+  ]
+}
