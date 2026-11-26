@@ -1,0 +1,27 @@
+{
+  "project": "threshold",
+  "size": [1920, 1080],
+  "trimToTimeline": true,
+  "entries": [
+    { "scene": "threshold/z0_coldopen", "id": "coldopen", "start": 0, "end": 4.2 },
+    { "scene": "threshold/z1_office", "id": "office", "start": 3.8, "end": 30.4 },
+    { "scene": "threshold/z2_playroom", "id": "playroom", "start": 29.6, "end": 55.4 },
+    { "scene": "threshold/z3_pool", "id": "pool", "start": 54.6, "end": 80.6 },
+    { "scene": "threshold/z4_library", "id": "library", "start": 79.4, "end": 105.3 },
+    { "scene": "threshold/z5_motel", "id": "motel", "start": 104.7, "end": 130.6 },
+    { "scene": "threshold/z6_theatre", "id": "theatre", "start": 129.4, "end": 150.5 },
+    { "scene": "threshold/z7_cathedral", "id": "cathedral", "start": 149.5, "end": 195.6 },
+    { "scene": "threshold/z8_home", "id": "home", "start": 194.4, "end": 225 },
+    { "scene": "threshold/endscreen", "id": "endscreen", "start": 225, "end": 235 }
+  ],
+  "transitions": [
+    { "id": "t0", "transition": "threshold_blackout", "from": "coldopen", "to": "office", "at": 3.8, "dur": 0.4 },
+    { "id": "t1", "transition": "threshold_exposure", "from": "office", "to": "playroom", "at": 29.6, "dur": 0.8 },
+    { "id": "t2", "transition": "threshold_tunnel", "from": "playroom", "to": "pool", "at": 54.6, "dur": 0.8 },
+    { "id": "t3", "transition": "threshold_ink", "from": "pool", "to": "library", "at": 79.4, "dur": 1.2 },
+    { "id": "t4", "transition": "threshold_page_slam", "from": "library", "to": "motel", "at": 104.7, "dur": 0.6 },
+    { "id": "t5", "transition": "threshold_static_felt", "from": "motel", "to": "theatre", "at": 129.4, "dur": 1.2 },
+    { "id": "t6", "transition": "threshold_door_push", "from": "theatre", "to": "cathedral", "at": 149.5, "dur": 1.0 },
+    { "id": "t7", "transition": "threshold_light_fall", "from": "cathedral", "to": "home", "at": 194.4, "dur": 1.2 }
+  ]
+}
