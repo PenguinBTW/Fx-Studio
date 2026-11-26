@@ -6,24 +6,25 @@ This plan operationalizes `storyboard.md` and `looks.md`; it does not replace th
 
 | Owner | Owned work |
 |---|---|
-| W1 lead / integrator | `project.json`, `build_plan.md`, shared first-person rig, gait presets, flashlight rig/beam/battery/flicker/haze, sensor post layer, exposure adaptation, shared materials/decals/particles, `assets/_bl.py`, beige phone core and variants, Tenant shared asset plan/core LODs, Lint shared asset, all transitions T0-T8, audio cue/mix architecture, integration, final seam evidence. |
+| W1 lead / integrator | `project.json`, `build_plan.md`, `z0_coldopen` integration scene, shared first-person rig, gait presets, flashlight rig/beam/battery/flicker/haze, sensor post layer, exposure adaptation, shared premise/typography utility, shared materials/decals/particles, `assets/_bl.py`, beige phone core and variants, Tenant shared asset plan/core LODs, Lint shared asset, engine transitions T0-T7 plus T8 in-world doorway integration support, audio cue/mix architecture, integration, final seam evidence. |
 | W2 zones A | Scene files and zone dressing for Z1-Z4: `z1_office`, `z2_playroom`, `z3_pool`, `z4_library`; zone environment/prop kits; Ceiling Breather, Pit Swimmer, Mirrorling, Archivist; their zone-specific asset folders and turntables. |
-| W3 zones B | Scene files and zone dressing for Z5-Z8+ending: `z5_motel`, `z6_theatre`, `z7_cathedral`, `z8_home`, `endscreen`; zone environment/prop kits; CCTV/motel systems, theatre puppets, vending machine systems, cathedral assembly/rift/fall, home loop; zone-specific asset folders and turntables. |
+| W3 zones B | Scene files and zone dressing for Z5-Z8+ending: `z5_motel`, `z6_theatre`, `z7_cathedral`, `z8_home`, `endscreen`; zone environment/prop kits; CCTV/motel systems, theatre puppets, vending machine systems, cathedral assembly/rift/fall, home loop; zone-specific asset folders and turntables. W3 owns the Z7 cathedral assets reused by `z0_coldopen`; W1 owns the cold-open scene integration itself. |
 
 Shared assets may be placed and animated by W2/W3, but their source files are W1-owned. Zone files remain W2/W3-owned. Any cross-ownership change goes through the orchestrator as an exact diff.
 
 ## 2. Build order and gates
 
-1. **Foundation now:** world bible, build plan, `project.json`, shared kit skeleton, `_bl.py`, grey-box placeholder scenes, transition framework.
-2. **G1 blockout:** every storyboard beat rendered as labelled grey-box stills/sheets with real timing, scale, gait, beam state and transition windows. User sign-off happens once here.
-3. **G2 vertical slice:** shared kit plus Z1 finished to final quality first. No other zone passes blockout until G2 sets the bar.
-4. **Asset wave A (shared dependencies):** beige phone core, Tenant arm-only LOD, Lint blockout, shared dust/footprint/decal kits, flashlight/sensor kit.
-5. **Asset wave B (zone creatures):** Ceiling Breather, Pit Swimmer, Mirrorling, Archivist in parallel with zone kits.
-6. **Asset wave C (late zones):** Tenant upper/full LODs, theatre puppet kit, vending-machine family, home kit.
-7. **G3 full grey-box timeline:** all zones in `project.json`, real overlaps, camera and timing.
-8. **G4 asset quality:** all GLBs pass manifests, triangle budgets, named parts, scale and turntable review.
-9. **G5 integration:** lighting, dressing, creature animation, transitions, room tones, footsteps and cue mix.
-10. **G6-G8 review loop:** stills, sheets, seams, audio only; no VM video renders.
+1. **Foundation now:** world bible, build plan, `project.json`, shared kit skeleton, `_bl.py`, and transition framework. W1 may create/wire `project.json` entry ids and shared integration scaffolding, but must not create or edit `z1`-`z8` or `endscreen` scene files; zone owners commit even placeholder versions of those files. The sole exception is W1-owned `z0_coldopen`.
+2. **Asset wave A blockout proxies:** beige phone core proxy, Tenant arm-only blockout, Lint blockout, shared dust/footprint/decal kits, flashlight/sensor kit. These land before G1 because Z0 and Z2-Z4 glimpse blockouts depend on them.
+3. **G1 blockout:** every storyboard beat rendered as labelled grey-box stills/sheets with real timing, scale, gait, beam state and transition windows. Include all five `z0_coldopen` beats and the exact 171.30-173.40 replay comparison strip. User sign-off happens once here.
+4. **G2 vertical slice:** shared kit plus Z1 finished to final quality first. No other zone passes blockout until G2 sets the bar.
+5. **Asset wave A final quality:** beige phone core, Tenant arm-only LOD, Lint, shared dust/footprint/decal kits, flashlight/sensor kit.
+6. **Asset wave B (zone creatures):** Ceiling Breather, Pit Swimmer, Mirrorling, Archivist in parallel with zone kits.
+7. **Asset wave C (late zones):** Tenant upper/full LODs, theatre puppet kit, vending-machine family, home kit.
+8. **G3 full grey-box timeline:** all zones in `project.json`, real overlaps, camera and timing.
+9. **G4 asset quality:** all GLBs pass manifests, triangle budgets, named parts, scale and turntable review.
+10. **G5 integration:** lighting, dressing, creature animation, transitions, room tones, footsteps and cue mix.
+11. **G6-G8 review loop:** stills, sheets, seams, audio only; no VM video renders.
 
 ## 3. Shared kit build list (W1)
 
@@ -37,11 +38,18 @@ Shared assets may be placed and animated by W2/W3, but their source files are W1
 | `assets/beige_phone/` | 1980s desk phone core: base, receiver, cord, hooks, 12 buttons, bell; desk variant. Variants planned: toy, floating/sealed, folded paper, payphone shell, felt puppet, vending product, wall-mounted. | `_bl.py` | 8k-15k core; variants 4k-18k each | 6-view turntable at 0.6/1.5/3m plus silhouette sheet |
 | `assets/tenant_shared/` | Shared Tenant plan and LOD geometry: `arm_only`, `upper_body`, `full`; named parts per looks.md; material collage slots. | `_bl.py`, zone material references | arm 25k-50k; upper 60k-110k; full 120k-200k | LOD turntables, silhouette sheet, parts/manifest check |
 | `assets/lint/` | Felt moth: body, wings, antennae, button eyes, glow abdomen, six legs. | `_bl.py` | 10k-25k | macro turntable because Z7 lens close-up; silhouette sheet |
+| shared premise/typography utility | Monospace lower-case typed premise line, cursor, timing, soft shadow and safe placement. Z1, Z8 and the later Short consume the same implementation. | `kit.ts`; engine text/canvas utilities | 2D cost only | typed-line stills at start/mid/hold/fade in Z1 placement and Short safe-zone placement |
 | shared decals/particles | Dust motes, insulation fibres, wet footprint decals, contact-shadow decals, seeded placement helpers. | `kit.ts` | GPU/instanced, budgeted per zone | beam/dust close-up sheet |
-| `app/src/transitions/threshold_*.ts` | T0-T8 framework and final transition implementations. | overlapping scenes in `project.json` | n/a | `--cuts` seam sheet plus explicit `--times` sheet at every window end |
+| `app/src/transitions/threshold_*.ts` | T0-T7 framework and final engine transition implementations. T8 is not an engine transition: it is the in-world home-to-office doorway inside `z8_home`; W1 supplies continuity guidance and seam evidence while W3 owns the scene. | overlapping scenes in `project.json` for T0-T7 only | n/a | `--cuts` seam sheet plus explicit `--times` sheets at one frame before each window end and the first post-transition frame |
 | audio/mix scripts | Zone room tones, surface footsteps locked to step phase, creature signatures, silence beats, transition crossfades, EBU R128 master target. No downloaded audio committed. | `fp_cam.ts` step events; zone telemetry | n/a | rendered WAV/MP3 artifact plus cue sheet; ffmpeg loudness readout |
 
 ## 4. Zone asset and prop responsibilities
+
+### Z0 cold open — W1 integration scene
+
+| asset id | Contents | Owner dependency | Est. triangles | Verification |
+|---|---|---|---|---|
+| `z0_coldopen` | Frame-0 sprint, whip look-back, stumble, floor-level Tenant arm reveal, dead-beam black. Reuses W3's Z7 cathedral environment and W1's shared first-person rig, beam and Tenant `arm_only` LOD. | W3 `z7_cathedral_kit` blockout; W1 rig/flashlight/Tenant arm | scene cost dominated by reused Z7 kit | five-beat grey-box sheet; exact Z0-vs-Z7 replay comparison strip at 171.30-173.40; dead-beam/black-frame stills |
 
 ### Z1 office — W2
 
@@ -130,7 +138,8 @@ Shared assets may be placed and animated by W2/W3, but their source files are W1
 - Labelled blockout/contact sheets: `.fx/captures/threshold/blockout/<zone_or_scope>.png`.
 - Turntable sheets: `.fx/captures/threshold/turntables/<assetId>_turntable.png` with six angles, three distances, flashlight-rig lighting, plus a silhouette version.
 - Zone strips: `.fx/captures/threshold/strips/z<N>_strip.png`.
-- Seam sheets: `.fx/captures/threshold/seams/seams_cuts.png` and `.fx/captures/threshold/seams/transition_ends.png`; transition ends must prove full incoming coverage.
+- Seam sheets: `.fx/captures/threshold/seams/seams_cuts.png` and `.fx/captures/threshold/seams/transition_ends.png`; transition-end sheets sample one frame before each window end (where the engine transition is still active) plus the first post-transition frame, proving both the completed blend and full incoming coverage.
+- Cold-open/replay comparison strip: `.fx/captures/threshold/strips/z0_z7_replay_171_30_173_40.png`, aligning the exact 171.30-173.40 Z7 replay frames to the corresponding cold-open frames.
 - Determinism pairs: render the same stills twice in separate runs and compare bytes or perceptual hashes.
 - Audio artifacts: generated mix WAV/MP3 outside git plus cue sheet/loudness output; never commit downloaded audio or copyrighted mixes.
 - Required checks before milestone reports: `bun run typecheck`, `bun run assets:check threshold`, relevant seam/determinism checks, manual inspection of actual stills for `SCENE ERRORS` and shader errors.
