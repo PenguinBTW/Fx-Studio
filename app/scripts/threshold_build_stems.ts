@@ -625,7 +625,7 @@ wav('z5_motel_events.wav', stem(25.7,(t)=>{
  const at=t+104.7; z5lp=z5lp*.87+noise()*.13; let l=0,r=0;
  const add=(v:number,pan=0)=>{const a=(pan+1)*Math.PI/4;l+=v*Math.cos(a);r+=v*Math.sin(a)};
  // End-window rain and unstable neon/ice-machine electrical bed.
- if(at>=105&&at<130){const rain=noise()*.009*(.55+.45*hash01(Math.floor(at*19),5));add(rain,.18);add(Math.sin(at*Math.PI*2*120)*.004*(1+.25*Math.sin(at*19)),.28);add(z5lp*.012,-.32)}
+ if(at>=105&&at<130){const bedDuck=1-.5*smoothstep(114.48,114.55,at)*(1-smoothstep(115.85,116.05,at));const rain=noise()*.009*(.55+.45*hash01(Math.floor(at*19),5));add(rain*bedDuck,.18);add(Math.sin(at*Math.PI*2*120)*.004*(1+.25*Math.sin(at*19))*bedDuck,.28);add(z5lp*.012*bedDuck,-.32)}
  // occasional compressor relay ticks
  for(const hit of[107.2,113.8,121.4,126.9]){const u=at-hit;if(u>0&&u<.05)add((noise()*.028+Math.sin(u*Math.PI*2*900)*.01)*Math.exp(-u*70),-.32)}
  // wet shoes compressing dense carpet, gait windows broad and deterministic
@@ -635,7 +635,7 @@ wav('z5_motel_events.wav', stem(25.7,(t)=>{
  for(const [st,pan] of[[105.6,.36],[107.4,-.34],[109.4,.34],[111.1,-.36],[113.2,.3]] as const){const u=at-st;if(at<114.5&&u>0&&u<1.1){const syll=Math.max(0,Math.sin(u*Math.PI*2*3.2));add((Math.sin(u*Math.PI*2*(160+60*Math.sin(u*8)))*.009+z5lp*.012)*syll*Math.exp(-u*.8),pan)}}
  // passing CRT static and cheap delayed CCTV feeds; all cut dead at 114.5
  if(at>=108.5&&at<111.5)add(noise()*.018*(.4+.6*hash01(Math.floor(at*37),8)),.34);
- if(at>=111.5&&at<114.5)add((noise()*.008+Math.sin(at*Math.PI*2*700)*.003)*(0.5+0.5*Math.sin(at*9)),.2);
+ if(at>=111.5&&at<114.5){add((noise()*.006+Math.sin(at*Math.PI*2*700)*.0025)*(0.5+0.5*Math.sin(at*9)),.2);for(let i=0;i<steps.length;i++){const u=at-steps[i]!-.16;if(u>0&&u<.13)add((z5lp*.024+Math.sin(u*Math.PI*2*190)*.009)*Math.exp(-u*24),(i%2?.18:-.18)+.08)}}
  // Lint at the sconce: felt wing bats plus tiny warm chirp
  if(at>=112.1&&at<112.8){const u=at-112.1;const flap=Math.abs(Math.sin(u*Math.PI*2*8));add(z5lp*.06*flap+Math.sin(u*Math.PI*2*980)*.006*flap,-.38)}
  // held breath negative space: tiny cloth movement and sparse rear drips only
@@ -717,7 +717,7 @@ wav('z7_cathedral_events.wav', stem(45.8,(t)=>{
  const add=(v:number,pan=0)=>{const a=(pan+1)*Math.PI/4;l+=v*Math.cos(a);r+=v*Math.sin(a)};
  // vast stone/machine nave pressure, then compressor-organ wake stack
  if(at>=150&&at<176)add(z7lp*.016+Math.sin(at*Math.PI*2*38)*.005,0);
- if(at>=154&&at<168){const sw=smoothstep(154,158,at);add((Math.sin(at*Math.PI*2*58)*.018+Math.sin(at*Math.PI*2*87)*.010+Math.sin(at*Math.PI*2*116)*.006)*sw,0)}
+ if(at>=154&&at<173.35){const sw=smoothstep(154,158,at);const off=at<168.2?0:Math.max(0,Math.min(15,Math.floor((at-168.2)/.48)+1));const subtract=1-off*.045;for(let row=0;row<8;row++){const hz=54+row*7+hash01(row,31)*3;const pan=-.52+row*.15;const rowWake=smoothstep(154+row*.28,157.2+row*.28,at);add((Math.sin(at*Math.PI*2*hz)*.010+Math.sin(at*Math.PI*2*hz*1.5)*.004)*sw*rowWake*subtract,pan)}}
  // sparse far coin drops with long nave echoes
  for(const hit of[151.4,154.8,156.7]){for(const [eo,m] of[[0,1],[.7,.38],[1.5,.18],[2.5,.08]] as const){const u=at-hit-eo;if(u>0&&u<.22)add((Math.sin(u*Math.PI*2*1150)*.018+noise()*.008)*Math.exp(-u*28)*m,0)}}
  // relay clunk wave sweeping row by row toward the camera
