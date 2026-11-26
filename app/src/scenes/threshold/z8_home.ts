@@ -24,8 +24,8 @@ const KEYS: PoseKey[] = [
   { t: 212.0, p: [0.58, 1.65, -5.75], yaw: 74, pitch: -2, fov: 66 },
   { t: 214.0, p: [0.68, 1.65, -5.9], yaw: 54, pitch: -4, fov: 60 },
   { t: 216.0, p: [0.66, 1.65, -5.95], yaw: 74, pitch: -2, fov: 64 },
-  { t: 218.0, p: [0.66, 1.65, -5.95], yaw: 76, pitch: 0, fov: 70 },
-  { t: 220.0, p: [0.66, 1.65, -5.95], yaw: 79, pitch: 0, fov: 74 },
+  { t: 218.0, p: [0.66, 1.65, -5.95], yaw: 68, pitch: 0, fov: 70 },
+  { t: 220.0, p: [0.7, 1.65, -6.1], yaw: 76, pitch: 0, fov: 74 },
   { t: 222.0, p: [0.95, 1.65, -6.45], yaw: 88, pitch: 0, fov: 74 },
   { t: 223.5, p: [2.4, 1.65, -6.8], yaw: 90, pitch: 0, fov: 74 },
   { t: 225.6, p: [4.6, 1.65, -6.8], yaw: 90, pitch: 0, fov: 74 },
@@ -119,7 +119,13 @@ export default class ThresholdZ8Home extends Scene {
     this.box(this.s, [2.7, 0.08, 10.4], [0, -0.04, -3.1], wood);
     for (let i = 0; i < 15; i++) this.box(this.s, [2.65, 0.012, 0.018], [0, 0.012, 1.6 - i * 0.68], woodDark);
     this.box(this.s, [0.12, 2.75, 10.4], [-1.36, 1.37, -3.1], cream);
-    this.box(this.s, [0.12, 2.75, 10.4], [1.36, 1.37, -3.1], cream);
+    const addRightWall = (zNear: number, zFar: number) => {
+      const len = zNear - zFar;
+      if (len > 0.02) this.box(this.s, [0.12, 2.75, len], [1.36, 1.37, (zNear + zFar) / 2], cream);
+    };
+    addRightWall(2.1, -3.15);
+    addRightWall(-4.65, -6.28);
+    addRightWall(-7.42, -8.3);
     this.box(this.s, [2.7, 0.1, 10.4], [0, 2.75, -3.1], cream);
     this.box(this.s, [2.7, 2.75, 0.12], [0, 1.37, 2.05], cream);
     this.box(this.s, [2.7, 2.75, 0.12], [0, 1.37, -8.25], cream);
@@ -198,7 +204,9 @@ export default class ThresholdZ8Home extends Scene {
 
     // Right-wall front door beside the wall-mounted beige phone.
     const doorMat = this.mat(0x5a321f, 0.55);
-    this.box(this.s, [0.1, 2.15, 1.05], [1.34, 1.07, -6.85], woodDark);
+    this.box(this.s, [0.1, 2.15, 0.08], [1.34, 1.07, -6.36], woodDark);
+    this.box(this.s, [0.1, 2.15, 0.08], [1.34, 1.07, -7.34], woodDark);
+    this.box(this.s, [0.1, 0.14, 1.05], [1.34, 2.08, -6.85], woodDark);
     this.doorGroup.position.set(1.34, 0, -7.32);
     const slab = this.box(this.doorGroup, [0.08, 2.0, 0.9], [0, 1.0, 0.43], doorMat);
     slab.castShadow = true;
@@ -236,6 +244,10 @@ export default class ThresholdZ8Home extends Scene {
     this.box(this.s, [0.14, 0.1, 0.42], [7.15, 1.0, -6.8], beige);
     for (let i = 0; i < 4; i++) this.box(this.s, [0.08, 1.45, 1.1], [3.1 + i * 1.2, 0.73, -5.45], officeWall, [0, 0.12 * (i % 2 ? 1 : -1), 0]);
 
+    const officeFluor = new THREE.PointLight(0xd8ffd0, 2.4, 8.5, 1.35);
+    officeFluor.position.set(3.8, 2.25, -6.8);
+    this.s.add(officeFluor);
+
     this.s.add(this.flash.group);
 
     const sun = new THREE.DirectionalLight(0xffb36b, 2.2);
@@ -261,7 +273,7 @@ export default class ThresholdZ8Home extends Scene {
 
     // Door handle turns, then the front door opens onto the office loop.
     this.handle.rotation.y = smooth((t - 214) / 2.0) * 0.9;
-    this.doorGroup.rotation.y = -smooth((t - 218) / 3.2) * 1.65;
+    this.doorGroup.rotation.y = smooth((t - 217.5) / 2.0) * 1.65;
 
     // Warm lamp is deliberately shadowless; its glow is steady and wrong.
     this.lampGlow.emissiveIntensity = 2.2 + 0.15 * Math.sin(t * 2.1);

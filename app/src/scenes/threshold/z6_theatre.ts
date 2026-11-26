@@ -188,6 +188,8 @@ export default class ThresholdZ6Theatre extends Scene {
     // spread across the stage simultaneously; each 1.5s puppet scene gets the full proscenium.
     const makeRecap = () => {
       const g = new THREE.Group();
+      g.scale.setScalar(1.35);
+      g.position.set(0, -0.15, 2.3);
       g.visible = false;
       this.s.add(g);
       this.recapScenes.push(g);
@@ -225,8 +227,8 @@ export default class ThresholdZ6Theatre extends Scene {
     this.box(this.houseTableau, [0.12, 0.36, 0.08], [-0.08, 0.86, -6.54], this.mat(0xe5d8a6, 0.95));
     this.box(this.houseTableau, [0.16, 0.65, 0.12], [-0.8, 1.05, -6.56], this.mat(0x2b2024, 0.95));
     this.box(this.houseTableau, [0.42, 0.08, 0.1], [-0.8, 1.34, -6.56], this.mat(0x51323b, 0.95));
-    this.houseTableau.scale.setScalar(1.55);
-    this.houseTableau.position.set(0, -0.35, 3.75);
+    this.houseTableau.scale.setScalar(2.1);
+    this.houseTableau.position.set(0, -0.6, 8.32);
     this.houseTableau.visible = false;
     this.s.add(this.houseTableau);
 
@@ -267,8 +269,8 @@ export default class ThresholdZ6Theatre extends Scene {
     const button = this.mat(0x050505, 0.28);
     const glow = this.mat(0xff8c2a, 0.55, 0, 0xff7418, 4.2);
     this.cyl(this.lint, 0.032, 0.045, 0.14, [0, 0, 0], lintBody, 10).rotation.x = Math.PI / 2;
-    this.sphere(this.lint, 0.075, [-0.085, 0, 0.005], lintWing, [1.3, 0.13, 0.75]).rotation.z = 0.35;
-    this.sphere(this.lint, 0.075, [0.085, 0, 0.005], lintWing, [1.3, 0.13, 0.75]).rotation.z = -0.35;
+    this.sphere(this.lint, 0.07, [-0.12, 0, 0.005], lintWing, [1.3, 0.13, 0.75]).rotation.z = 0.35;
+    this.sphere(this.lint, 0.07, [0.12, 0, 0.005], lintWing, [1.3, 0.13, 0.75]).rotation.z = -0.35;
     this.sphere(this.lint, 0.015, [-0.018, 0.025, 0.065], button);
     this.sphere(this.lint, 0.015, [0.018, 0.025, 0.065], button);
     this.sphere(this.lint, 0.005, [-0.014, 0.032, 0.077], this.mat(0xffe0b0, 0.5, 0, 0xffc47a, 1.2));
