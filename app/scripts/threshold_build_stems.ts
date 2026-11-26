@@ -729,7 +729,7 @@ wav('z7_cathedral_events.wav', stem(45.8,(t)=>{
  // product-drop cascade: balls, tile, paper, felt, coils converging center
  if(at>=163&&at<165.2){const u=at-163;const cell=Math.floor(u*28);const cu=(u*28-cell)/28;if(cu<.16){const hz=260+hash01(cell,9)*1450;const pan=(hash01(cell,10)-.5)*(1-u/2.2);add((noise()*.042+Math.sin(cu*Math.PI*2*hz)*.018)*Math.exp(-cu*35),pan)}}
  // Tenant assembly: object-specific snaps, creases, knocks and extending coils
- if(at>=164.5&&at<168){const u=at-164.5;const pulse=Math.max(0,Math.sin(u*Math.PI*2*2.4));add((z7lp*(.05+u*.018)+noise()*.026+Math.sin((190*u+27.5*u*u)*Math.PI*2)*.024)*pulse,0)}
+ if(at>=163&&at<166.4){const u=at-163;const pulse=Math.max(0,Math.sin(u*Math.PI*2*2.4));add((z7lp*(.05+u*.018)+noise()*.026+Math.sin((190*u+27.5*u*u)*Math.PI*2)*.024)*pulse,0)}
  // huge hollow material inhalation, intermittent pressure rather than voice
  if(at>=166.5&&at<173.35){const c=(at-166.5)%2.7;if(c<1.15){const gate=Math.sin(Math.PI*c/1.15)**1.4;add((z7lp*.13+Math.sin(at*Math.PI*2*74)*.024)*gate,0)}}
  // hard stone chase steps with nave slap
