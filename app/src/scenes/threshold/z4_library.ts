@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { thresholdPost } from './sensor_post';
-import { addFlashlight, applyFpCamera, basic, box, clamp, cyl, disposeTree, hash, mat, plane, smooth, sph, updateFlashlight, type CamKey } from './z1_fp_local';
+import { addFlashlight, applyFpCamera, basic, box, clamp, cyl, disposeTree, hash, mat, plane, smooth, sph, updateFlashlight, type CamKey } from './z1_scene_util';
 
 const KEYS: CamKey[] = [
   { t: 80, pos: [0, 1.1, -1.5], look: [0, 0.85, 2], fov: 78, gait: 'creep' },
@@ -12,7 +12,7 @@ const KEYS: CamKey[] = [
   { t: 87.8, pos: [0, 1.65, 4.0], look: [0, 0.95, 6.0], fov: 74, gait: 'walk' },
   { t: 90.5, pos: [0, 1.65, 5.0], look: [2.4, 2.8, 10], fov: 74, gait: 'still' },
   { t: 92.7, pos: [0, 1.65, 5.2], look: [0.8, 1.0, 7.0], fov: 74, gait: 'still' },
-  { t: 94.8, pos: [0, 1.65, 5.2], look: [1.2, 3.0, 1.3], fov: 76, gait: 'still' },
+  { t: 94.8, pos: [0, 1.65, 5.2], look: [0.95, 2.55, 1.3], fov: 64, gait: 'still' },
   { t: 97.0, pos: [0, 1.65, 4.5], look: [0, 2.8, 9.0], fov: 78, gait: 'run' },
   { t: 99.0, pos: [0, 1.65, 3.6], look: [0, 2.2, 9.5], fov: 82, gait: 'run' },
   { t: 101.5, pos: [0, 1.55, 7.0], look: [0, 1.0, 25], fov: 84, gait: 'run' },
@@ -120,7 +120,7 @@ export default class ThresholdZ4Library extends Scene {
       const pg = box(this.archivist, `z4_archivist_torso_page_${i}`, [0.52, 1.55, 0.025], [(i - 5.5) * 0.012, 0.8 + i * 0.015, -0.018 * i], i % 2 ? paper : paper2, [0, (i - 5.5) * 0.12, (i - 5.5) * 0.018]);
       pg.scale.x = 1 - Math.abs(i - 5.5) * 0.035;
     }
-    plane(this.archivist, 'z4_archivist_blank_face', 0.62, 0.82, [0, 1.78, 0.02], paper, [0, 0, 0]);
+    plane(this.archivist, 'z4_archivist_blank_face', 0.62, 0.82, [0, 1.78, 0.02], mat(0xd8caa2, 0.68, 0, 0x2a1d10, 0.08), [0, 0, 0]);
     box(this.archivist, 'z4_archivist_face_edge_l', [0.035, 0.88, 0.025], [-0.34, 1.78, -0.025], mat(0x352719, 0.82));
     box(this.archivist, 'z4_archivist_face_edge_r', [0.035, 0.88, 0.025], [0.34, 1.78, -0.025], mat(0x352719, 0.82));
     box(this.archivist, 'z4_archivist_brow_fold', [0.68, 0.04, 0.03], [0, 2.18, -0.02], mat(0x352719, 0.82));
@@ -152,7 +152,8 @@ export default class ThresholdZ4Library extends Scene {
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
     const t = f.t;
     applyFpCamera(this.cam, KEYS, t, out.width / out.height);
-    updateFlashlight(this.flash.light, this.flash.target, this.cam, t, 0.45, t > 98 ? 0.22 : 0.04);
+    const archivistBeam = 1 - 0.34 * smooth(94.0, 94.8, t) * (1 - smooth(99.0, 100.0, t));
+    updateFlashlight(this.flash.light, this.flash.target, this.cam, t, 0.45 * archivistBeam, t > 98 ? 0.22 : 0.04);
     // motes hang and drift deterministically
     this.motes.forEach((m, i) => { m.position.y += Math.sin(t * 0.35 + i) * 0.0008; m.position.x += Math.cos(t * 0.27 + i * 2) * 0.0005; });
     // ledger writes itself: pages lift one by one, ink lines emerge as thin dark strips

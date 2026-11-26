@@ -1,9 +1,9 @@
 // Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
-// Z3 tiled pool halls: deterministic grey-box beat blockout with real scale/camera path; local rig is W2 scaffolding pending W1's shared kit.
+// Z3 tiled pool halls: deterministic grey-box beat blockout with real scale/camera path; uses W1's stabilized first-person/flashlight/sensor kit through the owned look-target adapter.
 import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { thresholdPost } from './sensor_post';
-import { addFlashlight, applyFpCamera, basic, box, clamp, cyl, disposeTree, hash, mat, plane, smooth, sph, updateFlashlight, type CamKey } from './z1_fp_local';
+import { addFlashlight, applyFpCamera, basic, box, clamp, cyl, disposeTree, hash, mat, plane, smooth, sph, updateFlashlight, type CamKey } from './z1_scene_util';
 
 const KEYS: CamKey[] = [
   { t: 55, pos: [0, 1.65, 6.4], look: [0, 1.2, -2], fov: 74, gait: 'walk' },
@@ -62,11 +62,32 @@ export default class ThresholdZ3Pool extends Scene {
       box(this.s, `z3_tile_h_l_${z}`, [0.012, 0.012, 0.45], [-4.0, 2.1, z], grout);
       box(this.s, `z3_tile_h_r_${z}`, [0.012, 0.012, 0.45], [4.0, 2.1, z], grout);
     }
+    // dense ceramic tile structure: horizontal/vertical grout on both walls, blue mosaic waterline bands,
+    // and a continuous pool-edge gutter so the volume reads as a natatorium rather than a parking garage.
+    for (const side of [-1, 1]) {
+      const x = side * 3.995;
+      for (let y = 0.65; y <= 4.15; y += 0.5) box(this.s, `z3_wall_grout_h_${side}_${y.toFixed(1)}`, [0.018, 0.018, 29.5], [x, y, -7], grout);
+      for (let z = -21.5; z <= 7; z += 0.75) box(this.s, `z3_wall_grout_v_${side}_${z.toFixed(2)}`, [0.018, 3.55, 0.018], [x, 2.35, z], grout);
+      box(this.s, `z3_mosaic_waterline_${side}`, [0.022, 0.18, 29.5], [side * 3.985, 1.06, -7], mat(0x126eab, 0.28));
+      box(this.s, `z3_pool_edge_gutter_${side}`, [0.24, 0.075, 27.5], [side * 3.78, 0.49, -6.3], mat(0xe7f2ed, 0.34));
+      box(this.s, `z3_gutter_shadow_${side}`, [0.08, 0.045, 27.5], [side * 3.64, 0.475, -6.3], mat(0x061c22, 0.7));
+    }
+    // simplified block numerals/depth ticks on the end wall, legible as pool depth signage even in grey-box.
+    for (let i = 0; i < 4; i++) {
+      box(this.s, `z3_depth_marker_digit_${i}`, [0.12, 0.34 - (i % 2) * 0.1, 0.018], [-1.1 + i * 0.28, 2.05, -22.49], mat(0x0b3750, 0.4));
+    }
+    box(this.s, 'z3_depth_marker_m', [0.34, 0.22, 0.018], [0.35, 2.04, -22.49], mat(0x0b3750, 0.4));
+
     // columns and repeating arch openings
     for (let z = 2; z >= -20; z -= 4) {
       box(this.s, `z3_column_l_${z}`, [0.46, 3.8, 0.46], [-3.72, 1.9, z], tileB);
       box(this.s, `z3_column_r_${z}`, [0.46, 3.8, 0.46], [3.72, 1.9, z], tileB);
       box(this.s, `z3_arch_lintel_${z}`, [7.4, 0.28, 0.35], [0, 3.5, z], tileA);
+      for (const side of [-1, 1]) for (let band = 0; band < 5; band++) {
+        box(this.s, `z3_column_tile_band_${z}_${side}_${band}`, [0.5, 0.018, 0.5], [side * 3.72, 0.8 + band * 0.58, z], grout);
+      }
+      box(this.s, `z3_column_mosaic_l_${z}`, [0.51, 0.16, 0.51], [-3.72, 1.16, z], mat(0x126eab, 0.3));
+      box(this.s, `z3_column_mosaic_r_${z}`, [0.51, 0.16, 0.51], [3.72, 1.16, z], mat(0x126eab, 0.3));
     }
     // water plane and lane-rope/pipe details
     this.waterMat = mat(0x1a8c9d, 0.04, 0.18, 0x073f4a, 0.28) as THREE.MeshStandardMaterial;

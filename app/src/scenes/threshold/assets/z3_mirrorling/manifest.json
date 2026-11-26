@@ -1,0 +1,12 @@
+{
+  "model": "model.glb",
+  "parts": {
+    "root": "mirrorling_root",
+    "head": "head_teardrop_cranium",
+    "face": "blank_mirror_face",
+    "arm_l": "arm_l_upper",
+    "arm_r": "arm_r_upper",
+    "reflection_anchor": "reflection_anchor"
+  },
+  "budgets": { "tris": 60000, "textureMB": 0 }
+}

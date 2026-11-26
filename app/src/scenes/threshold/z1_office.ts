@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { Layer2D } from '../../engine/gl';
 import { thresholdPost } from './sensor_post';
-import { addFlashlight, applyFpCamera, basic, box, clamp, cyl, disposeTree, hash, mat, plane, smooth, sph, updateFlashlight, type CamKey } from './z1_fp_local';
+import { addFlashlight, applyFpCamera, basic, box, clamp, cyl, disposeTree, hash, mat, plane, smooth, sph, updateFlashlight, type CamKey } from './z1_scene_util';
 import { drawPremiseLine } from './premise';
 
 const KEYS: CamKey[] = [
@@ -253,7 +253,7 @@ export default class ThresholdZ1Office extends Scene {
     // premise typography: typed, held, then gone; it is the only non-diegetic line in the film
     this.layer.clear();
     const c = this.layer.ctx;
-    drawPremiseLine(c, t, 4.05, 96, 884, 980);
+    drawPremiseLine(c, t, 4.05);
     this.ctx.comp.draw(gl, this.layer.upload(), out, { mode: 'normal' });
     gl.resetState();
 

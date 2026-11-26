@@ -1,5 +1,5 @@
 // Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
-// W2-local deterministic first-person scaffolding, isolated so W1's shared rig can replace it without rewriting zone content.
+// W2 zone geometry helpers plus a thin look-target adapter into W1's stabilized first-person/flashlight rigs.
 import * as THREE from 'three';
 import { evalFirstPerson, applyFirstPersonCamera as applySharedFirstPersonCamera, type FPKey, type FPPose } from './fp_cam';
 import { FlashlightRig, beamStateAt } from './flashlight';
@@ -50,6 +50,7 @@ export function applyFpCamera(cam: THREE.PerspectiveCamera, keys: CamKey[], t: n
   });
   const pose = evalFirstPerson(fpKeys, t);
   applySharedFirstPersonCamera(cam, pose, aspect);
+  cam.userData.fpPose = pose;
   return evalCam(keys, t);
 }
 
@@ -83,27 +84,11 @@ export function addFlashlight(scene: THREE.Scene) {
 }
 
 export function updateFlashlight(light: FlashlightRig, _target: THREE.Object3D, cam: THREE.PerspectiveCamera, t: number, beamScale: number, threat: number) {
-  const forwardV = cam.getWorldDirection(new THREE.Vector3()).normalize();
-  const rightV = new THREE.Vector3().crossVectors(forwardV, cam.up).normalize();
-  const upV = new THREE.Vector3().crossVectors(rightV, forwardV).normalize();
-  const pose: FPPose = {
-    pos: [cam.position.x, cam.position.y, cam.position.z],
-    target: [cam.position.x + forwardV.x, cam.position.y + forwardV.y, cam.position.z + forwardV.z],
-    forward: [forwardV.x, forwardV.y, forwardV.z],
-    right: [rightV.x, rightV.y, rightV.z],
-    up: [upV.x, upV.y, upV.z],
-    roll: 0,
-    fov: cam.fov,
-    gait: 'still',
-    stepPhase: 0,
-    stepImpulse: 0,
-    breath: 0,
-  };
+  // Use the exact closed-form pose evaluated by applyFpCamera, including gait/breath/noise.
+  const pose = cam.userData.fpPose as FPPose;
   const state = beamStateAt(t, clamp(threat * 3, 0, 1));
   state.intensity *= beamScale;
   light.update(pose, t, state);
-  // Zone scenes already carry strong practicals; keep the shared haze present but soft enough not to become a solid triangular sheet.
-  (light as unknown as { hazeMat: THREE.MeshBasicMaterial }).hazeMat.opacity *= 0.32;
 }
 
 export function drawTextOverlay(layer: { clear(): void; ctx: CanvasRenderingContext2D; upload(): THREE.Texture }, draw: (c: CanvasRenderingContext2D) => void) {

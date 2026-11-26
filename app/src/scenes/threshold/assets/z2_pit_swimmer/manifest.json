@@ -1,0 +1,12 @@
+{
+  "model": "model.glb",
+  "parts": {
+    "root": "pit_swimmer_root",
+    "mouth_upper": "slide_mouth_upper_root",
+    "mouth_lower": "slide_mouth_lower_root",
+    "eye_l": "eye_ball_l",
+    "eye_r": "eye_ball_r",
+    "mouth_cavity": "mouth_cavity"
+  },
+  "budgets": { "tris": 120000, "textureMB": 0 }
+}

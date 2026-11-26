@@ -1,9 +1,9 @@
 // Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
-// Z2 ball-pit playroom: deterministic grey-box beat blockout with real scale/camera path; local rig is W2 scaffolding pending W1's shared kit.
+// Z2 ball-pit playroom: deterministic grey-box beat blockout with real scale/camera path; uses W1's stabilized first-person/flashlight/sensor kit through the owned look-target adapter.
 import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { thresholdPost } from './sensor_post';
-import { addFlashlight, applyFpCamera, basic, box, clamp, cyl, disposeTree, hash, mat, plane, smooth, sph, updateFlashlight, type CamKey } from './z1_fp_local';
+import { addFlashlight, applyFpCamera, basic, box, clamp, cyl, disposeTree, hash, mat, plane, smooth, sph, updateFlashlight, type CamKey } from './z1_scene_util';
 
 const KEYS: CamKey[] = [
   { t: 30, pos: [0, 1.65, 7], look: [0, 0.7, 0], fov: 76, gait: 'still' },
@@ -53,7 +53,7 @@ export default class ThresholdZ2Playroom extends Scene {
     const green = mat(0x3bbf5a, 0.3);
     const plasticDark = mat(0x204074, 0.3);
     const mats = [red, yellow, blue, green, mat(0xff7b2e, 0.28)];
-    const swimmerPale = [mat(0xc9bca5, 0.72), mat(0xa9b0aa, 0.76), mat(0xd2c788, 0.7), mat(0xb99e96, 0.74), mat(0x8d9aa4, 0.72)];
+    const swimmerPale = [mat(0xbdb4a4, 0.38), mat(0x99a7a4, 0.42), mat(0xc8bd8e, 0.36), mat(0xa88f8b, 0.44), mat(0x81939c, 0.4)];
     const mouthMat = mat(0xd9b83c, 0.62);
 
     box(this.s, 'z2_floor', [31, 0.1, 21], [0, -0.05, 0], foam);
@@ -116,9 +116,17 @@ export default class ThresholdZ2Playroom extends Scene {
     const shell = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.44, 6.4, 32, 1, true), shellMat);
     shell.position.set(-5, 0.82, 8.35); shell.rotation.x = Math.PI / 2; shell.name = 'z2_tunnel_shell'; shell.userData.fx_entity = shell.name; this.s.add(shell);
     for (let i = 0; i < 16; i++) {
-      const rib = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.035, 8, 28), blue);
-      rib.position.set(-5, 0.82, 5.6 + i * 0.38); rib.rotation.x = Math.PI / 2; rib.castShadow = rib.receiveShadow = true;
+      const rib = new THREE.Mesh(new THREE.TorusGeometry(0.405, 0.055, 10, 32), i % 3 ? yellow : red);
+      rib.position.set(-5, 0.82, 5.6 + i * 0.38); rib.castShadow = rib.receiveShadow = true;
       rib.name = `z2_tunnel_rib_${i}`; rib.userData.fx_entity = rib.name; this.s.add(rib); this.tunnelRibs.push(rib);
+      const groutRing = new THREE.Mesh(new THREE.TorusGeometry(0.398, 0.012, 6, 32), mat(0x071d3a, 0.78));
+      groutRing.position.set(-5, 0.82, 5.6 + i * 0.38 + 0.11); groutRing.name = `z2_tunnel_grout_ring_${i}`; groutRing.userData.fx_entity = groutRing.name; this.s.add(groutRing);
+    }
+    // longitudinal seams inside the tube make the crawl readable as ribbed plastic before they become pool grout.
+    for (let j = 0; j < 8; j++) {
+      const a = j * Math.PI / 4;
+      const seam = box(this.s, `z2_tunnel_longitudinal_seam_${j}`, [0.018, 0.018, 6.0], [-5 + Math.cos(a) * 0.39, 0.82 + Math.sin(a) * 0.39, 8.35], mat(0x071d3a, 0.78));
+      seam.rotation.z = a;
     }
 
     // shelves with toys facing the viewer; simple grey-box toy archetypes but real placement
@@ -235,7 +243,7 @@ export default class ThresholdZ2Playroom extends Scene {
     const wet = smooth(53.4, 55, t);
     this.tunnelRibs.forEach((r, i) => {
       const m = r.material as THREE.MeshStandardMaterial;
-      m.color.setHex(i / this.tunnelRibs.length < wet ? 0x8cc8d8 : 0x2e6fe6);
+      m.color.setHex(i / this.tunnelRibs.length < wet ? (i % 3 ? 0x9fd5c8 : 0x74c5d8) : (i % 3 ? 0xf6c83b : 0xe63b2e));
       m.roughness = 0.25 + wet * 0.2;
     });
     // tenant crosses far tunnel light only 52.2-52.7
