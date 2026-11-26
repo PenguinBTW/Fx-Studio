@@ -458,6 +458,145 @@ wav('z3_pool_events.wav', stem(25.8, (t) => {
   return [l, r];
 }));
 
+
+// Z4 paper-library cue pass from z2_z4_audio_cue_spec.md. Stem starts at 79.4;
+// `at` is project time. Conflicting rule-line duration is resolved conservatively:
+// writing stops dead when the clock stops at 88.0.
+const z4StepTimes = [81.0, 81.8, 82.6, 83.35, 84.05, 84.75, 85.45, 86.15, 86.85, 87.55, 95.65, 96.12, 96.59, 97.05, 97.51, 97.96, 98.40, 98.84, 99.27, 99.69, 100.10, 100.51, 100.91, 101.30, 101.68, 102.05, 102.41, 102.76, 103.10, 103.43];
+const z4ToppleTimes: number[] = [];
+for (let t = 95.5; t <= 103.7; t += 1.2) z4ToppleTimes.push(t);
+let z4PaperLp = 0;
+wav('z4_library_events.wav', stem(25.9, (t) => {
+  const at = t + 79.4;
+  z4PaperLp = z4PaperLp * 0.88 + noise() * 0.12;
+  let l = 0, r = 0;
+  const add = (v: number, pan = 0) => {
+    const a = (pan + 1) * Math.PI / 4;
+    l += v * Math.cos(a);
+    r += v * Math.sin(a);
+  };
+
+  // Dead paper-room microtone: dry air, leaf-like rustles and clock teeth until 88.0.
+  if (at >= 80.0 && at < 94.0) {
+    add(z4PaperLp * 0.018, 0);
+    const leafCell = Math.floor((at - 80) * 3.0);
+    const lu = ((at - 80) * 3.0) - leafCell;
+    if (hash01(leafCell, 12.4) < 0.34 && lu < 0.22) {
+      add(noise() * 0.010 * Math.sin(Math.PI * lu / 0.22), hash01(leafCell, 2.9) - 0.5);
+    }
+  }
+  if (at >= 80.0 && at < 88.0) {
+    const u = (at - 80) % 1.0;
+    if (u < 0.035) add((noise() * 0.030 + Math.sin(u * Math.PI * 2 * 1600) * 0.012) * Math.exp(-u * 90), -0.24);
+  }
+
+  // One distant human cough, dry paper-room tail.
+  for (const [off, hz, amp] of [[0, 210, 0.088], [0.13, 160, 0.060]] as const) {
+    const u = at - 81.8 - off;
+    if (u > 0 && u < 0.18) add((z4PaperLp * 0.07 + Math.sin(u * Math.PI * 2 * hz) * amp) * Math.exp(-u * 18), 0.42);
+  }
+
+  // Folded paper moth flutters; one lower/fabric-like flutter voice for Lint.
+  for (const start of [80.4, 80.9, 81.45, 82.0]) {
+    const u = at - start;
+    if (u > 0 && u < 0.18) {
+      const wing = Math.abs(Math.sin(u * Math.PI * 2 * 24));
+      const fuzzy = start > 81.7 ? 0.55 : 1.0;
+      add((noise() * 0.020 * wing + Math.sin(u * Math.PI * 2 * 520 * fuzzy) * 0.008 * wing) * Math.exp(-u * 8), -0.28 + hash01(Math.floor(start * 10), 4.5) * 0.55);
+    }
+  }
+
+  // Fountain-pen `step.` scratches synchronized to footfalls and quieter continuous rule lines.
+  for (let i = 0; i < z4StepTimes.length; i++) {
+    const hit = z4StepTimes[i]!;
+    const u = at - hit;
+    if (hit < 86.2 && u > 0 && u < 0.11) {
+      add((noise() * 0.044 + Math.sin(u * Math.PI * 2 * 2300) * 0.017) * Math.exp(-u * 32), i % 2 ? 0.09 : -0.09);
+    }
+    if (hit >= 95.5 && u > 0 && u < 0.13) {
+      const crunch = z4PaperLp * 0.065 + noise() * 0.035;
+      add(crunch * Math.exp(-u * 20), i % 2 ? 0.11 : -0.11);
+    }
+  }
+  if (at >= 86.0 && at < 88.0) {
+    const scratch = noise() * 0.016 * (0.6 + 0.4 * Math.sin(at * 17));
+    add(scratch, -0.12);
+  }
+  // Final clock tooth-click and noticeable absence afterward.
+  {
+    const u = at - 88.0;
+    if (u > 0 && u < 0.08) add((noise() * 0.045 + Math.sin(u * Math.PI * 2 * 1350) * 0.018) * Math.exp(-u * 50), -0.24);
+  }
+
+  // Tenant shadow crossing as a long paper sweep over the canyon wall.
+  if (at >= 89.7 && at < 91.6) {
+    const u = at - 89.7;
+    const pan = -0.45 + (u / 1.9) * 0.9;
+    add((z4PaperLp * 0.11 + noise() * 0.016) * Math.sin(Math.PI * u / 1.9), pan);
+  }
+
+  // Folded phone ring through a cardboard tube; each ring rattles brittle paper.
+  if (at >= 91.8 && at < 93.2) {
+    const cycle = (at - 91.8) % 0.62;
+    if (cycle < 0.28) {
+      const tubeHz = 390 + Math.sin(cycle * Math.PI * 2 * 5.5) * 55;
+      const e = Math.sin(Math.PI * cycle / 0.28);
+      add((Math.sin(cycle * Math.PI * 2 * tubeHz) * 0.060 + noise() * 0.025) * e, 0.38);
+    }
+  }
+
+  // Archivist reveal: tearing sheet/page-riffle roar and segmented party-blower arms.
+  if (at >= 94.2 && at < 95.5) {
+    const u = at - 94.2;
+    const tear = z4PaperLp * 0.18 + noise() * 0.075;
+    const riffle = Math.sin(u * Math.PI * 2 * (180 + u * 420)) * 0.050;
+    add((tear + riffle) * Math.min(1, u / 0.16) * Math.exp(-u * 1.2), 0);
+  }
+  if (at >= 95.0 && at < 96.2) {
+    const cell = Math.floor((at - 95.0) * 18);
+    const cu = ((at - 95.0) * 18 - cell) / 18;
+    if (cu < 0.022) {
+      add((noise() * 0.072 + Math.sin(cu * Math.PI * 2 * 1200) * 0.025) * Math.exp(-cu * 120), cell % 2 ? 0.45 : -0.45);
+    }
+  }
+
+  // Repeated topple/unfold locomotion and giant canyon-stack slam chain approaching camera.
+  for (let i = 0; i < z4ToppleTimes.length; i++) {
+    const hit = z4ToppleTimes[i]!;
+    const u = at - hit;
+    if (u > 0 && u < 0.48) {
+      const closeK = i / Math.max(1, z4ToppleTimes.length - 1);
+      const slam = Math.sin(u * Math.PI * 2 * 72) * (0.060 + closeK * 0.050) * Math.exp(-u * 12);
+      const fibre = z4PaperLp * (0.070 + closeK * 0.040) * Math.exp(-u * 8);
+      const snap = noise() * (0.030 + closeK * 0.020) * Math.exp(-u * 30);
+      add(slam + fibre + snap, (i % 2 ? 0.12 : -0.12) * (1 - closeK * 0.5));
+    }
+    if (hit >= 97.0) {
+      const bu = at - hit - 0.28;
+      if (bu > 0 && bu < 0.42) {
+        const closeK = i / Math.max(1, z4ToppleTimes.length - 1);
+        add((Math.sin(bu * Math.PI * 2 * 54) * 0.048 + z4PaperLp * 0.070 + noise() * 0.030) * Math.exp(-bu * 11) * (0.6 + closeK), 0);
+      }
+    }
+  }
+
+  // Loose sheets whip past the microphone intermittently as the canyon closes.
+  for (const start of [97.15, 98.05, 98.95, 99.9, 100.65, 101.45, 102.2, 103.0, 103.65]) {
+    const u = at - start;
+    if (u > 0 && u < 0.32) {
+      add((noise() * 0.034 + Math.sin(u * Math.PI * 2 * 720) * 0.010) * Math.sin(Math.PI * u / 0.32), hash01(Math.floor(start * 10), 7.1) * 1.1 - 0.55);
+    }
+  }
+
+  // Pre-silence pressure rise into T4's page-slam handoff.
+  if (at >= 102.5 && at < 104.7) {
+    const k = (at - 102.5) / 2.2;
+    add(z4PaperLp * (0.030 + k * 0.055) + Math.sin(at * Math.PI * 2 * (82 + k * 35)) * 0.012 * k, 0);
+  }
+
+  return [l, r];
+}));
+
 // Transition-specific sound continuity. These short cues bind the material handoffs together;
 // zone beds underneath already crossfade, so these stems carry only the physical seam events.
 wav('t2_plastic_to_water.wav', stem(1.4, (t) => {
