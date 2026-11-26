@@ -333,6 +333,18 @@ wav('z2_playroom_events.wav', stem(25.8, (t) => {
 // Z3 tiled pool cue pass from z2_z4_audio_cue_spec.md. The stem starts at 54.6;
 // `at` is project time. Viewer water steps use broad gait windows from z3_pool.ts,
 // while Mirrorling landings follow its exact 0.9 s late-step cycle at 72.5/73.4/74.3.
+const z3HumPhase = (at: number): number => {
+  const F = 51.5;
+  const q = 1 - Math.pow(2, -1 / 12);
+  const a = 62.7, b = 63.2, D = b - a;
+  if (at < a) return F * (at - 55.0);
+  if (at < b) {
+    const u = at - a;
+    const x = u / D;
+    return F * (a - 55.0) + F * u - F * q * D * (x ** 3 - 0.5 * x ** 4);
+  }
+  return F * (b - 55.0) - F * q * D * 0.5 + F * (1 - q) * (at - b);
+};
 const z3ViewerSteps: number[] = [];
 {
   for (let t = 55.05; t < 62.5; t += 0.72) z3ViewerSteps.push(t);
@@ -361,9 +373,8 @@ wav('z3_pool_events.wav', stem(25.8, (t) => {
 
   // Reverberant pool-hall pressure bed: low hum, tiled air, sparse distant drips.
   if (at >= 55.0 && at < 79.4) {
-    const drop = smoothstep(62.7, 63.2, at);
-    const humHz = 51.5 * (1 - drop * (1 - Math.pow(2, -1 / 12)));
-    const hum = Math.sin(at * Math.PI * 2 * humHz) * 0.018 + Math.sin(at * Math.PI * 2 * humHz * 1.99) * 0.007;
+    const phase = z3HumPhase(at);
+    const hum = Math.sin(phase * Math.PI * 2) * 0.018 + Math.sin(phase * Math.PI * 2 * 1.99) * 0.007;
     const air = z3AirLp * 0.028;
     add(hum + air, 0);
   }
@@ -609,7 +620,7 @@ wav('z5_motel_events.wav', stem(25.7,(t)=>{
  for(const hit of[107.2,113.8,121.4,126.9]){const u=at-hit;if(u>0&&u<.05)add((noise()*.028+Math.sin(u*Math.PI*2*900)*.01)*Math.exp(-u*70),-.32)}
  // wet shoes compressing dense carpet, gait windows broad and deterministic
  const steps=[105.3,106.0,106.75,107.5,108.25,109,109.75,110.5,111.25,112,112.75,113.5,114.25,115.0,115.65,116.3,116.95,117.6,118.25,118.9,119.55,120.2,120.9,121.55,122.2,122.85,123.5,124.15,124.8,125.45,126.1,126.75,127.4];
- for(let i=0;i<steps.length;i++){const u=at-steps[i]!;if(at<128&&u>0&&u<.13)add((z5lp*.07+Math.sin(u*Math.PI*2*78)*.026+noise()*.008)*Math.exp(-u*24),i%2?.1:-.1)}
+ for(let i=0;i<steps.length;i++){const u=at-steps[i]!;if(at<122.4&&u>0&&u<.13)add((z5lp*.07+Math.sin(u*Math.PI*2*78)*.026+noise()*.008)*Math.exp(-u*24),i%2?.1:-.1)}
  // muffled nonverbal TV murmurs alternating doors
  for(const [st,pan] of[[105.6,.36],[107.4,-.34],[109.4,.34],[111.1,-.36],[113.2,.3]] as const){const u=at-st;if(at<114.5&&u>0&&u<1.1){const syll=Math.max(0,Math.sin(u*Math.PI*2*3.2));add((Math.sin(u*Math.PI*2*(160+60*Math.sin(u*8)))*.009+z5lp*.012)*syll*Math.exp(-u*.8),pan)}}
  // passing CRT static and cheap delayed CCTV feeds; all cut dead at 114.5
@@ -657,7 +668,7 @@ wav('z6_theatre_events.wav', stem(21.2,(t)=>{
  if(at>=130&&at<141.5){
    const slow=at<139?1:Math.max(0,1-(at-139)/2.5); const pos=at-130; const nl=.52; const idx=Math.floor(pos/nl)%8; const u=pos%nl;
    const scale=[704,837,1055,1254,1055,940,837,790];
-   if(u<.46&&slow>0){const e=Math.min(1,u/.012)*Math.exp(-u*4.2)*slow;add((Math.sin(u*Math.PI*2*scale[idx]!)*.020+Math.sin(u*Math.PI*2*scale[idx]!*2.71)*.006)*e,-.08)}
+   if(u<.46&&slow>0&&!(at>=139&&idx===5)&&at<141.1){const e=Math.min(1,u/.012)*Math.exp(-u*4.2)*slow;add((Math.sin(u*Math.PI*2*scale[idx]!)*.020+Math.sin(u*Math.PI*2*scale[idx]!*2.71)*.006)*e,-.08)}
  }
  // stepped heavy curtains opening at a 12fps stop-motion feel
  if(at>=130.2&&at<132.8){const cell=Math.floor((at-130.2)*12);const cu=((at-130.2)*12-cell)/12;if(cu<.28)add((z6lp*.09+noise()*.012)*Math.sin(Math.PI*cu/.28),0)}
@@ -704,24 +715,24 @@ wav('z7_cathedral_events.wav', stem(45.8,(t)=>{
  // close individual machine fan/compressor and product-glass buzz
  if(at>=158&&at<163)add((z7lp*.035+Math.sin(at*Math.PI*2*132)*.008+noise()*.003),-.35);
  // beige-phone ring behind vending glass
- if(at>=160&&at<163){const c=(at-160)%.68;if(c<.32){const hz=520+Math.sin(c*Math.PI*2*7)*70;add((Math.sin(c*Math.PI*2*hz)*.035+Math.sin(c*Math.PI*2*hz*2.1)*.010)*Math.sin(Math.PI*c/.32),-.42)}}
+ if(at>=160&&at<163){const c=(at-160)%.68;if(c<.32){const hz=520+Math.sin(c*Math.PI*2*7)*70;add((Math.sin(c*Math.PI*2*hz)*.048+Math.sin(c*Math.PI*2*hz*2.1)*.015)*Math.sin(Math.PI*c/.32),-.42)}}
  // product-drop cascade: balls, tile, paper, felt, coils converging center
- if(at>=163&&at<165.2){const u=at-163;const cell=Math.floor(u*28);const cu=(u*28-cell)/28;if(cu<.16){const hz=260+hash01(cell,9)*1450;const pan=(hash01(cell,10)-.5)*(1-u/2.2);add((noise()*.030+Math.sin(cu*Math.PI*2*hz)*.012)*Math.exp(-cu*35),pan)}}
+ if(at>=163&&at<165.2){const u=at-163;const cell=Math.floor(u*28);const cu=(u*28-cell)/28;if(cu<.16){const hz=260+hash01(cell,9)*1450;const pan=(hash01(cell,10)-.5)*(1-u/2.2);add((noise()*.042+Math.sin(cu*Math.PI*2*hz)*.018)*Math.exp(-cu*35),pan)}}
  // Tenant assembly: object-specific snaps, creases, knocks and extending coils
- if(at>=164.5&&at<168){const u=at-164.5;const pulse=Math.max(0,Math.sin(u*Math.PI*2*2.4));add((z7lp*(.05+u*.018)+noise()*.018+Math.sin(at*Math.PI*2*(190+u*55))*.018)*pulse,0)}
+ if(at>=164.5&&at<168){const u=at-164.5;const pulse=Math.max(0,Math.sin(u*Math.PI*2*2.4));add((z7lp*(.05+u*.018)+noise()*.026+Math.sin((190*u+27.5*u*u)*Math.PI*2)*.024)*pulse,0)}
  // huge hollow material inhalation, intermittent pressure rather than voice
- if(at>=166.5&&at<176){const c=(at-166.5)%2.7;if(c<1.15){const gate=Math.sin(Math.PI*c/1.15)**1.4;add((z7lp*.10+Math.sin(at*Math.PI*2*74)*.018)*gate,0)}}
+ if(at>=166.5&&at<173.35){const c=(at-166.5)%2.7;if(c<1.15){const gate=Math.sin(Math.PI*c/1.15)**1.4;add((z7lp*.13+Math.sin(at*Math.PI*2*74)*.024)*gate,0)}}
  // hard stone chase steps with nave slap
- for(let i=0;i<18;i++){const hit=168+i*.44;const pan=i%2?.10:-.10;for(const [eo,m] of[[0,1],[.38,.28],[.9,.12]] as const){const u=at-hit-eo;if(at<176&&u>0&&u<.12)add((noise()*.042+Math.sin(u*Math.PI*2*95)*.040+z7lp*.04)*Math.exp(-u*28)*m,pan)}}
+ for(let i=0;i<18;i++){const hit=168+i*.44;const pan=i%2?.10:-.10;for(const [eo,m] of[[0,1],[.38,.28],[.9,.12]] as const){const u=at-hit-eo;if(at<173.35&&u>0&&u<.12)add((noise()*.042+Math.sin(u*Math.PI*2*95)*.040+z7lp*.04)*Math.exp(-u*28)*m,pan)}}
  // machines relay off behind the runner and subtract the organ bed perceptually
- for(let i=0;i<16;i++){const hit=168.2+i*.48;const u=at-hit;if(at<176&&u>0&&u<.16)add((Math.sin(u*Math.PI*2*88)*.055+noise()*.018)*Math.exp(-u*24),-.3+i*.04)}
+ for(let i=0;i<16;i++){const hit=168.2+i*.48;const u=at-hit;if(at<173.35&&u>0&&u<.16)add((Math.sin(u*Math.PI*2*88)*.055+noise()*.018)*Math.exp(-u*24),-.3+i*.04)}
  // uneven composite Tenant rattling pursuit
- for(let i=0;i<14;i++){const hit=168.15+i*.56+(hash01(i,17)-.5)*.09;const u=at-hit;if(at<176&&u>0&&u<.25)add((z7lp*.11+noise()*.038+Math.sin(u*Math.PI*2*(130+hash01(i,18)*180))*.025)*Math.exp(-u*16),(hash01(i,19)-.5)*.35)}
+ for(let i=0;i<14;i++){const hit=168.15+i*.56+(hash01(i,17)-.5)*.09;const u=at-hit;if(at<173.35&&u>0&&u<.25)add((z7lp*.11+noise()*.038+Math.sin(u*Math.PI*2*(130+hash01(i,18)*180))*.025)*Math.exp(-u*16),(hash01(i,19)-.5)*.35)}
  // final dead flashlight click, Lint relight flutter/warm bloom
  for(const [hit,pan] of[[173.38,0],[173.72,0]] as const){const u=at-hit;if(u>0&&u<.055)add((noise()*.045+Math.sin(u*Math.PI*2*1500)*.016)*Math.exp(-u*60),pan)}
- if(at>=174&&at<175){const u=at-174;add(z7lp*.055*Math.abs(Math.sin(u*Math.PI*2*7))+Math.sin(u*Math.PI*2*940)*.008*Math.exp(-u*4),.12)}
+ if(at>=174&&at<175){const u=at-174;add(z7lp*.055*Math.abs(Math.sin(u*Math.PI*2*7))+Math.sin(u*Math.PI*2*940)*.013*Math.exp(-u*4),.12)}
  // Tenant composite recoil screech: metal, tile shriek, tearing paper
- if(at>=174.7&&at<176){const u=at-174.7;add((Math.sin(u*Math.PI*2*(700+u*700))*.045+noise()*.045+z7lp*.06)*Math.sin(Math.PI*u/1.3),-.1)}
+ if(at>=174.7&&at<176){const u=at-174.7;add((Math.sin((700*u+350*u*u)*Math.PI*2)*.045+noise()*.045+z7lp*.06)*Math.sin(Math.PI*u/1.3),-.1)}
  // floor rift fracture and cascading debris
  if(at>=176&&at<180){const u=at-176;add((Math.sin(u*Math.PI*2*(42+u*8))*.070+z7lp*.11+noise()*.025)*Math.min(1,u/.5)*(1-smoothstep(3.1,4,u)),0)}
  // intermittent vending-machine topples, glass and metal crash tails
@@ -731,11 +742,11 @@ wav('z7_cathedral_events.wav', stem(45.8,(t)=>{
  // abrupt fall wind narrowing into warmer descent
  if(at>=186&&at<192){const u=at-186;const narrow=smoothstep(1.2,5,u);add(noise()*(.13-narrow*.075)+z7lp*(.04+narrow*.035),0)}
  // upward-passing machine/glass streaks during fall
- for(const st of[186.4,187.2,188.1,189.0,190.1,191.2]){const u=at-st;if(u>0&&u<.32)add((noise()*.040+Math.sin(u*Math.PI*2*(900+u*500))*.012)*Math.exp(-u*8),(hash01(Math.floor(st*10),21)-.5)*.9)}
+ for(const st of[186.4,187.2,188.1,189.0,190.1,191.2]){const u=at-st;if(u>0&&u<.32)add((noise()*.040+Math.sin((900*u+250*u*u)*Math.PI*2)*.012)*Math.exp(-u*8),(hash01(Math.floor(st*10),21)-.5)*.9)}
  // calm descending tonal pressure: temperature shift, not score
- if(at>=188&&at<194.4){const u=at-188;const hz=160-u*13;add((Math.sin(at*Math.PI*2*hz)*.014+Math.sin(at*Math.PI*2*hz*.5)*.010)*smoothstep(0,2,u),0)}
+ if(at>=188&&at<194.4){const u=at-188;add((Math.sin((160*u-6.5*u*u)*Math.PI*2)*.006+Math.sin((80*u-3.25*u*u)*Math.PI*2)*.004)*smoothstep(0,2,u),0)}
  // warm carpet landing and first domestic precues
- if(at>=192&&at<193.2){const u=at-192;add((z7lp*.13+Math.sin(u*Math.PI*2*70)*.050+noise()*.018)*Math.exp(-u*5),0)}
+ if(at>=192&&at<193.2){const u=at-192;add((z7lp*.13+Math.sin(u*Math.PI*2*70)*.065+noise()*.024)*Math.exp(-u*5),0)}
  if(at>=192.5&&at<195){const u=(at-192.5)%1;if(u<.035)add((noise()*.018+Math.sin(u*Math.PI*2*1300)*.006)*Math.exp(-u*80),.28)}
  return[l,r]
 }));
@@ -748,7 +759,7 @@ wav('z8_home_events.wav', stem(30.8,(t)=>{
  const add=(v:number,pan=0)=>{const a=(pan+1)*Math.PI/4;l+=v*Math.cos(a);r+=v*Math.sin(a)};
  // warm clock tick, quiet domestic air, birds and distant mower; mower becomes an exact 2s loop at 203
  if(at>=195&&at<225){const u=(at-195)%1;if(u<.032)add((noise()*.016+Math.sin(u*Math.PI*2*1280)*.006)*Math.exp(-u*85),.3);add(z8lp*.010,0)}
- if(at>=195&&at<206){for(const st of[195.4,197.2,199.7,202.1,204.8]){const u=at-st;if(u>0&&u<.16)add(Math.sin(u*Math.PI*2*(2500+Math.sin(u*40)*300))*.004*Math.sin(Math.PI*u/.16),-.34)};const loopT=at<203?at:203+((at-203)%2);add((Math.sin(loopT*Math.PI*2*88)*.006+z8lp*.012)*smoothstep(195,198,at),-.28)}
+ if(at>=195&&at<206){for(const st of[195.4,197.2,199.7,202.1,204.8]){const u=at-st;if(u>0&&u<.16)add(Math.sin(u*Math.PI*2*(2500+Math.sin(u*40)*300))*.004*Math.sin(Math.PI*u/.16),-.34)};const loopT=at<203?at:203+((at-203)%2);const mowerNoise=at<203?z8lp*.012:(Math.sin(loopT*Math.PI*2*91)*.004+Math.sin(loopT*Math.PI*2*176)*.002);add((Math.sin(loopT*Math.PI*2*88)*.006+mowerNoise)*smoothstep(195,198,at),-.28)}
  // kettle slowly rises then cuts dead at 214
  if(at>=195&&at<214){const k=smoothstep(200,210,at);add((noise()*.006+z8lp*.018)*(.15+.85*k),.34)}
  // slow wood/rug footsteps, switching material by position and then carpet at office threshold
@@ -758,20 +769,20 @@ wav('z8_home_events.wav', stem(30.8,(t)=>{
  // wrong-window fluorescent leak and shadowless lamp filament hiss
  if(at>=203&&at<206){add((Math.sin(at*Math.PI*2*120)*.006+noise()*.002),-.38);add(noise()*.004+z8lp*.008,.24)}
  // exact original beige-phone ring motif at the wall phone
- if(at>=206&&at<210){const c=(at-206)%.68;if(c<.32){const hz=940+Math.sin(c*Math.PI*2*8)*130;add((Math.sin(c*Math.PI*2*hz)*.052+Math.sin(c*Math.PI*2*hz*1.5)*.018)*Math.sin(Math.PI*c/.32),.34)}}
+ if(at>=206&&at<210){for(const base of[206,208.8])for(const off of[.02,1.18]){const u=at-base-off;if(u>=0&&u<.88){const trem=.45+.55*(Math.sin(u*Math.PI*40)>0?1:0);add((Math.sin(u*Math.PI*2*1280)*.052+Math.sin(u*Math.PI*2*1735)*.032)*Math.exp(-u*3.1)*trem,.34)}}}
  // receiver lifts by itself, hook click, curled cord tension and small hollow tapping
  if(at>=210&&at<210.8){const u=at-210;add((noise()*.018+Math.sin(u*Math.PI*2*420)*.018)*Math.sin(Math.PI*u/.8),.34)}
  if(at>=210.8&&at<214){const u=at-210.8;add((Math.sin(u*Math.PI*2*(220+Math.sin(u*4)*30))*.010+z8lp*.028)*(.4+.6*Math.max(0,Math.sin(u*Math.PI*2*1.7))),.33)}
  // receiver earpiece carries Z1 fluorescent/tube material, band-limited in character
  if(at>=210&&at<214)add((Math.sin(at*Math.PI*2*120)*.010+Math.sin(at*Math.PI*2*240)*.004+noise()*.003),.36);
  // kettle whistle peak then hard cutoff
- if(at>=213.2&&at<214.0){const u=at-213.2;add(Math.sin(at*Math.PI*2*(1250+u*300))*(.018+u*.025),.34)}
+ if(at>=213.2&&at<214.0){const u=at-213.2;add(Math.sin((1250*u+150*u*u)*Math.PI*2)*(.018+u*.025),.34)}
  // front-door handle turns by itself, latch stress, then wooden door opens into office air
  if(at>=214&&at<216){const u=at-214;add((Math.sin(u*Math.PI*2*(360+70*Math.sin(u*18)))*.018+noise()*.010)*Math.sin(Math.PI*u/2),.32)}
  if(at>=217.5&&at<220){const u=at-217.5;add((z8lp*.07+Math.sin(u*Math.PI*2*(95+u*30))*.025)*Math.sin(Math.PI*u/2.5),.2)}
  // office loop reasserts: fluorescent swell and desk-phone ring returning to origin
  if(at>=218&&at<225){const sw=smoothstep(218,224,at);add((Math.sin(at*Math.PI*2*120)*(.008+sw*.018)+noise()*.002)*1,.18)}
- if(at>=218&&at<225){const c=(at-218)%.68;if(c<.32){const hz=940+Math.sin(c*Math.PI*2*8)*130;add((Math.sin(c*Math.PI*2*hz)*.035+Math.sin(c*Math.PI*2*hz*1.5)*.012)*Math.sin(Math.PI*c/.32),.12)}}
+ if(at>=218&&at<225){for(const base of[218,220.8,223.6])for(const off of[.02,1.18]){const u=at-base-off;if(u>=0&&u<.88){const trem=.45+.55*(Math.sin(u*Math.PI*40)>0?1:0);add((Math.sin(u*Math.PI*2*1280)*.034+Math.sin(u*Math.PI*2*1735)*.021)*Math.exp(-u*3.1)*trem,.12)}}}
  // threshold steps cross warm wood into damp office carpet
  for(let i=0;i<6;i++){const hit=222+i*.48;const u=at-hit;if(u>0&&u<.13){const office=smoothstep(222.5,224,at);add((z8lp*(.045+office*.04)+noise()*.010+Math.sin(u*Math.PI*2*(102-office*35))*.030)*Math.exp(-u*24),i%2?.08:-.08)}}
  return[l,r]
@@ -779,7 +790,7 @@ wav('z8_home_events.wav', stem(30.8,(t)=>{
 wav('end_office_events.wav', stem(10.0,(t)=>{
  const at=t+225;let l=0,r=0;const add=(v:number,pan=0)=>{const a=(pan+1)*Math.PI/4;l+=v*Math.cos(a);r+=v*Math.sin(a)};
  // beige phone repeats, each 2 dB quieter, while office air loses high-frequency content
- const idx=Math.floor((at-225)/2.2);const c=(at-225)%2.2;if(c<.32){const hz=940+Math.sin(c*Math.PI*2*8)*130;const gain=Math.pow(.794,idx);add((Math.sin(c*Math.PI*2*hz)*.034+Math.sin(c*Math.PI*2*hz*1.5)*.012)*Math.sin(Math.PI*c/.32)*gain,.14)}
+ const idx=Math.floor((at-225)/2.8);for(const base of[225,227.8,230.6,233.4])for(const off of[.02,1.18]){const u=at-base-off;if(u>=0&&u<.88){const trem=.45+.55*(Math.sin(u*Math.PI*40)>0?1:0);const gain=Math.pow(.794,idx);add((Math.sin(u*Math.PI*2*1280)*.034+Math.sin(u*Math.PI*2*1735)*.021)*Math.exp(-u*3.1)*trem*gain,.14)}}
  const airloss=1-smoothstep(225,235,at);add((Math.sin(at*Math.PI*2*120)*.008+noise()*.002*airloss),.05);
  return[l,r]
 }));
