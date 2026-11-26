@@ -115,14 +115,17 @@ wav('z1_ceiling_creaks.wav', stem(2.2, (t) => {
 }));
 
 // Carpet run, ceiling rasp, and a separate escalating tile-slam chain behind.
+let carpetLp = 0, slamLp = 0;
 wav('z1_run_carpet.wav', stem(8.4, (t) => {
-  let l = noise() * 0.024, r = noise() * 0.024;
+  carpetLp = carpetLp * 0.82 + noise() * 0.18;
+  slamLp = slamLp * 0.68 + noise() * 0.32;
+  let l = carpetLp * 0.075, r = carpetLp * 0.075;
   const rate = 3.05;
   const idx = Math.floor(t * rate);
   const step = t - idx / rate;
   if (step < 0.075) {
     const k = 1 - step / 0.075;
-    const thud = (noise() * 0.22 + Math.sin(step * Math.PI * 2 * 58) * 0.14) * k;
+    const thud = (noise() * 0.07 + carpetLp * 0.34 + Math.sin(step * Math.PI * 2 * 58) * 0.17) * k;
     if (idx % 2) r += thud * 1.2, l += thud * 0.72;
     else l += thud * 1.2, r += thud * 0.72;
   }
@@ -131,10 +134,10 @@ wav('z1_run_carpet.wav', stem(8.4, (t) => {
     const u = t - at;
     if (u > 0 && u < 0.24) {
       const size = 0.65 + i * 0.055;
-      slam += (noise() * 0.26 + Math.sin(u * Math.PI * 2 * (88 - i * 2)) * 0.20 + Math.sin(u * Math.PI * 2 * 244) * 0.06) * Math.exp(-u * 11) * size;
+      slam += (noise() * 0.08 + slamLp * 0.18 + Math.sin(u * Math.PI * 2 * (88 - i * 2)) * 0.24 + Math.sin(u * Math.PI * 2 * 244) * 0.045) * Math.exp(-u * 11) * size;
     }
   }
-  const rasp = noise() * 0.034 * (0.5 + 0.5 * Math.sin(t * Math.PI * 0.8));
+  const rasp = (noise() * 0.016 + carpetLp * 0.025) * (0.5 + 0.5 * Math.sin(t * Math.PI * 0.8));
   const fade = Math.min(1, t / 0.18, (8.4 - t) / 0.35);
   return [(l + slam + rasp) * fade, (r + slam * 0.93 + rasp * 1.08) * fade];
 }));

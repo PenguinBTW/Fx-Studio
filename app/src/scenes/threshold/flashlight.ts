@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import type { FPPose, V3 } from './fp_cam';
 import { laggedVec3 } from './fp_cam';
-import { batteryAt, beamDeadAt, beamTintAt, clamp, flickerAt, hash, lerp } from './kit';
+import { batteryAt, beamDeadAt, beamTintAt, clamp, flickerAt, hash, lerp, sm } from './kit';
 
 const DEG = Math.PI / 180;
 
@@ -155,9 +155,22 @@ export class FlashlightRig {
     this.core.angle = lerp(4.5, 7, state.battery) * DEG;
     this.cone.angle = lerp(14, 22, state.battery) * DEG;
     this.spill.angle = 30 * DEG;
-    this.core.intensity = 48 * I;
-    this.cone.intensity = 22 * I;
-    this.spill.intensity = 5 * I;
+    // Downward beams intersect desktops/floors at close range. Preserve the 7/22/30 degree
+    // cone geometry, but attenuate and soften the hot core as incidence steepens so laminate
+    // and paper remain textured instead of becoming a white reflector disc.
+    const downness = clamp((-lagged[1] - 0.12) / 0.5);
+    const downAngle = downness * downness * (3 - 2 * downness);
+    // Approximate the first lit work surface as desk height. This makes the response
+    // distance-aware rather than merely pitch-aware while staying deterministic.
+    const drop = Math.max(0.05, pose.pos[1] - 0.75);
+    const deskDistance = drop / Math.max(0.16, -lagged[1]);
+    const proximity = lagged[1] < 0 ? 1 - sm(0.9, 1.9, deskDistance) : 0;
+    const closeSoft = Math.max(downAngle, proximity);
+    this.core.penumbra = lerp(0.55, 0.9, closeSoft);
+    this.cone.penumbra = lerp(0.72, 0.95, closeSoft);
+    this.core.intensity = 48 * I * lerp(1, 0.035, closeSoft);
+    this.cone.intensity = 22 * I * lerp(1, 0.24, closeSoft);
+    this.spill.intensity = 5 * I * lerp(1, 0.45, closeSoft);
     this.haze.position.copy(this.core.position);
     this.haze.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), new THREE.Vector3(lagged[0], lagged[1], lagged[2]).normalize());
     for (const mat of this.hazeMats) {
