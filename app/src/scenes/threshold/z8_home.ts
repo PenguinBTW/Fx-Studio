@@ -5,6 +5,9 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { evalFirstPerson, applyFirstPersonCamera, type FPKey, type GaitName } from './fp_cam';
 import { FlashlightRig, beamStateAt } from './flashlight';
 import { thresholdPost } from './sensor_post';
+import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
+import beigePhoneUrl from './assets/beige_phone/model.glb?url';
+import z8HomeKitUrl from './assets/z8_home_kit/model.glb?url';
 
 const clamp = (x: number, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -54,7 +57,9 @@ export default class ThresholdZ8Home extends Scene {
   private flash = new FlashlightRig();
   private doorGroup = new THREE.Group();
   private handle!: THREE.Mesh;
-  private receiver!: THREE.Mesh;
+  private phoneInst?: GLTFInstance;
+  private homeKit?: GLTFInstance;
+  private receiver?: THREE.Object3D;
   private receiverHome = new THREE.Vector3();
   private lampGlow!: THREE.MeshStandardMaterial;
   private officeTubeMats: THREE.MeshStandardMaterial[] = [];
@@ -101,7 +106,7 @@ export default class ThresholdZ8Home extends Scene {
     return mesh;
   }
 
-  override init() {
+  override async init() {
     this.s.background = new THREE.Color(0x17100b);
     this.s.fog = new THREE.FogExp2(0x17100b, 0.028);
 
@@ -114,6 +119,14 @@ export default class ThresholdZ8Home extends Scene {
     const black = this.mat(0x080808, 0.6);
     const glassMat = new THREE.MeshStandardMaterial({ color: 0xffd68a, roughness: 0.18, metalness: 0, transparent: true, opacity: 0.36, emissive: 0xff9d42, emissiveIntensity: 0.25 });
     this.disposables.push(glassMat);
+
+    this.homeKit = await GLTFManager.instantiate(z8HomeKitUrl, { castShadow: true, receiveShadow: true });
+    const cloneHomePart = (part: string) => {
+      const src = this.homeKit?.parts.get(part);
+      const c = src?.clone(true);
+      if (c) c.position.set(0, 0, 0);
+      return c;
+    };
 
     // Hallway shell, wood floor planks, runner rug and golden-hour window.
     this.box(this.s, [2.7, 0.08, 10.4], [0, -0.04, -3.1], wood);
@@ -152,30 +165,31 @@ export default class ThresholdZ8Home extends Scene {
       this.sphere(this.s, 0.006 + 0.004 * hash(i * 3), [-1.0 + hash(i) * 1.2, 0.9 + hash(i * 2) * 1.15, -4.8 + hash(i * 5) * 1.15], dustMat);
     }
 
-    // Family photos on the left wall: each frame contains an empty zone colour, no people.
-    const frameMat = this.mat(0x2b190f, 0.5);
-    const zoneColors = [0xc9b26a, 0xe63b2e, 0x6fc7d0, 0xf1e6cf, 0xe4307a, 0x9e1e24, 0x93c9ff];
-    zoneColors.forEach((c, i) => {
+    // Production family-photo modules: each frame contains a miniature empty-zone tableau.
+    const photoParts = ['photo_office', 'photo_ballpit', 'photo_pool', 'photo_library', 'photo_motel', 'photo_theatre', 'photo_cathedral'];
+    photoParts.forEach((part, i) => {
+      const frame = cloneHomePart(part);
+      if (!frame) return;
       const z = 0.8 - i * 0.78;
-      this.box(this.s, [0.06, 0.5, 0.42], [-1.29, 1.55, z], frameMat, [0, 0, (hash(i * 17) - 0.5) * 0.16]);
-      this.box(this.s, [0.025, 0.38, 0.31], [-1.25, 1.55, z], this.mat(c, 0.7));
-      this.box(this.s, [0.012, 0.3, 0.23], [-1.22, 1.55, z], this.mat(0x111111, 0.8));
+      frame.position.set(-1.29, 1.55, z);
+      frame.rotation.y = Math.PI / 2;
+      frame.rotation.x = (hash(i * 17) - 0.5) * 0.035;
+      this.s.add(frame);
     });
 
-    // Coats, shoes, umbrella stand, hall table with keys/post.
-    for (let i = 0; i < 4; i++) {
-      const z = -6.8 + i * 0.35;
-      this.cyl(this.s, 0.025, 0.025, 0.12, [-1.24, 1.78, z], brass, 8).rotation.z = Math.PI / 2;
-      this.box(this.s, [0.18, 0.72, 0.24], [-1.2, 1.32, z], this.mat([0x27364a, 0x5a2822, 0x3f4b2d, 0x4c3a55][i]!, 0.9));
+    // Production entryway clutter and hall table with keys/post.
+    const entryway = cloneHomePart('entryway_props');
+    if (entryway) {
+      entryway.position.set(-1.25, 0, -6.62);
+      entryway.rotation.y = Math.PI / 2;
+      this.s.add(entryway);
     }
-    for (let i = 0; i < 4; i++) this.box(this.s, [0.26, 0.11, 0.48], [-0.85 + (i % 2) * 0.35, 0.06, -6.75 + Math.floor(i / 2) * 0.35], this.mat(0x2b2119, 0.75), [0, 0.2 * (i % 2 ? 1 : -1), 0]);
-    this.cyl(this.s, 0.16, 0.13, 0.55, [1.05, 0.28, -6.95], brass, 14);
-    this.cyl(this.s, 0.02, 0.02, 0.72, [1.04, 0.65, -6.95], black, 8).rotation.z = 0.24;
-    this.box(this.s, [0.62, 0.08, 0.34], [1.05, 0.85, -3.1], woodDark);
-    this.box(this.s, [0.06, 0.8, 0.06], [0.82, 0.42, -3.0], woodDark);
-    this.box(this.s, [0.06, 0.8, 0.06], [1.28, 0.42, -3.0], woodDark);
-    this.box(this.s, [0.22, 0.025, 0.12], [0.96, 0.91, -3.05], this.mat(0xd7c89a, 0.7), [0, 0.4, 0]);
-    this.box(this.s, [0.16, 0.02, 0.08], [1.17, 0.91, -3.16], brass, [0, -0.2, 0]);
+    const hallTable = cloneHomePart('hall_table');
+    if (hallTable) {
+      hallTable.position.set(1.05, 0, -3.1);
+      hallTable.rotation.y = -Math.PI / 2;
+      this.s.add(hallTable);
+    }
 
     // Houseplant, wall clock, radiator, light switch, calendar crossed out.
     this.cyl(this.s, 0.18, 0.14, 0.32, [-1.0, 0.16, -2.25], this.mat(0x8b4d2c, 0.65), 12);
@@ -183,15 +197,28 @@ export default class ThresholdZ8Home extends Scene {
     this.cyl(this.s, 0.24, 0.24, 0.035, [1.29, 1.95, -2.1], cream, 24).rotation.z = Math.PI / 2;
     this.box(this.s, [0.03, 0.18, 0.025], [1.25, 1.95, -2.1], black, [0, 0, 0.6]);
     this.box(this.s, [0.03, 0.13, 0.02], [1.25, 1.95, -2.1], black, [0, 0, -0.9]);
-    for (let i = 0; i < 5; i++) this.box(this.s, [0.06, 0.42, 0.08], [1.28, 0.55, -1.1 + i * 0.12], this.mat(0xd8d0c2, 0.42, 0.35));
+    const radiator = cloneHomePart('radiator');
+    if (radiator) {
+      radiator.position.set(1.28, 0.05, -1.32);
+      radiator.rotation.y = -Math.PI / 2;
+      this.s.add(radiator);
+    }
     this.box(this.s, [0.035, 0.15, 0.1], [1.28, 1.2, -5.15], this.mat(0xe8e0cd, 0.55));
-    this.box(this.s, [0.025, 0.5, 0.35], [-1.25, 1.45, -5.65], this.mat(0xe3d6bd, 0.72));
-    for (let i = 0; i < 8; i++) this.box(this.s, [0.014, 0.015, 0.27], [-1.22, 1.28 + i * 0.04, -5.65], this.mat(0x8b1e1e, 0.7), [0, 0, i % 2 ? 0.4 : -0.4]);
+    const mirrorCalendar = cloneHomePart('mirror_calendar');
+    if (mirrorCalendar) {
+      mirrorCalendar.position.set(-1.28, 1.0, -5.6);
+      mirrorCalendar.rotation.y = Math.PI / 2;
+      this.s.add(mirrorCalendar);
+    }
 
     // Staircase glimpse with a small toy block left on a step.
     for (let i = 0; i < 7; i++) this.box(this.s, [0.9, 0.16, 0.34], [-0.7, 0.1 + i * 0.16, -0.4 + i * 0.3], woodDark);
-    this.box(this.s, [0.18, 0.18, 0.18], [-0.62, 0.62, 0.48], this.mat(0xe63b2e, 0.38));
-    this.box(this.s, [0.15, 0.15, 0.15], [-0.42, 0.62, 0.5], this.mat(0x2e6fe6, 0.38));
+    const stairToys = cloneHomePart('stair_toys');
+    if (stairToys) {
+      stairToys.position.set(-0.58, 0.54, 0.46);
+      stairToys.rotation.y = 0.25;
+      this.s.add(stairToys);
+    }
 
     // Living-room opening and shadowless floor lamp.
     this.box(this.s, [0.12, 2.1, 1.5], [1.34, 1.05, -3.9], cream);
@@ -206,8 +233,12 @@ export default class ThresholdZ8Home extends Scene {
 
     // Kitchen glimpse and kettle steam blocks at far end.
     this.box(this.s, [1.2, 0.8, 0.5], [-0.3, 0.4, -8.1], this.mat(0x7b7468, 0.55));
-    this.cyl(this.s, 0.13, 0.16, 0.24, [-0.32, 0.95, -8.0], this.mat(0xb7c1c7, 0.28, 0.65), 16);
-    for (let i = 0; i < 4; i++) this.sphere(this.s, 0.04 + i * 0.01, [-0.32 + 0.03 * i, 1.14 + i * 0.12, -8.0], this.mat(0xd9e6ef, 0.9), [1, 1.6, 1]);
+    const kettle = cloneHomePart('kitchen_kettle');
+    if (kettle) {
+      kettle.position.set(-0.32, 0.76, -8.0);
+      kettle.rotation.y = -0.35;
+      this.s.add(kettle);
+    }
 
     // Right-wall front door beside the wall-mounted beige phone.
     const doorMat = this.mat(0x5a321f, 0.55);
@@ -221,21 +252,29 @@ export default class ThresholdZ8Home extends Scene {
     this.handle.rotation.z = Math.PI / 2;
     this.s.add(this.doorGroup);
 
-    // Beige wall phone: base, buttons, curly cord approximation, lifting receiver.
-    const beige = this.mat(0xd0c19d, 0.45, 0, 0x5c4b32, 0.18);
-    this.box(this.s, [0.055, 0.58, 0.38], [1.29, 1.39, -5.85], black);
-    this.box(this.s, [0.17, 0.52, 0.32], [1.25, 1.38, -5.85], beige);
-    for (let i = 0; i < 12; i++) this.box(this.s, [0.025, 0.035, 0.035], [1.17, 1.24 + Math.floor(i / 3) * 0.055, -5.94 + (i % 3) * 0.055], black);
-    const receiverMat = this.mat(0xb29b73, 0.5, 0, 0x6b5638, 0.24);
-    this.receiver = this.box(this.s, [0.052, 0.04, 0.13], [1.16, 1.61, -5.85], receiverMat, [0, 0, 0.08]);
-    this.receiverHome.copy(this.receiver.position);
-    const capA = this.cyl(this.receiver, 0.047, 0.052, 0.052, [0, 0.002, -0.092], receiverMat, 12);
-    capA.rotation.x = Math.PI / 2;
-    const capB = this.cyl(this.receiver, 0.047, 0.052, 0.052, [0, 0.002, 0.092], receiverMat, 12);
-    capB.rotation.x = Math.PI / 2;
-    for (let i = 0; i < 8; i++) this.cyl(this.s, 0.012, 0.012, 0.08, [1.16, 1.3 - i * 0.045, -5.68 + Math.sin(i * 1.7) * 0.035], black, 6);
+    // Production beige phone as the wall-mounted final variant. The desk-phone axes are
+    // remapped so the face/receiver point into the hallway and the keypad descends vertically.
+    const phoneMount = cloneHomePart('wall_phone_mount');
+    if (phoneMount) {
+      phoneMount.position.set(1.27, 1.39, -5.85);
+      phoneMount.rotation.y = -Math.PI / 2;
+      this.s.add(phoneMount);
+    }
+    this.phoneInst = await GLTFManager.instantiate(beigePhoneUrl, { castShadow: true, receiveShadow: true });
+    const phone = this.phoneInst.root;
+    const basis = new THREE.Matrix4().makeBasis(
+      new THREE.Vector3(0, 0, -1),
+      new THREE.Vector3(-1, 0, 0),
+      new THREE.Vector3(0, 1, 0),
+    );
+    phone.quaternion.setFromRotationMatrix(basis);
+    phone.position.set(1.22, 1.34, -5.85);
+    this.s.add(phone);
+    this.receiver = this.phoneInst.parts.get('receiver');
+    if (this.receiver) this.receiverHome.copy(this.receiver.position);
 
     // Office loop beyond the door: mustard carpet, beige partitions, fluorescent ceiling, desk phone ahead.
+    const beige = this.mat(0xd0c19d, 0.45);
     const mustard = this.mat(0x8a7a55, 0.82);
     const officeWall = this.mat(0xaec2a4, 0.82);
     const ceiling = this.mat(0xe5ead8, 0.78);
@@ -275,11 +314,16 @@ export default class ThresholdZ8Home extends Scene {
     const lift = smooth((t - 210) / 1.2);
     const unhook = smooth((t - 210) / 0.7);
     const drop = smooth((t - 211.0) / 1.4);
-    this.receiver.position.copy(this.receiverHome).add(new THREE.Vector3(-0.01 - lift * 0.065, unhook * 0.075 - drop * 0.14, lift * 0.025));
-    this.receiver.rotation.z = 0.08 + lift * (0.32 + 0.08 * Math.sin((t - 210) * 5));
-    this.receiver.rotation.x = lift * 0.12 * Math.sin((t - 210) * 4);
-    // Ringing is vibration, not object growth; the handset must stay wall-phone scale.
-    this.receiver.scale.setScalar(1);
+    if (this.receiver) {
+      this.receiver.position.copy(this.receiverHome).add(new THREE.Vector3(
+        -lift * 0.018,
+        unhook * 0.045,
+        unhook * 0.075 - drop * 0.14,
+      ));
+      this.receiver.rotation.z = 0.04 + lift * (0.28 + 0.08 * Math.sin((t - 210) * 5));
+      this.receiver.rotation.x = lift * 0.12 * Math.sin((t - 210) * 4);
+      this.receiver.scale.setScalar(1);
+    }
 
     // Door handle turns, then the front door opens onto the office loop.
     this.handle.rotation.y = smooth((t - 214) / 2.0) * 0.9;
