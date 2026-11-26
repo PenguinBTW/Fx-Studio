@@ -137,7 +137,11 @@ wav('z1_run_carpet.wav', stem(8.4, (t) => {
     const u = t - at;
     if (u > 0 && u < 0.24) {
       const size = 0.65 + i * 0.055;
-      slam += (noise() * 0.08 + slamLp * 0.18 + Math.sin(u * Math.PI * 2 * (88 - i * 2)) * 0.24 + Math.sin(u * Math.PI * 2 * 244) * 0.045) * Math.exp(-u * 11) * size;
+      // Keep the low tile-slam body intact but shave the noise/top-edge transient crest;
+      // otherwise the master lookahead limiter pumps the whole chase underneath it.
+      const slamBody = Math.sin(u * Math.PI * 2 * (88 - i * 2)) * 0.24;
+      const slamEdge = noise() * 0.036 + slamLp * 0.095 + Math.sin(u * Math.PI * 2 * 244) * 0.020;
+      slam += (slamBody + slamEdge) * Math.exp(-u * 8) * size * 0.58;
     }
   }
   const rasp = (noise() * 0.016 + carpetLp * 0.025) * (0.5 + 0.5 * Math.sin(t * Math.PI * 0.8));
