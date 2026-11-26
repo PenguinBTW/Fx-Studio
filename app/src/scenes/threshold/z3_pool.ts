@@ -97,6 +97,10 @@ export default class ThresholdZ3Pool extends Scene {
   private tenant!: THREE.Mesh;
   private surfaceLeaves: THREE.Mesh[] = [];
   private underwaterBits: THREE.Mesh[] = [];
+  private cameraWakeRings: THREE.Mesh[] = [];
+  private contactRipples: { mesh: THREE.Mesh; x: number; z: number; phase: number }[] = [];
+  private creatureRipples: THREE.Mesh[] = [];
+  private creatureDrips: THREE.Mesh[] = [];
   private strips: THREE.Mesh[] = [];
   private stepGlow!: THREE.MeshStandardMaterial;
 
@@ -145,13 +149,24 @@ export default class ThresholdZ3Pool extends Scene {
       const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
       const mapped = mats.map(remap);
       mesh.material = Array.isArray(mesh.material) ? mapped : mapped[0]!;
-      if (/water_ripple_ring|torso_tile_band|head_grout_|(?:arm|leg)_.*_grout_|shoulder_socket|elbow_|wrist_|knee_|hip_socket|body_tile_chip|^(?:arm|leg)_[lr]_(?:upper|lower)$/.test(mesh.name)) mesh.visible = false;
+      if (/water_ripple_ring|torso_tile_band|head_grout_|(?:arm|leg)_.*_grout_|shoulder_socket|elbow_|wrist_|knee_|hip_socket|body_tile_chip|^(?:arm|leg)_[lr]_(?:upper|lower)$|^finger_[lr]_|^shoulder_bar$/.test(mesh.name)) mesh.visible = false;
     });
     this.mirrorlingAsset.root.traverse((o) => {
       const mesh = o as THREE.Mesh;
       if (!mesh.isMesh) return;
       const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
       mats.forEach((m) => { const mm = m as THREE.MeshStandardMaterial; if (/chrome|tile_highlight/.test(mm.name)) mm.envMapIntensity = 0.9; });
+    });
+    // Tilt/turn the whole head assembly around the neck as one organism. The GLB nodes have
+    // simple local translations, so rotating both position and orientation preserves the cracks,
+    // mirror face, cranium and chin as a single intentional head gesture.
+    const headPivot = new THREE.Vector3(0, 2.02, 0);
+    const headTurn = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.11, 0.14, 0.20));
+    this.mirrorlingAsset.root.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh || !/^(head_teardrop_cranium|head_pointed_chin|blank_mirror_face|head_hairline_grout_)/.test(mesh.name)) return;
+      mesh.position.sub(headPivot).applyQuaternion(headTurn).add(headPivot);
+      mesh.quaternion.premultiply(headTurn);
     });
     // Ceramic limb volume overlay: the GLB supplies the teardrop head, torso, joints and fingers;
     // these continuous tiled sleeves guarantee the limbs read as the same ceramic being at film distance.
@@ -178,12 +193,14 @@ export default class ThresholdZ3Pool extends Scene {
     };
     for (const side of [-1, 1] as const) {
       const left = side < 0;
-      const shoulder: [number, number, number] = [side * 0.28, 1.94, 0];
-      const elbow: [number, number, number] = left ? [-0.62, 1.28, 0.025] : [0.76, 1.34, -0.018];
-      const wrist: [number, number, number] = left ? [-0.43, 0.56, 0.04] : [0.57, 0.78, -0.04];
+      // Emergent creature stance, not a display pose: left arm drags low while the right arm
+      // reaches up/forward toward the viewer; the right leg steps ahead through the water.
+      const shoulder: [number, number, number] = left ? [-0.31, 1.93, 0] : [0.29, 1.96, 0];
+      const elbow: [number, number, number] = left ? [-0.67, 1.25, 0.06] : [0.72, 2.18, 0.32];
+      const wrist: [number, number, number] = left ? [-0.50, 0.52, 0.10] : [0.92, 2.02, 0.95];
       const hip: [number, number, number] = [side * 0.12, 1.35, 0];
-      const knee: [number, number, number] = left ? [-0.15, 0.72, 0.025] : [0.25, 0.72, -0.018];
-      const tip: [number, number, number] = left ? [-0.18, 0.03, 0.045] : [0.34, 0.03, -0.035];
+      const knee: [number, number, number] = left ? [-0.22, 0.70, -0.08] : [0.25, 0.88, 0.10];
+      const tip: [number, number, number] = left ? [-0.33, 0.03, -0.25] : [0.16, 0.03, 0.34];
       addLimbCylinder(`z3_mirrorling_ceramic_upper_arm_${side}`, shoulder, elbow, 0.062, 0.046, limbTile);
       addLimbCylinder(`z3_mirrorling_ceramic_lower_arm_${side}`, elbow, wrist, 0.046, 0.027, limbTile);
       addLimbCylinder(`z3_mirrorling_ceramic_upper_leg_${side}`, hip, knee, 0.076, 0.055, limbTile);
@@ -207,7 +224,19 @@ export default class ThresholdZ3Pool extends Scene {
           addSurfaceGrout(`z3_mirrorling_${label}_glaze_crack_${side}_${u}`, a, b, u, 0.045 + hash(seed) * 0.055, zoff, (hash(seed + 2) - 0.5) * 1.1);
         }
       });
+      // Replacement finger fans follow the rebuilt asymmetric wrists. They are tapered ceramic
+      // slivers rather than the GLB's symmetric shop-mannequin fingers.
+      for (let fi = 0; fi < 4; fi++) {
+        const lateral = (fi - 1.5) * 0.028;
+        const base: [number, number, number] = [wrist[0] + lateral * (left ? 1 : -1), wrist[1] - 0.012, wrist[2] + 0.018];
+        const mid: [number, number, number] = [base[0] + lateral * 0.35, base[1] - 0.105 - fi * 0.008, base[2] + (left ? 0.035 : 0.125)];
+        const ftip: [number, number, number] = [mid[0] + lateral * 0.18, mid[1] - 0.105, mid[2] + (left ? 0.025 : 0.085)];
+        addLimbCylinder(`z3_mirrorling_finger_upper_${side}_${fi}`, base, mid, 0.012, 0.008, limbTile);
+        addLimbCylinder(`z3_mirrorling_finger_lower_${side}_${fi}`, mid, ftip, 0.008, 0.0045, limbTile);
+      }
     }
+    // sloped clavicle bridge replacing the perfectly horizontal mannequin shoulder bar
+    addLimbCylinder('z3_mirrorling_sloped_clavicle_bridge', [-0.31, 1.93, 0], [0.29, 1.96, 0], 0.075, 0.075, limbTile);
     // Front-surface torso/head registration seams and a few chipped tile edges. These sit proud by only
     // millimetres, giving scale and ceramic construction without the crash-test-dummy hoop segmentation.
     for (const [i, y] of [1.2, 1.38, 1.56, 1.74, 1.92].entries()) {
@@ -220,6 +249,17 @@ export default class ThresholdZ3Pool extends Scene {
       const side = i % 2 ? 1 : -1;
       box(this.mirrorlingAsset.root, `z3_mirrorling_edge_chip_${i}`, [0.026 + hash(i) * 0.032, 0.012, 0.018], [side * (0.13 + hash(i + 2) * 0.18), 0.72 + hash(i + 3) * 1.62, 0.138], i % 3 ? limbTile : limbGrout, [0, 0, hash(i + 4) * 0.8]);
     }
+    // large silhouette bites and loose ceramic fragments: the body is damaged and incomplete,
+    // not a pristine symmetrical display figure.
+    const bitePts: Array<[number, number, number, number]> = [
+      [-0.22, 1.86, 0.14, 0.11], [0.19, 1.62, 0.145, 0.085], [-0.16, 1.31, 0.14, 0.095],
+      [0.14, 1.05, 0.14, 0.075], [-0.10, 2.42, 0.15, 0.07], [0.09, 2.25, 0.15, 0.06],
+      [-0.61, 1.21, 0.09, 0.075], [0.77, 2.11, 0.19, 0.065],
+    ];
+    bitePts.forEach(([x, y, z, sz], i) => {
+      box(this.mirrorlingAsset.root, `z3_mirrorling_missing_tile_bite_${i}`, [sz, 0.018 + hash(i) * 0.025, 0.022], [x, y, z], limbGrout, [0, 0, hash(i + 9) * 1.4]);
+      if (i < 5) box(this.mirrorlingAsset.root, `z3_mirrorling_loose_tile_fragment_${i}`, [sz * 0.42, 0.012, 0.018], [x + 0.06 + hash(i) * 0.06, y - 0.06, z + 0.025], limbTile, [0, 0, hash(i + 12) * 1.8]);
+    });
     this.mirrorlingAsset.root.visible = false;
     this.mirrorlingReflection.root.visible = false;
     this.mirrorlingReflection.root.scale.y = -1;
@@ -300,7 +340,7 @@ export default class ThresholdZ3Pool extends Scene {
     }
     // water plane and lane-rope/pipe details
     this.waterMat = mat(0x55b6c0, 0.055, 0.18, 0x0a5964, 0.24) as THREE.MeshStandardMaterial;
-    this.waterMat.transparent = true; this.waterMat.opacity = 0.60; this.waterMat.depthWrite = false; this.waterMat.side = THREE.DoubleSide;
+    this.waterMat.transparent = true; this.waterMat.opacity = 0.78; this.waterMat.depthWrite = false; this.waterMat.side = THREE.DoubleSide;
     const wc = document.createElement('canvas'); wc.width = wc.height = 256;
     const wg = wc.getContext('2d')!;
     wg.fillStyle = 'rgb(104,188,196)'; wg.fillRect(0, 0, 256, 256);
@@ -308,8 +348,8 @@ export default class ThresholdZ3Pool extends Scene {
     // read as a shallow volume at grazing angles, not as glossy floor paint.
     const deep = wg.createLinearGradient(0, 0, 0, 256); deep.addColorStop(0, 'rgba(5,54,72,0.48)'); deep.addColorStop(0.42, 'rgba(24,126,140,0.16)'); deep.addColorStop(1, 'rgba(3,38,55,0.55)'); wg.fillStyle = deep; wg.fillRect(0, 0, 256, 256);
     for (let y = 3; y < 256; y += 5) {
-      const alpha = 0.20 + hash(y * 1.71) * 0.25;
-      wg.strokeStyle = `rgba(225,255,248,${alpha})`; wg.lineWidth = 0.65 + hash(y * 2.3) * 1.25;
+      const alpha = 0.30 + hash(y * 1.71) * 0.32;
+      wg.strokeStyle = `rgba(225,255,248,${alpha})`; wg.lineWidth = 0.9 + hash(y * 2.3) * 1.65;
       wg.beginPath();
       for (let x = 0; x <= 256; x += 5) {
         const yy = y + Math.sin(x * 0.065 + y * 0.31) * 2.3 + Math.sin(x * 0.19 + y) * 0.9;
@@ -366,6 +406,47 @@ export default class ThresholdZ3Pool extends Scene {
       const side = i % 2 ? -1 : 1;
       plane(this.s, `z3_water_edge_foam_break_${i}`, 0.08 + hash(i) * 0.18, 0.012 + hash(i + 2) * 0.025, [side * (3.58 + hash(i) * 0.12), 0.466, -18 + hash(i * 4.2) * 23], basic(0xd9fff6, 0.22 + hash(i + 5) * 0.16), [-Math.PI / 2, 0, hash(i + 7) * Math.PI]);
     }
+    // Interaction geometry: expanding closed-form wake rings from the wading viewer, plus
+    // persistent contact ripples around bench/chair legs and small floating debris. These are
+    // horizontal water-surface disturbances rather than decorative wall trim.
+    const rippleCanvas = document.createElement('canvas'); rippleCanvas.width = rippleCanvas.height = 128;
+    const rg = rippleCanvas.getContext('2d')!; rg.clearRect(0, 0, 128, 128);
+    for (let ring = 0; ring < 3; ring++) {
+      rg.strokeStyle = `rgba(255,255,255,${0.62 - ring * 0.14})`; rg.lineWidth = 2.6 - ring * 0.45;
+      for (const arc of [[0.05, 1.55], [1.85, 3.35], [3.75, 5.75]] as const) {
+        rg.beginPath();
+        for (let k = 0; k <= 18; k++) {
+          const a = arc[0] + (arc[1] - arc[0]) * (k / 18);
+          const rr = 28 + ring * 13 + Math.sin(a * 3.1 + ring) * 2.2 + Math.sin(a * 7.3 + ring * 2) * 1.1;
+          const x = 64 + Math.cos(a) * rr, y = 64 + Math.sin(a) * rr * 0.72;
+          if (k === 0) rg.moveTo(x, y); else rg.lineTo(x, y);
+        }
+        rg.stroke();
+      }
+    }
+    const rippleTex = new THREE.CanvasTexture(rippleCanvas); rippleTex.colorSpace = THREE.SRGBColorSpace;
+    const rippleGeo = new THREE.PlaneGeometry(2, 2);
+    const makeRipple = (name: string, opacity: number) => {
+      const rm = new THREE.MeshBasicMaterial({ map: rippleTex, color: 0xbdfcf2, transparent: true, opacity, depthWrite: false, side: THREE.DoubleSide });
+      const r = new THREE.Mesh(rippleGeo, rm);
+      r.name = r.userData.fx_entity = name; r.rotation.x = -Math.PI / 2; r.renderOrder = 5; this.s.add(r);
+      return r;
+    };
+    for (let i = 0; i < 14; i++) this.cameraWakeRings.push(makeRipple(`z3_viewer_bow_wake_ring_${i}`, 0));
+    const contactPts: Array<[number, number]> = [
+      [-3.98, -1.92], [-3.98, -1.08], [-3.35, -1.92], [-3.35, -1.08], [3.18, 3.48], [3.72, 3.48],
+      [-3.0, -4.5], [-2.45, -5.6], [-1.9, -6.7], [-1.35, -7.8], [3.3, -8.0], [3.3, -9.8], [2.4, -5.2], [3.5, -6.5],
+    ];
+    contactPts.forEach(([x, z], i) => {
+      for (let k = 0; k < 2; k++) this.contactRipples.push({ mesh: makeRipple(`z3_contact_ripple_${i}_${k}`, 0), x, z, phase: hash(i * 7 + k * 3) });
+    });
+    for (let i = 0; i < 10; i++) this.creatureRipples.push(makeRipple(`z3_mirrorling_step_ripple_${i}`, 0));
+    for (let i = 0; i < 8; i++) {
+      const dm = new THREE.MeshBasicMaterial({ color: 0xa9fff2, transparent: true, opacity: 0, depthWrite: false });
+      const d = box(this.s, `z3_mirrorling_water_drip_${i}`, [0.012, 0.32, 0.012], [0, 0.3, 0], dm);
+      d.renderOrder = 6; this.creatureDrips.push(d);
+    }
+
     const gc = document.createElement('canvas'); gc.width = gc.height = 256;
     const gg = gc.getContext('2d')!;
     gg.clearRect(0, 0, 256, 256);
@@ -379,8 +460,24 @@ export default class ThresholdZ3Pool extends Scene {
       gg.fillStyle = grad;
       gg.save(); gg.translate(x, y); gg.scale(1, ry / rx); gg.beginPath(); gg.arc(0, 0, rx, 0, Math.PI * 2); gg.fill(); gg.restore();
     }
+    // dense directional capillary wavelets: these catch strips as broken moving threads rather
+    // than broad polished-floor sheen.
+    for (let y = 2; y < 256; y += 6) {
+      gg.strokeStyle = `rgba(225,255,250,${0.11 + hash(y * 4.7) * 0.16})`; gg.lineWidth = 0.7 + hash(y) * 0.9;
+      gg.beginPath();
+      for (let x = 0; x <= 256; x += 7) {
+        const yy = y + Math.sin(x * 0.08 + y * 0.37) * 2.2 + Math.sin(x * 0.23 + y) * 0.9;
+        if (x === 0) gg.moveTo(x, yy); else gg.lineTo(x, yy);
+      }
+      gg.stroke();
+    }
+    for (let i = 0; i < 34; i++) {
+      const x = hash(i * 3.1) * 256, y = hash(i * 5.7) * 256;
+      gg.strokeStyle = `rgba(175,245,238,${0.08 + hash(i) * 0.13})`; gg.lineWidth = 0.8;
+      gg.beginPath(); gg.moveTo(x, y); gg.lineTo(x + 18 + hash(i + 1) * 32, y + (hash(i + 2) - 0.5) * 12); gg.stroke();
+    }
     const glintTex = new THREE.CanvasTexture(gc); glintTex.wrapS = glintTex.wrapT = THREE.RepeatWrapping; glintTex.repeat.set(2.2, 7.5);
-    this.waterGlintMat = new THREE.MeshBasicMaterial({ map: glintTex, transparent: true, opacity: 0.34, depthWrite: false });
+    this.waterGlintMat = new THREE.MeshBasicMaterial({ map: glintTex, transparent: true, opacity: 0.48, depthWrite: false });
     plane(this.s, 'z3_water_specular_patches', 8, 27, [0, 0.456, -6], this.waterGlintMat, [-Math.PI / 2, 0, 0]);
     // Player-proxy reflection for the look-down beat: a full-length body reflection, pre-distorted
     // in horizontal water slices, with the flashlight and its warm scatter physically connected at the hand.
@@ -425,6 +522,9 @@ export default class ThresholdZ3Pool extends Scene {
     this.playerReflectionMat = new THREE.MeshBasicMaterial({ map: playerTex, transparent: true, opacity: 0, depthWrite: false });
     this.playerReflection = plane(this.s, 'z3_player_proxy_reflection', 1.86, 4.75, [0, 0.448, 1.5], this.playerReflectionMat, [-Math.PI / 2, 0, 0]);
     this.playerReflection.renderOrder = 4; this.playerReflection.visible = false;
+    this.playerReflection.userData.baseRefl = baseRefl;
+    this.playerReflection.userData.reflectCtx = pg;
+    this.playerReflection.userData.reflectTex = playerTex;
     const bc = document.createElement('canvas'); bc.width = 256; bc.height = 256;
     const bg = bc.getContext('2d')!; bg.clearRect(0, 0, 256, 256);
     for (let i = 0; i < 10; i++) {
@@ -617,6 +717,39 @@ export default class ThresholdZ3Pool extends Scene {
       b.position.x = bp.x + Math.cos(t * 0.4 + i) * 0.035;
     });
 
+    // Wading interaction: rings are emitted from the camera ground position using the same
+    // deterministic camera path, so a moving viewer leaves an expanding trailing wake. Rings
+    // emitted while the viewer is still have near-zero strength instead of pulsing forever.
+    const wakeFade = smooth(55.65, 56.05, t) * (1 - smooth(79.0, 80.0, t));
+    this.cameraWakeRings.forEach((r, i) => {
+      const cycle = 1.8;
+      const age = (t + i * cycle / this.cameraWakeRings.length) % cycle;
+      const emitT = t - age;
+      const ep = evalCam(KEYS, emitT);
+      const epa = evalCam(KEYS, emitT - 0.05), epb = evalCam(KEYS, emitT + 0.05);
+      const speed = Math.hypot(epb.pos[0] - epa.pos[0], epb.pos[2] - epa.pos[2]) / 0.1;
+      const strength = clamp(speed / 1.4, 0, 1);
+      const u = age / cycle;
+      const radius = 0.12 + u * 1.15;
+      const vx = (epb.pos[0] - epa.pos[0]) / 0.1, vz = (epb.pos[2] - epa.pos[2]) / 0.1;
+      const vl = Math.hypot(vx, vz) || 1;
+      // the visible mass of a wading wake is shoved ahead of the legs, not centered under the eye
+      const bowShift = 0.48 + u * 0.18;
+      r.position.set(ep.pos[0] + (vx / vl) * bowShift, this.water.position.y + 0.043, ep.pos[2] + (vz / vl) * bowShift);
+      r.scale.setScalar(radius);
+      const rm = r.material as THREE.MeshBasicMaterial;
+      rm.opacity = 0.68 * (1 - u) * strength * wakeFade;
+      r.visible = rm.opacity > 0.006;
+    });
+    this.contactRipples.forEach((cr) => {
+      const u = (t * 0.34 + cr.phase) % 1;
+      cr.mesh.position.set(cr.x, this.water.position.y + 0.045, cr.z);
+      cr.mesh.scale.setScalar(0.075 + u * 0.43);
+      const rm = cr.mesh.material as THREE.MeshBasicMaterial;
+      rm.opacity = 0.42 * (1 - u) * wakeFade;
+      cr.mesh.visible = rm.opacity > 0.006;
+    });
+
     // strip hum/flicker
     this.strips.forEach((s, i) => { const m = s.material as THREE.MeshStandardMaterial; m.emissiveIntensity = hash(Math.floor(t * 12) + i * 11) < (i === 2 ? 0.22 : 0.04) ? 0.2 : 2.0; });
 
@@ -628,6 +761,27 @@ export default class ThresholdZ3Pool extends Scene {
     this.playerReflectionMat.opacity = 0.66 * reflPlayer;
     this.beamReflectionMat.opacity = 0.50 * reflPlayer;
     if (reflPlayer > 0) {
+      // Live closed-form wave slicing: the reflected silhouette continually shears apart in
+      // horizontal fragments, so it cannot read as a mirror-polished floor during the look-down.
+      const base = this.playerReflection.userData.baseRefl as HTMLCanvasElement;
+      const pgx = this.playerReflection.userData.reflectCtx as CanvasRenderingContext2D;
+      const tex = this.playerReflection.userData.reflectTex as THREE.CanvasTexture;
+      pgx.clearRect(0, 0, 256, 512);
+      for (let y = 0; y < 512; y += 3) {
+        const depthAmp = 4.5 + (y / 512) * 10.5;
+        const wobble = Math.sin(y * 0.043 + t * 2.65) * depthAmp + Math.sin(y * 0.127 - t * 4.1) * 3.4 + Math.sin(y * 0.29 + t * 7.3) * 1.15;
+        pgx.drawImage(base, 0, y, 256, 3, wobble, y, 256, 3);
+      }
+      pgx.strokeStyle = 'rgba(145,238,230,0.16)'; pgx.lineWidth = 1;
+      for (let y = 10; y < 506; y += 13) {
+        pgx.beginPath();
+        for (let x = 24; x <= 232; x += 8) {
+          const yy = y + Math.sin(x * 0.065 + y * 0.17 + t * 2.4) * 2.7;
+          if (x === 24) pgx.moveTo(x, yy); else pgx.lineTo(x, yy);
+        }
+        pgx.stroke();
+      }
+      tex.needsUpdate = true;
       const fwdX = this.cam.position.x, fwdZ = this.cam.position.z - 1.08;
       this.playerReflection.position.set(fwdX, 0.448, fwdZ);
       const wrongU = smooth(61.0, 62.2, t) * (1 - smooth(63.0, 63.8, t));
@@ -668,12 +822,42 @@ export default class ThresholdZ3Pool extends Scene {
     this.mirrorlingAsset.root.visible = t > 72.0;
     this.mirrorlingAsset.root.scale.set(0.94, 1.04, 0.94);
     this.mirrorlingAsset.root.position.set((stepIndex % 2 ? -0.025 : 0.025) * stepPulse, 0.45, mz);
-    this.mirrorlingAsset.root.rotation.y = 0.28 + smooth(72.2, 74.8, t) * 0.16 + (stepIndex % 2 ? -0.035 : 0.035) * stepPulse;
-    this.mirrorlingAsset.root.rotation.z = (stepIndex % 2 ? 0.018 : -0.018) * stepPulse;
+    this.mirrorlingAsset.root.rotation.y = 0.38 + smooth(72.2, 74.8, t) * 0.28 + (stepIndex % 2 ? -0.045 : 0.045) * stepPulse;
+    this.mirrorlingAsset.root.rotation.x = 0.20 + Math.sin(t * 0.53) * 0.022;
+    this.mirrorlingAsset.root.rotation.z = -0.19 + (stepIndex % 2 ? 0.032 : -0.032) * stepPulse;
+    // Ground the stepped pose against the wave surface: solve the small vertical offset so the
+    // lowest foot exactly meets water instead of hovering as a display figure.
+    this.mirrorlingAsset.root.updateMatrixWorld(true);
+    const preFeet = [new THREE.Vector3(-0.33, 0.03, -0.25), new THREE.Vector3(0.16, 0.03, 0.34)].map((v) => this.mirrorlingAsset.root.localToWorld(v));
+    const lowestFoot = Math.min(preFeet[0]!.y, preFeet[1]!.y);
+    this.mirrorlingAsset.root.position.y -= (lowestFoot - (this.water.position.y - 0.115));
     this.mirrorlingWake.visible = t > 72.0;
-    this.mirrorlingWake.position.set(this.mirrorlingAsset.root.position.x, 0.461, mz + 0.03);
+    this.mirrorlingWake.position.set(this.mirrorlingAsset.root.position.x, 0.496, mz + 0.03);
     this.mirrorlingWake.rotation.z = Math.sin(t * 0.8) * 0.08;
-    this.mirrorlingWakeMat.opacity = (t > 72.0 ? 0.24 + stepPulse * 0.18 : 0);
+    this.mirrorlingWakeMat.opacity = (t > 72.0 ? 0.34 + stepPulse * 0.22 : 0);
+    // water-contact response at both stepping feet plus gravity drips from the reaching hand.
+    this.mirrorlingAsset.root.updateMatrixWorld(true);
+    const footLocals = [new THREE.Vector3(-0.33, 0.03, -0.25), new THREE.Vector3(0.16, 0.03, 0.34)];
+    const footWorld = footLocals.map((v) => this.mirrorlingAsset.root.localToWorld(v.clone()));
+    this.creatureRipples.forEach((r, i) => {
+      const foot = footWorld[i < 5 ? 0 : 1]!;
+      const u = (t * 0.48 + i * 0.19) % 1;
+      r.position.set(foot.x, this.water.position.y + 0.046, foot.z);
+      r.scale.setScalar(0.10 + u * 0.78);
+      const rm = r.material as THREE.MeshBasicMaterial;
+      rm.opacity = (t > 72 ? 0.78 : 0) * (1 - u) * (0.74 + stepPulse * 0.26);
+      r.visible = rm.opacity > 0.006;
+    });
+    const handWorld = this.mirrorlingAsset.root.localToWorld(new THREE.Vector3(0.92, 2.02, 0.95));
+    this.creatureDrips.forEach((d, i) => {
+      const u = (t * 0.72 + i * 0.137) % 1;
+      const spread = (i % 4 - 1.5) * 0.026;
+      d.position.set(handWorld.x + spread, handWorld.y - 0.12 - u * 0.92, handWorld.z + (hash(i) - 0.5) * 0.045);
+      d.scale.y = 0.28 + u * 1.2;
+      const dm = d.material as THREE.MeshBasicMaterial;
+      dm.opacity = (t > 72 ? 0.20 : 0) * (1 - u);
+      d.visible = dm.opacity > 0.006;
+    });
     for (const side of [-1, 1] as const) {
       const arm = this.mirrorlingAsset.part(side < 0 ? 'arm_l_upper' : 'arm_r_upper');
       if (arm) arm.rotation.z = 0;
@@ -695,7 +879,7 @@ export default class ThresholdZ3Pool extends Scene {
 
     const underwater = smooth(79.15, 80, t);
     this.s.fog = new THREE.FogExp2(underwater > 0.4 ? 0x061c22 : 0x0b4652, 0.055 + underwater * 0.22);
-    this.waterMat.opacity = 0.60 - underwater * 0.18;
+    this.waterMat.opacity = 0.78 - underwater * 0.18;
 
     const gl = this.ctx.renderer;
     gl.setRenderTarget(out); gl.setClearColor(underwater > 0.4 ? 0x03151a : 0x08262d, 1); gl.clear(true, true, true); gl.render(this.s, this.cam); gl.resetState();

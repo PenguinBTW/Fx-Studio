@@ -138,7 +138,12 @@ export function z7PoseAt(t: number) {
     pos[1] -= 0.13 * stumble * (0.72 + 0.28 * Math.sin((t - 170.38) * 17.0));
     const roll = lerp(0, JOIN_POSE.roll, u) + 2 * Math.PI / 180 * Math.sin(Math.PI * u)
       + stumble * (0.13 * stumbleSeed + 0.055 * Math.sin((t - 170.38) * 47.0));
-    const stumbledPitch = pitch - stumble * (0.19 + 0.035 * Math.sin((t - 170.38) * 23.0));
+    // The whip is motivated by the overhead lunge: the camera tilts up into the
+    // passing mass, then whips after it as it lands behind. This keeps the exchange
+    // visible instead of reading as an empty-aisle teleport frame.
+    const overheadPitch = 0.78 * smooth((t - 167.55) / 0.28) * (1 - smooth((t - 168.02) / 0.24));
+    const lookbackPitch = 0.12 * lookback;
+    const stumbledPitch = pitch + overheadPitch + lookbackPitch - stumble * (0.19 + 0.035 * Math.sin((t - 170.38) * 23.0));
     return poseFromYawPitch(base, pos, yaw + yawForward, stumbledPitch, roll, fov);
   }
   if (t >= 149.5 && t < 163) {
@@ -579,6 +584,7 @@ export default class ThresholdZ7Cathedral extends Scene {
       const seed = chain === 'spine' ? 0.05 + i * 0.012 : chain === 'rib' ? 0.28 + (i - 8) * 0.018 : chain === 'limb' ? 0.48 + (i - 14) * 0.015 : 0.68 + (i - 24) * 0.02;
       this.assembly.push({ mesh: piece, start, end, seed, chain });
       piece.scale.multiplyScalar(3.0);
+      piece.userData.baseAssemblyScale = 3.0;
       piece.visible = false;
     }
     this.assemblyShadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0, depthWrite: false });
@@ -1089,6 +1095,10 @@ export default class ThresholdZ7Cathedral extends Scene {
         lerp(floorY, a.end.y, rise) + Math.sin(Math.PI * u) * lift,
         lerp(a.start.z, a.end.z, gather) + depthLane * laneU,
       );
+      // As each fragment arrives it is swallowed into the fused body instead of
+      // remaining a toy-sized carton glued across the silhouette.
+      const absorb = smooth((u - 0.72) / 0.24);
+      a.mesh.scale.setScalar((a.mesh.userData.baseAssemblyScale ?? 3) * (1 - absorb * 0.78));
       const stepSpin = Math.floor(u * 5) / 5;
       a.mesh.rotation.set(stepSpin * (1 + a.seed) * 3.2, stepSpin * 4.4, stepSpin * 2.1);
     }
@@ -1107,22 +1117,29 @@ export default class ThresholdZ7Cathedral extends Scene {
       const chaseK = smooth((t - 168.05) / 0.45);
       let z = -16.6;
       let x = 0.15 * Math.sin(t * 1.7);
-      const passU = smooth((t - 167.2) / 1.06);
-      const handoffCamZ = z7PoseAt(168.26).pos[2];
+      const handoffCamZ = z7PoseAt(168.6).pos[2];
       const landingZ = handoffCamZ + 4.25;
-      if (t >= 167.2 && t < 168.26) {
-        // Continuous overhead lunge: the predator leaves its reveal position,
-        // passes over the camera during the whip, and lands behind it. No teleport.
-        z = lerp(-16.6, landingZ, passU);
-        x = lerp(0.15 * Math.sin(t * 1.7), 1.2, passU);
+      // Continuous overhead lunge in two motivated phases: first the predator closes
+      // in front of the runner, then it crosses the lens during the whip and lands behind.
+      // Position remains continuous at every sample; there is no relocation frame.
+      const preU = smooth((t - 167.2) / 0.8);
+      const postU = smooth((t - 168.0) / 0.6);
+      if (t >= 167.2 && t < 168.0) {
+        z = lerp(-16.6, -14.7, preU);
+        x = lerp(0.15 * Math.sin(t * 1.7), 0.0, preU);
       }
-      if (t >= 168.26) {
-        const gain = smooth((t - 168.26) / 1.55);
+      if (t >= 168.0 && t < 168.6) {
+        z = lerp(-14.7, landingZ, postU);
+        x = lerp(0.0, 0.45, postU);
+      }
+      if (t >= 168.6) {
+        const gain = smooth((t - 168.6) / 1.35);
         const gap = lerp(4.25, 2.72, gain);
         z = this.cam.position.z + gap;
-        x = lerp(1.2, -1.25 + 0.22 * Math.sin(t * 1.9), chaseK);
+        x = lerp(0.45, -1.25 + 0.22 * Math.sin(t * 1.9), smooth((t - 168.6) / 0.9));
       }
-      const overheadLift = Math.sin(Math.PI * passU) * (t >= 167.2 && t < 168.26 ? 1.12 : 0);
+      const overheadU = clamp((t - 167.55) / 1.05);
+      const overheadLift = Math.sin(Math.PI * overheadU) * (t >= 167.55 && t < 168.6 ? 1.35 : 0);
       // Stop-start predator language: a 30 deg head-tilt tell, then one fast 0.3 s
       // burst into the next held pose. During pursuit the same pose steps become a
       // four-beat all-fours gallop rather than continuous toylike swaying.
