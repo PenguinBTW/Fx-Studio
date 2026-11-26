@@ -402,7 +402,8 @@ wav('z3_pool_events.wav', stem(25.8, (t) => {
     const phase = z3HumPhase(at);
     const hum = Math.sin(phase * Math.PI * 2) * 0.018 + Math.sin(phase * Math.PI * 2 * 1.99) * 0.007;
     const air = z3AirLp * 0.028;
-    add(hum + air, 0);
+    const breath = 0.005 + 0.995 * ((1 - smoothstep(62.7, 63.0, at)) + smoothstep(65.7, 66.0, at));
+    add((hum + air) * breath, 0);
   }
   for (const drip of z3Drips) {
     const u = at - drip;
@@ -644,7 +645,7 @@ wav('z5_motel_events.wav', stem(25.7,(t)=>{
  const at=t+104.7; z5lp=z5lp*.87+noise()*.13; let l=0,r=0;
  const add=(v:number,pan=0)=>{const a=(pan+1)*Math.PI/4;l+=v*Math.cos(a);r+=v*Math.sin(a)};
  // End-window rain and unstable neon/ice-machine electrical bed.
- if(at>=105&&at<130){const bedDuck=1-.5*smoothstep(114.48,114.55,at)*(1-smoothstep(115.85,116.05,at));const rain=noise()*.009*(.55+.45*hash01(Math.floor(at*19),5));add(rain*bedDuck,.18);add(Math.sin(at*Math.PI*2*120)*.004*(1+.25*Math.sin(at*19))*bedDuck,.28);add(z5lp*.012*bedDuck,-.32)}
+ if(at>=105&&at<130){const bedDuck=1-.5*smoothstep(114.48,114.55,at)*(1-smoothstep(115.85,116.05,at));const breath=0.005+0.995*((1-smoothstep(117.0,117.3,at))+smoothstep(119.9,120.2,at));const bedGain=bedDuck*breath;const rain=noise()*.009*(.55+.45*hash01(Math.floor(at*19),5));add(rain*bedGain,.18);add(Math.sin(at*Math.PI*2*120)*.004*(1+.25*Math.sin(at*19))*bedGain,.28);add(z5lp*.012*bedGain,-.32)}
  // occasional compressor relay ticks
  for(const hit of[107.2,113.8,121.4,126.9]){const u=at-hit;if(u>0&&u<.05)add((noise()*.028+Math.sin(u*Math.PI*2*900)*.01)*Math.exp(-u*70),-.32)}
  // wet shoes compressing dense carpet, gait windows broad and deterministic
@@ -857,11 +858,13 @@ let z8lp=0;
 wav('z8_home_events.wav', stem(30.8,(t)=>{
  const at=t+194.4; z8lp=z8lp*.90+noise()*.10; let l=0,r=0;
  const add=(v:number,pan=0)=>{const a=(pan+1)*Math.PI/4;l+=v*Math.cos(a);r+=v*Math.sin(a)};
+ const z8Dip=(a:number,b:number,c:number,d:number)=>0.005+0.995*((1-smoothstep(a,b,at))+smoothstep(c,d,at));
+ const z8BedBreath=Math.min(z8Dip(198.0,198.3,199.8,200.1),z8Dip(214.8,215.1,217.15,217.35));
  // warm clock tick, quiet domestic air, birds and distant mower; mower becomes an exact 2s loop at 203
- if(at>=195&&at<225){const u=(at-195)%1;if(u<.032)add((noise()*.018+Math.sin(u*Math.PI*2*320)*.009+Math.sin(u*Math.PI*2*1280)*.0015)*Math.exp(-u*85),.3);add(z8lp*.010,0)}
- if(at>=195&&at<206){for(const st of[195.4,197.2,199.7,202.1,204.8]){const u=at-st;if(u>0&&u<.16)add(Math.sin(u*Math.PI*2*(1650+Math.sin(u*40)*180))*.002*Math.sin(Math.PI*u/.16),-.34)};const loopT=at<203?at:203+((at-203)%2);const mowerNoise=at<203?z8lp*.012:(Math.sin(loopT*Math.PI*2*91)*.004+Math.sin(loopT*Math.PI*2*176)*.002);add((Math.sin(loopT*Math.PI*2*88)*.006+mowerNoise)*smoothstep(195,198,at),-.28)}
+ if(at>=195&&at<225){const u=(at-195)%1;if(u<.032)add((noise()*.018+Math.sin(u*Math.PI*2*320)*.009+Math.sin(u*Math.PI*2*1280)*.0015)*Math.exp(-u*85),.3);add(z8lp*.010*z8BedBreath,0)}
+ if(at>=195&&at<206){for(const st of[195.4,197.2,199.7,202.1,204.8]){const u=at-st;if(u>0&&u<.16)add(Math.sin(u*Math.PI*2*(1650+Math.sin(u*40)*180))*.002*Math.sin(Math.PI*u/.16),-.34)};const loopT=at<203?at:203+((at-203)%2);const mowerNoise=at<203?z8lp*.012:(Math.sin(loopT*Math.PI*2*91)*.004+Math.sin(loopT*Math.PI*2*176)*.002);add((Math.sin(loopT*Math.PI*2*88)*.006+mowerNoise)*smoothstep(195,198,at)*z8BedBreath,-.28)}
  // kettle slowly rises then cuts dead at 214
- if(at>=195&&at<214){const k=smoothstep(200,210,at);add((noise()*.006+z8lp*.018)*(.15+.85*k),.34)}
+ if(at>=195&&at<214){const k=smoothstep(200,210,at);add((noise()*.006+z8lp*.018)*(.15+.85*k)*z8BedBreath,.34)}
  // slow wood/rug footsteps, switching material by position and then carpet at office threshold
  for(let i=0;i<45;i++){const hit=195.2+i*.58;if(hit>222)break;const u=at-hit;if(u>0&&u<.12){const rug=(i%5===2||i%5===3)?1:0;add((z8lp*(rug?.075:.045)+noise()*.010+Math.sin(u*Math.PI*2*(rug?76:105))*(rug?.022:.032))*Math.exp(-u*24),i%2?.08:-.08)}}
  // nearly subliminal photo-frame glass ticks
