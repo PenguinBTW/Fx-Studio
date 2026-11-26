@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import type { FPPose, V3 } from './fp_cam';
 import { laggedVec3 } from './fp_cam';
-import { batteryAt, beamDeadAt, beamTintAt, clamp, flickerAt, lerp, sm } from './kit';
+import { batteryAt, beamDeadAt, beamTintAt, clamp, flickerAt, hash, lerp } from './kit';
 
 const DEG = Math.PI / 180;
 
@@ -42,30 +42,6 @@ export function kelvinRGB(kelvin: number): [number, number, number] {
   return [clamp(r / 255), clamp(g / 255), clamp(b / 255)];
 }
 
-let cookieTex: THREE.CanvasTexture | null = null;
-function flashlightCookieTexture(): THREE.CanvasTexture {
-  if (cookieTex) return cookieTex;
-  const c = document.createElement('canvas');
-  c.width = c.height = 128;
-  const g = c.getContext('2d')!;
-  const img = g.createImageData(128, 128);
-  for (let y = 0; y < 128; y++) for (let x = 0; x < 128; x++) {
-    const dx = (x - 64) / 64, dy = (y - 64) / 64;
-    const r = Math.hypot(dx, dy);
-    const rings = 0.9 + 0.1 * Math.sin(r * 54);
-    const darkCentre = lerp(0.62, 1, sm(0.04, 0.18, r));
-    const edge = 1 - sm(0.86, 1, r);
-    const v = Math.round(255 * clamp(rings * darkCentre * edge));
-    const o = (y * 128 + x) * 4;
-    img.data[o] = img.data[o + 1] = img.data[o + 2] = v;
-    img.data[o + 3] = 255;
-  }
-  g.putImageData(img, 0, 0);
-  cookieTex = new THREE.CanvasTexture(c);
-  cookieTex.colorSpace = THREE.SRGBColorSpace;
-  return cookieTex;
-}
-
 let hazeAlphaTex: THREE.CanvasTexture | null = null;
 function hazeAlphaTexture(): THREE.CanvasTexture {
   if (hazeAlphaTex) return hazeAlphaTex;
@@ -73,9 +49,10 @@ function hazeAlphaTexture(): THREE.CanvasTexture {
   c.width = c.height = 128;
   const g = c.getContext('2d')!;
   const grad = g.createRadialGradient(64, 64, 4, 64, 64, 64);
-  grad.addColorStop(0, 'rgba(255,255,255,0.34)');
-  grad.addColorStop(0.45, 'rgba(255,255,255,0.16)');
-  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  // alphaMap samples the green channel, not canvas alpha, so bake the radial falloff into RGB.
+  grad.addColorStop(0, 'rgb(96,96,96)');
+  grad.addColorStop(0.45, 'rgb(42,42,42)');
+  grad.addColorStop(1, 'rgb(0,0,0)');
   g.fillStyle = grad;
   g.fillRect(0, 0, 128, 128);
   hazeAlphaTex = new THREE.CanvasTexture(c);
@@ -107,11 +84,11 @@ export function beamStateAt(t: number, threat = 0): BeamState {
 
 export class FlashlightRig {
   readonly group = new THREE.Group();
-  readonly core = new THREE.SpotLight(0xffffff, 0, 38, 7 * DEG, 0.25, 1.55);
-  readonly cone = new THREE.SpotLight(0xffffff, 0, 30, 22 * DEG, 0.58, 1.35);
-  readonly spill = new THREE.SpotLight(0xffffff, 0, 12, 30 * DEG, 0.92, 1.8);
+  readonly core = new THREE.SpotLight(0xffffff, 0, 38, 7 * DEG, 0.25, 1.8);
+  readonly cone = new THREE.SpotLight(0xffffff, 0, 30, 22 * DEG, 0.58, 1.65);
+  readonly spill = new THREE.SpotLight(0xffffff, 0, 12, 30 * DEG, 0.92, 2.0);
   readonly haze: THREE.Group;
-  private readonly hazeMats: THREE.MeshBasicMaterial[] = [];
+  private readonly hazeMats: THREE.SpriteMaterial[] = [];
   private readonly target = new THREE.Object3D();
 
   constructor() {
@@ -121,31 +98,29 @@ export class FlashlightRig {
       this.group.add(l);
     }
     this.group.add(this.target);
-    const cookie = flashlightCookieTexture();
-    this.core.map = cookie;
-    this.cone.map = cookie;
-    // Atmospheric haze is layered soft cross-sections starting away from the eye.
-    // Never a solid cone shell containing the camera: that reads as a flat triangle in first person.
+    // Atmospheric dust: sparse camera-facing motes inside the beam volume. No continuous cone
+    // shell or cross-section sheets, because those read as polygons/rings in first person.
     this.haze = new THREE.Group();
     const hazeAlpha = hazeAlphaTexture();
-    const diskGeom = new THREE.CircleGeometry(1, 40);
-    for (let i = 0; i < 6; i++) {
-      const mat = new THREE.MeshBasicMaterial({
-        color: 0xffd8a8,
-        transparent: true,
-        opacity: 0,
-        alphaMap: hazeAlpha,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-        side: THREE.DoubleSide,
-      });
-      const d = 0.9 + i * 0.92;
-      const disk = new THREE.Mesh(diskGeom, mat);
-      disk.position.z = d;
-      disk.scale.setScalar(Math.tan(22 * DEG) * d * (0.55 + i * 0.035));
-      disk.renderOrder = 10;
-      this.hazeMats.push(mat);
-      this.haze.add(disk);
+    const mat = new THREE.SpriteMaterial({
+      color: 0xffd8a8,
+      transparent: true,
+      opacity: 0,
+      alphaMap: hazeAlpha,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    this.hazeMats.push(mat);
+    for (let i = 0; i < 34; i++) {
+      const sprite = new THREE.Sprite(mat);
+      const z = 0.75 + hash(i * 3.1) * 5.7;
+      const radius = Math.tan(22 * DEG) * z * Math.sqrt(hash(i * 5.7)) * 0.82;
+      const a = hash(i * 9.3) * Math.PI * 2;
+      sprite.position.set(Math.cos(a) * radius, Math.sin(a) * radius, z);
+      sprite.scale.setScalar(0.018 + hash(i * 13.9) * 0.045);
+      sprite.userData.base = sprite.position.clone();
+      sprite.userData.seed = i * 17.31;
+      this.haze.add(sprite);
     }
     this.group.add(this.haze);
   }
@@ -177,20 +152,28 @@ export class FlashlightRig {
     this.core.angle = lerp(4.5, 7, state.battery) * DEG;
     this.cone.angle = lerp(14, 22, state.battery) * DEG;
     this.spill.angle = 30 * DEG;
-    this.core.intensity = 520 * I;
-    this.cone.intensity = 210 * I;
-    this.spill.intensity = 38 * I;
+    this.core.intensity = 260 * I;
+    this.cone.intensity = 86 * I;
+    this.spill.intensity = 16 * I;
     this.haze.position.copy(this.core.position);
     this.haze.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), new THREE.Vector3(lagged[0], lagged[1], lagged[2]).normalize());
-    for (const [i, mat] of this.hazeMats.entries()) {
+    for (const mat of this.hazeMats) {
       mat.color.copy(tint);
-      mat.opacity = (0.010 - i * 0.0009) * I;
+      mat.opacity = 0.075 * I;
+    }
+    for (const child of this.haze.children) {
+      const base = child.userData.base as THREE.Vector3;
+      const seed = child.userData.seed as number;
+      child.position.set(
+        base.x + Math.sin(t * 0.31 + seed) * 0.018,
+        base.y + Math.cos(t * 0.27 + seed * 1.3) * 0.014,
+        base.z + Math.sin(t * 0.19 + seed * 0.7) * 0.025,
+      );
     }
     this.haze.visible = I > 0.003;
   }
 
   dispose(): void {
-    this.haze.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) m.geometry.dispose(); });
     for (const mat of this.hazeMats) mat.dispose();
   }
 }
