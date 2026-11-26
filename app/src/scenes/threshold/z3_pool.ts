@@ -79,7 +79,7 @@ const KEYS: CamKey[] = [
   { t: 74.5, pos: [0, 1.65, 2.2], look: [0, 1.3, -2.8], fov: 78, gait: 'walk' },
   { t: 76.5, pos: [0, 1.65, 3.5], look: [0, 1.35, -2.8], fov: 80, gait: 'run' },
   { t: 78.8, pos: [0, 1.5, 4.9], look: [0, 2.5, -1.5], fov: 88, gait: 'run', roll: -0.3 },
-  { t: 80, pos: [0, -0.35, 5.8], look: [0, -0.8, 1.5], fov: 90, gait: 'hold', roll: -0.65 },
+  { t: 80, pos: [0, 0.08, 2.6], look: [0, -0.08, 0.5], fov: 90, gait: 'hold', roll: -0.65 },
 ];
 
 export default class ThresholdZ3Pool extends Scene {

@@ -436,7 +436,7 @@ export default class ThresholdZ4Library extends Scene {
     const stepInCycle = smooth(0.42, 0.82, phase);
     const travelSteps = Math.min(7, cycle + stepInCycle);
     const topple = (smooth(0.02, 0.30, phase) * (1 - smooth(0.38, 0.76, phase))) * chase;
-    this.archivistAsset.root.position.x = 1.15 - chase * 0.55;
+    this.archivistAsset.root.position.x = 1.15 - chase * 0.35;
     this.archivistAsset.root.position.z = 2.35 + travelSteps * 3.9 * chase;
     this.archivistAsset.root.position.y = 0.02 + (1 - reveal) * 0.45 + topple * 0.10;
     this.archivistAsset.root.rotation.x = topple * 0.42;

@@ -24,92 +24,96 @@ const BODY: Record<ThresholdTransitionMode, string> = {
     vec3 c = u < 0.46 ? darkA : incoming;
     fragColor = vec4(c, 1.0);`,
   exposure: `
-    vec3 ca = texture(texA, vUv).rgb;
-    vec3 cb = texture(texB, vUv).rgb;
-    float blast = smoothstep(0.0, 0.22, u) * (1.0 - smoothstep(0.68, 0.98, u));
+    // The fire-door aperture is the carrier. Scene A dollies through the narrowing
+    // rectangle, light blows out only inside that aperture, and the playroom resolves
+    // behind it while the dark door/frame edges remain physically present.
+    float zoomA = mix(1.0, 1.42, smoothstep(0.0, 1.0, u));
+    vec2 aUv = clamp((vUv - 0.5) / zoomA + 0.5, 0.0, 1.0);
+    float zoomB = mix(1.16, 1.0, smoothstep(0.12, 1.0, u));
+    vec2 bUv = clamp((vUv - 0.5) / zoomB + 0.5, 0.0, 1.0);
+    vec3 ca = texture(texA, aUv).rgb;
+    vec3 cb = texture(texB, bUv).rgb;
     vec2 q = (vUv - vec2(0.5, 0.47)) * vec2(1.7778, 1.0);
-    float width = mix(0.035, 0.92, smoothstep(0.10, 0.88, u));
-    float height = mix(0.24, 0.86, smoothstep(0.08, 0.92, u));
+    float width = mix(0.075, 1.08, smoothstep(0.02, 0.96, u));
+    float height = mix(0.20, 0.84, smoothstep(0.02, 0.96, u));
     float rect = max(abs(q.x) / width, abs(q.y) / height);
-    float doorway = 1.0 - smoothstep(0.88, 1.04, rect);
-    float eyeAdapt = smoothstep(0.12, 0.55, u);
-    float centerLead = doorway * smoothstep(0.28, 0.64, u);
-    float revealB = clamp(eyeAdapt * (0.52 + 0.48 * doorway) + centerLead * 0.48, 0.0, 1.0);
-    revealB = max(revealB, smoothstep(0.38, 0.48, u));
-    // The adaptation whiteout is optically uneven: skylit haze has granular density
-    // and edge falloff rather than becoming a uniform milk layer over the playroom.
-    float hazeN = fbm(vUv * vec2(7.0, 5.0) + vec2(u * 0.19, -u * 0.11), 4);
-    float hazeGrain = hash12(floor(vUv * vec2(180.0, 100.0)) + floor(u * 24.0));
-    float edgeHaze = 1.0 - 0.34 * smoothstep(0.32, 0.88, length(q));
-    vec3 daylight = vec3(5.8, 5.45, 4.8) * (0.32 + 0.68 * blast) * (0.48 + 0.58 * hazeN + 0.22 * hazeGrain) * edgeHaze;
-    vec3 c = mix(daylight, cb, revealB);
-    // After the fire-door peak the mean white level decays exponentially in
-    // absolute seconds; z2's exposure envelope continues the same eye-adapt tail
-    // after the spec-fixed 0.8 s shader seam ends.
-    float adaptT = max(0.0, u * 0.8 - 0.07);
-    float whiteK = 0.84 * exp(-9.7 * adaptT) * (1.0 - smoothstep(0.38, 0.48, u));
-    vec3 adaptC = mix(cb, vec3(5.8, 5.45, 4.8), whiteK);
-    c = mix(c, adaptC, smoothstep(0.0, 0.08, adaptT));
-    c = mix(ca, c, smoothstep(0.0, 0.10, u));
+    float inside = 1.0 - smoothstep(0.985, 1.015, rect);
+    float frameBand = (1.0 - smoothstep(0.018, 0.075, abs(rect - 1.0))) * (1.0 - smoothstep(0.90, 1.0, u));
+    float jambSide = smoothstep(0.55, 0.95, abs(q.x) / max(width, 0.001));
+    float spillK = smoothstep(0.0, 0.20, u) * (1.0 - smoothstep(0.32, 0.68, u));
+    float hazeN = fbm(vUv * vec2(8.0, 5.0) + vec2(u * 0.17, -u * 0.09), 4);
+    float grainN = hash12(floor(vUv * vec2(210.0, 118.0)) + floor(u * 24.0));
+    vec3 hotSpill = vec3(4.8, 4.25, 3.45) * (0.30 + 0.70 * spillK) * (0.55 + 0.38 * hazeN + 0.16 * grainN);
+    vec3 office = ca * (0.48 + 0.22 * (1.0 - u));
+    vec3 litAperture = mix(office, hotSpill, clamp(spillK * (0.72 + 0.28 * jambSide), 0.0, 1.0));
+    float revealB = inside * smoothstep(0.22, 0.72, u);
+    revealB = max(revealB, smoothstep(0.72, 0.92, u));
+    vec3 throughDoor = mix(litAperture, cb, revealB);
+    vec3 c = mix(office, throughDoor, inside);
+    // A thin hot line of spilled light sits just inside the surviving frame edges.
+    float edgeGlow = frameBand * smoothstep(0.04, 0.22, u) * (1.0 - smoothstep(0.72, 0.95, u));
+    c += vec3(1.2, 0.75, 0.32) * edgeGlow * 0.55;
+    c = mix(c, vec3(0.018, 0.012, 0.009), frameBand * (0.72 - 0.20 * edgeGlow));
     fragColor = vec4(c, 1.0);`,
   tunnel: `
+    // Forward tunnel-throat carrier: the existing ribbed crawl tunnel remains the
+    // outside world, while an irregular melting membrane opens radially at its mouth.
+    // The pool emerges through that expanding aperture rather than behind a lateral wipe.
     vec2 q = (vUv - 0.5) * vec2(1.7778, 1.0);
-    vec3 ca = texture(texA, vUv).rgb;
-    // Material transformation only: unmelted playroom ahead of the front,
-    // pool behind it, and ca-derived plastic fragments/foam after the front.
-    // The two scene textures are never blended at half alpha.
-    float n0 = fbm(vUv * vec2(5.0, 7.0) + vec2(0.0, u * 0.31), 5);
-    float front = mix(-0.22, 1.24, smoothstep(0.02, 0.98, u));
-    float edgeNoise = (n0 - 0.5) * 0.18;
-    float x = vUv.x + edgeNoise;
-    float behind = 1.0 - smoothstep(front - 0.012, front + 0.012, x);
-    float nearFront = (1.0 - smoothstep(0.0, 0.24, abs(x - front))) * smoothstep(0.0, 0.04, u);
-    vec2 flow = vec2(0.0, nearFront * nearFront * (0.09 + 0.07 * fbm(vUv * 9.0 + u, 3)));
-    // Water contact locally disturbs the already-revealed pool surface: the molten
-    // front is not a decal pasted over it, but a hot object meeting liquid.
-    float contactBand = (1.0 - smoothstep(0.0, 0.19, abs(x - front))) * smoothstep(0.42, 0.72, vUv.y) * smoothstep(0.03, 0.12, u);
-    vec2 contactRipple = vec2(sin(vUv.y * 92.0 + u * 31.0 + n0 * 8.0) * 0.006, cos(vUv.x * 71.0 - u * 24.0) * 0.004) * contactBand;
-    vec3 cb = texture(texB, vUv + flow * (1.0 - behind) + contactRipple).rgb;
-    // The first pool reveal is a dead interior skylight, not a sunny blue sky:
-    // desaturate/darken the incoming cyan only during the transformation, easing
-    // back to the authored pool grade before the seam ends.
-    float cbLum = dot(cb, vec3(0.2126, 0.7152, 0.0722));
-    float deadSky = 1.0 - smoothstep(0.68, 1.0, u);
-    vec3 deadened = mix(vec3(cbLum), cb, 0.58) * vec3(0.78, 0.86, 0.88);
-    cb = mix(cb, deadened, deadSky * 0.72);
-    vec3 ahead = ca;
-    float stretch = nearFront * smoothstep(front, front + 0.22, x);
-    vec2 meltUv = vUv + vec2((fbm(vUv * 16.0 + u, 3) - 0.5) * 0.025 * stretch, -0.16 * stretch * stretch);
+    float zoomA = mix(1.0, 1.20, smoothstep(0.0, 1.0, u));
+    vec2 aUv = clamp((vUv - 0.5) / zoomA + 0.5, 0.0, 1.0);
+    float zoomB = mix(1.13, 1.0, smoothstep(0.18, 1.0, u));
+    vec2 bUv = clamp((vUv - 0.5) / zoomB + 0.5, 0.0, 1.0);
+    vec3 ca = texture(texA, aUv).rgb;
+    vec3 cb0 = texture(texB, bUv).rgb;
+    float angle = atan(q.y, q.x + 0.0001);
+    float apertureNoise = fbm(vec2(angle * 1.35 + 4.0, length(q) * 5.0 - u * 0.4), 4);
+    float d = length(q * vec2(1.0, 1.10));
+    float rag = (apertureNoise - 0.5) * 0.105;
+    float front = mix(-0.06, 1.42, smoothstep(0.03, 0.97, u)) + rag;
+    float inside = 1.0 - smoothstep(front - 0.018, front + 0.018, d);
+    float membrane = (1.0 - smoothstep(0.0, 0.23, abs(d - front))) * smoothstep(0.015, 0.09, u) * (1.0 - smoothstep(0.91, 1.0, u));
+    float lipWide = (1.0 - smoothstep(0.0, 0.060, abs(d - front + 0.018))) * smoothstep(0.015, 0.09, u) * (1.0 - smoothstep(0.91, 1.0, u));
+    float lip = (1.0 - smoothstep(0.0, 0.027, abs(d - front))) * smoothstep(0.015, 0.09, u) * (1.0 - smoothstep(0.91, 1.0, u));
+    float crown = (1.0 - smoothstep(0.0, 0.009, abs(d - front - 0.014))) * smoothstep(0.015, 0.09, u) * (1.0 - smoothstep(0.91, 1.0, u));
+    // Incoming pool is initially deadened/desaturated as seen through the tunnel mouth.
+    float cbLum = dot(cb0, vec3(0.2126, 0.7152, 0.0722));
+    float deadSky = 1.0 - smoothstep(0.66, 1.0, u);
+    vec3 cb = mix(cb0, mix(vec3(cbLum), cb0, 0.56) * vec3(0.74, 0.84, 0.86), deadSky * 0.75);
+    // Molten tunnel plastic: radially dragged fragments of the outgoing image with
+    // fibrous flow lines, opaque hot body, and a dimensional glossy lip.
+    float stretch = membrane;
+    vec2 radial = normalize(q + vec2(0.0001, 0.0001));
+    vec2 meltUv = clamp(aUv + radial * (0.030 * stretch) + vec2(0.0, -0.11 * stretch * stretch), 0.0, 1.0);
     vec3 melted = texture(texA, meltUv).rgb;
     float lum = dot(melted, vec3(0.2126, 0.7152, 0.0722));
-    float plasticGrain = fbm(vUv * vec2(28.0, 13.0) + vec2(u * 0.23, -u * 0.11), 4);
-    float flowLine = 0.5 + 0.5 * sin((vUv.y * 34.0 + plasticGrain * 5.0 - u * 2.1) * TAU);
-    vec3 hotBase = vec3(0.145, 0.085, 0.030) + melted * vec3(0.20, 0.145, 0.070);
-    hotBase *= 0.72 + plasticGrain * 0.34 + flowLine * 0.09;
-    vec3 hotPlastic = mix(melted, hotBase, sat(stretch * 1.4));
-    vec3 wetPlastic = mix(hotPlastic, vec3(0.028, 0.105, 0.115) * (0.35 + lum), smoothstep(0.48, 1.0, stretch));
-    ahead = mix(ca, wetPlastic, smoothstep(0.0, 0.24, stretch));
-    // Torn plastic ribbons persist briefly behind the front, but as opaque fragments.
-    float fragN = fbm(vUv * vec2(19.0, 8.0) + vec2(u * 0.8, 0.0), 4);
-    float strip = smoothstep(0.56, 0.74, fragN) * (1.0 - smoothstep(front + 0.05, front + 0.31, x));
-    strip *= smoothstep(0.08, 0.24, u) * (1.0 - smoothstep(0.78, 0.98, u));
-    vec3 rubber = vec3(0.20, 0.105, 0.018) * (0.55 + lum * 0.8);
-    vec3 pool = cb + vec3(0.0, 0.025, 0.032) * pow(0.5 + 0.5 * sin((q.x * 6.0 + q.y * 10.0 + u * 4.0) * TAU), 3.0);
-    vec3 behindC = mix(pool, rubber, strip);
-    // The leading lip is a dimensional glossy plastic bead: dark trailing thickness,
-    // hot body, narrow specular crown, and cyan foam/ripple where it meets the pool.
-    float lipWide = (1.0 - smoothstep(0.0, 0.048, abs(x - front + 0.018))) * smoothstep(0.02, 0.10, u) * (1.0 - smoothstep(0.90, 1.0, u));
-    float lip = (1.0 - smoothstep(0.0, 0.022, abs(x - front))) * smoothstep(0.02, 0.10, u) * (1.0 - smoothstep(0.90, 1.0, u));
-    float crown = (1.0 - smoothstep(0.0, 0.006, abs(x - front - 0.010))) * smoothstep(0.02, 0.10, u) * (1.0 - smoothstep(0.90, 1.0, u));
-    float bodySpec = pow(0.5 + 0.5 * sin((vUv.y * 13.0 + n0 * 5.0 - u * 2.2) * TAU), 5.0) * lipWide;
-    vec3 c = mix(ahead, behindC, behind);
-    vec3 thickEdge = vec3(0.075, 0.028, 0.006) * (0.65 + lum * 0.45);
-    vec3 hotLip = vec3(0.31, 0.15, 0.018) * (0.52 + lum * 0.65) + vec3(0.24, 0.12, 0.018) * bodySpec;
-    c = mix(c, thickEdge, lipWide * 0.42);
+    float plasticGrain = fbm(vUv * vec2(30.0, 14.0) + vec2(u * 0.21, -u * 0.12), 4);
+    float flowLine = 0.5 + 0.5 * sin((angle * 5.0 + d * 24.0 + plasticGrain * 4.0 - u * 2.0) * TAU);
+    vec3 hotBase = vec3(0.145, 0.082, 0.026) + melted * vec3(0.18, 0.13, 0.060);
+    hotBase *= 0.68 + plasticGrain * 0.34 + flowLine * 0.10;
+    vec3 hotPlastic = mix(melted, hotBase, sat(stretch * 1.55));
+    vec3 wetPlastic = mix(hotPlastic, vec3(0.026, 0.096, 0.108) * (0.34 + lum), smoothstep(0.42, 1.0, stretch));
+    vec3 ahead = mix(ca, wetPlastic, smoothstep(0.0, 0.24, stretch));
+    // Water contact lives mostly along the lower arc of the aperture, rippling the first
+    // revealed pool surface where hot plastic meets liquid.
+    float lowerArc = smoothstep(-0.15, -0.70, q.y);
+    float contactBand = lipWide * lowerArc * smoothstep(0.08, 0.24, u);
+    vec2 contactRipple = radial * sin(angle * 17.0 + u * 29.0) * 0.006 * contactBand;
+    vec3 pool = texture(texB, clamp(bUv + contactRipple, 0.0, 1.0)).rgb;
+    pool = mix(pool, cb, 0.35);
+    float fragN = fbm(vec2(angle * 3.0 + u * 0.7, d * 18.0), 4);
+    float rags = smoothstep(0.57, 0.76, fragN) * membrane * (1.0 - inside * 0.35);
+    vec3 rubber = vec3(0.19, 0.095, 0.015) * (0.55 + lum * 0.75);
+    vec3 behindC = mix(pool, rubber, rags * 0.55);
+    vec3 c = mix(ahead, behindC, inside);
+    float ribShadow = pow(0.5 + 0.5 * sin(angle * 14.0 + apertureNoise * 2.2), 5.0) * membrane;
+    vec3 thickEdge = vec3(0.070, 0.026, 0.005) * (0.65 + lum * 0.45);
+    vec3 hotLip = vec3(0.30, 0.135, 0.015) * (0.52 + lum * 0.65) + vec3(0.20, 0.09, 0.012) * ribShadow;
+    c = mix(c, thickEdge, lipWide * 0.40);
     c = mix(c, hotLip, lip * 0.78);
-    c += vec3(0.32, 0.22, 0.075) * crown * (0.25 + lum * 0.55);
-    float foamBreak = smoothstep(0.48, 0.78, fbm(vUv * vec2(34.0, 16.0) + vec2(u * 1.7, 0.0), 3));
-    c += vec3(0.08, 0.34, 0.36) * contactBand * behind * (0.25 + foamBreak * 0.55);
+    c += vec3(0.30, 0.20, 0.065) * crown * (0.24 + lum * 0.55);
+    float foamBreak = smoothstep(0.46, 0.78, fbm(vUv * vec2(36.0, 17.0) + vec2(u * 1.6, 0.0), 3));
+    c += vec3(0.07, 0.30, 0.32) * contactBand * (0.25 + foamBreak * 0.55);
     fragColor = vec4(c, 1.0);`,
   ink: `
     vec3 ca = texture(texA, vUv).rgb;

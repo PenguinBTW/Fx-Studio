@@ -265,8 +265,8 @@ export default class ThresholdZ2Playroom extends Scene {
     // as a manufactured tunnel throat rather than a void.
     box(this.s, 'z2_tunnel_service_fixture', [0.34, 0.09, 0.16], [-4.35, 1.72, 5.48], mat(0x1d2020, 0.62));
     box(this.s, 'z2_tunnel_service_lens', [0.24, 0.025, 0.10], [-4.35, 1.66, 5.48], mat(0xffb26b, 0.24, 0, 0xff9d45, 1.7));
-    const tunnelService = new THREE.PointLight(0xffad62, 4.8, 8.5, 1.15); tunnelService.position.set(-4.55, 1.55, 6.1); this.s.add(tunnelService);
-    const tunnelThroat = new THREE.PointLight(0x78c9ff, 5.2, 8.0, 1.05); tunnelThroat.position.set(-5.0, 1.05, 8.4); this.s.add(tunnelThroat);
+    const tunnelService = new THREE.PointLight(0xffad62, 2.0, 8.5, 1.15); tunnelService.position.set(-4.55, 1.55, 6.1); this.s.add(tunnelService);
+    const tunnelThroat = new THREE.PointLight(0x78c9ff, 1.35, 8.0, 1.05); tunnelThroat.position.set(-5.0, 1.05, 8.4); this.s.add(tunnelThroat);
     for (const [side, z] of [[-1, -10.34], [1, 10.34]] as const) {
       for (let i = 0; i < 5; i++) {
         const x = -10 + i * 5.0;
@@ -350,7 +350,7 @@ export default class ThresholdZ2Playroom extends Scene {
     }
     for (let i = 0; i < 7; i++) box(this.s, `z2_step_block_${i}`, [0.7, 0.25, 0.7], [3.1 + (i % 2) * 0.8, 0.13 + i * 0.11, 3.8 - i * 0.55], mats[i % mats.length]!);
     // tube tunnel ribs along z
-    const shellMat = mat(0x244d68, 0.50); shellMat.side = THREE.BackSide;
+    const shellMat = mat(0x18364a, 0.58); shellMat.side = THREE.BackSide;
     const shell = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.44, 6.4, 32, 1, true), shellMat);
     shell.position.set(-5, 0.82, 8.35); shell.rotation.x = Math.PI / 2; shell.name = 'z2_tunnel_shell'; shell.userData.fx_entity = shell.name; this.s.add(shell);
     // thick padded tunnel mouth, panel fasteners and grime; the opening is a manufactured tube, not a color portal
@@ -685,7 +685,7 @@ export default class ThresholdZ2Playroom extends Scene {
     const wet = smooth(53.4, 55, t);
     this.tunnelRibs.forEach((r, i) => {
       const m = r.material as THREE.MeshStandardMaterial;
-      m.color.setHex(i / this.tunnelRibs.length < wet ? (i % 3 ? 0x7aa99e : 0x5a9bad) : (i % 3 ? 0xb8922e : 0xa82d25));
+      m.color.setHex(i / this.tunnelRibs.length < wet ? (i % 3 ? 0x426f68 : 0x315b70) : (i % 3 ? 0x6d5525 : 0x65251f));
       m.color.multiplyScalar(1 - i / this.tunnelRibs.length * 0.35);
       m.roughness = 0.25 + wet * 0.2;
     });
@@ -696,7 +696,7 @@ export default class ThresholdZ2Playroom extends Scene {
     const gl = this.ctx.renderer;
     gl.setRenderTarget(out); gl.setClearColor(0x394448, 1); gl.clear(true, true, true); gl.render(this.s, this.cam); gl.resetState();
     return {
-      ...thresholdPost(t, { darkness: 0.12, exposure: 0.95, stress: t > 40.5 && t < 49.5 ? 0.22 : 0.02 }),
+      ...thresholdPost(t, { darkness: 0.28, exposure: 0.78, stress: t > 40.5 && t < 49.5 ? 0.22 : 0.02 }),
       // T1 now owns the eye-adaptation bridge. Do not re-impose a zone-local whiteout
       // after the seam or the exposure decay reverses when transition post is unsuppressed.
       flash: 0,
