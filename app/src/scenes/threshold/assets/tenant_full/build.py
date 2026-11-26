@@ -11,8 +11,8 @@ R = random.Random(91731)
 
 # Source-true but dust-muted materials. The continuous body carries the silhouette;
 # ball-pit plastic, glazed pool tile, paper, felt, chrome and glass are surface evidence.
-BODY = mat('TenantFusedBody', (0.026, 0.011, 0.008), 0.88, metal=0.01)
-BODY_ALT = mat('TenantFusedBodyWarm', (0.045, 0.016, 0.010), 0.86, metal=0.01)
+BODY = mat('TenantFusedBody', (0.032, 0.012, 0.009), 0.9, metal=0.01)
+BODY_ALT = mat('TenantFusedBodyWarm', (0.074, 0.025, 0.015), 0.88, metal=0.01)
 TILE = mat('TenantPoolTile', (0.045, 0.14, 0.14), 0.42, metal=0.02)
 GROUT = mat('TenantTileGrout', (0.018, 0.028, 0.028), 0.82)
 PAPER = mat('TenantPaper', (0.34, 0.255, 0.13), 0.88)
@@ -88,7 +88,7 @@ def catmull(points, radii, per_seg=9):
     out.append((mathutils.Vector(points[-1]), radii[-1 if len(radii) == len(points) else -2]))
     return out
 
-def tapered_tube(name, points, radii, material, sides=20, per_seg=9):
+def tapered_tube(name, points, radii, material, sides=20, per_seg=9, patch_material=None):
     samples = catmull(points, list(radii), per_seg)
     verts = []
     faces = []
@@ -125,6 +125,16 @@ def tapered_tube(name, points, radii, material, sides=20, per_seg=9):
     ob = bpy.data.objects.new(name, mesh)
     bpy.context.collection.objects.link(ob)
     assign(ob, material)
+    if patch_material is not None:
+        ob.data.materials.append(patch_material)
+        # Deterministic patchwork within the same continuous mesh: irregular bands of
+        # warmer fused plastic interrupt the base material without splitting the volume.
+        for pi, poly in enumerate(mesh.polygons[:-2]):
+            ring_i = pi // sides
+            k = pi % sides
+            patch_wave = math.sin(ring_i * 0.71 + k * 1.19) + 0.55 * math.sin(ring_i * 0.29 - k * 2.13)
+            if patch_wave > 0.42:
+                poly.material_index = 1
     for poly in mesh.polygons:
         poly.use_smooth = True
     return ob
@@ -141,6 +151,35 @@ def path_point(points, u):
             return pts[i].lerp(pts[i + 1], q)
     return pts[-1]
 
+def path_radius(radii, u):
+    if len(radii) == 1:
+        return radii[0]
+    q = max(0.0, min(0.999999, u)) * (len(radii) - 1)
+    i = int(q)
+    f = q - i
+    return radii[i] * (1 - f) + radii[min(i + 1, len(radii) - 1)] * f
+
+def surface_frame(path, u):
+    eps = 0.012
+    c = path_point(path, u)
+    a = path_point(path, max(0.0, u - eps))
+    b = path_point(path, min(1.0, u + eps))
+    tangent = (b - a).normalized()
+    ref = mathutils.Vector((0, 1, 0)) if abs(tangent.dot(mathutils.Vector((0, 1, 0)))) < 0.86 else mathutils.Vector((1, 0, 0))
+    side = tangent.cross(ref).normalized()
+    normal = side.cross(tangent).normalized()
+    return c, side, normal, tangent
+
+def surface_seam(name, path, radii, u0, u1, wraps, phase, material, bevel=0.007, samples=54):
+    pts = []
+    for j in range(samples):
+        q = j / (samples - 1)
+        u = u0 + (u1 - u0) * q
+        c, side, normal, tangent = surface_frame(path, u)
+        r = path_radius(radii, u) * 1.035
+        a = math.tau * (wraps * u + phase)
+        pts.append(c + (side * math.cos(a) + normal * math.sin(a)) * r)
+    return curve(name, pts, bevel, material)
 
 def roughen_blob(ob, amount=0.06, seed=0.0):
     # Deterministic fused-mass deformation: enough to remove balloon/primitive outlines,
@@ -176,7 +215,7 @@ leg_r_lower_g = group('leg_r_lower_control', leg_r_g, 'leg_r_lower', (0.44, -0.0
 
 # Hunched torso: one continuous sloping mass. Chest high, pelvis back, neck/head forward.
 torso_path = [(0, -0.22, 1.92), (0.02, 0.02, 2.35), (-0.02, 0.35, 2.78), (0, 0.67, 3.08)]
-add(tapered_tube('torso_continuous_hunched_mass', torso_path, [0.43, 0.5, 0.54, 0.34], BODY, sides=24, per_seg=10), rib_g)
+add(tapered_tube('torso_continuous_hunched_mass', torso_path, [0.43, 0.5, 0.54, 0.34], BODY, sides=24, per_seg=10, patch_material=BODY_ALT), rib_g)
 pelvis_mass = sphere('pelvis_fused_mass', 0.42, (0, -0.2, 1.96), BODY_ALT, scale=(1.28, 0.9, 0.66), segments=36, rings=18)
 roughen_blob(pelvis_mass, 0.075, 1.3)
 add(pelvis_mass, pelvis_g)
@@ -219,22 +258,24 @@ for seg in range(7):
 
 # Small forward head, clearly below the shoulder line. The neck reaches horizontally
 # out of the chest, so the head reads as a predator skull rather than a top knob.
-add(tapered_tube('neck_forward_fused_mass', [(0, 0.56, 2.92), (0, 0.76, 2.8), (0, 0.98, 2.66)], [0.17, 0.145, 0.115], FELT, sides=18, per_seg=8), neck_g, 'neck_segments')
+add(tapered_tube('neck_forward_fused_mass', [(0, 0.56, 2.92), (0, 0.82, 2.79), (0, 1.12, 2.60)], [0.17, 0.145, 0.112], FELT, sides=18, per_seg=8), neck_g, 'neck_segments')
 for i in range(3):
     u = i / 2
     add(sphere(f'neck_{i+1}', 0.105 - i * 0.012, (0, 0.62 + u * 0.32, 2.87 - u * 0.19), FELT,
                scale=(1.05, 0.72, 0.8), segments=24, rings=12), neck_g, 'neck_segments')
-head_mass = sphere('head_tile_ovoid', 0.135, (0, 1.15, 2.46), TILE, scale=(0.78, 0.68, 1.05), segments=40, rings=20)
+head_mass = sphere('head_tile_ovoid', 0.142, (0, 1.31, 2.48), TILE, scale=(0.78, 0.68, 1.05), segments=40, rings=20)
 roughen_blob(head_mass, 0.025, 9.2)
 add(head_mass, head_g)
-add(box('head_black_face_slot', (0.045, 0.012, 0.115), (0, 1.235, 2.47), BLACK, bev=0.002, rot=(math.radians(5), 0, 0)), head_g, 'face_slot')
+# A separate compressed chin/forehead mass keeps the skull from reading as one smooth egg.
+add(sphere('head_tile_chin_mass', 0.088, (0, 1.37, 2.405), TILE, scale=(0.82, 0.62, 0.68), segments=28, rings=14), head_g, 'head_damage')
+add(box('head_black_face_slot', (0.045, 0.012, 0.115), (0, 1.398, 2.485), BLACK, bev=0.002, rot=(math.radians(5), 0, 0)), head_g, 'face_slot')
 for i, z in enumerate((2.40, 2.46, 2.53)):
     pts = []
     for j in range(22):
         a = j / 21 * math.tau
-        pts.append((math.cos(a) * 0.094, 1.15 + math.sin(a) * 0.082, z))
+        pts.append((math.cos(a) * 0.099, 1.31 + math.sin(a) * 0.086, z))
     add(curve(f'head_grout_ring_{i}', pts, 0.006, GROUT, cyclic=True), head_g, 'head_grout')
-for i, (loc, sc) in enumerate((((-0.045, 1.19, 2.50), (0.045, 0.012, 0.06)), ((0.052, 1.18, 2.42), (0.055, 0.014, 0.045)), ((0.0, 1.21, 2.54), (0.07, 0.012, 0.032)))):
+for i, (loc, sc) in enumerate((((-0.045, 1.35, 2.51), (0.045, 0.012, 0.06)), ((0.052, 1.34, 2.43), (0.055, 0.014, 0.045)), ((0.0, 1.37, 2.55), (0.07, 0.012, 0.032)))):
     add(box(f'head_broken_tile_chip_{i}', sc, loc, GROUT if i == 1 else TILE, bev=0.003,
             rot=(R.uniform(-0.18, 0.18), R.uniform(-0.18, 0.18), R.uniform(-0.4, 0.4))), head_g, 'head_damage')
 
@@ -250,7 +291,7 @@ def build_arm(side):
         path = [(sx * 0.42, 0.18, 3.03), (sx * 0.78, 0.16, 2.55), (sx * 0.96, 0.22, 1.98), (sx * 0.88, 0.48, 1.25), (sx * 0.68, 0.76, 0.72)]
         radii = [0.175, 0.168, 0.148, 0.118, 0.082]
     parent_control = arm_l_g if side == 'l' else arm_r_g
-    add(tapered_tube(f'arm_{side}_continuous_fused_limb', path, radii, BODY_ALT if side == 'l' else BODY, sides=22, per_seg=8), parent_control, 'fused_limb_volume')
+    add(tapered_tube(f'arm_{side}_continuous_fused_limb', path, radii, BODY_ALT if side == 'l' else BODY, sides=22, per_seg=8, patch_material=BODY if side == 'l' else BODY_ALT), parent_control, 'fused_limb_volume')
     elbow = path[2]
     elbow_mass = sphere(f'arm_{side}_elbow_fused_joint', 0.16, elbow, BODY_ALT, scale=(1.05, 0.9, 1.1), segments=28, rings=14)
     roughen_blob(elbow_mass, 0.07, 11.0 if side == 'l' else 13.0)
@@ -263,15 +304,20 @@ def build_arm(side):
         add(bulk, parent_control, 'fused_limb_volume')
     # Compressed ball-pit plastic is embedded in the continuous skin. Dense overlapping
     # flattened balls create a crust; the thick tube underneath still owns the silhouette.
-    for i in range(44):
+    # Ugly joint lines are geometry, not shader noise: cracked grout and melted
+    # plastic seams wrap the continuous limb and remain legible at delivery scale.
+    seam_specs = ((0.05, 0.93, 1.55, 0.05, GROUT, 0.0065), (0.12, 0.82, -1.15, 0.48, PAPER_DARK, 0.008), (0.22, 0.68, 0.0, 0.2, RUBBER, 0.009))
+    for seam_i, (u0, u1, wraps, phase, smat, bw) in enumerate(seam_specs):
+        add(surface_seam(f'arm_{side}_ugly_joint_seam_{seam_i}', path, radii, u0, u1, wraps, phase, smat, bw), parent_control, 'melted_seams')
+    for i in range(64):
         # Deterministic but deliberately nonuniform: clustered/gapped compressed crust,
         # never a single-file bead chain.
         u = 0.04 + 0.88 * R.random()
         c = path_point(path, u)
         angle = R.random() * math.tau
-        radial = 0.068 + 0.026 * R.random()
+        radial = 0.062 + 0.038 * R.random()
         offset = mathutils.Vector((math.cos(angle) * radial, math.sin(angle) * radial * 0.9, (R.random() - 0.5) * 0.035))
-        radius = (0.055 + 0.032 * (1 - u)) * R.uniform(0.78, 1.18)
+        radius = (0.052 + 0.04 * (1 - u)) * R.uniform(0.68, 1.28)
         ball_mat = BALLS[4] if i % 5 in (0, 3) else BALLS[int(R.random() * 4)]
         ob = sphere(f'arm_{side}_embedded_ball_{i}', radius, c + offset, ball_mat,
                     scale=(1.36, 0.38 + 0.1 * (i % 3), 0.86), segments=20, rings=10)
@@ -279,6 +325,17 @@ def build_arm(side):
         if i % 6 == 2:
             add(torus(f'arm_{side}_melted_seam_{i}', radius * 0.86, 0.004, c + offset * 0.65, RUBBER,
                       rot=(math.radians(90), 0, 0), major_segments=18, minor_segments=5), parent_control, 'melted_seams')
+    # Torn paper and cracked tile plates sit partly inside the limb skin. Their irregular
+    # exposed edges break the otherwise clay-smooth albedo without becoming separate armor.
+    plate_mats = (PAPER_DARK, TILE, FELT, PAPER)
+    for i in range(22):
+        u = 0.07 + 0.82 * ((i * 0.381 + (0.11 if side == 'r' else 0.0)) % 1.0)
+        c, sidev, normalv, tangentv = surface_frame(path, u)
+        angle = (i * 2.399 + (0.7 if side == 'r' else 0.0)) % math.tau
+        loc = c + (sidev * math.cos(angle) + normalv * math.sin(angle)) * (path_radius(radii, u) * 0.9)
+        add(box(f'arm_{side}_embedded_source_plate_{i}', (0.045 + 0.012 * (i % 3), 0.012, 0.065 + 0.014 * ((i + 1) % 3)),
+                loc, plate_mats[i % len(plate_mats)], bev=0.004,
+                rot=(R.uniform(-0.45, 0.45), R.uniform(-0.45, 0.45), R.uniform(-0.9, 0.9))), parent_control, 'patchwork')
     return path
 
 arm_l_path = build_arm('l')
@@ -314,7 +371,8 @@ def build_leg(side):
         path = [(sx * 0.27, -0.16, 1.98), (sx * 0.43, -0.05, 1.48), (sx * 0.46, 0.0, 1.04), (sx * 0.52, 0.16, 0.5), (sx * 0.43, 0.28, 0.16)]
     radii = [0.155, 0.148, 0.13, 0.105, 0.078]
     parent_control = leg_l_g if side == 'l' else leg_r_g
-    add(tapered_tube(f'leg_{side}_continuous_fused_limb', path, radii, BODY, sides=20, per_seg=8), parent_control, 'fused_limb_volume')
+    add(tapered_tube(f'leg_{side}_continuous_fused_limb', path, radii, BODY, sides=20, per_seg=8, patch_material=BODY_ALT), parent_control, 'fused_limb_volume')
+    add(surface_seam(f'leg_{side}_cracked_grout_seam', path, radii, 0.08, 0.9, 1.25 if side == 'l' else -1.05, 0.18, GROUT, 0.006), parent_control, 'melted_seams')
     knee = path[2]
     ankle = path[-1]
     add(sphere(f'leg_{side}_knee_joint', 0.17, knee, RUBBER, scale=(1.12, 0.84, 0.95), segments=24, rings=12), parent_control, 'joints')
