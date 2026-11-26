@@ -84,14 +84,36 @@ const BODY: Record<ThresholdTransitionMode, string> = {
   ink: `
     vec3 ca = texture(texA, vUv).rgb;
     vec3 cb = texture(texB, vUv).rgb;
-    vec2 q = vUv - 0.5;
-    float n = fbm(vUv * 5.0 + vec2(u * 1.7, -u * 0.8), 5) * 0.5 + 0.5;
-    float spread = smoothstep(1.0 - u * 1.25, 1.0 - u * 1.25 + 0.25, n + length(q) * 0.42);
-    vec3 ink = vec3(0.002, 0.004, 0.006);
-    vec3 a = mix(ca, ink, spread);
-    float paperLines = smoothstep(0.46, 0.5, fract((vUv.y + n * 0.04) * 42.0)) * 0.08;
-    vec3 b = mix(ink, cb + vec3(paperLines), smoothstep(0.52, 0.95, u));
-    vec3 c = u < 0.5 ? a : b;
+    vec2 q = (vUv - 0.5) * vec2(1.7778, 1.0);
+    // Ink blooms outward as a physical liquid front. Ahead of it pool imagery is
+    // drowned; behind it opaque black liquid cellulose-dries into paper fibres,
+    // then the library emerges through gaps in those fibres. No half-alpha wipe.
+    float rag = (fbm(vUv * vec2(7.0, 6.0) + vec2(u * 0.35, -u * 0.18), 5) - 0.5) * 0.24;
+    float d = length(q) + rag;
+    float front = mix(-0.20, 1.34, smoothstep(0.02, 0.97, u));
+    float inside = 1.0 - smoothstep(front - 0.014, front + 0.014, d);
+    float wetBand = (1.0 - smoothstep(0.0, 0.22, abs(d - front))) * smoothstep(0.02, 0.10, u);
+    float inkSub = 1.0 - smoothstep(front - 0.02, front + 0.20, d);
+    vec3 drowned = mix(ca, vec3(0.001, 0.004, 0.006), sat(inkSub * 1.25));
+    // Paper fibre field: long torn cellulose threads and small dry pinholes.
+    float fibreA = fbm(vec2(vUv.x * 42.0, vUv.y * 9.0), 5);
+    float fibreB = fbm(vec2(vUv.x * 150.0, vUv.y * 28.0) + 3.7, 3);
+    float fibre = fibreA * 0.65 + fibreB * 0.35;
+    vec3 paper = vec3(0.29, 0.245, 0.17) * (0.45 + fibre * 0.55);
+    vec3 wetInk = vec3(0.001, 0.003, 0.005);
+    float dryK = smoothstep(0.36, 0.86, u) * inside;
+    vec3 membrane = mix(wetInk, paper, dryK * (0.35 + 0.65 * smoothstep(0.30, 0.66, fibre)));
+    // Library visibility is peeled open as a second opaque cellulose front.
+    float peelN = (fbm(vUv * vec2(6.0, 5.0) + vec2(8.2, -u * 0.27), 4) - 0.5) * 0.16;
+    float peelD = d + peelN;
+    float peelFront = mix(-0.28, 1.72, smoothstep(0.42, 0.82, u));
+    float peeled = 1.0 - smoothstep(peelFront - 0.018, peelFront + 0.018, peelD);
+    float fibrousTears = 0.58 + 0.42 * smoothstep(0.26, 0.68, fibre);
+    float reveal = inside * smoothstep(0.40, 0.50, u) * peeled * fibrousTears;
+    vec3 transformed = mix(membrane, cb, reveal);
+    vec3 c = mix(drowned, transformed, inside);
+    float lip = (1.0 - smoothstep(0.0, 0.024, abs(d - front))) * smoothstep(0.02, 0.10, u) * (1.0 - smoothstep(0.88, 1.0, u));
+    c = mix(c, vec3(0.0, 0.006, 0.008), lip * 0.86 + wetBand * 0.28);
     fragColor = vec4(c, 1.0);`,
   pageSlam: `
     vec3 ca = texture(texA, vUv).rgb;
@@ -215,7 +237,7 @@ export class ThresholdShaderTransition implements Transition {
       void main() {
         ${BODY[mode]}
         vec3 endB = texture(texB, vUv).rgb;
-        fragColor = vec4(mix(fragColor.rgb, endB, smoothstep(${mode === 'exposure' ? '0.82' : '0.965'}, 1.0, u)), 1.0);
+        fragColor = vec4(mix(fragColor.rgb, endB, smoothstep(${mode === 'exposure' || mode === 'ink' ? '0.82' : '0.965'}, 1.0, u)), 1.0);
       }
     `, {
       texA: { value: null },
