@@ -296,6 +296,12 @@ export async function mixdown(o: MixOptions): Promise<MixReport> {
   const stemSpan = new Map<string, { s0: number; s1: number; t: number }>();
   const ids = new Set<string>();
 
+  if ((manifest as any).build) {
+    const builder = path.resolve(baseDir, (manifest as any).build);
+    if (!existsSync(builder)) throw new Error(`[mixdown] missing stem builder ${builder}`);
+    await run(['bun', builder]);
+  }
+
   // 1. Process Legacy Stems (manifest.stems)
   if (manifest.stems && manifest.stems.length > 0) {
     for (const stemDecl of manifest.stems) {

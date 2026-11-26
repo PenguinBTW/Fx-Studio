@@ -130,6 +130,8 @@ export interface MixStemConfig {
 }
 
 export interface MixConfig {
+  /** Optional deterministic stem-generation script, resolved relative to this mix file and run before loading stems. */
+  build?: string;
   sampleRate?: number;
   stems?: MixStemConfig[];
   soundtracks?: SoundtrackConfig[];
