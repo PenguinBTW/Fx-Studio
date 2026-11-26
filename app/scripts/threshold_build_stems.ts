@@ -794,7 +794,7 @@ wav('z8_home_events.wav', stem(30.8,(t)=>{
 wav('end_office_events.wav', stem(10.0,(t)=>{
  const at=t+225;let l=0,r=0;const add=(v:number,pan=0)=>{const a=(pan+1)*Math.PI/4;l+=v*Math.cos(a);r+=v*Math.sin(a)};
  // beige phone repeats, each 2 dB quieter, while office air loses high-frequency content
- const idx=Math.floor((at-225)/2.8);for(const base of[225,227.8,230.6,233.4])for(const off of[.02,1.18]){const u=at-base-off;if(u>=0&&u<.88){const trem=.45+.55*(Math.sin(u*Math.PI*40)>0?1:0);const gain=Math.pow(.794,idx);add((Math.sin(u*Math.PI*2*1280)*.034+Math.sin(u*Math.PI*2*1735)*.021)*Math.exp(-u*3.1)*trem*gain,.14)}}
+ const idx=Math.floor((at-225)/2.8);for(const base of[225,227.8,230.6,233.4])for(const off of[.02,1.18]){if(base+off+.88>235)continue;const u=at-base-off;if(u>=0&&u<.88){const trem=.45+.55*(Math.sin(u*Math.PI*40)>0?1:0);const gain=Math.pow(.794,idx);add((Math.sin(u*Math.PI*2*1280)*.034+Math.sin(u*Math.PI*2*1735)*.021)*Math.exp(-u*3.1)*trem*gain,.14)}}
  const airloss=1-smoothstep(225,235,at);add((Math.sin(at*Math.PI*2*120)*.008+noise()*.002*airloss),.05);
  return[l,r]
 }));
