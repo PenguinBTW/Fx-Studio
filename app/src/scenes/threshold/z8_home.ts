@@ -129,9 +129,56 @@ export default class ThresholdZ8Home extends Scene {
     this.s.background = new THREE.Color(0x17100b);
     this.s.fog = new THREE.FogExp2(0x17100b, 0.028);
 
+    // Procedural aged wallpaper/plaster: fine grain, faint vertical print rhythm,
+    // stains, chips and hairline cracks break the flat-vector beige read at close range.
+    const wallCanvas = document.createElement('canvas');
+    wallCanvas.width = 512; wallCanvas.height = 512;
+    const wg = wallCanvas.getContext('2d')!;
+    wg.fillStyle = '#d8c9aa'; wg.fillRect(0, 0, 512, 512);
+    for (let x = 0; x < 512; x += 64) {
+      wg.fillStyle = 'rgba(105,78,50,0.055)'; wg.fillRect(x, 0, 2, 512);
+      wg.fillStyle = 'rgba(255,246,220,0.045)'; wg.fillRect(x + 5, 0, 1, 512);
+    }
+    for (let i = 0; i < 1500; i++) {
+      const x = Math.floor(hash(i * 2.17) * 512);
+      const y = Math.floor(hash(i * 3.91) * 512);
+      const v = hash(i * 5.33);
+      wg.fillStyle = v > 0.55 ? `rgba(75,50,32,${0.018 + v * 0.025})` : `rgba(255,244,214,${0.018 + v * 0.02})`;
+      wg.fillRect(x, y, 1 + Math.floor(hash(i * 7.1) * 2), 1 + Math.floor(hash(i * 9.7) * 2));
+    }
+    for (let i = 0; i < 20; i++) {
+      const x = hash(i * 11.3) * 512;
+      const y = 270 + hash(i * 13.7) * 230;
+      const r = 10 + hash(i * 17.9) * 42;
+      const grad = wg.createRadialGradient(x, y, 1, x, y, r);
+      grad.addColorStop(0, `rgba(88,57,31,${0.035 + hash(i) * 0.045})`);
+      grad.addColorStop(1, 'rgba(88,57,31,0)');
+      wg.fillStyle = grad;
+      wg.beginPath(); wg.arc(x, y, r, 0, Math.PI * 2); wg.fill();
+    }
+    wg.strokeStyle = 'rgba(75,48,31,0.16)';
+    wg.lineWidth = 1;
+    for (let c = 0; c < 7; c++) {
+      let x = 40 + hash(c * 19.1) * 430;
+      let y = 20 + hash(c * 23.7) * 180;
+      wg.beginPath(); wg.moveTo(x, y);
+      for (let seg = 0; seg < 5; seg++) {
+        x += (hash(c * 31 + seg) - 0.5) * 18;
+        y += 10 + hash(c * 37 + seg) * 24;
+        wg.lineTo(x, y);
+      }
+      wg.stroke();
+    }
+    const wallTex = new THREE.CanvasTexture(wallCanvas);
+    wallTex.colorSpace = THREE.SRGBColorSpace;
+    wallTex.wrapS = wallTex.wrapT = THREE.RepeatWrapping;
+    wallTex.repeat.set(1.35, 2.2);
+    wallTex.anisotropy = 4;
+    const cream = new THREE.MeshStandardMaterial({ map: wallTex, bumpMap: wallTex, bumpScale: 0.012, color: 0xffffff, roughness: 0.86, metalness: 0 });
+    this.disposables.push(wallTex, cream);
+
     const wood = this.mat(0x7b4d2b, 0.55);
     const woodDark = this.mat(0x3f2415, 0.62);
-    const cream = this.mat(0xd8c9aa, 0.78);
     const rug = this.mat(0x7b2d25, 0.86);
     const brass = this.mat(0xa5742d, 0.38, 0.6);
     const plant = this.mat(0x2e6b34, 0.8);
@@ -248,7 +295,14 @@ export default class ThresholdZ8Home extends Scene {
       radiator.rotation.y = -Math.PI / 2;
       this.s.add(radiator);
     }
-    this.box(this.s, [0.035, 0.15, 0.1], [1.28, 1.2, -5.15], this.mat(0xe8e0cd, 0.55));
+    const switchPlate = this.box(this.s, [0.035, 0.15, 0.1], [1.28, 1.2, -5.15], this.mat(0xe8e0cd, 0.55));
+    switchPlate.castShadow = true;
+    const switchDetail = this.mat(0x6f604e, 0.55, 0.25);
+    for (const sy of [1.15, 1.25]) {
+      const screw = this.cyl(this.s, 0.006, 0.006, 0.004, [1.257, sy, -5.15], switchDetail, 12);
+      screw.rotation.z = Math.PI / 2;
+    }
+    this.box(this.s, [0.009, 0.045, 0.022], [1.252, 1.2, -5.15], this.mat(0xf3ead7, 0.68));
     const mirrorCalendar = cloneHomePart('mirror_calendar');
     if (mirrorCalendar) {
       mirrorCalendar.position.set(-1.28, 1.0, -5.6);
@@ -290,13 +344,56 @@ export default class ThresholdZ8Home extends Scene {
     }
 
     // Right-wall front door beside the wall-mounted beige phone.
-    const doorMat = this.mat(0x5a321f, 0.55);
+    const doorCanvas = document.createElement('canvas');
+    doorCanvas.width = 256; doorCanvas.height = 512;
+    const dg = doorCanvas.getContext('2d')!;
+    dg.fillStyle = '#5a321f'; dg.fillRect(0, 0, 256, 512);
+    for (let x = 0; x < 256; x += 2) {
+      const v = hash(x * 0.71);
+      dg.fillStyle = `rgba(${42 + v * 38},${20 + v * 18},${10 + v * 10},${0.10 + v * 0.10})`;
+      dg.fillRect(x, 0, 1, 512);
+    }
+    for (let y = 0; y < 512; y += 11) {
+      const v = hash(y * 1.37);
+      dg.fillStyle = `rgba(35,16,8,${0.025 + v * 0.035})`;
+      dg.fillRect(0, y, 256, 1);
+    }
+    for (let i = 0; i < 55; i++) {
+      const x = hash(i * 3.3) * 256;
+      const y = hash(i * 5.9) * 512;
+      dg.fillStyle = `rgba(20,10,5,${0.08 + hash(i) * 0.12})`;
+      dg.fillRect(x, y, 1 + hash(i * 7) * 2, 18 + hash(i * 11) * 82);
+    }
+    for (let i = 0; i < 18; i++) {
+      dg.fillStyle = `rgba(168,105,56,${0.08 + hash(i * 13) * 0.1})`;
+      dg.fillRect(hash(i * 17) * 256, 430 + hash(i * 19) * 72, 8 + hash(i * 23) * 42, 1 + hash(i * 29) * 3);
+    }
+    const doorTex = new THREE.CanvasTexture(doorCanvas);
+    doorTex.colorSpace = THREE.SRGBColorSpace;
+    doorTex.wrapS = doorTex.wrapT = THREE.RepeatWrapping;
+    doorTex.anisotropy = 4;
+    const doorMat = new THREE.MeshStandardMaterial({ map: doorTex, color: 0xffffff, roughness: 0.66, metalness: 0.02 });
+    this.disposables.push(doorTex, doorMat);
     this.box(this.s, [0.1, 2.15, 0.08], [1.34, 1.07, -6.36], woodDark);
     this.box(this.s, [0.1, 2.15, 0.08], [1.34, 1.07, -7.34], woodDark);
     this.box(this.s, [0.1, 0.14, 1.05], [1.34, 2.08, -6.85], woodDark);
     this.doorGroup.position.set(1.34, 0, -7.32);
     const slab = this.box(this.doorGroup, [0.08, 2.0, 0.9], [0, 1.0, 0.43], doorMat);
     slab.castShadow = true;
+    // Raised panel beads, edge wear and hand-polished grime stop the slab reading as a vector rectangle.
+    const doorTrimMat = this.mat(0x3c2114, 0.68, 0.02, 0x080302, 0.04);
+    const doorWearMat = this.mat(0x9a6738, 0.82, 0.02, 0x1c0c04, 0.06);
+    for (const yc of [0.58, 1.43]) {
+      const ph = yc < 1 ? 0.58 : 0.82;
+      this.box(this.doorGroup, [0.018, ph, 0.025], [-0.049, yc, 0.16], doorTrimMat);
+      this.box(this.doorGroup, [0.018, ph, 0.025], [-0.049, yc, 0.70], doorTrimMat);
+      this.box(this.doorGroup, [0.018, 0.025, 0.56], [-0.049, yc - ph * 0.5, 0.43], doorTrimMat);
+      this.box(this.doorGroup, [0.018, 0.025, 0.56], [-0.049, yc + ph * 0.5, 0.43], doorTrimMat);
+    }
+    for (let chip = 0; chip < 9; chip++) {
+      this.box(this.doorGroup, [0.012, 0.018 + hash(chip) * 0.035, 0.035 + hash(chip * 3) * 0.09], [-0.052, 0.08 + hash(chip * 5) * 0.38, 0.06 + hash(chip * 7) * 0.74], chip % 2 ? doorWearMat : doorTrimMat, [0, 0, (hash(chip * 11) - 0.5) * 0.3]);
+    }
+    this.box(this.doorGroup, [0.011, 0.19, 0.16], [-0.054, 1.0, 0.72], this.mat(0x2c170d, 0.94, 0, 0x050202, 0.02));
     this.handle = this.cyl(this.doorGroup, 0.045, 0.045, 0.12, [-0.08, 1.0, 0.78], brass, 12);
     this.handle.rotation.z = Math.PI / 2;
     this.s.add(this.doorGroup);
@@ -315,15 +412,89 @@ export default class ThresholdZ8Home extends Scene {
     this.disposables.push(plaqueTex, plaqueMat);
     this.box(this.doorGroup, [0.018, 0.16, 0.32], [-0.055, 1.52, 0.43], plaqueMat);
     const wallTrim = this.mat(0x745039, 0.78);
-    const wallScuff = this.mat(0x735941, 0.94);
     for (const [zNear, zFar] of [[2.1, -3.15], [-4.65, -6.28], [-7.42, -8.3]] as const) {
       const len = zNear - zFar;
       this.box(this.s, [0.010, 0.032, len], [1.292, 0.86, (zNear + zFar) / 2], wallTrim);
+      this.box(this.s, [0.026, 0.15, len], [1.286, 0.105, (zNear + zFar) / 2], wallTrim);
     }
+    const grimeCanvas = document.createElement('canvas');
+    grimeCanvas.width = 256; grimeCanvas.height = 256;
+    const gg = grimeCanvas.getContext('2d')!;
+    gg.clearRect(0, 0, 256, 256);
+    for (let i = 0; i < 65; i++) {
+      const x = 42 + hash(i * 2.7) * 172;
+      const y = 35 + hash(i * 4.9) * 190;
+      const rx = 8 + hash(i * 6.1) * 30;
+      const ry = 4 + hash(i * 8.3) * 20;
+      const grd = gg.createRadialGradient(x, y, 1, x, y, Math.max(rx, ry));
+      grd.addColorStop(0, `rgba(69,43,24,${0.08 + hash(i * 9.9) * 0.13})`);
+      grd.addColorStop(1, 'rgba(69,43,24,0)');
+      gg.fillStyle = grd;
+      gg.beginPath(); gg.ellipse(x, y, rx, ry, hash(i * 12.1) * Math.PI, 0, Math.PI * 2); gg.fill();
+    }
+    for (let i = 0; i < 18; i++) {
+      gg.strokeStyle = `rgba(54,32,18,${0.09 + hash(i * 3) * 0.1})`;
+      gg.lineWidth = 1 + hash(i * 5) * 2;
+      gg.beginPath();
+      const x = 35 + hash(i * 7) * 180;
+      const y = 40 + hash(i * 11) * 170;
+      gg.moveTo(x, y);
+      gg.lineTo(x + (hash(i * 13) - 0.5) * 40, y + 20 + hash(i * 17) * 55);
+      gg.stroke();
+    }
+    const grimeTex = new THREE.CanvasTexture(grimeCanvas);
+    grimeTex.colorSpace = THREE.SRGBColorSpace;
+    const grimeMat = new THREE.MeshBasicMaterial({ map: grimeTex, transparent: true, opacity: 0.55, depthWrite: false });
+    this.disposables.push(grimeTex, grimeMat);
+    const addWallGrime = (z: number, y: number, w: number, h: number) => {
+      const geo = new THREE.PlaneGeometry(w, h);
+      const mesh = new THREE.Mesh(geo, grimeMat);
+      mesh.position.set(1.281, y, z);
+      mesh.rotation.y = -Math.PI / 2;
+      mesh.renderOrder = 2;
+      this.s.add(mesh);
+      this.disposables.push(geo);
+    };
+    addWallGrime(-6.02, 1.28, 0.78, 1.12);
+    addWallGrime(-6.62, 0.64, 0.62, 0.72);
+    addWallGrime(-5.28, 0.72, 0.58, 0.82);
     // Production beige phone as the wall-mounted final variant. The desk-phone axes are
     // remapped so the face/receiver point into the hallway and the keypad descends vertically.
     const phoneMount = cloneHomePart('wall_phone_mount');
     if (phoneMount) {
+      const mountCanvas = document.createElement('canvas');
+      mountCanvas.width = 128; mountCanvas.height = 256;
+      const mg = mountCanvas.getContext('2d')!;
+      mg.fillStyle = '#4b2112'; mg.fillRect(0, 0, 128, 256);
+      for (let x = 0; x < 128; x += 2) {
+        const v = hash(x * 1.19);
+        mg.fillStyle = `rgba(${52 + v * 42},${22 + v * 18},${10 + v * 9},${0.18 + v * 0.12})`;
+        mg.fillRect(x, 0, 1, 256);
+      }
+      for (let i = 0; i < 28; i++) {
+        mg.fillStyle = `rgba(150,91,48,${0.08 + hash(i * 3) * 0.12})`;
+        mg.fillRect(hash(i * 5) * 128, 205 + hash(i * 7) * 45, 3 + hash(i * 11) * 18, 1 + hash(i * 13) * 3);
+      }
+      const mountTex = new THREE.CanvasTexture(mountCanvas);
+      mountTex.colorSpace = THREE.SRGBColorSpace;
+      mountTex.wrapS = mountTex.wrapT = THREE.RepeatWrapping;
+      this.disposables.push(mountTex);
+      phoneMount.traverse((obj) => {
+        if (!(obj instanceof THREE.Mesh) || obj.name !== 'phone_mount_plate') return;
+        const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+        const cloned = mats.map((m) => {
+          if (!(m instanceof THREE.MeshStandardMaterial)) return m;
+          const mm = m.clone();
+          mm.map = mountTex;
+          mm.color.setHex(0xffffff);
+          mm.roughness = 0.72;
+          mm.bumpMap = mountTex;
+          mm.bumpScale = 0.005;
+          this.disposables.push(mm);
+          return mm;
+        });
+        obj.material = Array.isArray(obj.material) ? cloned : cloned[0]!;
+      });
       phoneMount.position.set(1.27, 1.39, -6.02);
       phoneMount.rotation.y = -Math.PI / 2;
       this.s.add(phoneMount);
@@ -337,9 +508,52 @@ export default class ThresholdZ8Home extends Scene {
     );
     phone.quaternion.setFromRotationMatrix(basis);
     phone.position.set(1.22, 1.34, -6.02);
+    // Fine molded-plastic grain and handling polish on the production phone materials.
+    const phoneNoiseCanvas = document.createElement('canvas');
+    phoneNoiseCanvas.width = 128; phoneNoiseCanvas.height = 128;
+    const png = phoneNoiseCanvas.getContext('2d')!;
+    png.fillStyle = '#808080'; png.fillRect(0, 0, 128, 128);
+    for (let i = 0; i < 950; i++) {
+      const v = 104 + Math.floor(hash(i * 4.7) * 52);
+      png.fillStyle = `rgb(${v},${v},${v})`;
+      png.fillRect(Math.floor(hash(i * 2.1) * 128), Math.floor(hash(i * 3.9) * 128), 1, 1);
+    }
+    for (let i = 0; i < 20; i++) {
+      png.strokeStyle = `rgba(170,170,170,${0.08 + hash(i) * 0.08})`;
+      png.lineWidth = 1;
+      png.beginPath();
+      const x = hash(i * 5.3) * 128;
+      const y = hash(i * 7.7) * 128;
+      png.moveTo(x, y);
+      png.lineTo(x + (hash(i * 11) - 0.5) * 28, y + (hash(i * 13) - 0.5) * 12);
+      png.stroke();
+    }
+    const phoneNoiseTex = new THREE.CanvasTexture(phoneNoiseCanvas);
+    phoneNoiseTex.wrapS = phoneNoiseTex.wrapT = THREE.RepeatWrapping;
+    phoneNoiseTex.repeat.set(3, 3);
+    this.disposables.push(phoneNoiseTex);
+    phone.traverse((obj) => {
+      if (!(obj instanceof THREE.Mesh)) return;
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      const cloned = mats.map((m) => {
+        if (!(m instanceof THREE.MeshStandardMaterial)) return m;
+        const mm = m.clone();
+        mm.bumpMap = phoneNoiseTex;
+        mm.bumpScale = 0.006;
+        mm.roughness = Math.max(mm.roughness, 0.58);
+        return mm;
+      });
+      obj.material = Array.isArray(obj.material) ? cloned : cloned[0]!;
+    });
     this.s.add(phone);
     this.receiver = this.phoneInst.parts.get('receiver');
     if (this.receiver) this.receiverHome.copy(this.receiver.position);
+    // Wallplate screws, plaster shadows and handling wear around the phone mount.
+    const screwMat = this.mat(0x5a422c, 0.34, 0.72, 0x120806, 0.08);
+    for (const [sy, sz] of [[1.58, -6.16], [1.58, -5.88], [1.20, -6.16], [1.20, -5.88]] as const) {
+      const screw = this.cyl(this.s, 0.013, 0.013, 0.006, [1.176, sy, sz], screwMat, 14);
+      screw.rotation.z = Math.PI / 2;
+    }
 
 
     // Explicit close-range payoff geometry at real handset scale: a 22cm curved
