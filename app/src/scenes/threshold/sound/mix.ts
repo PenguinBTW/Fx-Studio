@@ -62,12 +62,14 @@ export default defineMix({
     { id: 'z0_pre_drop_vacuum', from: 3.30, to: 3.55 },
     // T4 page-slam true-black pause: normalized 0.20-0.333 of the 0.6s window.
     { id: 't4_page_slam_silence', from: 104.82, to: 104.90 },
+    // Z7 replay beam-death vacuum before black/relight; exact digital silence by design.
+    { id: 'z7_beam_death_vacuum', from: 173.40, to: 174.00 },
   ],
   master: {
     lufs: -14,
     truePeak: -1.2,
     limiterLookaheadMs: 5,
-    lowLevelLift: { thresholdDb: -24, ratio: 1.7, maxLiftDb: 16 },
+    lowLevelLift: { thresholdDb: -40, ratio: 1.2, maxLiftDb: 4 },
     downwardCompress: { thresholdDb: -34, ratio: 2.0 },
   },
 });
