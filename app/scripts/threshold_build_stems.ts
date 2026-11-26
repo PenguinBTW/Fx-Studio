@@ -443,8 +443,8 @@ wav('z3_pool_events.wav', stem(25.8, (t) => {
   // Mirrorling emergence: wet tile scrape and a sheet of water shedding off chrome.
   if (at >= 72.0 && at < 72.5) {
     const u = at - 72.0;
-    const scrape = z3NoiseLp * 0.16 * Math.min(1, u / 0.08) + Math.sin(u * Math.PI * 2 * (260 + u * 620)) * 0.034;
-    const sheet = noise() * 0.07 * Math.exp(-u * 5);
+    const scrape = z3NoiseLp * 0.18 * Math.min(1, u / 0.08) + Math.sin(u * Math.PI * 2 * (260 + u * 720)) * 0.044;
+    const sheet = noise() * 0.105 * Math.exp(-u * 4.2) + Math.sin(u * Math.PI * 2 * (1150 + u * 900)) * 0.014 * Math.exp(-u * 7);
     add((scrape + sheet) * Math.exp(-u * 1.8), -0.04);
   }
 
@@ -471,7 +471,7 @@ wav('z3_pool_events.wav', stem(25.8, (t) => {
   if (at >= 78.4 && at < 80.0) {
     const u = at - 78.4;
     const cut = smoothstep(0.06, 0.30, u);
-    const splash = noise() * 0.16 * Math.exp(-u * 3.0) * (1 - cut);
+    const splash = (noise() * 0.20 + Math.sin(u * Math.PI * 2 * (1350 - u * 500)) * 0.028) * Math.exp(-u * 3.4) * (1 - cut);
     const submerged = z3NoiseLp * 0.18 * cut + Math.sin(u * Math.PI * 2 * 58) * 0.042 * cut;
     add(splash + submerged, 0);
   }
