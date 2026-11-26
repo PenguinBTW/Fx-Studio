@@ -9,9 +9,9 @@ from _bl import *
 reset()
 R = random.Random(4177)
 
-TILE = mat('TenantPoolTile', (0.34, 0.55, 0.52), 0.28, metal=0.03)
+TILE = mat('TenantPoolTile', (0.18, 0.34, 0.32), 0.28, metal=0.03)
 GROUT = mat('TenantTileGrout', (0.025, 0.045, 0.045), 0.72)
-PAPER = mat('TenantPaper', (0.64, 0.54, 0.36), 0.84)
+PAPER = mat('TenantPaper', (0.28, 0.205, 0.105), 0.86)
 PAPER_DARK = mat('TenantPaperEdge', (0.31, 0.22, 0.13), 0.9)
 FELT = mat('TenantFelt', (0.20, 0.055, 0.035), 0.96)
 CHROME = mat('TenantChrome', (0.42, 0.47, 0.51), 0.18, metal=0.88)
@@ -230,24 +230,49 @@ def build_leg(side):
     leg_g = group(f'leg_{side}_control', lower, f'leg_{side}', (sx * 0.18, 0, 1.95))
     upper_g = group_local(f'leg_{side}_upper_control', leg_g, f'leg_{side}_upper')
     lower_g = group_local(f'leg_{side}_lower_control', leg_g, f'leg_{side}_lower', (sx * 0.10, 0.04, -1.0))
-    for i in range(6):
-        z = 1.84 - i * 0.16
-        x = sx * (0.18 + 0.018 * i)
-        ybend = -0.02 + 0.012 * i + (0.10 if side == 'l' else -0.06) * (i / 5)
-        ob = box(f'leg_{side}_upper_tile_{i}', (0.22, 0.20, 0.23), (x, ybend, z), TILE if i % 2 == 0 else PAPER,
-                 bev=0.012, rot=(0.02 * i, 0.03 * sx, 0.025 * sx * i))
-        add(ob, upper_g, 'stacked_tiles')
-    for i in range(6):
-        z = 0.94 - i * 0.14
-        x = sx * (0.28 + 0.01 * i)
-        ybend = 0.04 + 0.012 * i + (0.20 if side == 'l' else -0.10) * (i / 5)
-        ob = box(f'leg_{side}_lower_tile_{i}', (0.20, 0.18, 0.22), (x, ybend, z), TILE if i % 2 else PAPER,
-                 bev=0.01, rot=(-0.025 * i, -0.02 * sx, -0.018 * sx * i))
-        add(ob, lower_g, 'stacked_tiles')
+
+    # Bent limb landmarks in Blender Z-up space: hip -> forward knee -> ankle.
+    # Tiles overlap along those chords instead of forming a vertical rectangular stack.
+    hip = (sx * 0.18, -0.02, 1.91)
+    knee = (sx * (0.58 if side == 'l' else 0.34), 0.16 if side == 'l' else -0.10, 1.04)
+    ankle = (sx * (0.31 if side == 'l' else 0.46), 0.02 if side == 'l' else -0.02, 0.18)
+
+    def along(a, b, u):
+        return tuple(a[j] * (1 - u) + b[j] * u for j in range(3))
+
+    add(sphere(f'leg_{side}_hip_joint', 0.19, hip, RUBBER, scale=(1.2, 0.86, 0.92), segments=24, rings=12), upper_g, 'joints')
+    add(sphere(f'leg_{side}_knee_joint', 0.19, knee, RUBBER, scale=(1.28, 0.82, 0.86), segments=24, rings=12), upper_g, 'joints')
+
+    for i in range(5):
+        u = (i + 0.42) / 5
+        x, ybend, z = along(hip, knee, u)
+        ybend += math.sin(u * math.pi) * (0.025 if side == 'l' else -0.018)
+        ob = box(f'leg_{side}_upper_tile_{i}',
+                 (0.25 - 0.015 * i, 0.15 + 0.012 * (i % 2), 0.31),
+                 (x, ybend, z), TILE if i % 2 == 0 else PAPER,
+                 bev=0.015,
+                 rot=(math.radians(-11 + 4 * i), math.radians(sx * (22 - 2 * i)), math.radians(sx * (5 - i))))
+        add(ob, upper_g, 'overlapping_tiles')
+
+    for i in range(5):
+        u = (i + 0.3) / 5
+        x, ybend, z = along(knee, ankle, u)
+        ybend += math.sin(u * math.pi) * (0.055 if side == 'l' else -0.04)
+        ob = box(f'leg_{side}_lower_tile_{i}',
+                 (0.22 - 0.01 * i, 0.14 + 0.012 * ((i + 1) % 2), 0.28),
+                 (x, ybend, z), TILE if i % 2 else PAPER,
+                 bev=0.012,
+                 rot=(math.radians(9 - 3 * i), math.radians(sx * (-16 + 2 * i)), math.radians(sx * (-4 + i))))
+        add(ob, lower_g, 'overlapping_tiles')
         if i % 2 == 0:
-            add(box(f'leg_{side}_grout_slip_{i}', (0.17, 0.012, 0.018), (x, 0.125 + 0.012 * i, z), GROUT,
-                    rot=(0, 0, 0.05 * sx)), lower_g, 'cracked_grout')
-    foot = box(f'foot_{side}', (0.22, 0.38, 0.12), (sx * 0.31, 0.17 + (0.24 if side == 'l' else -0.12), 0.08), PAPER_DARK, bev=0.018, rot=(0, 0.05 * sx, 0))
+            add(box(f'leg_{side}_grout_slip_{i}', (0.17, 0.012, 0.018),
+                    (x, ybend + 0.09, z), GROUT,
+                    rot=(math.radians(12), 0, math.radians(sx * (18 + i)))), lower_g, 'cracked_grout')
+
+    add(sphere(f'leg_{side}_ankle_joint', 0.14, ankle, RUBBER, scale=(1.3, 0.74, 0.76), segments=20, rings=10), lower_g, 'joints')
+    foot_pos = (sx * 0.25, 0.27 if side == 'l' else -0.10, 0.09)
+    foot = box(f'foot_{side}', (0.24, 0.43, 0.13), foot_pos, PAPER_DARK, bev=0.018,
+               rot=(math.radians(5), math.radians(sx * 10), math.radians(sx * 7)))
     add(foot, lower_g, f'foot_{side}')
     return leg_g
 
@@ -302,15 +327,15 @@ for ob in list(bpy.data.objects):
     if zc <= 1.85:
         continue
     u = max(0.0, min(1.0, (zc - 1.85) / 1.9))
-    forward_sag = 0.86 * (u ** 1.35)
-    downward_sag = 0.38 * (u ** 1.6)
+    forward_sag = 1.12 * (u ** 1.28)
+    downward_sag = 0.52 * (u ** 1.5)
     ob.matrix_world = mathutils.Matrix.Translation((0, forward_sag, -downward_sag)) @ ob.matrix_world
     # Pull the head and felt neck down into the torso silhouette. A hunched predator's
     # head is carried low in front of the ribcage, not balanced upright like a balloon.
     if ob.name.startswith('head_'):
-        ob.matrix_world = mathutils.Matrix.Translation((0, 0.34, -0.56)) @ ob.matrix_world
+        ob.matrix_world = mathutils.Matrix.Translation((-0.10, 0.62, -0.82)) @ ob.matrix_world
     elif ob.name.startswith('neck_'):
-        ob.matrix_world = mathutils.Matrix.Translation((0, 0.14, -0.24)) @ ob.matrix_world
+        ob.matrix_world = mathutils.Matrix.Translation((-0.04, 0.26, -0.36)) @ ob.matrix_world
 bpy.context.view_layer.update()
 
 export(HERE)

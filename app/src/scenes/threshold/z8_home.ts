@@ -26,9 +26,9 @@ const KEYS: PoseKey[] = [
   { t: 206.0, p: [0, 1.65, -3.1], yaw: 20, pitch: 0, fov: 69 },
   { t: 208.0, p: [0.15, 1.65, -4.6], yaw: 26, pitch: 0, fov: 68 },
   { t: 210.0, p: [0.35, 1.65, -5.3], yaw: 38, pitch: 0, fov: 66 },
-  { t: 212.0, p: [0.58, 1.65, -5.75], yaw: 74, pitch: -7, fov: 66 },
-  { t: 214.0, p: [0.68, 1.65, -5.9], yaw: 54, pitch: -10, fov: 60 },
-  { t: 216.0, p: [0.56, 1.65, -5.65], yaw: 76, pitch: -10, fov: 66 },
+  { t: 212.0, p: [0.58, 1.65, -5.75], yaw: 74, pitch: -12, fov: 66 },
+  { t: 214.0, p: [0.68, 1.65, -5.9], yaw: 54, pitch: -14, fov: 60 },
+  { t: 216.0, p: [0.56, 1.65, -5.65], yaw: 76, pitch: -14, fov: 66 },
   { t: 218.0, p: [0.56, 1.65, -5.65], yaw: 75, pitch: -7, fov: 72 },
   { t: 220.0, p: [0.7, 1.65, -6.1], yaw: 76, pitch: 0, fov: 74 },
   { t: 222.0, p: [0.95, 1.65, -6.45], yaw: 88, pitch: 0, fov: 74 },
@@ -315,14 +315,11 @@ export default class ThresholdZ8Home extends Scene {
     this.disposables.push(plaqueTex, plaqueMat);
     this.box(this.doorGroup, [0.018, 0.16, 0.32], [-0.055, 1.52, 0.43], plaqueMat);
     const wallTrim = this.mat(0x745039, 0.78);
-    const wallScuff = this.mat(0xa88465, 0.9);
+    const wallScuff = this.mat(0x735941, 0.94);
     for (const [zNear, zFar] of [[2.1, -3.15], [-4.65, -6.28], [-7.42, -8.3]] as const) {
       const len = zNear - zFar;
       this.box(this.s, [0.010, 0.032, len], [1.292, 0.86, (zNear + zFar) / 2], wallTrim);
     }
-    for (let i = 0; i < 2; i++) this.box(this.s, [0.006, 1.75, 0.007], [1.291, 1.42, -4.92 - i * 0.62], wallScuff);
-    for (let i = 0; i < 7; i++) this.box(this.s, [0.007, 0.12 + hash(i) * 0.24, 0.012 + hash(i * 2) * 0.018], [1.289, 0.62 + hash(i * 3) * 1.25, -4.78 - i * 0.2], wallScuff, [0, 0, (hash(i) - 0.5) * 0.18]);
-
     // Production beige phone as the wall-mounted final variant. The desk-phone axes are
     // remapped so the face/receiver point into the hallway and the keypad descends vertically.
     const phoneMount = cloneHomePart('wall_phone_mount');
@@ -350,7 +347,7 @@ export default class ThresholdZ8Home extends Scene {
     const handsetMat = this.mat(0xc4b28d, 0.58, 0, 0x2a190b, 0.08);
     const handsetEdge = this.mat(0x4b341f, 0.74);
     const handsetDark = this.mat(0x17100b, 0.82);
-    this.payoffReceiver.position.set(1.11, 1.31, -6.02);
+    this.payoffReceiver.position.set(1.11, 1.38, -6.02);
     this.payoffReceiver.scale.setScalar(1);
     const gripPts = [
       new THREE.Vector3(0, 0.034, -0.085),
@@ -446,7 +443,7 @@ export default class ThresholdZ8Home extends Scene {
     this.payoffReceiver.visible = t >= 210 && t < 218;
     if (this.payoffReceiver.visible) {
       const swing = Math.sin((t - 210) * 4.4) * (0.18 + 0.1 * (1 - drop));
-      this.payoffReceiver.position.y = 1.35 - drop * 0.04 + 0.010 * Math.sin((t - 210) * 8);
+      this.payoffReceiver.position.y = 1.42 - drop * 0.04 + 0.010 * Math.sin((t - 210) * 8);
       this.payoffReceiver.position.z = -6.02 + drop * 0.04;
       this.payoffReceiver.rotation.x = 0.16 + drop * 0.42 + swing * 0.65;
       this.payoffReceiver.rotation.z = 0.08 * Math.sin((t - 210) * 3.1);
@@ -457,7 +454,7 @@ export default class ThresholdZ8Home extends Scene {
     this.doorGroup.rotation.y = smooth((t - 217.5) / 2.0) * 1.65;
 
     // Warm lamp is deliberately shadowless; its glow is steady and wrong.
-    const lampLevel = lerp(1.75, 0.46, smooth((t - 209.5) / 1.2));
+    const lampLevel = lerp(1.75, 0.24, smooth((t - 209.5) / 1.2));
     if (this.lampLight) this.lampLight.intensity = lampLevel;
     this.lampGlow.emissiveIntensity = (2.2 + 0.15 * Math.sin(t * 2.1)) * (0.55 + 0.45 * lampLevel / 1.75);
     this.officeTubeMats.forEach((m, i) => { m.emissiveIntensity = 1.65 + (i === 2 ? 0.5 * hash(Math.floor(t * 7) + i) : 0.12 * hash(Math.floor(t * 3) + i)); });
@@ -467,7 +464,7 @@ export default class ThresholdZ8Home extends Scene {
     const beam = beamStateAt(t, threat);
     // At the wall-phone payoff the beam is inches from the wall; soften only this close-range
     // adapter window so the handset/cord silhouette remains readable instead of washing to white.
-    if (t >= 210 && t < 214.5) beam.intensity *= 0.07;
+    if (t >= 210 && t < 218.5) beam.intensity *= 0.028;
     this.flash.update(pose, t, beam, (time) => z8PoseAt(time, z8Gait(time)).forward);
 
     const rr = this.ctx.renderer;

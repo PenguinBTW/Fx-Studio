@@ -27,6 +27,7 @@ const KEYS: PoseKey[] = [
   { t: 145.0, p: [0.55, 1.65, 2.5], yaw: 10, pitch: -4, fov: 70 },
   { t: 147.0, p: [0.9, 1.65, -2.2], yaw: -3, pitch: -2, fov: 72 },
   { t: 148.5, p: [1.4, 1.65, -6.2], yaw: -25, pitch: 0, fov: 76 },
+  { t: 149.5, p: [1.75, 1.63, -7.3], yaw: -21, pitch: 0, fov: 76 },
   { t: 150.5, p: [2.1, 1.62, -8.4], yaw: -16, pitch: 0, fov: 76 },
 ];
 
@@ -39,7 +40,7 @@ const FP_KEYS: FPKey[] = KEYS.map((k) => ({
   fov: k.fov,
 }));
 
-function poseAt(t: number, gait?: GaitName) {
+export function z6PoseAt(t: number, gait?: GaitName) {
   return evalFirstPerson(FP_KEYS, clamp(t, FP_KEYS[0]!.t, FP_KEYS[FP_KEYS.length - 1]!.t), gait);
 }
 
@@ -261,7 +262,7 @@ export default class ThresholdZ6Theatre extends Scene {
       }
     }
 
-    const stageActionLight = new THREE.PointLight(0xffc37a, 2.8, 10, 1.45);
+    const stageActionLight = new THREE.PointLight(0xffc37a, 3.6, 11, 1.45);
     stageActionLight.position.set(0, 3.2, -3.9);
     this.s.add(stageActionLight);
     this.houseLight = new THREE.PointLight(0xffb28a, 0, 7, 1.55);
@@ -405,7 +406,7 @@ export default class ThresholdZ6Theatre extends Scene {
     beamCone.rotation.x = -0.08;
     this.s.add(beamCone);
     this.disposables.push(beamGeo, beamMat);
-    this.s.add(new THREE.AmbientLight(0x3a2028, 0.68));
+    this.s.add(new THREE.AmbientLight(0x4a2b31, 1.0));
 
     this.s.add(this.flash.group);
   }
@@ -427,7 +428,7 @@ export default class ThresholdZ6Theatre extends Scene {
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
     const t = f.t;
     const st = stepped(t, 12);
-    const pose = poseAt(t, z6Gait(t));
+    const pose = z6PoseAt(t, z6Gait(t));
     applyFirstPersonCamera(this.cam, pose, out.width / out.height);
     const dir = new THREE.Vector3(...pose.forward);
 
@@ -477,7 +478,7 @@ export default class ThresholdZ6Theatre extends Scene {
 
     // Shared beam adapter: 50% battery with the deliberate friendly-Lint flicker.
     const threat = t >= 139 && t < 143.6 ? 0.75 : 0.15;
-    this.flash.update(pose, t, beamStateAt(t, threat), (time) => poseAt(time, z6Gait(time)).forward);
+    this.flash.update(pose, t, beamStateAt(t, threat), (time) => z6PoseAt(time, z6Gait(time)).forward);
 
     // EXIT slit swells near the threshold.
     this.exitGlow.emissiveIntensity = 2.4 + 2.2 * smooth((t - 147) / 3);

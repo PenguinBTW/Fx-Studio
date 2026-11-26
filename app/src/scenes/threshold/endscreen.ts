@@ -43,10 +43,12 @@ export default class ThresholdEndscreen extends Scene {
       this.office.receiver.position.copy(this.office.receiverHome).add(new THREE.Vector3(0, ring * 0.012, ring * 0.006));
       this.office.receiver.rotation.z = ring * 0.045;
     }
-    const fade = Math.min(1, Math.max(0, (t - 225) / 10));
-    const powerPhase = (t - 225) % 3.7;
-    const pulse = (center: number, width: number) => smooth((powerPhase - center + width) / width) * (1 - smooth((powerPhase - center) / width));
-    const powerSag = Math.min(1, pulse(1.05, 0.12) * 0.58 + pulse(2.05, 0.09) * 0.82 + pulse(2.82, 0.16) * 0.68);
+    const fade = 0.35;
+    const endT = t - 225;
+    const pulse = (center: number, width: number) => Math.max(0, 1 - Math.abs(endT - center) / width);
+    // Three irregular one-off power dips across the ten-second slot, each with a real
+    // recovery to baseline; deliberately not a periodic flicker loop.
+    const powerSag = Math.min(1, pulse(1.18, 0.24) * 0.82 + pulse(5.35, 0.34) * 0.96 + pulse(8.42, 0.27) * 0.72);
     const powerLevel = 1 - powerSag * 0.52;
     this.office?.tubeMats.forEach((m, i) => { m.emissiveIntensity = (1.75 + 0.25 * hash(Math.floor(t * 4) + i * 7)) * (1 - fade * 0.38) * powerLevel; });
 
@@ -60,7 +62,7 @@ export default class ThresholdEndscreen extends Scene {
     // Same frame, intentionally darkened about 60%; modest radial/depth softness reads as endscreen blur
     // while grain/CA preserve the film's sensor language. No text or UI: slots are added by the user.
     return {
-      exposure: (0.22 - fade * 0.04) * (1 - powerSag * 0.34),
+      exposure: (0.22 - fade * 0.04) * (1 - powerSag * 0.42),
       bloom: 0.09,
       bloomThreshold: 1.05,
       vignette: 0.42,

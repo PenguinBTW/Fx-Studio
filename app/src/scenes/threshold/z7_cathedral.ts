@@ -100,7 +100,7 @@ function sprintDistanceAt(t: number) {
   // into the finite-difference speed of the exact replay at local z0=1.2. The
   // replay itself is immutable, so the custom approach absorbs its run-up shape.
   const u = clamp((t - SPRINT_T0) / (SPRINT_T1 - SPRINT_T0));
-  const shaped = u - 0.1264 * Math.sin(Math.PI * 2 * u);
+  const shaped = u - 0.064 * Math.sin(Math.PI * 2 * u);
   return sprintTable[SPRINT_SAMPLES]!.d * shaped;
 }
 function sprintPoint(t: number) {
@@ -126,14 +126,31 @@ export function z7PoseAt(t: number) {
     const sp = sprintPoint(t);
     const u = clamp((t - SPRINT_T0) / (SPRINT_T1 - SPRINT_T0));
     const pos: [number, number, number] = [sp.x, lerp(1.6, JOIN_POSE.pos[1], u), sp.z];
-    const lookback = smooth((t - 168.0) / 0.18) * (1 - smooth((t - 168.95) / 0.28));
-    const yaw = Math.PI * lookback;
+    const lookback = smooth((t - 168.0) / 0.5) * (1 - smooth((t - 169.3) / 0.42));
+    const secondGlance = smooth((t - 169.9) / 0.36) * (1 - smooth((t - 170.52) / 0.44));
+    const yaw = Math.PI * lookback + Math.PI * 0.78 * secondGlance;
     const targetYaw = Math.atan2(JOIN_POSE.forward[0], -JOIN_POSE.forward[2]);
     const yawForward = targetYaw * smooth((u - 0.86) / 0.14);
     const pitch = lerp(0, Math.asin(JOIN_POSE.forward[1]), u);
-    const fov = lerp(84 + 10 * smooth((t - 168.2) / 0.3), JOIN_POSE.fov, smooth((t - 169.75) / 0.35));
-    const roll = lerp(0, JOIN_POSE.roll, u) + 2 * Math.PI / 180 * Math.sin(Math.PI * u);
-    return poseFromYawPitch(base, pos, yaw + yawForward, pitch, roll, fov);
+    const fov = lerp(84 + 4 * smooth((t - 168.2) / 0.3), JOIN_POSE.fov, smooth((t - 170.55) / 0.45));
+    const stumble = smooth((t - 170.38) / 0.18) * (1 - smooth((t - 171.08) / 0.22));
+    const stumbleSeed = Math.sin((t - 170.38) * 31.0);
+    pos[1] -= 0.17 * stumble * (0.72 + 0.28 * Math.sin((t - 170.38) * 17.0));
+    const roll = lerp(0, JOIN_POSE.roll, u) + 2 * Math.PI / 180 * Math.sin(Math.PI * u)
+      + stumble * (0.13 * stumbleSeed + 0.055 * Math.sin((t - 170.38) * 47.0));
+    const stumbledPitch = pitch - stumble * (0.19 + 0.035 * Math.sin((t - 170.38) * 23.0));
+    return poseFromYawPitch(base, pos, yaw + yawForward, stumbledPitch, roll, fov);
+  }
+  if (t >= 149.5 && t < 163) {
+    // T6 handoff: z6 pre-decays into the doorway, then z7 keeps a very small
+    // forward creep instead of stepping to a dead stop. The total 6cm push is
+    // compositionally imperceptible but makes the 50ms velocity samples continuous.
+    const base = poseAt(t, z7Gait(t));
+    const dt = Math.max(0, t - 149.5);
+    const u = clamp(dt / 0.8);
+    const push = u < 1 ? -0.16 * 0.8 * (u - 0.5 * u * u) : -0.064;
+    const pos: [number, number, number] = [base.pos[0], base.pos[1], base.pos[2] + push];
+    return { ...base, pos, target: [pos[0] + base.forward[0], pos[1] + base.forward[1], pos[2] + base.forward[2]] as [number, number, number] };
   }
   return poseAt(t, z7Gait(t));
 }
@@ -152,6 +169,7 @@ export default class ThresholdZ7Cathedral extends Scene {
   private tenantArmInst?: GLTFInstance;
   private tenantInst?: GLTFInstance;
   private lintInst?: GLTFInstance;
+  private lintMats: THREE.MeshStandardMaterial[] = [];
   private replayArm = new THREE.Group();
   private replayHeroMachines = new THREE.Group();
   private replayMachines?: THREE.InstancedMesh;
@@ -273,7 +291,7 @@ export default class ThresholdZ7Cathedral extends Scene {
       const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
       for (const m of mats) {
         if (!(m instanceof THREE.MeshStandardMaterial)) continue;
-        if (m.name === 'TenantPoolTile') { m.emissive.setHex(0x123f48); m.emissiveIntensity = 0.48; }
+        if (m.name === 'TenantPoolTile') { m.emissive.setHex(0x09262c); m.emissiveIntensity = 0.18; }
         if (m.name === 'TenantChrome') { m.emissive.setHex(0x263746); m.emissiveIntensity = 0.52; }
         if (m.name === 'TenantRibcageGlass') { m.emissive.setHex(0x164b59); m.emissiveIntensity = 0.68; }
       }
@@ -360,11 +378,11 @@ export default class ThresholdZ7Cathedral extends Scene {
     fg.fillStyle = '#d8eef7'; fg.fillRect(0, 0, 64, 128);
     for (let shelf = 0; shelf < 5; shelf++) {
       const y = 16 + shelf * 23;
-      fg.fillStyle = 'rgba(18,35,48,0.72)'; fg.fillRect(3, y + 11, 58, 3);
+      fg.fillStyle = 'rgba(10,24,36,0.86)'; fg.fillRect(2, y + 10, 60, 6);
       for (let col = 0; col < 5; col++) {
         const h = hash(shelf * 17 + col * 5);
         fg.fillStyle = h > 0.72 ? 'rgba(178,73,38,0.72)' : h > 0.42 ? 'rgba(44,126,128,0.7)' : 'rgba(224,210,154,0.68)';
-        fg.fillRect(6 + col * 11, y + 2 + Math.floor(h * 3), 6, 8);
+        fg.fillRect(5 + col * 11, y + 1 + Math.floor(h * 3), 8, 10);
       }
     }
     fg.fillStyle = 'rgba(255,255,255,0.25)'; fg.fillRect(5, 0, 7, 128);
@@ -385,10 +403,10 @@ export default class ThresholdZ7Cathedral extends Scene {
     let frameIndex = 0;
     const wallX = (side: number, r: number, lev: number) => {
       const depthBand = r % 14 < 2 ? 0.9 : r % 14 < 6 ? 0.3 : r % 14 < 10 ? -0.15 : 0.45;
-      return side * (14.05 + 1.05 * hash(lev * 13 + r) + 0.55 * Math.sin(r * 0.73 + lev * 0.19) - depthBand);
+      return side * (14.05 + 0.28 * hash(lev * 13 + r) + 0.22 * Math.sin(r * 0.73 + lev * 0.19) - depthBand);
     };
-    const structuralVoid = (r: number, lev: number) => (r % 16 === 7 || r % 16 === 8) && lev > 1 && lev < 11;
-    const wallZ = (r: number, lev: number) => -2.5 - r * 3.25 + (hash(r * 7 + lev) - 0.5) * 0.34;
+    const structuralVoid = (_r: number, _lev: number) => false;
+    const wallZ = (r: number, lev: number) => -2.5 - r * 3.25 + (hash(r * 7 + lev) - 0.5) * 0.08;
     const setFramePiece = (x: number, y: number, z: number, sx: number, sy: number, sz: number, hidden: boolean) => {
       this.tmpP.set(x, y, z);
       this.tmpS.set(hidden ? 0.0001 : sx, hidden ? 0.0001 : sy, hidden ? 0.0001 : sz);
@@ -408,7 +426,7 @@ export default class ThresholdZ7Cathedral extends Scene {
           const damaged = hash(k * 17.9 + 1.3) > 0.86;
           const ajar = !heroCovered && !missing && lev < 4 && hash(k * 31.7 + 2.4) > 0.86;
           const hidden = heroCovered || missing || structuralVoid(r, lev);
-          this.tmpS.set(hidden ? 0.0001 : (1 + 0.05 * hash(k)) * (damaged ? 0.93 : 1), hidden ? 0.0001 : damaged ? 0.86 : 1, hidden ? 0.0001 : 0.9 + 0.14 * hash(k * 2));
+          this.tmpS.set(hidden ? 0.0001 : (1.22 + 0.04 * hash(k)) * (damaged ? 0.95 : 1), hidden ? 0.0001 : damaged ? 0.9 : 1, hidden ? 0.0001 : 1.18 + 0.05 * hash(k * 2));
           this.tmpM.compose(this.tmpP, this.tmpQ, this.tmpS);
           this.machineBodies.setMatrixAt(k, this.tmpM);
           this.tmpP.set(x - side * (ajar ? 0.62 : 0.48), y + 0.05, z + (ajar ? side * 0.06 : 0));
@@ -949,9 +967,20 @@ export default class ThresholdZ7Cathedral extends Scene {
 
     // Production Lint asset for the macro relight beat.
     this.lintInst = await GLTFManager.instantiate(lintUrl, { castShadow: true, receiveShadow: true });
+    this.lintInst.root.traverse((obj) => {
+      const mesh = obj as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      for (const mat of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
+        const smat = mat as THREE.MeshStandardMaterial;
+        if (!smat.isMeshStandardMaterial) continue;
+        smat.emissive = new THREE.Color(0x5a210b);
+        smat.emissiveIntensity = 0.72;
+        this.lintMats.push(smat);
+      }
+    });
     this.lint.add(this.lintInst.root);
     this.lint.visible = false;
-    const lintLight = new THREE.PointLight(0xffa65a, 1.35, 2.4, 1.45);
+    const lintLight = new THREE.PointLight(0xffa65a, 2.8, 3.0, 1.35);
     lintLight.position.set(0.08, 0.18, 0.18);
     this.lint.add(lintLight);
     this.s.add(this.lint);
@@ -1060,8 +1089,10 @@ export default class ThresholdZ7Cathedral extends Scene {
       const chaseK = smooth((t - 168.05) / 0.45);
       let z = -16.6;
       let x = 0.15 * Math.sin(t * 1.7);
-      if (t >= 168.1) {
-        const pursuitZ = this.cam.position.z + 8.6 + 0.4 * Math.sin(t * 3.3 * 2.1);
+      if (t >= 168.26) {
+        const gain = smooth((t - 168.26) / 1.55);
+        const gap = lerp(4.25, 2.72, gain) + 0.16 * Math.sin(t * 3.3 * 2.1);
+        const pursuitZ = this.cam.position.z + gap;
         z = pursuitZ;
         x = lerp(1.2, -1.25 + 0.22 * Math.sin(t * 1.9), chaseK);
       }
@@ -1089,7 +1120,7 @@ export default class ThresholdZ7Cathedral extends Scene {
       this.tenant.rotation.z = 0.045 * heldPose + (t >= 168 ? 0.018 * gallop : 0);
       this.tenant.rotation.y = t >= 168 ? lerp(Math.PI - 0.55, 0, chaseK) : Math.PI - 0.55;
       const reach = smooth((t - 172.4) / 0.8) * (1 - smooth((t - 174.0) / 0.5));
-      const revealScale = t < 168 ? 1.18 : lerp(1.18, 1, chaseK);
+      const revealScale = t < 168 ? 1.18 : lerp(1.18, 1.26, chaseK);
       this.tenant.scale.set(revealScale * (1 + reach * 0.12), revealScale, revealScale * (1 + reach * 0.35));
       const head = this.tenantInst?.parts.get('head');
       const armL = this.tenantInst?.parts.get('arm_l');
@@ -1103,9 +1134,9 @@ export default class ThresholdZ7Cathedral extends Scene {
       this.assemblyShadowMat.opacity = 0.46 * smooth((t - 163.2) / 0.65) * (1 - smooth((t - 168.02) / 0.2));
     }
     if (this.tenantPursuitLight) {
-      const pursuitLightOn = tenantVisible && t >= 168 && t < 170.9;
+      const pursuitLightOn = tenantVisible && t >= 168 && t < 171.05;
       this.tenantPursuitLight.visible = pursuitLightOn;
-      this.tenantPursuitLight.intensity = pursuitLightOn ? 6.8 * smooth((t - 168.02) / 0.18) * (1 - smooth((t - 170.05) / 0.85)) : 0;
+      this.tenantPursuitLight.intensity = pursuitLightOn ? 13.5 * smooth((t - 168.02) / 0.18) * (1 - smooth((t - 170.05) / 0.85)) : 0;
       if (pursuitLightOn) this.tenantPursuitLight.position.set(this.tenant.position.x + 0.35, 2.3, this.tenant.position.z - 1.35);
     }
     const revealLight = smooth((t - 165.45) / 0.25) * (1 - smooth((t - 168.02) / 0.22));
@@ -1137,12 +1168,25 @@ export default class ThresholdZ7Cathedral extends Scene {
     }
 
     // Lint lands on the dead flashlight and relights it warm.
-    const lintOn = t >= 174.0 && t < 176.2;
+    const lintOn = t >= 173.6 && t < 176.2;
     this.lint.visible = lintOn;
     if (lintOn) {
-      const lp = this.cam.position.clone().add(dir.clone().multiplyScalar(0.48)).add(new THREE.Vector3(0.07, -0.09, 0));
+      const right = new THREE.Vector3(...pose.right);
+      const up = new THREE.Vector3(...pose.up);
+      const lp = this.cam.position.clone()
+        .add(dir.clone().multiplyScalar(0.48))
+        .add(right.multiplyScalar(0.055))
+        .add(up.multiplyScalar(-0.075));
       this.lint.position.copy(lp);
-      this.lint.scale.setScalar(2.8);
+      this.lint.scale.setScalar(t < 175 ? 3.65 : 2.8);
+      const lintGlow = t < 175 ? 1.75 : 0.72;
+      for (const mat of this.lintMats) mat.emissiveIntensity = lintGlow;
+      if (t < 175.15) {
+        this.lint.quaternion.copy(this.cam.quaternion);
+        this.lint.rotateY(Math.PI);
+      } else {
+        this.lint.rotation.set(0, 0, 0);
+      }
       const flap = Math.sign(Math.sin(t * Math.PI * 12)) * 0.42;
       const wl = this.lintInst?.parts.get('wing_l');
       const wr = this.lintInst?.parts.get('wing_r');
