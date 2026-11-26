@@ -125,6 +125,9 @@ export default class Z0ColdOpen extends Scene {
       const source = this.vendingInst.root.getObjectByName(kinds[(row + (side > 0 ? 1 : 0)) % kinds.length]!);
       if (!source) continue;
       const clone = source.clone(true);
+      clone.traverse((obj) => {
+        if (obj instanceof THREE.Mesh) obj.material = Array.isArray(obj.material) ? obj.material.map((m) => m.clone()) : obj.material.clone();
+      });
       clone.position.set(0, 0, 0);
       const wrap = new THREE.Group();
       wrap.add(clone);
@@ -177,6 +180,18 @@ export default class Z0ColdOpen extends Scene {
     const machineGlint = new THREE.PointLight(0x7fc9ff, 0.85, 2.4, 1.6);
     machineGlint.position.set(-0.18, 0.18, -0.95);
     this.arm.add(machineGlint);
+    const fingerGlint = new THREE.PointLight(0xffc28a, 1.35, 2.2, 1.8);
+    fingerGlint.position.set(0.06, 0.08, -1.92);
+    this.arm.add(fingerGlint);
+    this.tenantInst.root.traverse((obj) => {
+      if (!(obj instanceof THREE.Mesh)) return;
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      for (const m of mats) {
+        if (!(m instanceof THREE.MeshStandardMaterial)) continue;
+        if (m.name === 'TenantChrome') { m.emissive.setHex(0x182230); m.emissiveIntensity = 0.18; m.roughness = 0.24; }
+        if (m.name === 'TenantPoolTile') { m.emissive.setHex(0x07191e); m.emissiveIntensity = 0.12; }
+      }
+    });
     this.arm.visible = false;
     this.scene3d.add(this.arm);
     this.scene3d.add(this.flash.group);
@@ -186,10 +201,10 @@ export default class Z0ColdOpen extends Scene {
 
   private poseArm(t: number, pose: FPPose) {
     const reach = sm(2.4, 3.25, t);
-    const dist = lerp(5.8, 3.9, reach);
+    const dist = lerp(5.8, 4.35, reach);
     this.arm.position.set(
       pose.pos[0] + pose.forward[0] * dist + pose.right[0] * 0.78,
-      pose.pos[1] - 0.24 + 0.62 * (1 - reach),
+      pose.pos[1] - 0.24 + 0.62 * (1 - reach) + 0.34 * reach,
       pose.pos[2] + pose.forward[2] * dist + pose.right[2] * 0.78,
     );
     const towardCamera = new THREE.Vector3(
@@ -199,6 +214,8 @@ export default class Z0ColdOpen extends Scene {
     ).normalize();
     this.arm.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, -1), towardCamera);
     this.arm.rotateX(0.1 * reach);
+    this.arm.rotateY(-0.28 * reach);
+    this.arm.rotateZ(0.16 * reach);
     this.arm.scale.setScalar(lerp(0.95, 1.36, reach));
     this.arm.visible = t > 1.15 && t < 3.32;
   }
