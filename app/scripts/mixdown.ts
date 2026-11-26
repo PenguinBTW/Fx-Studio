@@ -112,6 +112,7 @@ export interface MixReport {
   reconstructionLowpassHz?: string;
   downwardCompress?: Record<string, string>;
   measuredTruePeak?: string;
+  measuredOutput?: Record<string, string>;
   measuredTruePeakPreTrim?: string;
   limiterInputMarginDb?: string;
   truePeakTrimDb?: string;
@@ -610,10 +611,11 @@ export async function mixdown(o: MixOptions): Promise<MixReport> {
     }
     writeWav(o.out, master, sr, 24);
     if (m.limiter !== false && hasSignal) {
-      const measureOut = async () => {
+      const measureOutJson = async () => {
         const finalMeasure = await run(['ffmpeg', '-hide_banner', '-nostats', '-i', o.out, '-af', 'loudnorm=I=-14:TP=-1:LRA=11:print_format=json', '-f', 'null', '-']);
-        return Number.parseFloat(parseLoudnormJson(finalMeasure.err).input_tp);
+        return parseLoudnormJson(finalMeasure.err);
       };
+      const measureOut = async () => Number.parseFloat((await measureOutJson()).input_tp);
       let finalTp = await measureOut();
       const tpCeiling = m.truePeak ?? -1.0;
       if (Number.isFinite(finalTp) && finalTp > tpCeiling) {
@@ -625,6 +627,12 @@ export async function mixdown(o: MixOptions): Promise<MixReport> {
         finalTp = await measureOut();
       }
       report.measuredTruePeak = Number.isFinite(finalTp) ? finalTp.toFixed(2) : undefined;
+      const outputMeasure = await measureOutJson();
+      report.measuredOutput = {
+        integrated_lufs: outputMeasure.input_i,
+        true_peak_dbtp: outputMeasure.input_tp,
+        lra_lu: outputMeasure.input_lra,
+      };
     }
     log(`[mixdown] wrote ${o.out} (${frames} samples @ ${sr} Hz, ${dur.toFixed(3)} s)`);
 
