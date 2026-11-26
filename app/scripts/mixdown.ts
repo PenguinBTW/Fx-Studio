@@ -108,6 +108,7 @@ export interface MixReport {
   measuredTruePeak?: string;
   measuredTruePeakPreTrim?: string;
   truePeakTrimDb?: string;
+  truePeakFinalTrimDb?: string;
   out: string;
   foleyOut?: string;
 }
@@ -203,7 +204,11 @@ function duckEnvelope(frames: number, sr: number, hits: Array<{ s0: number; s1: 
   const target = new Float32Array(frames).fill(1);
   const lo = db(-amountDb);
   const look = Math.round(attack * sr);
-  for (const h of hits) target.fill(lo, Math.max(0, h.s0 - look), Math.min(frames, h.s1));
+  for (const h of hits) {
+    const a = Math.max(0, h.s0 - look);
+    const b = Math.min(frames, h.s1);
+    if (b > a) target.fill(lo, a, b);
+  }
   const ca = Math.exp(-3 / Math.max(1, attack * sr));
   const cr = Math.exp(-3 / Math.max(1, release * sr));
   const env = new Float32Array(frames);
@@ -545,8 +550,21 @@ export async function mixdown(o: MixOptions): Promise<MixReport> {
     }
     writeWav(o.out, master, sr, 24);
     if (m.limiter !== false && hasSignal) {
-      const finalMeasure = await run(['ffmpeg', '-hide_banner', '-nostats', '-i', o.out, '-af', 'loudnorm=I=-14:TP=-1:LRA=11:print_format=json', '-f', 'null', '-']);
-      report.measuredTruePeak = parseLoudnormJson(finalMeasure.err).input_tp;
+      const measureOut = async () => {
+        const finalMeasure = await run(['ffmpeg', '-hide_banner', '-nostats', '-i', o.out, '-af', 'loudnorm=I=-14:TP=-1:LRA=11:print_format=json', '-f', 'null', '-']);
+        return Number.parseFloat(parseLoudnormJson(finalMeasure.err).input_tp);
+      };
+      let finalTp = await measureOut();
+      const tpCeiling = m.truePeak ?? -1.0;
+      if (Number.isFinite(finalTp) && finalTp > tpCeiling) {
+        const trimDb = tpCeiling - finalTp - 0.05;
+        const trim = Math.pow(10, trimDb / 20);
+        for (let i = 0; i < master.length; i++) master[i] *= trim;
+        writeWav(o.out, master, sr, 24);
+        report.truePeakFinalTrimDb = trimDb.toFixed(2);
+        finalTp = await measureOut();
+      }
+      report.measuredTruePeak = Number.isFinite(finalTp) ? finalTp.toFixed(2) : undefined;
     }
     log(`[mixdown] wrote ${o.out} (${frames} samples @ ${sr} Hz, ${dur.toFixed(3)} s)`);
 
