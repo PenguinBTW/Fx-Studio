@@ -16,8 +16,8 @@ export function coldOpenLocalFromZ7Replay(t: number): number {
 
 function fpKeys(): FPKey[] {
   return [
-    { t: 0, pos: [0, 1.65, 6], yaw: 0, pitch: -0.02, fov: 82, gait: 'run' },
-    { t: 1.2, pos: [0.08, 1.65, -0.8], yaw: 0, pitch: -0.02, fov: 82, gait: 'run' },
+    { t: 0, pos: [0, 1.65, 6], yaw: 0, pitch: -0.13, fov: 82, gait: 'run' },
+    { t: 1.2, pos: [0.08, 1.65, -0.8], yaw: 0, pitch: -0.13, fov: 82, gait: 'run' },
     { t: 1.7, pos: [0.0, 1.65, -3.0], yaw: Math.PI * 0.84, pitch: -0.05, fov: 82, gait: 'run' },
     { t: 2.05, pos: [0.0, 1.42, -4.2], yaw: 0.08, pitch: -0.18, roll: 0.12, fov: 82, gait: 'run' },
     { t: 2.4, pos: [0.1, 0.62, -5.2], yaw: Math.PI * 0.82, pitch: -0.1, roll: 0.45, fov: 82, gait: 'still' },
@@ -44,22 +44,27 @@ export default class Z0ColdOpen extends Scene {
   private flash = new FlashlightRig();
   private arm!: THREE.Group;
   private tenantInst!: GLTFInstance;
+  private vendingInst!: GLTFInstance;
+  private heroMachines = new THREE.Group();
   private machines!: THREE.InstancedMesh;
   private machineData: { x: number; z: number; h: number; hue: number }[] = [];
   private machineMat!: THREE.MeshStandardMaterial;
   private panels!: THREE.InstancedMesh;
   private panelMat!: THREE.MeshStandardMaterial;
+  private vents!: THREE.InstancedMesh;
 
   override async init() {
     this.scene3d.background = new THREE.Color(0.0004, 0.0005, 0.0008);
     this.scene3d.fog = new THREE.FogExp2(0x020308, 0.035);
-    const floorMat = new THREE.MeshStandardMaterial({ color: 0x071018, roughness: 0.2, metalness: 0.62, emissive: 0x01070b, emissiveIntensity: 0.35 });
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0x111923, roughness: 0.68, metalness: 0.18, emissive: 0x01070b, emissiveIntensity: 0.35 });
     const floor = new THREE.Mesh(new THREE.BoxGeometry(9, 0.12, 190), floorMat);
     floor.position.set(0, -0.06, -70);
     floor.receiveShadow = true;
     this.scene3d.add(floor);
 
-    this.machineMat = new THREE.MeshStandardMaterial({ color: 0x182233, roughness: 0.34, metalness: 0.45, emissive: 0x2c5d7c, emissiveIntensity: 1.55 });
+    this.vendingInst = await GLTFManager.instantiate(resolveAsset('z7_vending_machines', this.ctx.project ?? 'threshold').url, {});
+
+    this.machineMat = new THREE.MeshStandardMaterial({ color: 0x101722, roughness: 0.42, metalness: 0.58, emissive: 0x102438, emissiveIntensity: 0.95 });
     const geom = new THREE.BoxGeometry(0.85, 2.2, 0.62);
     const count = 96;
     this.machines = new THREE.InstancedMesh(geom, this.machineMat, count);
@@ -71,9 +76,9 @@ export default class Z0ColdOpen extends Scene {
       const h = 2.2 + 0.25 * hash(row * 2.13 + side);
       const x = side * (2.25 + 0.08 * hash(row * 4.7));
       this.machineData.push({ x, z, h, hue: hash(row * 9.1 + side * 3) });
-      m4.compose(new THREE.Vector3(x, h / 2, z), q, new THREE.Vector3(1, h / 2.2, 1));
+      m4.compose(new THREE.Vector3(x, h / 2, z), q, row < 10 ? new THREE.Vector3(0.001, 0.001, 0.001) : new THREE.Vector3(1, h / 2.2, 1));
       this.machines.setMatrixAt(i, m4);
-      this.machines.setColorAt(i, new THREE.Color().setHSL(0.52 + 0.18 * hash(row + side * 11), 0.55, 0.42));
+      this.machines.setColorAt(i, new THREE.Color().setHSL(0.52 + 0.18 * hash(row + side * 11), 0.42, 0.19));
       i++;
     }
     this.machines.instanceMatrix.needsUpdate = true;
@@ -89,13 +94,68 @@ export default class Z0ColdOpen extends Scene {
       const z = 4 - row * 3.2;
       const h = 2.2 + 0.25 * hash(row * 2.13 + side);
       const x = side * (2.25 + 0.08 * hash(row * 4.7)) - side * 0.44;
-      m4.compose(new THREE.Vector3(x, 1.18 * (h / 2.2), z - 0.02), q, new THREE.Vector3(1, h / 2.2, 1));
+      m4.compose(new THREE.Vector3(x, 1.18 * (h / 2.2), z - 0.02), q, row < 10 ? new THREE.Vector3(0.001, 0.001, 0.001) : new THREE.Vector3(1, h / 2.2, 1));
       this.panels.setMatrixAt(i, m4);
       this.panels.setColorAt(i, new THREE.Color().setHSL(row % 5 === 0 ? 0.08 : 0.53, 0.9, row % 5 === 0 ? 0.55 : 0.46));
       i++;
     }
     this.panels.instanceMatrix.needsUpdate = true;
     this.scene3d.add(this.panels);
+
+    // Horizontal fascia vents break the vending machines out of primitive-box silhouette.
+    const ventMat = new THREE.MeshStandardMaterial({ color: 0x030609, roughness: 0.7, metalness: 0.35, emissive: 0x071923, emissiveIntensity: 0.32 });
+    const ventGeom = new THREE.BoxGeometry(0.018, 0.035, 0.34);
+    this.vents = new THREE.InstancedMesh(ventGeom, ventMat, count * 4);
+    i = 0;
+    for (const side of [-1, 1]) for (let row = 0; row < 48; row++) {
+      const z = 4 - row * 3.2;
+      const h = 2.2 + 0.25 * hash(row * 2.13 + side);
+      const x = side * (2.25 + 0.08 * hash(row * 4.7)) - side * 0.455;
+      for (let slot = 0; slot < 4; slot++) {
+        m4.compose(new THREE.Vector3(x, (0.66 + slot * 0.18) * (h / 2.2), z - 0.02), q, row < 10 ? new THREE.Vector3(0.001, 0.001, 0.001) : new THREE.Vector3(1, 1, 1));
+        this.vents.setMatrixAt(i++, m4);
+      }
+    }
+    this.vents.instanceMatrix.needsUpdate = true;
+    this.scene3d.add(this.vents);
+
+    // Near-camera rows use W3's real vending-machine family; far rows stay instanced blockout.
+    const kinds = ['snacks_machine_root', 'drinks_machine_root', 'glass_front_machine_root', 'retro_machine_root'];
+    for (const side of [-1, 1]) for (let row = 0; row < 10; row++) {
+      const source = this.vendingInst.root.getObjectByName(kinds[(row + (side > 0 ? 1 : 0)) % kinds.length]!);
+      if (!source) continue;
+      const clone = source.clone(true);
+      clone.position.set(0, 0, 0);
+      const wrap = new THREE.Group();
+      wrap.add(clone);
+      const z = 4 - row * 3.2;
+      const x = side * (2.25 + 0.08 * hash(row * 4.7));
+      wrap.position.set(x, 0, z);
+      wrap.rotation.y = side < 0 ? Math.PI / 2 : -Math.PI / 2;
+      wrap.scale.setScalar(1.04);
+      this.heroMachines.add(wrap);
+    }
+    this.scene3d.add(this.heroMachines);
+
+    // Cable trays, floor runs, and overhead conduits supply mechanical scale cues in the first frames.
+    const conduitMat = new THREE.MeshStandardMaterial({ color: 0x0b1118, roughness: 0.48, metalness: 0.72, emissive: 0x071018, emissiveIntensity: 0.18 });
+    for (const x of [-1.72, 1.72, -0.72, 0.72]) {
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(x < -1 || x > 1 ? 0.08 : 0.045, x < -1 || x > 1 ? 0.08 : 0.035, 170), conduitMat);
+      rail.position.set(x, x < -1 || x > 1 ? 3.55 : 0.035, -62);
+      this.scene3d.add(rail);
+    }
+    for (let k = 0; k < 18; k++) {
+      for (const side of [-1, 1]) {
+        const drop = new THREE.Mesh(new THREE.BoxGeometry(0.055, 1.05, 0.055), conduitMat);
+        drop.position.set(side * 1.72, 3.05, 3 - k * 8);
+        this.scene3d.add(drop);
+      }
+      if (k % 3 === 0) {
+        const floorCross = new THREE.Mesh(new THREE.BoxGeometry(1.55, 0.025, 0.06), conduitMat);
+        floorCross.position.set(0, 0.025, 1.2 - k * 8);
+        this.scene3d.add(floorCross);
+      }
+    }
 
     // High cold strips establish the cathedral scale and vanishing aisle silhouette.
     const stripMat = new THREE.MeshBasicMaterial({ color: 0x88d7ff, transparent: true, opacity: 0.55 });
@@ -112,26 +172,26 @@ export default class Z0ColdOpen extends Scene {
     this.arm.visible = false;
     this.scene3d.add(this.arm);
     this.scene3d.add(this.flash.group);
-    const ambient = new THREE.HemisphereLight(0x2a4a66, 0x020204, 0.34);
+    const ambient = new THREE.HemisphereLight(0x355a78, 0x050404, 0.72);
     this.scene3d.add(ambient);
   }
 
   private poseArm(t: number, pose: FPPose) {
     const reach = sm(2.4, 3.25, t);
-    const dist = lerp(5.8, 2.15, reach);
+    const dist = lerp(5.8, 2.7, reach);
     this.arm.position.set(
-      pose.pos[0] + pose.forward[0] * dist,
-      pose.pos[1] - 0.12 + 0.62 * (1 - reach),
-      pose.pos[2] + pose.forward[2] * dist,
+      pose.pos[0] + pose.forward[0] * dist + pose.right[0] * 0.55,
+      pose.pos[1] - 0.24 + 0.62 * (1 - reach),
+      pose.pos[2] + pose.forward[2] * dist + pose.right[2] * 0.55,
     );
     const towardCamera = new THREE.Vector3(
-      -pose.forward[0] + pose.right[0] * 0.38,
+      -pose.forward[0] + pose.right[0] * 1.35,
       0,
-      -pose.forward[2] + pose.right[2] * 0.38,
+      -pose.forward[2] + pose.right[2] * 1.35,
     ).normalize();
     this.arm.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, -1), towardCamera);
     this.arm.rotateX(0.1 * reach);
-    this.arm.scale.setScalar(lerp(0.9, 1.12, reach));
+    this.arm.scale.setScalar(lerp(0.95, 1.28, reach));
     this.arm.visible = t > 1.15 && t < 3.32;
   }
 
@@ -142,11 +202,16 @@ export default class Z0ColdOpen extends Scene {
     this.poseArm(t, pose);
     const threat = t > 1.15 ? 1 : 0.3;
     const state = beamStateAt(t, threat);
-    this.flash.update(pose, t, state, (time) => coldOpenPose(clamp(time, 0, 4)).forward);
+    this.flash.update(pose, t, state, (time) => {
+      const fwd = coldOpenPose(clamp(time, 0, 4)).forward;
+      const down = lerp(0.18, 0, sm(1.8, 2.35, time));
+      const len = Math.hypot(fwd[0], fwd[1] - down, fwd[2]) || 1;
+      return [fwd[0] / len, (fwd[1] - down) / len, fwd[2] / len];
+    });
     // Machines switch off in a wave during the look-back: emissive intensity only in blockout;
     // W3's final cathedral animates per-machine relays and lamp glass.
     const wave = t < 1.2 ? 0 : clamp((t - 1.2) / 0.7);
-    this.machineMat.emissiveIntensity = lerp(1.55, 0.2, wave) * (t >= 3.3 ? 0 : 1);
+    this.machineMat.emissiveIntensity = lerp(0.95, 0.14, wave) * (t >= 3.3 ? 0 : 1);
     this.panelMat.emissiveIntensity = lerp(1.8, 0.22, wave) * (t >= 3.3 ? 0 : 1);
     const r = this.ctx.renderer;
     r.setRenderTarget(out);
@@ -160,8 +225,10 @@ export default class Z0ColdOpen extends Scene {
 
   override dispose() {
     this.tenantInst.dispose();
+    this.vendingInst.dispose();
     this.flash.dispose();
     this.machines.dispose();
     this.panels.dispose();
+    this.vents.dispose();
   }
 }

@@ -84,8 +84,8 @@ export function beamStateAt(t: number, threat = 0): BeamState {
 
 export class FlashlightRig {
   readonly group = new THREE.Group();
-  readonly core = new THREE.SpotLight(0xffffff, 0, 38, 7 * DEG, 0.25, 1.8);
-  readonly cone = new THREE.SpotLight(0xffffff, 0, 30, 22 * DEG, 0.58, 1.65);
+  readonly core = new THREE.SpotLight(0xffffff, 0, 38, 7 * DEG, 0.55, 1.8);
+  readonly cone = new THREE.SpotLight(0xffffff, 0, 30, 22 * DEG, 0.72, 1.65);
   readonly spill = new THREE.SpotLight(0xffffff, 0, 12, 30 * DEG, 0.92, 2.0);
   readonly haze: THREE.Group;
   private readonly hazeMats: THREE.MeshBasicMaterial[] = [];
@@ -154,8 +154,8 @@ export class FlashlightRig {
     this.core.angle = lerp(4.5, 7, state.battery) * DEG;
     this.cone.angle = lerp(14, 22, state.battery) * DEG;
     this.spill.angle = 30 * DEG;
-    this.core.intensity = 68 * I;
-    this.cone.intensity = 28 * I;
+    this.core.intensity = 48 * I;
+    this.cone.intensity = 22 * I;
     this.spill.intensity = 5 * I;
     this.haze.position.copy(this.core.position);
     this.haze.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), new THREE.Vector3(lagged[0], lagged[1], lagged[2]).normalize());
