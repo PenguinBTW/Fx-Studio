@@ -173,14 +173,14 @@ export default class ThresholdZ7Cathedral extends Scene {
       const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
       for (const m of mats) {
         if (!(m instanceof THREE.MeshStandardMaterial)) continue;
-        if (m.name === 'TenantPoolTile') { m.emissive.setHex(0x07191e); m.emissiveIntensity = 0.16; }
-        if (m.name === 'TenantChrome') { m.emissive.setHex(0x101a24); m.emissiveIntensity = 0.22; }
-        if (m.name === 'TenantRibcageGlass') { m.emissive.setHex(0x08232c); m.emissiveIntensity = 0.3; }
+        if (m.name === 'TenantPoolTile') { m.emissive.setHex(0x123f48); m.emissiveIntensity = 0.48; }
+        if (m.name === 'TenantChrome') { m.emissive.setHex(0x263746); m.emissiveIntensity = 0.52; }
+        if (m.name === 'TenantRibcageGlass') { m.emissive.setHex(0x164b59); m.emissiveIntensity = 0.68; }
       }
     });
-    const chestGlow = new THREE.PointLight(0x5bb9d7, 1.3, 5.5, 1.8);
+    const chestGlow = new THREE.PointLight(0x5bb9d7, 3.2, 6.5, 1.55);
     chestGlow.position.set(0, 2.8, 0.65);
-    const rim = new THREE.PointLight(0x83cfff, 1.8, 6.5, 1.7);
+    const rim = new THREE.PointLight(0x83cfff, 4.0, 7.5, 1.5);
     rim.position.set(-0.8, 3.7, -1.0);
     this.tenant.add(chestGlow, rim);
     this.tenant.visible = false;
@@ -219,10 +219,31 @@ export default class ThresholdZ7Cathedral extends Scene {
     const productTeal = this.mat(0x2aa9a4, 0.35);
     const paper = this.mat(0xd8c69d, 0.82);
     const chrome = this.mat(0x9aa0a3, 0.2, 0.82);
+    productRed.emissive.setHex(0x32100c); productRed.emissiveIntensity = 0.35;
+    productTeal.emissive.setHex(0x0b3030); productTeal.emissiveIntensity = 0.35;
+    paper.emissive.setHex(0x2c2112); paper.emissiveIntensity = 0.25;
+    chrome.emissive.setHex(0x182a34); chrome.emissiveIntensity = 0.28;
 
     // Polished black nave floor and central aisle slab.
     this.box(this.s, [31, 0.12, 210], [0, -0.06, -98], floorMat);
     this.box(this.s, [5.4, 0.025, 210], [0, 0.015, -98], this.mat(0x090c11, 0.12, 0.55));
+
+    // Long fluorescent reflections in the polished black stone: raster lights cannot
+    // self-reflect, so thin additive streaks mirror the machine-wall rhythm down the aisle.
+    const reflMat = new THREE.MeshBasicMaterial({ color: 0x2d7fc5, transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending, depthWrite: false });
+    const reflWarmMat = new THREE.MeshBasicMaterial({ color: 0xb67535, transparent: true, opacity: 0.1, blending: THREE.AdditiveBlending, depthWrite: false });
+    this.disposables.push(reflMat, reflWarmMat);
+    for (let i = 0; i < 54; i++) {
+      const z = -4 - i * 3.25;
+      for (const side of [-1, 1]) {
+        const x = side * (1.85 + hash(i + side) * 0.55);
+        const len = 1.8 + hash(i * 3.3) * 3.8;
+        const strip = this.box(this.s, [0.045 + hash(i) * 0.12, 0.004, len], [x, 0.033 + i * 0.00002, z - len * 0.35], i % 5 === 0 ? reflWarmMat : reflMat);
+        strip.castShadow = false;
+        strip.receiveShadow = false;
+        this.z7DetailObjects.push(strip);
+      }
+    }
 
     // Stacked vending-machine walls as instanced hard-surface bodies plus glowing glass fronts.
     const rows = 62;
@@ -317,8 +338,17 @@ export default class ThresholdZ7Cathedral extends Scene {
       const start = new THREE.Vector3(side * (11 + hash(i) * 2), 0.7 + hash(i * 2) * 1.6, -8 - hash(i * 3) * 16);
       const end = new THREE.Vector3((hash(i * 4) - 0.5) * 0.9, 0.5 + hash(i * 5) * 3.0, -18 + (hash(i * 6) - 0.5) * 0.5);
       this.assembly.push({ mesh: piece, start, end, seed: hash(i * 9) });
+      piece.scale.multiplyScalar(2.5);
       piece.visible = false;
     }
+    const assemblyLight = new THREE.PointLight(0x8fd7ff, 8.5, 12.5, 1.25);
+    assemblyLight.position.set(0, 2.2, -13.6);
+    this.s.add(assemblyLight);
+    this.z7DetailObjects.push(assemblyLight);
+    const assemblyWarm = new THREE.PointLight(0xff9b45, 1.9, 5.5, 1.5);
+    assemblyWarm.position.set(-1.1, 0.9, -15.4);
+    this.s.add(assemblyWarm);
+    this.z7DetailObjects.push(assemblyWarm);
     await this.buildTenant();
     this.buildReachArm();
 

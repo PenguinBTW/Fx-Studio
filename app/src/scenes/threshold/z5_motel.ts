@@ -251,6 +251,37 @@ export default class ThresholdZ5Motel extends Scene {
       }
     }
 
+    // Beam-catch wall detail in the exact 113-120 s look paths: wallpaper seams,
+    // stained wainscot, faded framed prints and water marks break the corridor walls
+    // without brightening the accepted negative space.
+    const wallpaperStripe = this.mat(0x34302a, 0.9);
+    const wallpaperStripeB = this.mat(0x40362b, 0.88);
+    const stainMat = this.mat(0x1b1712, 0.96);
+    const frameMat = this.mat(0x392718, 0.65);
+    const printMat = this.mat(0x766047, 0.82, 0, 0x1a1008, 0.08);
+    for (const side of [-1, 1]) {
+      const x = side * 1.515;
+      for (let i = 0; i < 16; i++) {
+        const z = -8.6 - i * 0.66;
+        this.box(this.s, [0.018, 2.05, 0.035], [x, 1.28, z], i % 2 ? wallpaperStripe : wallpaperStripeB);
+      }
+      for (const [z, y, w, h] of [[-16.15, 1.42, 0.48, 0.58], [-17.68, 1.38, 0.72, 0.82], [-18.75, 1.48, 0.56, 0.68], [-20.65, 1.38, 0.42, 0.52]] as const) {
+        const yaw = side < 0 ? Math.PI / 2 : -Math.PI / 2;
+        this.box(this.s, [0.035, h, w], [x - side * 0.018, y, z], frameMat, [0, 0, 0]);
+        this.box(this.s, [0.04, h - 0.1, w - 0.1], [x - side * 0.038, y, z], printMat, [0, yaw, 0]);
+        this.box(this.s, [0.043, 0.08, 0.12], [x - side * 0.045, y - h * 0.12, z + w * 0.12], stainMat, [0, yaw, 0]);
+      }
+      for (const [z, y] of [[-10.4, 1.42], [-12.35, 1.36], [-14.35, 1.46]] as const) {
+        this.box(this.s, [0.035, 0.62, 0.5], [x - side * 0.018, y, z], frameMat);
+        this.box(this.s, [0.04, 0.5, 0.38], [x - side * 0.038, y, z], printMat);
+        this.box(this.s, [0.043, 0.11, 0.15], [x - side * 0.045, y - 0.12, z + 0.08], stainMat);
+      }
+      for (let i = 0; i < 7; i++) {
+        const z = -15.2 - i * 0.9;
+        this.box(this.s, [0.02, 0.28 + hash(i + side * 4) * 0.5, 0.09 + hash(i) * 0.16], [x - side * 0.025, 0.62 + hash(i * 3) * 0.75, z], stainMat, [0, 0, (hash(i) - 0.5) * 0.2]);
+      }
+    }
+
     // Doors every 4 m; right side even numbers, left odd. Room 217 is the open hero room.
     for (let i = 0; i < 10; i++) {
       const zBase = -4 - i * 4;
@@ -384,18 +415,24 @@ export default class ThresholdZ5Motel extends Scene {
       const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
       for (const m of mats) {
         if (!(m instanceof THREE.MeshStandardMaterial)) continue;
-        if (m.name === 'TenantPoolTile') { m.emissive.setHex(0x07191e); m.emissiveIntensity = 0.18; }
-        if (m.name === 'TenantChrome') { m.emissive.setHex(0x111923); m.emissiveIntensity = 0.2; }
-        if (m.name === 'TenantRibcageGlass') { m.emissive.setHex(0x071d24); m.emissiveIntensity = 0.22; }
+        if (m.name === 'TenantPoolTile') { m.emissive.setHex(0x123f48); m.emissiveIntensity = 0.55; }
+        if (m.name === 'TenantChrome') { m.emissive.setHex(0x24313c); m.emissiveIntensity = 0.5; }
+        if (m.name === 'TenantRibcageGlass') { m.emissive.setHex(0x123844); m.emissiveIntensity = 0.62; }
       }
     });
     this.tenant.add(this.tenantInst.root);
     this.tenant.scale.setScalar(0.62);
     this.tenant.rotation.y = Math.PI;
     this.tenant.position.set(0.05, 0, -21.6);
-    const tenantRim = new THREE.PointLight(0x9adbe4, 1.35, 4.2, 1.7);
-    tenantRim.position.set(-0.45, 2.25, -20.85);
-    this.tenant.add(tenantRim);
+    // Rim/fill lights live in scene space (not inside the translated Tenant group):
+    // cool edge light separates the mirror/head and hanging arms, warm motel bounce
+    // gives the foosball torso and ball-coil arms just enough shape at delivery exposure.
+    const tenantRim = new THREE.PointLight(0x9adbe4, 4.4, 5.2, 1.45);
+    tenantRim.position.set(-0.55, 2.18, -22.35);
+    this.s.add(tenantRim);
+    const tenantFill = new THREE.PointLight(0xff9a4c, 2.4, 3.8, 1.5);
+    tenantFill.position.set(0.38, 1.25, -19.85);
+    this.s.add(tenantFill);
     this.tenant.visible = false;
     this.s.add(this.tenant);
 

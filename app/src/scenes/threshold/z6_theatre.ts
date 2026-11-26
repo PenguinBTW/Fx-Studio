@@ -19,9 +19,9 @@ type PoseKey = { t: number; p: [number, number, number]; yaw: number; pitch: num
 const KEYS: PoseKey[] = [
   { t: 129.5, p: [0, 1.2, 4.2], yaw: 0, pitch: 1, fov: 68 },
   { t: 133.0, p: [0, 1.2, 4.2], yaw: 2, pitch: 1, fov: 68 },
-  { t: 136.0, p: [0, 1.2, 4.2], yaw: -10, pitch: 0, fov: 60 },
-  { t: 139.0, p: [0, 1.2, 4.2], yaw: 6, pitch: 0, fov: 60 },
-  { t: 141.5, p: [0, 1.2, 4.2], yaw: 5, pitch: -2, fov: 60 },
+  { t: 136.0, p: [0, 1.2, 4.2], yaw: -10, pitch: 0, fov: 48 },
+  { t: 139.0, p: [0, 1.2, 4.2], yaw: 6, pitch: 0, fov: 48 },
+  { t: 141.5, p: [0, 1.2, 4.2], yaw: 5, pitch: -2, fov: 50 },
   { t: 142.6, p: [0, 1.2, 4.2], yaw: 34, pitch: -10, fov: 62 },
   { t: 143.5, p: [0, 1.2, 4.2], yaw: 32, pitch: -10, fov: 64 },
   { t: 145.0, p: [0.55, 1.65, 2.5], yaw: 10, pitch: -4, fov: 70 },
@@ -366,7 +366,7 @@ export default class ThresholdZ6Theatre extends Scene {
     if (lintOn) {
       const lp = this.lintPath(st);
       this.lint.position.copy(lp);
-      this.lint.scale.setScalar(t < 143.5 ? 1.1 : 0.9);
+      this.lint.scale.setScalar(t < 143.5 ? 4.2 : 1.8);
       this.lint.position.y += 0.035 * Math.sin(st * 19);
       const landed = t < 143.5;
       const flap = landed ? 0.1 * Math.sin(st * Math.PI * 12) : Math.sign(Math.sin(st * Math.PI * 12)) * 0.42;

@@ -63,6 +63,7 @@ export default class ThresholdZ8Home extends Scene {
   private officeLoop?: OfficeLoopSet;
   private receiver?: THREE.Object3D;
   private receiverHome = new THREE.Vector3();
+  private payoffReceiver = new THREE.Group();
   private lampGlow!: THREE.MeshStandardMaterial;
   private officeTubeMats: THREE.MeshStandardMaterial[] = [];
   private disposables: { dispose(): void }[] = [];
@@ -155,6 +156,32 @@ export default class ThresholdZ8Home extends Scene {
     const officeGlow = this.mat(0xc9b26a, 0.55, 0, 0xc9ffb0, 0.5);
     this.box(this.s, [0.025, 0.24, 1.22], [-1.34, 1.02, -4.3], officeGlow);
 
+
+    // Impossible right-wall window in the look-right beat: instead of outdoors it shows a
+    // mustard office carpet strip, cubicle edge and fluorescent ceiling line compressed outside.
+    const officeWindowGlass = this.mat(0x1a231d, 0.28, 0, 0x243822, 0.32);
+    this.box(this.s, [0.035, 1.02, 1.18], [1.325, 1.55, -2.35], officeWindowGlass);
+    for (const [y, z, sy, sz] of [[2.1, -2.35, 0.08, 1.34], [1.0, -2.35, 0.08, 1.34], [1.55, -2.98, 1.18, 0.08], [1.55, -1.72, 1.18, 0.08]] as const) {
+      this.box(this.s, [0.045, sy, sz], [1.30, y, z], woodDark);
+    }
+    const wrongCarpet = this.mat(0x8a7a45, 0.9, 0, 0x6c5b25, 0.22);
+    this.box(this.s, [0.025, 0.23, 1.04], [1.29, 1.12, -2.35], wrongCarpet);
+    this.box(this.s, [0.026, 0.52, 0.28], [1.285, 1.48, -2.15], this.mat(0x817650, 0.9, 0, 0x51492f, 0.12));
+    this.box(this.s, [0.026, 0.42, 0.24], [1.285, 1.45, -2.63], this.mat(0x746c49, 0.9, 0, 0x493f27, 0.1));
+    this.box(this.s, [0.028, 0.055, 0.86], [1.275, 1.94, -2.35], this.mat(0xd8ffd0, 0.35, 0, 0xc9ffd2, 1.8));
+
+    // A second impossible window hangs inside the living-room opening exactly where the
+    // 204-206 look-right beam lands; its contents are unmistakably office carpet/cubicle/fluorescent strip.
+    this.box(this.s, [0.035, 0.92, 1.08], [1.31, 1.48, -4.05], officeWindowGlass);
+    this.box(this.s, [0.045, 0.08, 1.22], [1.29, 1.98, -4.05], woodDark);
+    this.box(this.s, [0.045, 0.08, 1.22], [1.29, 0.98, -4.05], woodDark);
+    this.box(this.s, [0.045, 1.08, 0.08], [1.29, 1.48, -4.62], woodDark);
+    this.box(this.s, [0.045, 1.08, 0.08], [1.29, 1.48, -3.48], woodDark);
+    this.box(this.s, [0.026, 0.22, 0.94], [1.275, 1.1, -4.05], wrongCarpet);
+    this.box(this.s, [0.028, 0.48, 0.25], [1.27, 1.43, -3.86], this.mat(0x827650, 0.9, 0, 0x5b4e2f, 0.16));
+    this.box(this.s, [0.028, 0.4, 0.22], [1.27, 1.4, -4.3], this.mat(0x716a49, 0.9, 0, 0x4a3f27, 0.14));
+    this.box(this.s, [0.029, 0.05, 0.78], [1.265, 1.83, -4.05], this.mat(0xd8ffd0, 0.35, 0, 0xc9ffd2, 2.4));
+
     // Golden-hour sun reads as floor/wall light patches plus dust, not floating rectangles.
     const sunPatchMat = new THREE.MeshBasicMaterial({ color: 0xffb45e, transparent: true, opacity: 0.2, blending: THREE.AdditiveBlending, depthWrite: false });
     this.disposables.push(sunPatchMat);
@@ -224,13 +251,16 @@ export default class ThresholdZ8Home extends Scene {
 
     // Living-room opening and shadowless floor lamp.
     this.box(this.s, [0.12, 2.1, 1.5], [1.34, 1.05, -3.9], cream);
-    this.cyl(this.s, 0.06, 0.08, 1.35, [2.0, 0.68, -4.35], brass, 12);
-    this.cyl(this.s, 0.28, 0.18, 0.36, [2.0, 1.42, -4.35], this.mat(0xf0d2a0, 0.8, 0, 0xffbc65, 1.4), 18);
+    this.cyl(this.s, 0.06, 0.08, 1.35, [2.0, 0.68, -4.05], brass, 12);
+    this.cyl(this.s, 0.38, 0.22, 0.46, [2.0, 1.42, -4.05], this.mat(0xf0d2a0, 0.8, 0, 0xffbc65, 2.2), 18);
     this.lampGlow = this.mat(0xffbd65, 0.45, 0, 0xffa640, 2.4);
-    this.sphere(this.s, 0.19, [2.0, 1.42, -4.35], this.lampGlow, [1, 0.65, 1]);
+    this.sphere(this.s, 0.25, [2.0, 1.42, -4.05], this.lampGlow, [1, 0.68, 1]);
+    const lampPoolMat = new THREE.MeshBasicMaterial({ color: 0xff9f45, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false });
+    this.disposables.push(lampPoolMat);
+    this.sphere(this.s, 0.62, [1.92, 0.045, -4.04], lampPoolMat, [1.45, 0.035, 0.9]);
     const lampLight = new THREE.PointLight(0xffa957, 1.25, 6, 1.7);
-    lampLight.intensity = 0.9;
-    lampLight.position.set(2.0, 1.45, -4.35);
+    lampLight.intensity = 1.75;
+    lampLight.position.set(2.0, 1.45, -4.05);
     this.s.add(lampLight);
 
     // Kitchen glimpse and kettle steam blocks at far end.
@@ -275,6 +305,41 @@ export default class ThresholdZ8Home extends Scene {
     this.receiver = this.phoneInst.parts.get('receiver');
     if (this.receiver) this.receiverHome.copy(this.receiver.position);
 
+
+    // Explicit close-range payoff geometry: the GLB receiver is correct at hallway scale,
+    // but at 210-214 the handset needs a dark-edged dangling silhouette and a legible curly cord.
+    const handsetMat = this.mat(0x7d6248, 0.68, 0, 0x1f1209, 0.08);
+    const handsetEdge = this.mat(0x4b341f, 0.72);
+    this.payoffReceiver.position.set(1.06, 1.3, -5.84);
+    this.payoffReceiver.scale.setScalar(1.28);
+    this.box(this.payoffReceiver, [0.075, 0.085, 0.31], [0, 0, 0], handsetMat);
+    for (const side of [-1, 1]) {
+      const cap = this.cyl(this.payoffReceiver, 0.072, 0.072, 0.105, [0, -0.015, side * 0.17], handsetMat, 16);
+      cap.rotation.x = Math.PI / 2;
+      const rim = this.cyl(this.payoffReceiver, 0.074, 0.074, 0.012, [0, -0.015, side * 0.225], handsetEdge, 16);
+      rim.rotation.x = Math.PI / 2;
+    }
+    const cordPts: THREE.Vector3[] = [];
+    for (let i = 0; i <= 52; i++) {
+      const u = i / 52;
+      const phase = u * Math.PI * 18;
+      cordPts.push(new THREE.Vector3(
+        -0.015 + Math.cos(phase) * 0.018,
+        0.02 - u * 0.5,
+        -0.12 + Math.sin(phase) * 0.018 + u * 0.08,
+      ));
+    }
+    const cordGeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(cordPts), 42, 0.007, 7);
+    const cordMesh = new THREE.Mesh(cordGeo, handsetEdge);
+    cordMesh.castShadow = cordMesh.receiveShadow = true;
+    this.payoffReceiver.add(cordMesh);
+    this.disposables.push(cordGeo);
+    this.payoffReceiver.visible = false;
+    this.s.add(this.payoffReceiver);
+    const phoneRim = new THREE.PointLight(0xffc17a, 0.65, 1.6, 1.7);
+    phoneRim.position.set(0.72, 1.42, -5.48);
+    this.s.add(phoneRim);
+
     // Office loop beyond the door: the same production Z1 opening set, rotated so its
     // forward axis runs through the right-hand front door. Crossing the threshold therefore
     // reveals the exact cubicle landscape/hero desk composition rather than a corridor proxy.
@@ -313,6 +378,15 @@ export default class ThresholdZ8Home extends Scene {
       this.receiver.scale.setScalar(1);
     }
 
+    this.payoffReceiver.visible = t >= 210 && t < 218;
+    if (this.payoffReceiver.visible) {
+      const swing = Math.sin((t - 210) * 4.4) * (0.18 + 0.1 * (1 - drop));
+      this.payoffReceiver.position.y = 1.31 - drop * 0.18 + 0.012 * Math.sin((t - 210) * 8);
+      this.payoffReceiver.position.z = -5.84 + drop * 0.06;
+      this.payoffReceiver.rotation.x = 0.2 + drop * 0.52 + swing;
+      this.payoffReceiver.rotation.z = 0.08 * Math.sin((t - 210) * 3.1);
+    }
+
     // Door handle turns, then the front door opens onto the office loop.
     this.handle.rotation.y = smooth((t - 214) / 2.0) * 0.9;
     this.doorGroup.rotation.y = smooth((t - 217.5) / 2.0) * 1.65;
@@ -323,7 +397,11 @@ export default class ThresholdZ8Home extends Scene {
 
     // Shared beam adapter: weak 25% battery in daylight, with the low-battery stutter.
     const threat = t >= 206 && t < 218 ? 0.55 : 0.1;
-    this.flash.update(pose, t, beamStateAt(t, threat), (time) => poseAt(time, z8Gait(time)).forward);
+    const beam = beamStateAt(t, threat);
+    // At the wall-phone payoff the beam is inches from the wall; soften only this close-range
+    // adapter window so the handset/cord silhouette remains readable instead of washing to white.
+    if (t >= 210 && t < 214.5) beam.intensity *= 0.24;
+    this.flash.update(pose, t, beam, (time) => poseAt(time, z8Gait(time)).forward);
 
     const rr = this.ctx.renderer;
     rr.setRenderTarget(out);

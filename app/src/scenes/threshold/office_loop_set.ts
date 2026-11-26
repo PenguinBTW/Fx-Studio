@@ -48,7 +48,7 @@ export async function buildOfficeLoopSet(): Promise<OfficeLoopSet> {
   root.name = 'office_loop_production_set';
   const disposables: { dispose(): void }[] = [];
   const mat = (color: number, roughness = 0.75, metalness = 0, emissive = 0, emissiveIntensity = 0, tex?: THREE.Texture) => {
-    const m = new THREE.MeshStandardMaterial({ color, roughness, metalness, emissive, emissiveIntensity, map: tex });
+    const m = new THREE.MeshStandardMaterial({ color, roughness, metalness, emissive, emissiveIntensity, ...(tex ? { map: tex } : {}) });
     disposables.push(m);
     return m;
   };
