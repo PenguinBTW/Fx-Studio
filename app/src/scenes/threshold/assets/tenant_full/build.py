@@ -1,5 +1,5 @@
 # THRESHOLD Tenant full creature. Silhouette-first fused quadruped predator.
-import bpy, os, sys, math, random
+import bpy, os, sys, math, random, json, struct
 import mathutils
 sys.dont_write_bytecode = True
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -37,6 +37,31 @@ BALLS = [
     mat('TenantBallGreen', (0.0015, 0.010, 0.005), 0.99),
     mat('TenantBallDark', (0.018, 0.009, 0.008), 0.91),
 ]
+
+def promote_grime_color_attributes(glb_path):
+    # Blender 4.5 exports a default all-white COLOR_0 beside the authored Grime
+    # attribute as COLOR_1 unless the material node graph consumes it. glTF
+    # renderers consume COLOR_0, so promote the authored attribute in-place.
+    data = open(glb_path, 'rb').read()
+    json_len = struct.unpack('<I', data[12:16])[0]
+    js = json.loads(data[20:20 + json_len])
+    changed = 0
+    for mesh in js.get('meshes', []):
+        for prim in mesh.get('primitives', []):
+            attrs = prim.get('attributes', {})
+            if 'COLOR_1' in attrs:
+                attrs['COLOR_0'] = attrs.pop('COLOR_1')
+                changed += 1
+    if not changed:
+        return
+    payload = json.dumps(js, separators=(',', ':')).encode('utf-8')
+    payload += b' ' * ((4 - len(payload) % 4) % 4)
+    rest = data[20 + json_len:]
+    out = bytearray(data[:12])
+    out += struct.pack('<I', len(payload)) + data[16:20] + payload + rest
+    struct.pack_into('<I', out, 8, len(out))
+    open(glb_path, 'wb').write(out)
+    print(f'[build] promoted grime COLOR_1 to COLOR_0 on {changed} primitives')
 
 def grime_colors(ob, seed, lo=0.28, hi=0.98):
     # Byte/float vertex colors export through glTF and multiply the base albedo,
@@ -225,19 +250,19 @@ leg_r_lower_g = group('leg_r_lower_control', leg_r_g, 'leg_r_lower', (0.44, -0.0
 # Hunched torso: one continuous sloping mass. Chest high, pelvis back, neck/head forward.
 torso_path = [(0, -0.22, 1.92), (0.02, 0.02, 2.35), (-0.02, 0.35, 2.78), (0, 0.67, 3.08)]
 torso_mass_ob = add(tapered_tube('torso_continuous_hunched_mass', torso_path, [0.43, 0.5, 0.54, 0.34], BODY, sides=24, per_seg=10, patch_material=BODY_ALT), rib_g)
-grime_colors(torso_mass_ob, 2.1, 0.08, 1.0)
+grime_colors(torso_mass_ob, 2.1, 0.18, 1.0)
 pelvis_mass = sphere('pelvis_fused_mass', 0.42, (0, -0.2, 1.96), BODY_ALT, scale=(1.28, 0.9, 0.66), segments=36, rings=18)
 roughen_blob(pelvis_mass, 0.105, 1.3)
-grime_colors(pelvis_mass, 3.2, 0.07, 0.92)
+grime_colors(pelvis_mass, 3.2, 0.16, 0.92)
 add(pelvis_mass, pelvis_g)
 chest_mass = sphere('chest_fused_mass', 0.5, (0, 0.3, 2.68), BODY, scale=(1.34, 0.86, 0.86), segments=40, rings=20)
 roughen_blob(chest_mass, 0.12, 4.1)
-grime_colors(chest_mass, 4.2, 0.07, 0.94)
+grime_colors(chest_mass, 4.2, 0.16, 0.94)
 add(chest_mass, rib_g)
 for side in (-1, 1):
     shoulder = sphere(f'shoulder_hump_{side}', 0.27, (side * 0.38, 0.18, 2.95), BODY_ALT, scale=(1.08, 0.82, 0.78), segments=28, rings=14)
     roughen_blob(shoulder, 0.11, 7.0 + side)
-    grime_colors(shoulder, 7.0 + side, 0.07, 0.92)
+    grime_colors(shoulder, 7.0 + side, 0.16, 0.92)
     add(shoulder, upper, 'shoulder_mass')
 
 # Ribcage remains a broken vending-machine front, now embedded in the front of the torso mass.
@@ -272,14 +297,14 @@ for seg in range(7):
 # Small forward head, clearly below the shoulder line. The neck reaches horizontally
 # out of the chest, so the head reads as a predator skull rather than a top knob.
 neck_mass_ob = add(tapered_tube('neck_forward_fused_mass', [(0, 0.56, 2.92), (0, 0.82, 2.79), (0, 1.12, 2.60)], [0.27, 0.235, 0.19], BODY_ALT, sides=18, per_seg=8), neck_g, 'neck_segments')
-grime_colors(neck_mass_ob, 5.4, 0.07, 0.88)
+grime_colors(neck_mass_ob, 5.4, 0.16, 0.88)
 for i in range(3):
     u = i / 2
     add(sphere(f'neck_{i+1}', 0.15 - i * 0.015, (0, 0.62 + u * 0.32, 2.87 - u * 0.19), BODY_ALT,
                scale=(1.05, 0.72, 0.8), segments=24, rings=12), neck_g, 'neck_segments')
 head_mass = sphere('head_tile_ovoid', 0.19, (0, 1.38, 2.45), SKULL, scale=(0.82, 0.7, 1.08), segments=40, rings=20)
 roughen_blob(head_mass, 0.055, 9.2)
-grime_colors(head_mass, 9.2, 0.08, 0.82)
+grime_colors(head_mass, 9.2, 0.18, 0.82)
 add(head_mass, head_g)
 # A separate compressed chin/forehead mass keeps the skull from reading as one smooth egg.
 add(sphere('head_tile_chin_mass', 0.12, (0, 1.46, 2.36), SKULL, scale=(0.82, 0.62, 0.68), segments=28, rings=14), head_g, 'head_damage')
@@ -364,7 +389,7 @@ def build_arm(side):
         radii = [0.285, 0.265, 0.23, 0.185, 0.13]
     parent_control = arm_l_g if side == 'l' else arm_r_g
     arm_mass_ob = add(tapered_tube(f'arm_{side}_continuous_fused_limb', path, radii, BODY_ALT if side == 'l' else BODY, sides=22, per_seg=8, patch_material=BODY if side == 'l' else BODY_ALT), parent_control, 'fused_limb_volume')
-    grime_colors(arm_mass_ob, 11.0 if side == 'l' else 13.0, 0.07, 0.92)
+    grime_colors(arm_mass_ob, 11.0 if side == 'l' else 13.0, 0.16, 0.92)
     elbow = path[2]
     elbow_mass = sphere(f'arm_{side}_elbow_fused_joint', 0.225, elbow, BODY_ALT, scale=(1.05, 0.9, 1.1), segments=28, rings=14)
     roughen_blob(elbow_mass, 0.07, 11.0 if side == 'l' else 13.0)
@@ -455,7 +480,7 @@ def build_leg(side):
     radii = [0.255, 0.24, 0.205, 0.165, 0.12]
     parent_control = leg_l_g if side == 'l' else leg_r_g
     leg_mass_ob = add(tapered_tube(f'leg_{side}_continuous_fused_limb', path, radii, BODY, sides=20, per_seg=8, patch_material=BODY_ALT), parent_control, 'fused_limb_volume')
-    grime_colors(leg_mass_ob, 15.0 if side == 'l' else 17.0, 0.07, 0.90)
+    grime_colors(leg_mass_ob, 15.0 if side == 'l' else 17.0, 0.16, 0.90)
     add(surface_seam(f'leg_{side}_cracked_grout_seam', path, radii, 0.08, 0.9, 1.25 if side == 'l' else -1.05, 0.18, GROUT, 0.006), parent_control, 'melted_seams')
     knee = path[2]
     ankle = path[-1]
@@ -543,3 +568,4 @@ for clod in range(90):
 
 bpy.context.view_layer.update()
 export(HERE)
+promote_grime_color_attributes(os.path.join(HERE, 'model.glb'))
