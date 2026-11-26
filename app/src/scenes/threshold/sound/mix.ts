@@ -66,7 +66,7 @@ export default defineMix({
     { id: 'z7_beam_death_vacuum', from: 173.40, to: 174.00 },
   ],
   master: {
-    lufs: -14,
+    lufs: -13.6,
     truePeak: -1.8,
     limiterLookaheadMs: 5,
     lowLevelLift: { thresholdDb: -40, ratio: 1.2, maxLiftDb: 4 },
