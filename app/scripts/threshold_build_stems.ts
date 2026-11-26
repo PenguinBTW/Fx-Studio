@@ -128,7 +128,9 @@ wav('z1_run_carpet.wav', stem(8.4, (t) => {
   const step = t - idx / rate;
   if (step < 0.075) {
     const k = 1 - step / 0.075;
-    const thud = (noise() * 0.07 + carpetLp * 0.34 + Math.sin(step * Math.PI * 2 * 58) * 0.17) * k;
+    // Keep the low footstep weight, but shave the noisy attack crest that otherwise
+    // makes the master limiter pump throughout the first chase.
+    const thud = (noise() * 0.03 + carpetLp * 0.16 + Math.sin(step * Math.PI * 2 * 58) * 0.22) * k;
     if (idx % 2) r += thud * 1.2, l += thud * 0.72;
     else l += thud * 1.2, r += thud * 0.72;
   }
