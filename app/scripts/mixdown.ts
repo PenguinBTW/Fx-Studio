@@ -533,10 +533,6 @@ export async function mixdown(o: MixOptions): Promise<MixReport> {
         for (let i = 0; i < master.length; i++) master[i] *= trim;
         report.truePeakTrimDb = trimDb.toFixed(2);
       }
-      const finalWav = path.join(tmp, 'limited_final.wav');
-      writeWav(finalWav, master, sr, 32);
-      const finalMeasure = await run(['ffmpeg', '-hide_banner', '-nostats', '-i', finalWav, '-af', 'loudnorm=I=-14:TP=-1:LRA=11:print_format=json', '-f', 'null', '-']);
-      report.measuredTruePeak = parseLoudnormJson(finalMeasure.err).input_tp;
     }
     applyGate(master, regions);
     if (m.fadeOut && m.fadeOut.dur > 0) {
@@ -548,6 +544,10 @@ export async function mixdown(o: MixOptions): Promise<MixReport> {
       log(`[mixdown] master fade-out ${at.toFixed(2)}s +${fd.toFixed(2)}s`);
     }
     writeWav(o.out, master, sr, 24);
+    if (m.limiter !== false && hasSignal) {
+      const finalMeasure = await run(['ffmpeg', '-hide_banner', '-nostats', '-i', o.out, '-af', 'loudnorm=I=-14:TP=-1:LRA=11:print_format=json', '-f', 'null', '-']);
+      report.measuredTruePeak = parseLoudnormJson(finalMeasure.err).input_tp;
+    }
     log(`[mixdown] wrote ${o.out} (${frames} samples @ ${sr} Hz, ${dur.toFixed(3)} s)`);
 
     const foleyOut = o.foleyOut ?? (manifest.foleyGuide?.out ? path.resolve(baseDir, manifest.foleyGuide.out) : undefined);
