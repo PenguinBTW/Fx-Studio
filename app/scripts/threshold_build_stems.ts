@@ -30,7 +30,7 @@ function wav(file: string, pcmIn: Float32Array): void {
     for (let f = 0; f < pcmIn.length / 2; f++) {
       airL = airL * 0.935 + (hash01(f, seed) - 0.5) * 0.065;
       airR = airR * 0.935 + (hash01(f, seed + 19.7) - 0.5) * 0.065;
-      const widthAmount = file.includes('fluorescent_bed') ? 0.29 : 0.18;
+      const widthAmount = file.includes('fluorescent_bed') ? 0.34 : 0.18;
       pcmIn[f * 2] += airL * widthAmount;
       pcmIn[f * 2 + 1] += airR * widthAmount;
     }
