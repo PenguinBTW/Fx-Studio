@@ -115,6 +115,7 @@ export interface MixReport {
   measuredOutput?: Record<string, string>;
   measuredTruePeakPreTrim?: string;
   limiterInputMarginDb?: string;
+  loudnessMakeupDb?: string;
   truePeakTrimDb?: string;
   truePeakFinalTrimDb?: string;
   out: string;
@@ -537,8 +538,9 @@ export async function mixdown(o: MixOptions): Promise<MixReport> {
       master = applyReconstructionLowpass(master, m.reconstructionLowpassHz, sr, CH);
       report.reconstructionLowpassHz = m.reconstructionLowpassHz.toFixed(0);
     }
+    const targetLufs = m.lufs ?? -14;
     if ((m as any).normalize !== false && hasSignal) {
-      const I = m.lufs ?? -14;
+      const I = targetLufs;
       // Internal true-peak ceiling sits 0.5 dB under the requested one to absorb the 192k->48k resample.
       const tp = (m.truePeak ?? -1) - 0.5;
       const preWav = path.join(tmp, 'pre.wav');
@@ -578,21 +580,38 @@ export async function mixdown(o: MixOptions): Promise<MixReport> {
     if (m.limiter !== false && hasSignal) {
       const tpCeiling = m.truePeak ?? -1.0;
       const lookaheadMs = m.limiterLookaheadMs ?? 1.5;
-      const preLimit = master;
+      const preLimitBase = new Float32Array(master);
       const limitedWav = path.join(tmp, 'limited.wav');
       let marginDb = 0;
       let measuredTp = Infinity;
-      for (let attempt = 0; attempt < 4; attempt++) {
-        master = applyLookaheadLimiter(preLimit, tpCeiling - marginDb, lookaheadMs, sr);
+      let loudnessMakeupDb = 0;
+      // Loudness normalization before peak limiting under-reads the final master:
+      // limiter gain reduction removes part of the applied EBU gain. Iterate the
+      // pre-limiter makeup against the limited measurement so master.lufs is the
+      // intended output loudness rather than merely the unconstrained input gain.
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const limitInput = new Float32Array(preLimitBase);
+        if (loudnessMakeupDb !== 0) {
+          const makeup = Math.pow(10, loudnessMakeupDb / 20);
+          for (let i = 0; i < limitInput.length; i++) limitInput[i] *= makeup;
+        }
+        master = applyLookaheadLimiter(limitInput, tpCeiling - marginDb, lookaheadMs, sr);
         writeWav(limitedWav, master, sr, 32);
         const tpMeasure = await run(['ffmpeg', '-hide_banner', '-nostats', '-i', limitedWav, '-af', 'loudnorm=I=-14:TP=-1:LRA=11:print_format=json', '-f', 'null', '-']);
         const tpMs = parseLoudnormJson(tpMeasure.err);
         measuredTp = Number.parseFloat(tpMs.input_tp);
         report.measuredTruePeakPreTrim = tpMs.input_tp;
-        if (!Number.isFinite(measuredTp) || measuredTp <= tpCeiling) break;
-        marginDb += measuredTp - tpCeiling + 0.22;
+        const measuredI = Number.parseFloat(tpMs.input_i);
+        const loudnessError = Number.isFinite(measuredI) ? targetLufs - measuredI : 0;
+        const tpError = Number.isFinite(measuredTp) ? measuredTp - tpCeiling : 0;
+        const tpCompliant = !Number.isFinite(measuredTp) || tpError <= 0;
+        const loudnessConverged = Math.abs(loudnessError) < 0.12 || Math.abs(loudnessMakeupDb + loudnessError) > 8;
+        if (tpCompliant && loudnessConverged) break;
+        if (!tpCompliant) marginDb += tpError + 0.22;
+        if (!loudnessConverged) loudnessMakeupDb += loudnessError;
       }
       report.limiterInputMarginDb = marginDb.toFixed(2);
+      report.loudnessMakeupDb = loudnessMakeupDb.toFixed(2);
       if (Number.isFinite(measuredTp) && measuredTp > tpCeiling) {
         const trimDb = tpCeiling - measuredTp - 0.05;
         const trim = Math.pow(10, trimDb / 20);
