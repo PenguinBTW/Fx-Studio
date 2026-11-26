@@ -178,20 +178,20 @@ const BODY: Record<ThresholdTransitionMode, string> = {
     float scan = (0.5 + 0.5 * sin(vUv.y * 900.0)) * (1.0 - smoothstep(0.12, 0.48, u));
     vec3 stat = vec3(n) * (0.13 + 0.24 * scan + 0.08 * (1.0 - scan));
     vec3 a = mix(ca, stat, smoothstep(0.0, 0.36, u));
-    float fibreLong = fbm(vec2(vUv.x * 34.0, vUv.y * 7.0), 5) * 0.5 + 0.5;
+    float fibreLong = fbm(vec2(vUv.x * 78.0, vUv.y * 18.0), 5) * 0.5 + 0.5;
     float fibreFine = fbm(vec2(vUv.x * 190.0, vUv.y * 20.0), 3) * 0.5 + 0.5;
     float strand = 0.5 + 0.5 * sin(vUv.x * 620.0 + fibreLong * 8.0);
-    vec3 felt = vec3(0.105, 0.027, 0.020) * (0.46 + fibreLong * 0.16 + fibreFine * 0.05 + strand * 0.04);
+    vec3 felt = vec3(0.105, 0.027, 0.020) * (0.48 + fibreLong * 0.08 + fibreFine * 0.04 + strand * 0.035);
     // Heavy drapery rather than a flat red noise field: broad vertical folds catch a
     // warm house light, with valleys falling into brown shadow and a top/bottom falloff.
-    float foldWide = 0.5 + 0.5 * sin(vUv.x * 43.0 + fibreLong * 1.35 + sin(vUv.x * 9.0) * 1.6);
-    float foldFine = 0.5 + 0.5 * sin(vUv.x * 137.0 + fibreFine * 9.0);
+    float foldWide = 0.5 + 0.5 * sin(vUv.x * 43.0 + sin(vUv.x * 9.0 + vUv.y * 0.8) * 0.52 + fibreFine * 0.045);
+    float foldFine = 0.5 + 0.5 * sin(vUv.x * 137.0 + fibreFine * 1.7);
     float valley = pow(1.0 - foldWide, 2.2);
-    float ridge = pow(foldWide, 5.0);
+    float ridge = pow(foldWide, 18.0);
     float verticalFalloff = smoothstep(0.0, 0.16, vUv.y) * (1.0 - smoothstep(0.82, 1.0, vUv.y) * 0.55);
     float centerLight = 1.0 - abs(vUv.x - 0.5) * 0.72;
-    felt *= (0.20 + foldWide * 0.88 + foldFine * 0.05) * (0.55 + verticalFalloff * 0.55) * centerLight;
-    felt += vec3(0.24, 0.065, 0.025) * ridge * verticalFalloff * centerLight * 0.34;
+    felt *= (0.16 + pow(foldWide, 1.7) * 0.96 + foldFine * 0.04) * (0.55 + verticalFalloff * 0.55) * centerLight;
+    felt += vec3(0.38, 0.095, 0.032) * ridge * verticalFalloff * centerLight * 0.52;
     felt -= vec3(0.055, 0.018, 0.01) * valley * 0.55;
     vec3 m = mix(a, felt, smoothstep(0.22, 0.52, u));
     // The curtain parts from the center outward, with an irregular fibrous leading edge.

@@ -136,8 +136,8 @@ export default class ThresholdZ8Home extends Scene {
     const wg = wallCanvas.getContext('2d')!;
     wg.fillStyle = '#d8c9aa'; wg.fillRect(0, 0, 512, 512);
     for (let x = 0; x < 512; x += 64) {
-      wg.fillStyle = 'rgba(105,78,50,0.055)'; wg.fillRect(x, 0, 2, 512);
-      wg.fillStyle = 'rgba(255,246,220,0.045)'; wg.fillRect(x + 5, 0, 1, 512);
+      wg.fillStyle = 'rgba(105,78,50,0.12)'; wg.fillRect(x, 0, 2, 512);
+      wg.fillStyle = 'rgba(255,246,220,0.095)'; wg.fillRect(x + 5, 0, 1, 512);
     }
     for (let i = 0; i < 1500; i++) {
       const x = Math.floor(hash(i * 2.17) * 512);
@@ -174,7 +174,7 @@ export default class ThresholdZ8Home extends Scene {
     wallTex.wrapS = wallTex.wrapT = THREE.RepeatWrapping;
     wallTex.repeat.set(1.35, 2.2);
     wallTex.anisotropy = 4;
-    const cream = new THREE.MeshStandardMaterial({ map: wallTex, bumpMap: wallTex, bumpScale: 0.012, color: 0xffffff, roughness: 0.86, metalness: 0 });
+    const cream = new THREE.MeshStandardMaterial({ map: wallTex, bumpMap: wallTex, bumpScale: 0.022, color: 0xffffff, roughness: 0.86, metalness: 0 });
     this.disposables.push(wallTex, cream);
 
     const wood = this.mat(0x7b4d2b, 0.55);
@@ -696,6 +696,11 @@ export default class ThresholdZ8Home extends Scene {
     const sun = new THREE.DirectionalLight(0xffb36b, 2.2);
     sun.position.set(-3.5, 4.2, -2.0);
     this.s.add(sun, new THREE.AmbientLight(0x604632, 0.36));
+    for (const z of [-2.2, -5.8]) {
+      const graze = new THREE.PointLight(0xffb36b, 0.9, 4.5, 1.65);
+      graze.position.set(0.92, 1.55, z);
+      this.s.add(graze);
+    }
   }
 
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {

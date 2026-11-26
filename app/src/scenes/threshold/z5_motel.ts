@@ -379,7 +379,7 @@ export default class ThresholdZ5Motel extends Scene {
     const heroTvMat = this.cctvMaterial(99);
     this.tvScreens.push(heroTvMat);
     this.box(this.s, [0.86, 0.56, 0.025], [1.75, 0.94, -17.72], heroTvMat, [0, -2.35, 0]);
-    const heroTvGlow = new THREE.PointLight(0x7db4ff, 0.72, 3.4, 1.8);
+    const heroTvGlow = new THREE.PointLight(0x7db4ff, 2.4, 6.5, 1.5);
     heroTvGlow.position.set(1.62, 1.0, -17.92);
     this.s.add(heroTvGlow);
 
@@ -397,7 +397,7 @@ export default class ThresholdZ5Motel extends Scene {
       this.rainLines.push(line);
     }
 
-    const corridorFill = new THREE.PointLight(0xff7d32, 2.2, 17, 1.75);
+    const corridorFill = new THREE.PointLight(0xff7d32, 2.4, 15, 1.95);
     corridorFill.position.set(0, 2.05, -8.5);
     this.s.add(corridorFill);
 
@@ -408,7 +408,7 @@ export default class ThresholdZ5Motel extends Scene {
       const on = i !== 4;
       kitAt(on ? 'sconce' : 'broken_sconce', [side * 1.48, 1.28, z], side < 0 ? Math.PI / 2 : -Math.PI / 2, 0.95);
       if (on) {
-        const l = new THREE.PointLight(0xff8a2a, 1.35, 8.5, 1.7);
+        const l = new THREE.PointLight(0xff8a2a, 4.2, 12, 1.45);
         l.position.set(side * 1.25, 1.75, z);
         this.s.add(l);
       }
@@ -504,7 +504,12 @@ export default class ThresholdZ5Motel extends Scene {
 
     this.s.add(this.flash.group);
 
-    const ambient = new THREE.AmbientLight(0x344159, 1.55);
+    const ambient = new THREE.AmbientLight(0x344159, 0.72);
+    const neonSpill = new THREE.PointLight(0xff4da0, 4.2, 22, 1.55);
+    neonSpill.position.set(0, 1.7, -36.5);
+    const crtSpill = new THREE.PointLight(0x6fa8ff, 3.4, 12, 1.45);
+    crtSpill.position.set(1.6, 1.0, -13.5);
+    this.s.add(neonSpill, crtSpill);
     this.s.add(ambient);
   }
 
@@ -562,7 +567,7 @@ export default class ThresholdZ5Motel extends Scene {
     rr.render(this.s, this.cam);
     rr.resetState();
 
-    const exposure = t < 114 ? 2.85 : t < 120 ? 2.15 : t < 122 ? 1.3 : 1.65;
+    const exposure = t < 114 ? 2.85 : t < 120 ? 2.25 : t < 122 ? 1.95 : 2.25;
     return thresholdPost(t, { exposure, darkness: 0.5, stress: threat * 0.55 });
   }
 

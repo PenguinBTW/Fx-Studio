@@ -141,7 +141,7 @@ export default class ThresholdZ6Theatre extends Scene {
     for (let i = 0; i < 5; i++) {
       const x = -2.6 + i * 1.3;
       this.box(this.s, [0.28, 0.08, 0.12], [x, 0.65, -4.55], warm, [0.25, 0, 0]);
-      const foot = new THREE.PointLight(0xffa65a, 0.55, 4.5, 1.7);
+      const foot = new THREE.PointLight(0xffa65a, 2.35, 7.5, 1.4);
       foot.position.set(x, 0.9, -4.8);
       this.s.add(foot);
     }
@@ -177,7 +177,14 @@ export default class ThresholdZ6Theatre extends Scene {
     const rowLampMat = this.mat(0xffb36b, 0.55, 0, 0xff8f35, 1.7);
     for (let row = 0; row < 6; row++) {
       const z = 1.05 + row * 0.72;
-      for (const side of [-1, 1]) this.box(this.s, [0.09, 0.025, 0.18], [side * 0.83, 0.07, z], rowLampMat, [0, 0, side * 0.05]);
+      for (const side of [-1, 1]) {
+        this.box(this.s, [0.09, 0.025, 0.18], [side * 0.83, 0.07, z], rowLampMat, [0, 0, side * 0.05]);
+        if (row % 2 === 0) {
+          const aisleLight = new THREE.PointLight(0xff9a4a, 1.05, 4.6, 1.5);
+          aisleLight.position.set(side * 0.85, 0.32, z);
+          this.s.add(aisleLight);
+        }
+      }
     }
     for (const side of [-1, 1]) {
       this.box(this.s, [0.08, 0.09, 10.8], [side * 4.58, 2.72, -0.8], gold);
@@ -359,7 +366,7 @@ export default class ThresholdZ6Theatre extends Scene {
         m.metalness = 0;
         if (m.name.includes('LintFeltBrown')) { m.color.setHex(0x4a2818); m.emissive.setHex(0x090302); m.emissiveIntensity = 0.08; }
         if (m.name.includes('LintFeltEdge')) { m.color.setHex(0x7b4425); m.emissive.setHex(0x120603); m.emissiveIntensity = 0.1; }
-        if (m.name.includes('ButtonEye')) { m.color.setHex(0x120806); m.roughness = 0.58; }
+        if (m.name.includes('ButtonEye')) { m.color.setHex(0x090403); m.roughness = 0.96; m.metalness = 0; m.emissive.setHex(0x000000); m.emissiveIntensity = 0; }
       }
     });
     this.lintInst.root.rotation.x = Math.PI / 2;
@@ -388,7 +395,7 @@ export default class ThresholdZ6Theatre extends Scene {
     const lintTex = new THREE.CanvasTexture(lintCanvas);
     lintTex.colorSpace = THREE.SRGBColorSpace;
     lintTex.wrapS = lintTex.wrapT = THREE.RepeatWrapping;
-    lintTex.repeat.set(2.5, 2.5);
+    lintTex.repeat.set(6.5, 6.5);
     this.disposables.push(lintTex);
     // Put the same fibre/bump response onto the GLB felt itself; the procedural shell
     // alone was too small to carry the close-up material read.
@@ -411,7 +418,7 @@ export default class ThresholdZ6Theatre extends Scene {
     lintWingMat.bumpScale = 0.003;
     const lintWingEdge = this.mat(0xc0834e, 0.98, 0, 0x653012, 0.42);
     lintWingEdge.map = lintTex;
-    const lintButton = this.mat(0x070403, 0.22, 0, 0x090302, 0.18);
+    const lintButton = this.mat(0x070403, 0.96, 0, 0x020101, 0.03);
     const lintThread = this.mat(0x090504, 0.86);
     // A matte handmade shell overrides the asset's close-range plastic read while leaving
     // the original stitching, fuzz, eyes, legs and abdomen glow visible around it.
@@ -479,14 +486,28 @@ export default class ThresholdZ6Theatre extends Scene {
         const hy = 0.004 + hash(hair * 5.7) * 0.005;
         const hgeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
           new THREE.Vector3(hx, hy, hz),
-          new THREE.Vector3(hx + side * (0.004 + hash(hair) * 0.005), hy + 0.004 + hash(hair * 2) * 0.004, hz + (hash(hair * 4) - 0.5) * 0.006),
-        ]), 2, 0.00055, 4, false);
+          new THREE.Vector3(hx + side * (0.007 + hash(hair) * 0.009), hy + 0.006 + hash(hair * 2) * 0.007, hz + (hash(hair * 4) - 0.5) * 0.006),
+        ]), 2, 0.00105, 4, false);
         const hm = new THREE.Mesh(hgeo, lintWingEdge);
         this.lint.add(hm);
         this.disposables.push(hgeo);
       }
-      this.sphere(this.lint, 0.0038, [side * 0.0062, 0.006, 0.052], lintButton, [1, 0.72, 0.5]);
-      this.sphere(this.lint, 0.00075, [side * 0.0052, 0.0072, 0.0545], this.mat(0x6b5848, 0.48, 0, 0x241812, 0.08), [1, 0.7, 0.5]);
+      this.sphere(this.lint, 0.0031, [side * 0.0062, 0.006, 0.052], lintButton, [1.2, 0.58, 0.22]);
+      this.sphere(this.lint, 0.00075, [side * 0.0052, 0.0072, 0.0545], this.mat(0x1b100a, 0.95, 0, 0x050201, 0.02), [1, 0.7, 0.5]);
+      // Irregular bristle halo around the handmade body: dense enough to break the
+      // sphere silhouette at close range, but still coarse/stitched rather than fur.
+      for (let bristle = 0; bristle < 34; bristle++) {
+        const a = hash(bristle * 4.17 + side) * Math.PI * 2;
+        const zq = hash(bristle * 7.31) * 2 - 1;
+        const radial = Math.sqrt(Math.max(0.05, 1 - zq * zq));
+        const dir = new THREE.Vector3(Math.cos(a) * radial, zq * 0.7, Math.sin(a) * radial).normalize();
+        const start = dir.clone().multiplyScalar(0.018 + hash(bristle) * 0.004).add(new THREE.Vector3(0, 0.002, 0.008));
+        const end = dir.clone().multiplyScalar(0.025 + hash(bristle * 2.3) * 0.009).add(new THREE.Vector3((hash(bristle * 3.1) - 0.5) * 0.004, 0.002 + (hash(bristle * 5.7) - 0.5) * 0.004, 0.008));
+        const bgeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([start, end]), 2, 0.00032, 4, false);
+        const bm = new THREE.Mesh(bgeo, lintWingEdge);
+        this.lint.add(bm);
+        this.disposables.push(bgeo);
+      }
       const pts = [
         new THREE.Vector3(side * 0.005, 0.006, 0.028),
         new THREE.Vector3(side * 0.016, 0.026, 0.044),
@@ -514,6 +535,9 @@ export default class ThresholdZ6Theatre extends Scene {
     this.s.add(this.lint);
 
     // Warm theatrical spotlight plus low house fill.
+    const projectorSpill = new THREE.PointLight(0x9fc8ff, 2.5, 14, 1.55);
+    projectorSpill.position.set(0, 3.35, 5.2);
+    this.s.add(projectorSpill);
     const spot = new THREE.SpotLight(0xffb15c, 4.2, 12, 0.55, 0.6, 1.2);
     spot.position.set(0, 4.0, 0.5);
     spot.target.position.set(0, 1.0, -6.5);
@@ -609,7 +633,7 @@ export default class ThresholdZ6Theatre extends Scene {
     rr.render(this.s, this.cam);
     rr.resetState();
 
-    return thresholdPost(t, { exposure: 1.2, darkness: 0.68, stress: threat * 0.25 });
+    return thresholdPost(t, { exposure: 1.78, darkness: 0.58, stress: threat * 0.25 });
   }
 
   override dispose() {

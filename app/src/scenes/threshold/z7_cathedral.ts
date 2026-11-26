@@ -902,8 +902,20 @@ export default class ThresholdZ7Cathedral extends Scene {
       const y = -2.5 - hash(i * 5.7) * 26.0;
       const z = -95.5 - hash(i * 7.9) * 9.0;
       const mesh = i % 5 !== 4
-        ? this.cyl(this.s, 0.055 + seed * 0.018, 0.06 + seed * 0.014, 0.22 + hash(i) * 0.08, [x, y, z], mat, 12)
+        ? this.cyl(this.s, 0.052 + seed * 0.02, 0.082 + seed * 0.026, 0.32 + hash(i) * 0.1, [x, y, z], mat, 14)
         : this.box(this.s, [0.12 + seed * 0.15, 0.07 + hash(i) * 0.07, 0.15 + hash(i * 2) * 0.19], [x, y, z], mat, [hash(i) * 2, hash(i * 4) * 2, hash(i * 6) * 2]);
+      if (i % 5 !== 4) {
+        const bandGeo = new THREE.CylinderGeometry(0.084 + seed * 0.026, 0.084 + seed * 0.026, 0.045, 14);
+        const bandMat = this.mat(i % 2 ? 0xd8c9a5 : 0x3fb7c9, 0.62, 0, i % 2 ? 0x2a1608 : 0x07303a, 0.28);
+        const band = new THREE.Mesh(bandGeo, bandMat);
+        band.position.y = 0.02;
+        mesh.add(band);
+        const neckGeo = new THREE.CylinderGeometry(0.026 + seed * 0.009, 0.044 + seed * 0.012, 0.11, 12);
+        const neck = new THREE.Mesh(neckGeo, mat);
+        neck.position.y = 0.2 + hash(i) * 0.05;
+        mesh.add(neck);
+        this.disposables.push(bandGeo, neckGeo, bandMat);
+      }
       mesh.visible = false;
       this.fallDebris.push({ mesh, seed, baseY: y });
     }
@@ -1314,9 +1326,16 @@ export default class ThresholdZ7Cathedral extends Scene {
       for (const mat of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
         const smat = mat as THREE.MeshStandardMaterial;
         if (!smat.isMeshStandardMaterial) continue;
-        smat.emissive = new THREE.Color(0x5a210b);
-        smat.emissiveIntensity = 0.72;
-        this.lintMats.push(smat);
+        smat.roughness = Math.max(smat.roughness, 0.92);
+        smat.metalness = 0;
+        if (smat.name.includes('AbdomenWarmGlow')) {
+          smat.emissive = new THREE.Color(0x5a210b);
+          smat.emissiveIntensity = 0.72;
+          this.lintMats.push(smat);
+        } else {
+          smat.emissive = new THREE.Color(0x000000);
+          smat.emissiveIntensity = 0;
+        }
       }
     });
     this.lint.add(this.lintInst.root);
@@ -1328,7 +1347,14 @@ export default class ThresholdZ7Cathedral extends Scene {
 
     this.s.add(this.flash.group);
 
-    this.baseAmbient = new THREE.AmbientLight(0x152033, 0.18);
+    this.baseAmbient = new THREE.AmbientLight(0x152033, 0.24);
+    for (let spill = 0; spill < 8; spill++) {
+      const side = spill % 2 ? 1 : -1;
+      const machineSpill = new THREE.PointLight(spill % 3 ? 0x6fc9ff : 0xffa15c, 2.65, 12.5, 1.42);
+      machineSpill.position.set(side * 2.4, 1.9, -24 - spill * 8.5);
+      this.s.add(machineSpill);
+      this.z7DetailObjects.push(machineSpill);
+    }
     this.s.add(this.baseAmbient);
     const wallKey = new THREE.DirectionalLight(0x9fdcff, 0.85);
     wallKey.position.set(-5, 9, 8);
@@ -1455,13 +1481,13 @@ export default class ThresholdZ7Cathedral extends Scene {
       }
       if (t >= 168.0 && t < 168.6) {
         z = lerp(-14.7, landingZ, postU);
-        x = lerp(0.0, 0.45, postU);
+        x = lerp(0.0, 1.72, postU);
       }
       if (t >= 168.6) {
-        const gain = smooth((t - 168.6) / 2.7);
+        const gain = smooth((t - 168.6) / 2.2);
         const gap = lerp(4.25, 2.0, gain);
         z = this.cam.position.z + gap;
-        x = lerp(0.45, -1.25 + 0.22 * Math.sin(t * 1.9), smooth((t - 168.6) / 0.9));
+        x = lerp(1.72, -0.42 + 0.16 * Math.sin(t * 1.9), smooth((t - 168.6) / 0.9));
       }
       const overheadU = clamp((t - 167.55) / 1.05);
       const overheadLift = Math.sin(Math.PI * overheadU) * (t >= 167.55 && t < 168.6 ? 0.78 : 0);
@@ -1706,7 +1732,7 @@ export default class ThresholdZ7Cathedral extends Scene {
       const replayFade = beamTime >= 3.3 ? smooth((beamTime - 3.3) / 0.12) : 0;
       return thresholdPost(beamTime, { darkness: 0.82, stress: beamTime > 1.1 ? 0.8 : 0.35, fade: replayFade });
     }
-    const exposure = dead ? 0.2 : (t < 158 ? 1.85 : t >= 181 && t < 185.2 ? 2.8 : 1.18);
+    const exposure = dead ? 0.2 : (t < 158 ? 1.85 : t >= 181 && t < 185.2 ? 2.8 : 1.82);
     return thresholdPost(t, { exposure, darkness: 0.78, stress: threat * 0.65, fade: dead ? 0.55 : 0 });
   }
 

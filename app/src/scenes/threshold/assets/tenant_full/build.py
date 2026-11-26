@@ -12,7 +12,7 @@ R = random.Random(91731)
 # Source-true but dust-muted materials. The continuous body carries the silhouette;
 # ball-pit plastic, glazed pool tile, paper, felt, chrome and glass are surface evidence.
 BODY = mat('TenantFusedBody', (0.032, 0.012, 0.009), 0.9, metal=0.01)
-BODY_ALT = mat('TenantFusedBodyWarm', (0.074, 0.025, 0.015), 0.88, metal=0.01)
+BODY_ALT = mat('TenantFusedBodyWarm', (0.047, 0.018, 0.012), 0.94, metal=0.01)
 TILE = mat('TenantPoolTile', (0.045, 0.14, 0.14), 0.42, metal=0.02)
 SKULL = mat('TenantSkullTile', (0.30, 0.39, 0.35), 0.58, metal=0.01)
 GROUT = mat('TenantTileGrout', (0.018, 0.028, 0.028), 0.82)
@@ -31,10 +31,10 @@ except Exception:
 BLACK = mat('TenantFaceSlot', (0.0015, 0.002, 0.002), 0.94)
 RUBBER = mat('TenantDarkRubber', (0.012, 0.009, 0.008), 0.86)
 BALLS = [
-    mat('TenantBallRed', (0.095, 0.008, 0.006), 0.74),
-    mat('TenantBallBlue', (0.006, 0.022, 0.048), 0.72),
-    mat('TenantBallYellow', (0.105, 0.055, 0.006), 0.78),
-    mat('TenantBallGreen', (0.008, 0.048, 0.025), 0.78),
+    mat('TenantBallRed', (0.045, 0.006, 0.005), 0.96),
+    mat('TenantBallBlue', (0.004, 0.012, 0.026), 0.96),
+    mat('TenantBallYellow', (0.052, 0.025, 0.003), 0.97),
+    mat('TenantBallGreen', (0.005, 0.025, 0.014), 0.97),
     mat('TenantBallDark', (0.045, 0.025, 0.022), 0.62),
 ]
 
@@ -109,7 +109,7 @@ def tapered_tube(name, points, radii, material, sides=20, per_seg=9, patch_mater
             a = math.tau * k / sides
             # Fused matter is not an inflated tube: low-frequency asymmetrical lumps
             # break the silhouette while the underlying volume remains continuous.
-            lump = 1.0 + 0.125 * math.sin(i * 0.83 + k * 1.91) + 0.065 * math.sin(i * 0.31 - k * 3.07)
+            lump = 1.0 + 0.17 * math.sin(i * 0.83 + k * 1.91) + 0.095 * math.sin(i * 0.31 - k * 3.07)
             rr = radius * lump * (1.0 + 0.035 * math.sin(i * 0.47))
             v = p + (side * math.cos(a) + normal * math.sin(a)) * rr
             ring.append(len(verts))
@@ -330,10 +330,17 @@ def build_arm(side):
         radial = path_radius(radii, u) * (0.58 + 0.22 * R.random())
         offset = mathutils.Vector((math.cos(angle) * radial, math.sin(angle) * radial * 0.9, (R.random() - 0.5) * 0.035))
         radius = (0.072 + 0.052 * (1 - u)) * R.uniform(0.72, 1.34)
-        ball_mat = BALLS[4] if i % 5 in (0, 3) else BALLS[int(R.random() * 4)]
+        ball_mat = BALLS[4] if i % 5 in (0, 2, 3) else BALLS[int(R.random() * 4)]
         ob = sphere(f'arm_{side}_embedded_ball_{i}', radius, c + offset, ball_mat,
                     scale=(1.36, 0.38 + 0.1 * (i % 3), 0.86), segments=20, rings=10)
         add(ob, parent_control, 'ball_pit_shell')
+        # A flattened fused-plastic cap overlaps the exposed center of most balls,
+        # leaving only a muted rim visible: embedded/crusted mass rather than candy
+        # glued onto the limb surface.
+        if i % 5 != 1:
+            cap = sphere(f'arm_{side}_crust_cap_{i}', radius * 1.06, c + offset + mathutils.Vector((0, 0.010 + 0.002 * (i % 3), 0)), BODY if side == 'r' else BODY_ALT,
+                         scale=(1.43, 0.18, 0.91), segments=20, rings=8)
+            add(cap, parent_control, 'crusted_mass')
         if i % 6 == 2:
             add(torus(f'arm_{side}_melted_seam_{i}', radius * 0.86, 0.004, c + offset * 0.65, RUBBER,
                       rot=(math.radians(90), 0, 0), major_segments=18, minor_segments=5), parent_control, 'melted_seams')
