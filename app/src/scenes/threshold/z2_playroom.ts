@@ -91,8 +91,8 @@ export default class ThresholdZ2Playroom extends Scene {
     this.s.background = new THREE.Color(0xcfe8ff);
     this.s.fog = new THREE.Fog(0xcfe8ff, 18, 55);
     this.flash = addFlashlight(this.s);
-    this.s.add(new THREE.HemisphereLight(0xffffff, 0x5c78a8, 1.4));
-    this.sun = new THREE.DirectionalLight(0xffffff, 2.5); this.sun.position.set(-4, 9, 2); this.s.add(this.sun);
+    this.s.add(new THREE.HemisphereLight(0xffffff, 0x36475f, 0.68));
+    this.sun = new THREE.DirectionalLight(0xffffff, 1.05); this.sun.position.set(-4, 9, 2); this.s.add(this.sun);
 
     const foam = mat(0xf1efe8, 0.55);
     const red = mat(0xe63b2e, 0.28);
@@ -138,7 +138,7 @@ export default class ThresholdZ2Playroom extends Scene {
 
     // skylights
     for (let i = 0; i < 3; i++) {
-      const m = mat(0xffffff, 0.2, 0, 0xffffff, 2.8) as THREE.MeshStandardMaterial;
+      const m = mat(0xffffff, 0.2, 0, 0xffffff, 1.1) as THREE.MeshStandardMaterial;
       this.skylightMats.push(m);
       box(this.s, `z2_skylight_${i}`, [4.8, 0.05, 2.8], [-6 + i * 6, 5.95, -2], m);
     }
@@ -148,6 +148,7 @@ export default class ThresholdZ2Playroom extends Scene {
     box(this.s, 'z2_pit_s', [12.6, 0.8, 0.35], [0, 0.4, 4.2], red);
     box(this.s, 'z2_pit_w', [0.35, 0.8, 8.4], [-6.2, 0.4, 0], yellow);
     box(this.s, 'z2_pit_e', [0.35, 0.8, 8.4], [6.2, 0.4, 0], green);
+    box(this.s, 'z2_ballpit_dark_substrate', [12.0, 0.035, 8.0], [0, 0.515, 0], mat(0x2d241e, 0.92));
     const geom = new THREE.SphereGeometry(0.075, 8, 5);
     const inst = new THREE.InstancedMesh(geom, new THREE.MeshStandardMaterial({ roughness: 0.26, metalness: 0 }), 4900);
     inst.castShadow = false; inst.receiveShadow = true;
@@ -186,6 +187,14 @@ export default class ThresholdZ2Playroom extends Scene {
     const shellMat = mat(0x255dcc, 0.32); shellMat.side = THREE.BackSide;
     const shell = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.44, 6.4, 32, 1, true), shellMat);
     shell.position.set(-5, 0.82, 8.35); shell.rotation.x = Math.PI / 2; shell.name = 'z2_tunnel_shell'; shell.userData.fx_entity = shell.name; this.s.add(shell);
+    // thick padded tunnel mouth, panel fasteners and grime; the opening is a manufactured tube, not a color portal
+    const mouthPad = new THREE.Mesh(new THREE.TorusGeometry(0.52, 0.105, 12, 36), mat(0xc73932, 0.58));
+    mouthPad.position.set(-5, 0.82, 5.55); mouthPad.name = 'z2_tunnel_mouth_padding'; mouthPad.userData.fx_entity = mouthPad.name; mouthPad.castShadow = mouthPad.receiveShadow = true; this.s.add(mouthPad);
+    for (let bi = 0; bi < 12; bi++) {
+      const a = bi * Math.PI * 2 / 12;
+      sph(this.s, `z2_tunnel_mouth_bolt_${bi}`, 0.018, [-5 + Math.cos(a) * 0.52, 0.82 + Math.sin(a) * 0.52, 5.48], mat(0x302d2a, 0.35, 0.5), 8);
+    }
+    for (let gi = 0; gi < 9; gi++) plane(this.s, `z2_tunnel_grime_streak_${gi}`, 0.07 + hash(gi) * 0.08, 0.35 + hash(gi + 2) * 0.45, [-5 + (hash(gi) - 0.5) * 0.55, 0.86 + (hash(gi + 1) - 0.5) * 0.45, 5.47], basic(0x20150f, 0.28), [0, 0, (hash(gi + 3) - 0.5) * 0.3]);
     for (let i = 0; i < 16; i++) {
       const rib = new THREE.Mesh(new THREE.TorusGeometry(0.405, 0.055, 10, 32), i % 3 ? yellow : red);
       rib.position.set(-5, 0.82, 5.6 + i * 0.38); rib.castShadow = rib.receiveShadow = true;
@@ -420,7 +429,8 @@ export default class ThresholdZ2Playroom extends Scene {
     const wet = smooth(53.4, 55, t);
     this.tunnelRibs.forEach((r, i) => {
       const m = r.material as THREE.MeshStandardMaterial;
-      m.color.setHex(i / this.tunnelRibs.length < wet ? (i % 3 ? 0x9fd5c8 : 0x74c5d8) : (i % 3 ? 0xf6c83b : 0xe63b2e));
+      m.color.setHex(i / this.tunnelRibs.length < wet ? (i % 3 ? 0x7aa99e : 0x5a9bad) : (i % 3 ? 0xb8922e : 0xa82d25));
+      m.color.multiplyScalar(1 - i / this.tunnelRibs.length * 0.35);
       m.roughness = 0.25 + wet * 0.2;
     });
     // tenant crosses far tunnel light only 52.2-52.7
@@ -430,7 +440,7 @@ export default class ThresholdZ2Playroom extends Scene {
     const gl = this.ctx.renderer;
     gl.setRenderTarget(out); gl.setClearColor(0xcfe8ff, 1); gl.clear(true, true, true); gl.render(this.s, this.cam); gl.resetState();
     return {
-      ...thresholdPost(t, { darkness: 0.12, exposure: 0.72, stress: t > 40.5 && t < 49.5 ? 0.22 : 0.02 }),
+      ...thresholdPost(t, { darkness: 0.12, exposure: 0.40, stress: t > 40.5 && t < 49.5 ? 0.22 : 0.02 }),
       flash: 1 - smooth(30, 31.0, t),
       shake: t > 40.5 && t < 44.5 ? [0.15 * (hash(Math.floor(t * 90)) - 0.5), 0.15 * (hash(Math.floor(t * 90) + 3) - 0.5)] : [0, 0],
     };

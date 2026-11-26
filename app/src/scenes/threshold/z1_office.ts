@@ -555,8 +555,24 @@ export default class ThresholdZ1Office extends Scene {
     }
     plane(this.s, 'z1_contact_shadow_desk', 2.25, 1.15, [0, 0.009, -6], basic(0x050403, 0.3), [-Math.PI / 2, 0, 0]);
 
+    // chase-path cubicle evidence: occupied desks and grounded paperwork enter the beam instead of empty grey corridor
+    for (let i = 0; i < 14; i++) {
+      const side = i % 2 ? 1 : -1, z = 0.4 + i * 0.82, x = side * (2.15 + hash(i) * 1.1);
+      box(this.s, `z1_chase_desk_edge_${i}`, [0.95, 0.055, 0.52], [x, 0.74, z], this.assetMats.laminate_surface ?? mat(0x6d5b45, 0.65));
+      box(this.s, `z1_chase_contact_shadow_${i}`, [0.72, 0.006, 0.34], [x, 0.012, z + 0.18], basic(0x050403, 0.34));
+      plane(this.s, `z1_chase_floor_paper_${i}`, 0.22 + hash(i) * 0.16, 0.3, [x + (hash(i + 4) - 0.5) * 0.7, 0.018, z + (hash(i + 5) - 0.5) * 0.5], mat(0xd6cfbd, 0.9), [-Math.PI / 2, 0, hash(i + 6) * 2]);
+      if (i % 3 === 0) box(this.s, `z1_chase_keyboard_${i}`, [0.34, 0.025, 0.12], [x - side * 0.08, 0.785, z - 0.04], mat(0x1a1a18, 0.72));
+    }
+
     // fire door, push bar, sign and daylight slit
-    box(this.s, 'z1_fire_door', [1.0, 2.1, 0.09], [-2, 1.05, 15.92], mat(0x4c5a4e, 0.55));
+    box(this.s, 'z1_fire_door', [1.0, 2.1, 0.09], [-2, 1.05, 15.92], this.assetMats.firedoor_paint ?? mat(0x4c5a4e, 0.55));
+    box(this.s, 'z1_fire_door_frame_top', [1.18, 0.09, 0.14], [-2, 2.16, 15.9], mat(0x242821, 0.72));
+    for (const x of [-2.56,-1.44]) box(this.s, `z1_fire_door_frame_side_${x}`, [0.08, 2.2, 0.14], [x, 1.08, 15.9], mat(0x242821, 0.72));
+    box(this.s, 'z1_exit_panic_bar', [0.72, 0.075, 0.07], [-2, 1.04, 15.84], mat(0x9b9a8e, 0.32, 0.55));
+    box(this.s, 'z1_exit_push_plate', [0.28, 0.48, 0.018], [-2, 0.83, 15.86], mat(0x77776d, 0.42, 0.35));
+    for (const y of [0.48,1.08,1.68]) box(this.s, `z1_exit_hinge_${y}`, [0.055,0.18,0.045], [-2.48,y,15.84], mat(0x4c4c45,0.38,0.5));
+    for (let i=0;i<7;i++) box(this.s, `z1_exit_scratch_${i}`, [0.16+hash(i)*0.18,0.006,0.008], [-2.25+hash(i+2)*0.5,0.62+hash(i+3)*1.1,15.855], basic(0xd2cdbb,0.35), [0,0,(hash(i+4)-.5)*.5]);
+    const exitSpill = new THREE.PointLight(0xff8b68, 1.15, 4.5, 2); exitSpill.position.set(-2,2.25,15.45); this.s.add(exitSpill);
     box(this.s, 'z1_fire_pushbar', [0.72, 0.07, 0.08], [-2, 1.02, 15.84], metal);
     box(this.s, 'z1_exit_sign', [0.62, 0.22, 0.08], [-2, 2.32, 15.82], red);
     plane(this.s, 'z1_exit_text_proxy', 0.42, 0.12, [-2, 2.32, 15.77], basic(0xff4038), [0, 0, 0]);

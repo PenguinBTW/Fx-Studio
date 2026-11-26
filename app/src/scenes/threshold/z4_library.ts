@@ -128,6 +128,21 @@ export default class ThresholdZ4Library extends Scene {
         (side < 0 ? this.leftStacks : this.rightStacks).push(g);
       }
     }
+    // denser irregular canyon fill: protruding colored spines, slipped pages, labels and high rim separation.
+    const spineCols = [mat(0x6d2e24, 0.82), mat(0x2d445e, 0.82), mat(0x6e6034, 0.86), mat(0x3c5736, 0.86)];
+    for (const side of [-1, 1]) for (let i = 0; i < 70; i++) {
+      const z = 0.4 + hash(i * 3.7 + side) * 24, y = 0.75 + hash(i * 5.1) * 5.1, x = side * (2.03 + hash(i) * 0.15);
+      if (i % 4 === 0) box(this.s, `z4_protruding_spine_${side}_${i}`, [0.08 + hash(i) * 0.06, 0.34 + hash(i + 1) * 0.22, 0.08], [x, y, z], spineCols[i % 4]!, [0, (hash(i + 2) - 0.5) * 0.16, (hash(i + 3) - 0.5) * 0.12]);
+      else plane(this.s, `z4_protruding_page_${side}_${i}`, 0.12 + hash(i) * 0.12, 0.2 + hash(i + 1) * 0.16, [x, y, z], i % 2 ? paper : paper2, [0, side < 0 ? Math.PI / 2 : -Math.PI / 2, (hash(i + 3) - 0.5) * 0.35]);
+    }
+    for (let i = 0; i < 34; i++) {
+      plane(this.s, `z4_floor_litter_contact_${i}`, 0.16 + hash(i) * 0.2, 0.24 + hash(i + 2) * 0.18, [(hash(i * 2.3) - 0.5) * 3.2, 0.011, 8 + hash(i * 4.1) * 18], i % 2 ? paper : paper2, [-Math.PI / 2, 0, hash(i + 6) * 6]);
+      plane(this.s, `z4_floor_contact_shadow_${i}`, 0.18 + hash(i) * 0.2, 0.25 + hash(i + 2) * 0.18, [(hash(i * 2.3) - 0.5) * 3.2, 0.006, 8 + hash(i * 4.1) * 18], basic(0x090604, 0.22), [-Math.PI / 2, 0, hash(i + 6) * 6]);
+    }
+    for (const side of [-1, 1]) {
+      const rim = new THREE.PointLight(0xffd7a0, 0.75, 9, 2); rim.position.set(side * 1.8, 6.2, 15); this.s.add(rim);
+    }
+
     // scattered paper drifts and loose sheets
     for (let i = 0; i < 55; i++) {
       const p = plane(this.s, `z4_loose_page_${i}`, 0.22 + hash(i) * 0.12, 0.3 + hash(i + 1) * 0.1, [(hash(i) - 0.5) * 4.2, 0.004 + hash(i + 2) * 0.012, -1 + hash(i + 3) * 25], i % 2 ? paper : paper2, [-Math.PI / 2 + (hash(i + 4) - 0.5) * 0.08, 0, hash(i + 5) * 6]);
@@ -240,6 +255,11 @@ export default class ThresholdZ4Library extends Scene {
     this.cloneProp(this.paperProps, 'fountain_pen_root', [0.34, 0.91, 5.78], -0.35, 1, 'z4_fountain_pen_asset');
     this.cloneProp(this.paperProps, 'ink_bottle_root', [-0.38, 0.82, 5.78], 0, 1, 'z4_ink_bottle_asset');
     this.cloneProp(this.paperProps, 'reading_glasses_root', [0.46, 0.91, 6.18], 0.35, 1, 'z4_glasses_asset');
+    // close-range mechanical cues on desk props: pen nib/cap bands, inkwell rim, glasses hinges.
+    cyl(this.s, 'z4_pen_gold_cap_band', 0.026, 0.018, [0.30, 0.927, 5.76], brass, [Math.PI / 2, 0, -0.35], 20);
+    cyl(this.s, 'z4_pen_nib', 0.018, 0.065, [0.43, 0.925, 5.70], mat(0xc6a14a, 0.28, 0.75), [Math.PI / 2, 0, -0.35], 4);
+    const inkRim = new THREE.Mesh(new THREE.TorusGeometry(0.052, 0.008, 8, 24), brass); inkRim.position.set(0.58, 0.955, 5.83); inkRim.rotation.x = Math.PI / 2; inkRim.name = inkRim.userData.fx_entity = 'z4_inkwell_brass_rim'; this.s.add(inkRim);
+    for (const x of [0.36, 0.56]) box(this.s, `z4_glasses_hinge_${x}`, [0.018, 0.028, 0.018], [x, 0.945, 6.17], brass);
     this.cloneProp(this.paperProps, 'scissors_root', [-0.52, 0.9, 6.12], -0.8, 1, 'z4_scissors_asset');
     for (const x of [-0.7, 0.7]) this.cloneProp(this.paperProps, 'bankers_lamp_root', [x, 0.79, 5.75], 0, 1, `z4_bankers_lamp_asset_${x}`);
     this.cloneProp(this.paperProps, 'folded_paper_phone_root', [0.8, 1.08, 7.0], -0.25, 1, 'z4_folded_phone_asset');

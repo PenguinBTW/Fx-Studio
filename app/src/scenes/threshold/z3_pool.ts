@@ -194,6 +194,18 @@ export default class ThresholdZ3Pool extends Scene {
       box(this.s, `z3_pool_edge_gutter_${side}`, [0.24, 0.075, 27.5], [side * 3.78, 0.49, -6.3], mat(0xe7f2ed, 0.34));
       box(this.s, `z3_gutter_shadow_${side}`, [0.08, 0.045, 27.5], [side * 3.64, 0.475, -6.3], mat(0x061c22, 0.7));
     }
+    // age variation over the modular tile system: mineral tide marks, damp drips, missing/chipped tiles.
+    const mineral = basic(0x6f5c39, 0.24), damp = basic(0x071c22, 0.22), chipMat = mat(0x20363a, 0.82);
+    for (const side of [-1, 1]) {
+      const x = side * 3.972;
+      box(this.s, `z3_mineral_tide_${side}`, [0.012, 0.055, 28.5], [x, 0.72, -7], mat(0x6f5c39, 0.9));
+      for (let i = 0; i < 18; i++) {
+        const z = -20.5 + hash(i * 4.3 + side) * 26.5, y = 0.9 + hash(i * 7.1) * 2.9;
+        if (i % 3 === 0) plane(this.s, `z3_wall_damp_drip_${side}_${i}`, 0.055 + hash(i) * 0.07, 0.35 + hash(i + 2) * 0.95, [x - side * 0.006, y, z], damp, [0, side < 0 ? Math.PI / 2 : -Math.PI / 2, 0]);
+        else box(this.s, `z3_chipped_tile_${side}_${i}`, [0.018, 0.11 + hash(i) * 0.13, 0.16 + hash(i + 1) * 0.18], [x - side * 0.012, y, z], chipMat);
+      }
+    }
+
     // simplified block numerals/depth ticks on the end wall, legible as pool depth signage even in grey-box.
     for (let i = 0; i < 4; i++) {
       box(this.s, `z3_depth_marker_digit_${i}`, [0.12, 0.34 - (i % 2) * 0.1, 0.018], [-1.1 + i * 0.28, 2.05, -22.49], mat(0x0b3750, 0.4));
@@ -329,7 +341,7 @@ export default class ThresholdZ3Pool extends Scene {
       box(this.s, `z3_submerged_step_${st}`, [7.6, 0.16, 0.55], [0, 0.28 - st * 0.18, 4.75 - st * 0.55], st % 2 ? tileA : tileB);
       box(this.s, `z3_step_noseline_${st}`, [7.6, 0.025, 0.035], [0, 0.37 - st * 0.18, 4.49 - st * 0.55], mat(0x103c45, 0.5));
     }
-    for (const x of [-1.6, 0, 1.6]) box(this.s, `z3_floor_lane_${x}`, [0.09, 0.012, 25], [x, -0.105, -6.5], mat(0x083b55, 0.42));
+    for (const x of [-1.6, 0, 1.6]) box(this.s, `z3_floor_lane_${x}`, [0.09, 0.012, 25], [x, -0.105, -6.5], mat(0x24576a, 0.52));
     for (let i = 0; i < 22; i++) {
       const side = i % 2 ? -1 : 1;
       const z = 4 - i * 1.15;
