@@ -435,10 +435,14 @@ export default class ThresholdZ4Library extends Scene {
     const travelSteps = Math.min(7, cycle + stepInCycle);
     const topple = (smooth(0.02, 0.30, phase) * (1 - smooth(0.38, 0.76, phase))) * chase;
     this.archivistAsset.root.position.x = 1.15 - chase * 0.55;
-    this.archivistAsset.root.position.z = 2.35 + travelSteps * 2.35 * chase;
+    this.archivistAsset.root.position.z = 2.35 + travelSteps * 3.9 * chase;
     this.archivistAsset.root.position.y = 0.02 + (1 - reveal) * 0.45 + topple * 0.10;
     this.archivistAsset.root.rotation.x = topple * 0.42;
-    this.archivistAsset.root.rotation.y = -0.08 + reveal * 0.08;
+    // As it passes the viewer it twists its whole upper body back toward the camera.
+    // Keeping the face visible through the pass-over preserves creature readability instead
+    // of letting the closest frame collapse into anonymous paper planes.
+    const passTurn = smooth(96.05, 96.75, t);
+    this.archivistAsset.root.rotation.y = -0.08 + reveal * 0.08 + passTurn * Math.PI;
     const mouth = this.archivistAsset.part('mouth_crease_main');
     if (mouth) mouth.scale.x = 0.25 + smooth(95.0, 96.0, t) * 1.4;
     for (const [pid, sign] of [['arm_l_root', -1], ['arm_r_root', 1]] as const) {
@@ -463,7 +467,7 @@ export default class ThresholdZ4Library extends Scene {
         const bs = panel.userData.baseScale as THREE.Vector3;
         const unfold = reveal * (0.62 + 0.38 * smooth(95.2, 96.2, t));
         const ripple = Math.sin(t * 4.6 - ai * 0.72 + sign) * 0.055 * unfold;
-        const stage = 0.78 + unfold * 0.46 + ai * 0.006 * unfold;
+        const stage = 0.88 + unfold * 0.22 + ai * 0.006 * unfold;
         panel.position.x = bp.x * stage;
         panel.position.y = bp.y + Math.sin(ai * 0.82 + sign) * 0.026 * unfold - ai * 0.0045 * unfold;
         panel.position.z = (panel.userData.basePos as THREE.Vector3).z + Math.cos(ai * 0.63 - sign) * 0.018 * unfold;

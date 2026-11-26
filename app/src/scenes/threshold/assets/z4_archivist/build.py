@@ -75,23 +75,45 @@ for i,x in enumerate((-.16,-.07,.06,.15)):
     cube(f'mouth_crease_branch_{i+1}',(x,-.118,2.42+i%2*.025),(.11,.01,.009),ink,rot=(0,0,(i-1.5)*.28),bevel=.001).parent=root
 for i,x in enumerate((-.19,-.08,.04,.17)):
     cube(f'mouth_jagged_shadow_{i+1}',(x,-.123,2.36-i%2*.018),(.10,.012,.028),ink,rot=(0,0,(i-1.5)*.22),bevel=.002).parent=root
-# accordion arms: alternating folded panels and hinge beads, extending sideways in canonical asset space
+# accordion arms: continuous tapered paper tubes, not separated paddles. Each named
+# panel is a frustum section whose ends overlap the next section; alternating rectangular
+# apertures create the party-blower concertina read while preserving a single connected limb.
+def tube_segment(name,x0,x1,yc,zc,ry0,rz0,ry1,rz1,mat):
+    xc=(x0+x1)/2; length=x1-x0
+    verts=[]
+    for xx,ry,rz in ((-length/2,ry0,rz0),(length/2,ry1,rz1)):
+        verts.extend([(xx,-ry,-rz),(xx,ry,-rz),(xx,ry,rz),(xx,-ry,rz)])
+    faces=[(0,1,2,3),(4,7,6,5),(0,4,5,1),(1,5,6,2),(2,6,7,3),(4,0,3,7)]
+    mesh=bpy.data.meshes.new(name+'_mesh'); mesh.from_pydata(verts,[],faces); mesh.update()
+    o=bpy.data.objects.new(name,mesh); bpy.context.collection.objects.link(o); o.location=(xc,yc,zc)
+    bevel=o.modifiers.new('soft_folded_edges','BEVEL'); bevel.width=.006; bevel.segments=2
+    return finish(o,name,mat)
+
 for side,sgn in [('l',-1),('r',1)]:
     armroot=empty(f'arm_{side}_root',(sgn*.28,0,2.03)); armroot.parent=root
+    xstart=.34; spacing=.14; seglen=.29
     for j in range(12):
-        # zig-zag in both depth and vertical angle; panels overlap like a party blower
-        x=sgn*(.43+j*.18); z=2.03+math.sin(j*.9)*.13-j*.018; y=(j%2-.5)*.115
-        panel=cube(f'arm_{side}_accordion_panel_{j+1:02d}',(x,y,z),(.38+random.uniform(-.02,.04),.045,.165+random.uniform(-.015,.025)),paper if j%2 else paper2,rot=(0,sgn*(j%2-.5)*.48,sgn*(j%2-.5)*.30),bevel=.006)
+        xa=xstart+j*spacing; xb=xa+seglen
+        # mirror the canonical tube for the right arm while keeping alternating fold sizes
+        x0=sgn*xa; x1=sgn*xb
+        lo,hi=min(x0,x1),max(x0,x1)
+        large0=.125 if j%2==0 else .082
+        large1=.082 if j%2==0 else .125
+        zc=2.02-j*.014+math.sin(j*.8)*.045
+        yc=(j%2-.5)*.045
+        panel=tube_segment(f'arm_{side}_accordion_panel_{j+1:02d}',lo,hi,yc,zc,large0*.72,large0,large1*.72,large1,paper if j%2 else paper2)
+        panel.rotation_euler[1]=sgn*(j%2-.5)*.10
         panel.parent=armroot; panel.matrix_parent_inverse=armroot.matrix_world.inverted()
-        hinge=cube(f'arm_{side}_hinge_{j+1:02d}',(x,y,z),(.12,.052,.105),paperhi,rot=(random.uniform(-.2,.2),sgn*(j%2-.5)*.35,random.uniform(-.3,.3)),bevel=.012); hinge.parent=armroot; hinge.matrix_parent_inverse=armroot.matrix_world.inverted()
-        if j%2==0: cube(f'arm_{side}_panel_crease_{j+1:02d}',(x,y-.019,z),(.22,.005,.008),ink,rot=(0,0,sgn*.08),bevel=.001).parent=armroot
-        if j%3==1: cube(f'arm_{side}_panel_tear_{j+1:02d}',(x+sgn*.1,y-.02,z+.035),(.045,.005,.012),ink,rot=(0,0,sgn*.18),bevel=.001).parent=armroot
-    # paper-strip hand fan and five long fingers
-    handx=sgn*(.43+12*.19)
-    cube(f'hand_{side}_paper_fan',(handx,0,1.86),(.28,.035,.22),paperhi,rot=(0,0,sgn*.08),bevel=.01).parent=armroot
+        # dark compression line at the fold throat, still physically attached to the tube
+        xjoint=sgn*(xa+.012)
+        cube(f'arm_{side}_hinge_{j+1:02d}',(xjoint,yc,zc),(.018,(large0+large1)*.72,(large0+large1)*.96),paper2,rot=(0,0,sgn*(j%2-.5)*.12),bevel=.002).parent=armroot
+        if j%3==1: cube(f'arm_{side}_panel_tear_{j+1:02d}',(sgn*(xa+.10),yc-.045,zc+.045),(.045,.005,.012),ink,rot=(0,0,sgn*.18),bevel=.001).parent=armroot
+    # paper-strip hand fan and five long fingers, attached directly to the final tube mouth
+    handx=sgn*(xstart+11*spacing+seglen+.10)
+    cube(f'hand_{side}_paper_fan',(handx,0,1.76),(.28,.035,.22),paperhi,rot=(0,0,sgn*.08),bevel=.01).parent=armroot
     for fi in range(5):
         length=.42+fi*.035+random.uniform(-.02,.02)
-        finger=cube(f'finger_{side}_{fi+1}',(handx+sgn*.12,(fi-2)*.035,1.77-fi*.008),(.035,.018,length),paperhi if fi%2 else paper,rot=(.12*fi,sgn*.1,sgn*(fi-2)*.12),bevel=.004)
+        finger=cube(f'finger_{side}_{fi+1}',(handx+sgn*.12,(fi-2)*.035,1.67-fi*.008),(.035,.018,length),paperhi if fi%2 else paper,rot=(.12*fi,sgn*.1,sgn*(fi-2)*.12),bevel=.004)
         finger.parent=armroot
 # dense edge fibres, page holes and crease ticks: small deterministic paper damage catches flashlight grazing light
 for i in range(72):
