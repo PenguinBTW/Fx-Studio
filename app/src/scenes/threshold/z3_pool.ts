@@ -149,7 +149,7 @@ export default class ThresholdZ3Pool extends Scene {
       const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
       const mapped = mats.map(remap);
       mesh.material = Array.isArray(mesh.material) ? mapped : mapped[0]!;
-      if (/water_ripple_ring|torso_tile_band|head_grout_|(?:arm|leg)_.*_grout_|shoulder_socket|elbow_|wrist_|knee_|hip_socket|body_tile_chip|^(?:arm|leg)_[lr]_(?:upper|lower)$|^finger_[lr]_|^shoulder_bar$/.test(mesh.name)) mesh.visible = false;
+      if (/water_ripple_ring|torso_tile_band|head_grout_|(?:arm|leg)_.*_grout_|shoulder_socket|elbow_|wrist_|knee_|hip_socket|body_tile_chip|^(?:arm|leg)_[lr]_(?:upper|lower)$|^finger_[lr]_|^shoulder_bar$|^head_hairline_grout_/.test(mesh.name)) mesh.visible = false;
     });
     this.mirrorlingAsset.root.traverse((o) => {
       const mesh = o as THREE.Mesh;
@@ -167,17 +167,37 @@ export default class ThresholdZ3Pool extends Scene {
       if (!mesh.isMesh || !/^(head_teardrop_cranium|head_pointed_chin|blank_mirror_face|head_hairline_grout_)/.test(mesh.name)) return;
       mesh.position.sub(headPivot).applyQuaternion(headTurn).add(headPivot);
       mesh.quaternion.premultiply(headTurn);
+      if (mesh.name === 'head_teardrop_cranium') mesh.scale.set(mesh.scale.x * 1.10, mesh.scale.y * 0.96, mesh.scale.z * 1.02);
+      if (mesh.name === 'head_pointed_chin') mesh.scale.set(mesh.scale.x * 0.88, mesh.scale.y * 1.04, mesh.scale.z);
     });
     // Ceramic limb volume overlay: the GLB supplies the teardrop head, torso, joints and fingers;
     // these continuous tiled sleeves guarantee the limbs read as the same ceramic being at film distance.
+    const lc = document.createElement('canvas'); lc.width = lc.height = 256;
+    const lg = lc.getContext('2d')!;
+    lg.fillStyle = 'rgb(232,238,224)'; lg.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 48; i++) {
+      lg.fillStyle = `rgba(175,190,176,${0.08 + hash(i) * 0.14})`;
+      lg.fillRect(hash(i * 2.1) * 246, hash(i * 4.7) * 246, 4 + hash(i) * 18, 3 + hash(i + 2) * 14);
+    }
+    lg.strokeStyle = 'rgba(8,25,28,0.84)'; lg.lineWidth = 5;
+    for (let x = 0; x <= 256; x += 64) { lg.beginPath(); lg.moveTo(x + Math.sin(x) * 2, 0); lg.lineTo(x + Math.cos(x) * 2, 256); lg.stroke(); }
+    for (let y = 0; y <= 256; y += 64) { lg.beginPath(); lg.moveTo(0, y + Math.sin(y) * 2); lg.lineTo(256, y + Math.cos(y) * 2); lg.stroke(); }
+    lg.strokeStyle = 'rgba(2,8,10,0.68)'; lg.lineWidth = 2.2;
+    for (let i = 0; i < 20; i++) {
+      const x = hash(i * 7) * 256, y = hash(i * 11) * 256;
+      lg.beginPath(); lg.moveTo(x, y); lg.lineTo(x + (hash(i) - 0.5) * 80, y + (hash(i + 1) - 0.5) * 80); lg.stroke();
+    }
+    const limbGridTex = new THREE.CanvasTexture(lc); limbGridTex.colorSpace = THREE.SRGBColorSpace; limbGridTex.wrapS = limbGridTex.wrapT = THREE.RepeatWrapping;
     const limbTile = new THREE.MeshPhysicalMaterial({ color: 0xf0f6ec, roughness: 0.25, metalness: 0.0, clearcoat: 0.78, clearcoatRoughness: 0.10, envMapIntensity: 1.15, emissive: 0x102526, emissiveIntensity: 0.12 });
-    limbTile.roughnessMap = mirrorlingGlazeTex; limbTile.bumpMap = mirrorlingGlazeTex; limbTile.bumpScale = 0.006;
+    limbTile.map = limbGridTex; limbTile.roughnessMap = mirrorlingGlazeTex; limbTile.bumpMap = limbGridTex; limbTile.bumpScale = 0.009;
     const limbGrout = new THREE.MeshStandardMaterial({ color: 0x102a2d, roughness: 0.82, metalness: 0.0 });
     const addLimbCylinder = (name: string, a: [number, number, number], b: [number, number, number], r1: number, r2: number, material: THREE.Material) => {
       const va = new THREE.Vector3(...a), vb = new THREE.Vector3(...b);
       const d = vb.clone().sub(va);
       const len = d.length();
-      const mesh = new THREE.Mesh(new THREE.CylinderGeometry(r2, r1, len, 28, 1), material);
+      const lm = (material as THREE.MeshPhysicalMaterial).clone();
+      if (lm.map) { lm.map = lm.map.clone(); lm.map.repeat.set(2, Math.max(2, len / 0.17)); }
+      const mesh = new THREE.Mesh(new THREE.CylinderGeometry(r2, r1, len, 28, 1), lm);
       mesh.name = mesh.userData.fx_entity = name;
       mesh.position.copy(va).add(vb).multiplyScalar(0.5);
       mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
@@ -189,7 +209,7 @@ export default class ThresholdZ3Pool extends Scene {
       const va = new THREE.Vector3(...a), vb = new THREE.Vector3(...b);
       const c = va.clone().lerp(vb, u);
       const angle = Math.atan2(vb.y - va.y, vb.x - va.x) + Math.PI / 2 + angleOffset;
-      return box(this.mirrorlingAsset.root, name, [width, 0.004, 0.007], [c.x, c.y, c.z + zoff], limbGrout, [0, 0, angle]);
+      return box(this.mirrorlingAsset.root, name, [width, 0.011, 0.010], [c.x, c.y, c.z + zoff], limbGrout, [0, 0, angle]);
     };
     for (const side of [-1, 1] as const) {
       const left = side < 0;
@@ -201,10 +221,10 @@ export default class ThresholdZ3Pool extends Scene {
       const hip: [number, number, number] = [side * 0.12, 1.35, 0];
       const knee: [number, number, number] = left ? [-0.22, 0.70, -0.08] : [0.25, 0.88, 0.10];
       const tip: [number, number, number] = left ? [-0.33, 0.03, -0.25] : [0.16, 0.03, 0.34];
-      addLimbCylinder(`z3_mirrorling_ceramic_upper_arm_${side}`, shoulder, elbow, 0.062, 0.046, limbTile);
-      addLimbCylinder(`z3_mirrorling_ceramic_lower_arm_${side}`, elbow, wrist, 0.046, 0.027, limbTile);
-      addLimbCylinder(`z3_mirrorling_ceramic_upper_leg_${side}`, hip, knee, 0.076, 0.055, limbTile);
-      addLimbCylinder(`z3_mirrorling_ceramic_lower_leg_${side}`, knee, tip, 0.055, 0.021, limbTile);
+      addLimbCylinder(`z3_mirrorling_ceramic_upper_arm_${side}`, shoulder, elbow, left ? 0.064 : 0.084, left ? 0.046 : 0.058, limbTile);
+      addLimbCylinder(`z3_mirrorling_ceramic_lower_arm_${side}`, elbow, wrist, left ? 0.043 : 0.055, left ? 0.026 : 0.032, limbTile);
+      addLimbCylinder(`z3_mirrorling_ceramic_upper_leg_${side}`, hip, knee, left ? 0.084 : 0.066, left ? 0.058 : 0.047, limbTile);
+      addLimbCylinder(`z3_mirrorling_ceramic_lower_leg_${side}`, knee, tip, left ? 0.060 : 0.044, left ? 0.022 : 0.016, limbTile);
       // grout now reads as shallow tile seams on the front glazed surface, never as hoops or cage rings.
       for (const u of [0.34, 0.68]) {
         addSurfaceGrout(`z3_mirrorling_upper_arm_surface_grout_${side}_${u}`, shoulder, elbow, u, 0.105);
@@ -223,6 +243,17 @@ export default class ThresholdZ3Pool extends Scene {
           const seed = ri * 17 + u * 31 + side * 5;
           addSurfaceGrout(`z3_mirrorling_${label}_glaze_crack_${side}_${u}`, a, b, u, 0.045 + hash(seed) * 0.055, zoff, (hash(seed + 2) - 0.5) * 1.1);
         }
+      });
+      // asymmetric ceramic joint masses interrupt the ballet-slender rod silhouette while
+      // remaining physically attached at elbow/knee/wrist intersections.
+      const jointMasses: Array<[number, number, number, number]> = left ? [
+        [-0.67, 1.25, 0.06, 0.074], [-0.22, 0.70, -0.08, 0.088], [-0.50, 0.52, 0.10, 0.048],
+      ] : [
+        [0.72, 2.18, 0.32, 0.082], [0.25, 0.88, 0.10, 0.070], [0.92, 2.02, 0.95, 0.050],
+      ];
+      jointMasses.forEach(([x, y, z, r], mi) => {
+        const nodule = sph(this.mirrorlingAsset.root, `z3_mirrorling_asymmetric_joint_mass_${side}_${mi}`, r, [x, y, z], limbTile, 14);
+        nodule.scale.set(1.25 - mi * 0.12, 0.78 + hash(mi + side) * 0.35, 0.82 + hash(mi * 3 + side) * 0.28);
       });
       // Replacement finger fans follow the rebuilt asymmetric wrists. They are tapered ceramic
       // slivers rather than the GLB's symmetric shop-mannequin fingers.
@@ -245,6 +276,18 @@ export default class ThresholdZ3Pool extends Scene {
     box(this.mirrorlingAsset.root, 'z3_mirrorling_spine_surface_grout', [0.0045, 0.66, 0.007], [0.012, 1.57, 0.128], limbGrout, [0, 0, -0.025]);
     box(this.mirrorlingAsset.root, 'z3_mirrorling_head_vertical_grout', [0.0035, 0.24, 0.006], [0.018, 2.3, 0.148], limbGrout, [0, 0, -0.04]);
     box(this.mirrorlingAsset.root, 'z3_mirrorling_head_hairline_crack', [0.003, 0.11, 0.006], [-0.045, 2.24, 0.149], limbGrout, [0, 0, 0.42]);
+    // eyeless but intentional face grammar: two asymmetric eye-like fracture slashes and a
+    // jagged vertical mouth crack, transformed with the head tilt so the arrangement reads at 3m.
+    const addFaceCrack = (name: string, pos: [number, number, number], size: [number, number, number], rz: number) => {
+      const c = box(this.mirrorlingAsset.root, name, size, pos, limbGrout, [0, 0, rz]);
+      c.position.sub(headPivot).applyQuaternion(headTurn).add(headPivot);
+      c.quaternion.premultiply(headTurn);
+    };
+    addFaceCrack('z3_mirrorling_face_eye_crack_l', [-0.052, 2.345, 0.162], [0.082, 0.018, 0.012], 0.34);
+    addFaceCrack('z3_mirrorling_face_eye_crack_r', [0.045, 2.305, 0.162], [0.058, 0.016, 0.012], -0.22);
+    addFaceCrack('z3_mirrorling_face_mouth_crack_a', [-0.012, 2.235, 0.163], [0.018, 0.082, 0.012], -0.18);
+    addFaceCrack('z3_mirrorling_face_mouth_crack_b', [0.010, 2.175, 0.163], [0.017, 0.070, 0.012], 0.24);
+    addFaceCrack('z3_mirrorling_face_mouth_crack_c', [-0.006, 2.125, 0.163], [0.016, 0.060, 0.012], -0.30);
     for (let i = 0; i < 20; i++) {
       const side = i % 2 ? 1 : -1;
       box(this.mirrorlingAsset.root, `z3_mirrorling_edge_chip_${i}`, [0.026 + hash(i) * 0.032, 0.012, 0.018], [side * (0.13 + hash(i + 2) * 0.18), 0.72 + hash(i + 3) * 1.62, 0.138], i % 3 ? limbTile : limbGrout, [0, 0, hash(i + 4) * 0.8]);
@@ -259,6 +302,19 @@ export default class ThresholdZ3Pool extends Scene {
     bitePts.forEach(([x, y, z, sz], i) => {
       box(this.mirrorlingAsset.root, `z3_mirrorling_missing_tile_bite_${i}`, [sz, 0.018 + hash(i) * 0.025, 0.022], [x, y, z], limbGrout, [0, 0, hash(i + 9) * 1.4]);
       if (i < 5) box(this.mirrorlingAsset.root, `z3_mirrorling_loose_tile_fragment_${i}`, [sz * 0.42, 0.012, 0.018], [x + 0.06 + hash(i) * 0.06, y - 0.06, z + 0.025], limbTile, [0, 0, hash(i + 12) * 1.8]);
+    });
+    // Crooked ceramic mass over the torso: thicker uneven volumes replace the elegant narrow
+    // capsule silhouette without becoming flat pasted plates.
+    const torsoCore = this.mirrorlingAsset.part('torso_core');
+    if (torsoCore) { torsoCore.scale.x *= 1.20; torsoCore.scale.z *= 1.10; torsoCore.scale.y *= 0.96; }
+    const torsoMasses: Array<[string, number, number, number, number, [number, number, number]]> = [
+      ['chest', 0.060, 1.70, 0.030, 0.158, [1.04, 1.15, 0.50]],
+      ['abdomen', -0.055, 1.43, 0.040, 0.138, [0.88, 1.12, 0.48]],
+      ['pelvis', 0.035, 1.17, 0.020, 0.122, [1.05, 0.88, 0.46]],
+    ];
+    torsoMasses.forEach(([label, x, y, z, r, sc]) => {
+      const mass = sph(this.mirrorlingAsset.root, `z3_mirrorling_crooked_torso_mass_${label}`, r, [x, y, z], limbTile, 20);
+      mass.scale.set(...sc);
     });
     this.mirrorlingAsset.root.visible = false;
     this.mirrorlingReflection.root.visible = false;
@@ -808,7 +864,7 @@ export default class ThresholdZ3Pool extends Scene {
     const stepU = clamp((t - 72.0) / 0.9, 0, 3.0);
     const stepIndex = Math.floor(stepU);
     const stepK = smooth(0.56, 0.86, stepU - stepIndex);
-    const advance = Math.min(3, stepIndex + stepK) * 0.68;
+    const advance = Math.min(3, stepIndex + stepK) * 0.78;
     const mz = -3.4 + advance;
     this.reflection.visible = false;
     this.mirrorling.visible = false;
@@ -820,7 +876,7 @@ export default class ThresholdZ3Pool extends Scene {
     const gaitPhase = stepU - stepIndex;
     const stepPulse = smooth(0.54, 0.7, gaitPhase) * (1 - smooth(0.78, 0.95, gaitPhase));
     this.mirrorlingAsset.root.visible = t > 72.0;
-    this.mirrorlingAsset.root.scale.set(0.94, 1.04, 0.94);
+    this.mirrorlingAsset.root.scale.set(1.08, 1.17, 1.08);
     this.mirrorlingAsset.root.position.set((stepIndex % 2 ? -0.025 : 0.025) * stepPulse, 0.45, mz);
     this.mirrorlingAsset.root.rotation.y = 0.38 + smooth(72.2, 74.8, t) * 0.28 + (stepIndex % 2 ? -0.045 : 0.045) * stepPulse;
     this.mirrorlingAsset.root.rotation.x = 0.20 + Math.sin(t * 0.53) * 0.022;
