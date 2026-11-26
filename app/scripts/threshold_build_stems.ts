@@ -787,7 +787,7 @@ wav('z7_cathedral_events.wav', stem(45.8,(t)=>{
    }
  }
  // overwhelming machine/glass/stone roar as rift widens, with slower pressure motion rather than a flat noise shelf
- if(at>=180&&at<186){const k=(at-180)/6;add((noise()*(.040+k*.060)+z7lp*(.065+k*.045)+Math.sin(at*Math.PI*2*(31+k*9))*(.012+k*.020))*(.58+.42*Math.sin(at*2.1)),0)}
+ if(at>=180&&at<186){const u=at-180,k=u/6;add((noise()*(.040+k*.060)+z7lp*(.065+k*.045)+Math.sin((31*u+.75*u*u)*Math.PI*2)*(.012+k*.020))*(.58+.42*Math.sin(at*2.1)),0)}
  // abrupt fall wind narrowing into warmer descent
  if(at>=186&&at<192){const u=at-186;const narrow=smoothstep(1.2,5,u);add(noise()*(.13-narrow*.075)+z7lp*(.04+narrow*.035),0)}
  // upward-passing machine/glass streaks during fall
