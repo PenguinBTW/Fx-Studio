@@ -411,7 +411,7 @@ export default class ThresholdZ7Cathedral extends Scene {
     this.s.add(this.replayMachines, this.replayPanels);
 
     // Same Tenant arm GLB and placement reference as Z0; no reinterpreted proxy arm.
-    this.tenantArmInst = await GLTFManager.instantiate(resolveAsset('tenant_arm', this.ctx.project ?? 'threshold').url, { castShadow: true, receiveShadow: true });
+    this.tenantArmInst = await GLTFManager.instantiate(resolveAsset('tenant_arm', 'threshold').url, { castShadow: true, receiveShadow: true });
     this.replayArm.add(this.tenantArmInst.root);
     const machineGlint = new THREE.PointLight(0x7fc9ff, 1.8, 3.0, 1.6);
     machineGlint.position.set(-0.18, 0.18, -0.95);

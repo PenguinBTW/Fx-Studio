@@ -18,8 +18,8 @@ const KEYS: PoseKey[] = [
   { t: 110.0, p: [0, 1.65, -5.7], yaw: 33, pitch: -2, fov: 70 },
   { t: 111.5, p: [0, 1.65, -7.2], yaw: 18, pitch: 0, fov: 72 },
   { t: 113.0, p: [0, 1.65, -10.4], yaw: -34, pitch: 1, fov: 72 },
-  { t: 114.5, p: [0.35, 1.65, -17.6], yaw: 108, pitch: -12, fov: 66 },
-  { t: 117.0, p: [0.35, 1.65, -19.0], yaw: 128, pitch: -15, fov: 62 },
+  { t: 114.5, p: [0.55, 1.65, -17.75], yaw: 86, pitch: -9, fov: 62 },
+  { t: 117.0, p: [0.55, 1.65, -18.9], yaw: 118, pitch: -12, fov: 62 },
   { t: 120.0, p: [0.35, 1.65, -19.0], yaw: 180, pitch: -13, fov: 66 },
   { t: 120.2, p: [0.35, 1.65, -19.0], yaw: 120, pitch: -7, fov: 68 },
   { t: 120.4, p: [0.35, 1.65, -19.0], yaw: 60, pitch: -3, fov: 68 },
@@ -130,10 +130,29 @@ export default class ThresholdZ5Motel extends Scene {
       g.fillStyle = '#c96a24';
       if (i % 2 === 0) g.fillRect(cx - spread - 1, y - h + 3, 2, 4);
     }
-    g.fillStyle = '#d9f0ee';
-    g.fillRect(cx - 1.5, 70, 3, 12);
-    g.fillStyle = '#030608';
-    g.fillRect(cx - 3.5, 61, 7, 10);
+    if (seed === 99) {
+      // Critical feed semantics: the viewer is the foreground silhouette and the Tenant
+      // is the impossible tall thin figure behind them. This is structural storytelling,
+      // not texture polish.
+      g.fillStyle = '#c8e2dc';
+      g.fillRect(cx - 10, 82, 20, 28);
+      g.fillStyle = '#111315';
+      g.fillRect(cx - 8, 76, 16, 12);
+      g.fillStyle = '#050607';
+      g.fillRect(cx + 19, 48, 7, 8);
+      g.fillRect(cx + 21, 56, 4, 38);
+      g.fillRect(cx + 14, 62, 4, 29);
+      g.fillRect(cx + 29, 62, 4, 29);
+      g.fillRect(cx + 18, 94, 4, 16);
+      g.fillRect(cx + 26, 94, 4, 16);
+      g.fillStyle = '#b9d9d7';
+      g.fillRect(cx + 19, 48, 7, 5);
+    } else {
+      g.fillStyle = '#d9f0ee';
+      g.fillRect(cx - 1.5, 70, 3, 12);
+      g.fillStyle = '#030608';
+      g.fillRect(cx - 3.5, 61, 7, 10);
+    }
     g.fillStyle = 'rgba(0,0,0,0.34)';
     for (let y = 0; y < 112; y += 4) g.fillRect(0, y, 160, 1);
     for (let i = 0; i < 90; i++) {
@@ -239,10 +258,10 @@ export default class ThresholdZ5Motel extends Scene {
     this.box(this.s, [0.75, 0.75, 0.55], [2.35, 0.38, -19.45], this.mat(0x3a2419, 0.6));
     this.cyl(this.s, 0.09, 0.12, 0.58, [2.35, 1.05, -19.45], brass, 10);
     this.cyl(this.s, 0.26, 0.18, 0.28, [2.35, 1.4, -19.45], orange, 16);
-    this.box(this.s, [1.0, 0.68, 0.64], [2.25, 0.85, -17.2], crtBody, [0, 0.85, 0]);
+    this.box(this.s, [1.16, 0.82, 0.64], [2.25, 0.85, -17.2], crtBody, [0, 0.85, 0]);
     const heroTvMat = this.cctvMaterial(99);
     this.tvScreens.push(heroTvMat);
-    this.box(this.s, [0.84, 0.55, 0.025], [1.95, 0.92, -17.55], heroTvMat, [0, Math.PI + 0.12, 0]);
+    this.box(this.s, [1.08, 0.7, 0.025], [1.93, 0.94, -17.55], heroTvMat, [0, Math.PI + 0.12, 0]);
     this.box(this.s, [0.08, 1.8, 1.1], [4.95, 1.1, -17.15], this.mat(0x381f2d, 0.9));
 
     // Window and rain-streaked neon vacancy sign at the corridor end.
@@ -285,16 +304,23 @@ export default class ThresholdZ5Motel extends Scene {
     this.cyl(this.s, 0.025, 0.025, 0.9, [-1.42, 0.45, -19.3], this.mat(0x1c1c20, 0.7), 8).rotation.z = 0.25;
 
     // Wet footprint decals leading to where the viewer stands.
-    const fpMat = this.mat(0x4f7c86, 0.08, 0.42, 0x183a42, 0.34);
+    const fpMat = this.mat(0x5f8d95, 0.08, 0.38, 0x183a42, 0.45);
     this.footprintMats.push(fpMat);
     for (let i = 0; i < 14; i++) {
       const x = 0.35 + (i % 2 ? 0.18 : -0.18);
       const z = -9.2 - i * 0.7;
       const yaw = 0.1 * (i % 2 ? 1 : -1);
-      const sole = this.sphere(this.s, 0.13, [x, 0.018, z], fpMat, [0.9, 0.055, 1.55]);
+      // Alternating wet foot shapes point back toward the viewer: long oval forefoot,
+      // separate smaller oval heel, and three small toe ovals at the viewer-facing end.
+      const sole = this.sphere(this.s, 0.125, [x, 0.018, z + 0.04], fpMat, [0.64, 0.045, 1.55]);
       sole.rotation.y = yaw;
-      const heel = this.sphere(this.s, 0.095, [x, 0.019, z + 0.2], fpMat, [0.9, 0.055, 1.0]);
+      const heel = this.sphere(this.s, 0.092, [x, 0.019, z - 0.18], fpMat, [0.74, 0.045, 0.85]);
       heel.rotation.y = yaw;
+      for (let toe = 0; toe < 3; toe++) {
+        const toeMesh = this.sphere(this.s, 0.031, [x + (toe - 1) * 0.052, 0.02, z + 0.24], fpMat, [0.9, 0.04, 1.25]);
+        toeMesh.rotation.y = yaw;
+        toeMesh.castShadow = false;
+      }
       sole.castShadow = false;
       heel.castShadow = false;
     }
@@ -315,23 +341,32 @@ export default class ThresholdZ5Motel extends Scene {
     const paper = this.mat(0xd8c69d, 0.82);
     const plasticRed = this.mat(0xa92624, 0.28);
     const chrome = this.mat(0x8c9296, 0.22, 0.8);
-    const glass = new THREE.MeshStandardMaterial({ color: 0x25333a, roughness: 0.18, metalness: 0.1, transparent: true, opacity: 0.62 });
+    const glass = new THREE.MeshStandardMaterial({ color: 0x25333a, roughness: 0.18, metalness: 0.1, transparent: true, opacity: 0.62, emissive: 0x102a30, emissiveIntensity: 0.28 });
     this.disposables.push(glass);
     // Lanky upper-body silhouette first: too-small tile head, thin neck, narrow vending ribcage,
     // long downward-hanging collage arms, and only a hint of legs disappearing into darkness.
+    const silhouette = this.mat(0x050607, 0.88, 0, 0x071116, 0.34);
+    this.box(this.tenant, [0.34, 1.08, 0.12], [0, 1.42, -0.08], silhouette);
+    this.box(this.tenant, [0.09, 1.22, 0.09], [-0.48, 1.25, -0.04], silhouette, [0, 0, 0.08]);
+    this.box(this.tenant, [0.09, 1.22, 0.09], [0.48, 1.25, -0.04], silhouette, [0, 0, -0.08]);
+    this.box(this.tenant, [0.12, 0.92, 0.1], [-0.18, 0.46, -0.06], silhouette);
+    this.box(this.tenant, [0.12, 0.92, 0.1], [0.18, 0.46, -0.06], silhouette);
     this.sphere(this.tenant, 0.18, [0, 2.48, 0.02], tile, [0.82, 1.08, 0.72]);
     this.box(this.tenant, [0.045, 0.16, 0.018], [0, 2.48, 0.145], this.mat(0x020303, 0.9));
     for (let i = 0; i < 5; i++) this.cyl(this.tenant, 0.052, 0.062, 0.16, [0, 2.2 - i * 0.12, 0], this.mat(0x5a342b, 0.9), 8);
     this.box(this.tenant, [0.58, 0.98, 0.3], [0, 1.43, 0], glass);
     for (let i = 0; i < 5; i++) this.box(this.tenant, [0.49, 0.032, 0.33], [0, 1.1 + i * 0.16, 0.01], chrome);
     this.box(this.tenant, [0.42, 0.28, 0.28], [0, 0.83, 0], paper, [0, 0, 0.12]);
-    for (let i = 0; i < 6; i++) this.cyl(this.tenant, 0.075, 0.085, 0.22, [-0.35 - i * 0.055, 1.78 - i * 0.18, 0.01], i % 2 ? plasticRed : this.mat(0xd1a62c, 0.3), 10).rotation.z = 0.45;
-    for (let i = 0; i < 5; i++) this.cyl(this.tenant, 0.023, 0.033, 0.44, [0.36 + i * 0.04, 1.76 - i * 0.19, 0.03 * i], chrome, 8).rotation.z = 0.35 + i * 0.12;
+    for (let i = 0; i < 6; i++) this.cyl(this.tenant, 0.075, 0.085, 0.22, [-0.46 - i * 0.012, 1.9 - i * 0.2, 0.01], i % 2 ? plasticRed : this.mat(0xd1a62c, 0.3), 10).rotation.z = 0.08;
+    for (let i = 0; i < 5; i++) this.cyl(this.tenant, 0.023, 0.033, 0.44, [0.46 + i * 0.012, 1.85 - i * 0.22, 0.03 * i], chrome, 8).rotation.z = -0.06;
     for (let i = 0; i < 5; i++) this.box(this.tenant, [0.032, 0.4, 0.065], [0.51 + i * 0.035, 0.86 - i * 0.025, 0.08], paper, [0, 0, -0.12 - i * 0.08]);
     for (const side of [-1, 1]) {
       this.box(this.tenant, [0.13, 0.72, 0.16], [side * 0.18, 0.38, -0.02], side < 0 ? tile : paper, [0.04, 0, side * 0.04]);
     }
     this.tenant.position.set(0.05, 0, -21.6);
+    const tenantRim = new THREE.PointLight(0x9adbe4, 1.35, 4.2, 1.7);
+    tenantRim.position.set(-0.45, 2.25, -20.85);
+    this.tenant.add(tenantRim);
     this.tenant.visible = false;
     this.s.add(this.tenant);
 

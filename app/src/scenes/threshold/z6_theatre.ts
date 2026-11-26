@@ -188,8 +188,8 @@ export default class ThresholdZ6Theatre extends Scene {
     // spread across the stage simultaneously; each 1.5s puppet scene gets the full proscenium.
     const makeRecap = () => {
       const g = new THREE.Group();
-      g.scale.setScalar(1.35);
-      g.position.set(0, -0.15, 2.3);
+      g.scale.setScalar(1.75);
+      g.position.set(0, -0.32, 4.7);
       g.visible = false;
       this.s.add(g);
       this.recapScenes.push(g);
@@ -199,20 +199,36 @@ export default class ThresholdZ6Theatre extends Scene {
     this.box(officeRecap, [1.45, 0.95, 0.08], [0, 1.25, -6.28], beige);
     this.box(officeRecap, [1.15, 0.24, 0.52], [0, 0.78, -5.82], this.mat(0x6b5138, 0.8));
     this.box(officeRecap, [0.24, 0.58, 0.16], [-0.28, 1.02, -5.55], paper);
+    this.sphere(officeRecap, 0.15, [-0.28, 1.42, -5.52], paper, [0.9, 1.1, 0.85]);
+    this.box(officeRecap, [0.08, 0.48, 0.08], [-0.5, 1.02, -5.5], paper, [0, 0, -0.35]);
+    this.box(officeRecap, [0.08, 0.48, 0.08], [-0.06, 1.02, -5.5], paper, [0, 0, 0.35]);
     this.box(officeRecap, [0.28, 0.045, 0.045], [0.02, 1.05, -5.42], this.mat(0xfff0b0, 0.35, 0, 0xffe38a, 1.8));
     const pitRecap = makeRecap();
     this.box(pitRecap, [1.55, 0.36, 0.82], [0, 0.68, -5.9], blue);
     for (let i = 0; i < 11; i++) this.sphere(pitRecap, 0.11, [-0.62 + (i % 6) * 0.25, 0.91 + Math.floor(i / 6) * 0.12, -5.72 - (i % 2) * 0.25], i % 2 ? red : yellow);
     this.box(pitRecap, [0.42, 0.24, 0.08], [0.25, 1.12, -5.5], this.mat(0x151719, 0.8));
+    this.sphere(pitRecap, 0.15, [0.25, 1.36, -5.48], red, [0.9, 1.05, 0.85]);
+    this.box(pitRecap, [0.08, 0.45, 0.08], [0.02, 1.08, -5.46], red, [0, 0, -0.6]);
+    this.box(pitRecap, [0.08, 0.45, 0.08], [0.48, 1.08, -5.46], red, [0, 0, 0.6]);
     const poolRecap = makeRecap();
     this.box(poolRecap, [1.6, 0.08, 0.9], [0, 0.72, -5.85], aqua);
     this.box(poolRecap, [1.6, 0.86, 0.08], [0, 1.16, -6.28], this.mat(0xb9d9d7, 0.8));
     this.box(poolRecap, [0.18, 0.58, 0.14], [0.42, 1.02, -5.52], this.mat(0x26343a, 0.9));
+    this.sphere(poolRecap, 0.14, [0.42, 1.42, -5.52], this.mat(0x26343a, 0.9), [0.85, 1.1, 0.8]);
+    this.box(poolRecap, [0.07, 0.52, 0.07], [0.2, 1.08, -5.5], this.mat(0x26343a, 0.9), [0, 0, -0.55]);
+    this.box(poolRecap, [0.07, 0.52, 0.07], [0.64, 1.08, -5.5], this.mat(0x26343a, 0.9), [0, 0, 0.55]);
     this.box(poolRecap, [0.72, 0.055, 0.05], [0, 1.48, -6.2], aqua);
     const bookRecap = makeRecap();
     this.box(bookRecap, [0.95, 1.2, 0.08], [-0.36, 1.22, -5.9], paper, [0, -0.34, 0]);
     this.box(bookRecap, [0.95, 1.2, 0.08], [0.36, 1.22, -5.9], paper, [0, 0.34, 0]);
     this.box(bookRecap, [0.18, 0.55, 0.12], [0, 0.98, -5.45], this.mat(0x2a2025, 0.92));
+    this.sphere(bookRecap, 0.14, [0, 1.38, -5.45], this.mat(0x2a2025, 0.92), [0.85, 1.1, 0.8]);
+    this.box(bookRecap, [0.07, 0.46, 0.07], [-0.22, 1.03, -5.43], this.mat(0x2a2025, 0.92), [0, 0, -0.45]);
+    this.box(bookRecap, [0.07, 0.46, 0.07], [0.22, 1.03, -5.43], this.mat(0x2a2025, 0.92), [0, 0, 0.45]);
+
+    const stageActionLight = new THREE.PointLight(0xffc37a, 2.8, 10, 1.45);
+    stageActionLight.position.set(0, 3.2, -3.9);
+    this.s.add(stageActionLight);
 
     // Stage steps make the follow route physically readable before any dressing/polish.
     for (let i = 0; i < 4; i++) this.box(this.s, [1.05, 0.11, 0.38], [0.9, 0.06 + i * 0.11, -3.7 - i * 0.34], wood);

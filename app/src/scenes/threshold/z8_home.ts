@@ -220,22 +220,24 @@ export default class ThresholdZ8Home extends Scene {
     this.box(this.s, [0.17, 0.52, 0.32], [1.25, 1.38, -5.85], beige);
     for (let i = 0; i < 12; i++) this.box(this.s, [0.025, 0.035, 0.035], [1.17, 1.24 + Math.floor(i / 3) * 0.055, -5.94 + (i % 3) * 0.055], black);
     const receiverMat = this.mat(0xb29b73, 0.5, 0, 0x6b5638, 0.24);
-    this.receiver = this.box(this.s, [0.09, 0.065, 0.13], [1.13, 1.61, -5.85], receiverMat, [0, 0, 0.08]);
+    this.receiver = this.box(this.s, [0.052, 0.04, 0.13], [1.16, 1.61, -5.85], receiverMat, [0, 0, 0.08]);
     this.receiverHome.copy(this.receiver.position);
-    this.box(this.receiver, [0.12, 0.1, 0.065], [0, 0.003, -0.095], receiverMat);
-    this.box(this.receiver, [0.12, 0.1, 0.065], [0, 0.003, 0.095], receiverMat);
+    const capA = this.cyl(this.receiver, 0.047, 0.052, 0.052, [0, 0.002, -0.092], receiverMat, 12);
+    capA.rotation.x = Math.PI / 2;
+    const capB = this.cyl(this.receiver, 0.047, 0.052, 0.052, [0, 0.002, 0.092], receiverMat, 12);
+    capB.rotation.x = Math.PI / 2;
     for (let i = 0; i < 8; i++) this.cyl(this.s, 0.012, 0.012, 0.08, [1.16, 1.3 - i * 0.045, -5.68 + Math.sin(i * 1.7) * 0.035], black, 6);
 
     // Office loop beyond the door: mustard carpet, beige partitions, fluorescent ceiling, desk phone ahead.
     const mustard = this.mat(0x8a7a55, 0.82);
-    const officeWall = this.mat(0xc9b26a, 0.82);
-    const ceiling = this.mat(0xd8d2be, 0.78);
+    const officeWall = this.mat(0xaec2a4, 0.82);
+    const ceiling = this.mat(0xe5ead8, 0.78);
     this.box(this.s, [8.8, 0.08, 3.2], [5.6, -0.04, -6.8], mustard);
     this.box(this.s, [8.8, 2.7, 0.1], [5.6, 1.35, -8.45], officeWall);
     this.box(this.s, [8.8, 2.7, 0.1], [5.6, 1.35, -5.15], officeWall);
     this.box(this.s, [8.8, 0.1, 3.2], [5.6, 2.7, -6.8], ceiling);
     for (let i = 0; i < 5; i++) {
-      const tm = this.mat(0xd8ffd0, 0.35, 0, 0xc9ffd2, 1.4);
+      const tm = this.mat(0xd8ffd0, 0.35, 0, 0xc9ffd2, 2.2);
       this.officeTubeMats.push(tm);
       this.box(this.s, [0.8, 0.03, 0.36], [2.7 + i * 1.35, 2.64, -6.8], tm);
     }
@@ -244,7 +246,7 @@ export default class ThresholdZ8Home extends Scene {
     this.box(this.s, [0.14, 0.1, 0.42], [7.15, 1.0, -6.8], beige);
     for (let i = 0; i < 4; i++) this.box(this.s, [0.08, 1.45, 1.1], [3.1 + i * 1.2, 0.73, -5.45], officeWall, [0, 0.12 * (i % 2 ? 1 : -1), 0]);
 
-    const officeFluor = new THREE.PointLight(0xd8ffd0, 2.4, 8.5, 1.35);
+    const officeFluor = new THREE.PointLight(0xc9ffd2, 3.4, 9.5, 1.35);
     officeFluor.position.set(3.8, 2.25, -6.8);
     this.s.add(officeFluor);
 
@@ -269,7 +271,8 @@ export default class ThresholdZ8Home extends Scene {
     this.receiver.position.copy(this.receiverHome).add(new THREE.Vector3(-0.01 - lift * 0.065, unhook * 0.075 - drop * 0.14, lift * 0.025));
     this.receiver.rotation.z = 0.08 + lift * (0.32 + 0.08 * Math.sin((t - 210) * 5));
     this.receiver.rotation.x = lift * 0.12 * Math.sin((t - 210) * 4);
-    this.receiver.scale.setScalar(ring);
+    // Ringing is vibration, not object growth; the handset must stay wall-phone scale.
+    this.receiver.scale.setScalar(1);
 
     // Door handle turns, then the front door opens onto the office loop.
     this.handle.rotation.y = smooth((t - 214) / 2.0) * 0.9;
@@ -277,7 +280,7 @@ export default class ThresholdZ8Home extends Scene {
 
     // Warm lamp is deliberately shadowless; its glow is steady and wrong.
     this.lampGlow.emissiveIntensity = 2.2 + 0.15 * Math.sin(t * 2.1);
-    this.officeTubeMats.forEach((m, i) => { m.emissiveIntensity = 1.1 + (i === 2 ? 0.5 * hash(Math.floor(t * 7) + i) : 0.12 * hash(Math.floor(t * 3) + i)); });
+    this.officeTubeMats.forEach((m, i) => { m.emissiveIntensity = 1.65 + (i === 2 ? 0.5 * hash(Math.floor(t * 7) + i) : 0.12 * hash(Math.floor(t * 3) + i)); });
 
     // Shared beam adapter: weak 25% battery in daylight, with the low-battery stutter.
     const threat = t >= 206 && t < 218 ? 0.55 : 0.1;
