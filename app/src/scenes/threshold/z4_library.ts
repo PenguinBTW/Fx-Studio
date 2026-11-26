@@ -217,6 +217,13 @@ export default class ThresholdZ4Library extends Scene {
       this.s.add(moth); this.moths.push(moth); this.mothWings.push(wl, wr);
     }
 
+    // pre-reveal darkness anchor at 93.5: a dim fallen lantern and close paper silhouette keep the frame spatially readable.
+    const lanternMat = mat(0xffc27a, 0.38, 0, 0xff9d45, 0.85);
+    cyl(this.s, 'z4_fallen_lantern_body', 0.055, 0.12, [-0.62, 0.10, 6.95], lanternMat, [Math.PI / 2, 0, 0.3], 16);
+    box(this.s, 'z4_fallen_lantern_handle', [0.10, 0.012, 0.018], [-0.62, 0.18, 6.95], brass, [0, 0, 0.3]);
+    plane(this.s, 'z4_nearby_page_silhouette', 0.24, 0.34, [-0.42, 0.035, 6.65], paper2, [-Math.PI / 2, 0, -0.35]);
+    const fallenLight = new THREE.PointLight(0xffa45e, 0.55, 3.2, 2); fallenLight.position.set(-0.62, 0.28, 6.95); this.s.add(fallenLight);
+
     // folded phone on lectern
     box(this.s, 'z4_lectern', [0.55, 1.0, 0.45], [0.8, 0.5, 7.0], wood, [0, -0.25, 0]);
     this.phone = new THREE.Group(); this.phone.position.set(0.8, 1.08, 7.0); this.phone.rotation.y = -0.25; this.s.add(this.phone);
