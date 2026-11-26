@@ -16,8 +16,8 @@ const KEYS: PoseKey[] = [
   { t: 111.5, p: [0, 1.65, -7.2], yaw: 18, pitch: 0, fov: 72 },
   { t: 113.0, p: [0, 1.65, -9.4], yaw: -34, pitch: 1, fov: 72 },
   { t: 114.5, p: [0, 1.65, -12.7], yaw: 18, pitch: 0, fov: 66 },
-  { t: 117.0, p: [0, 1.65, -14.2], yaw: 31, pitch: 0, fov: 62 },
-  { t: 120.0, p: [0, 1.65, -14.2], yaw: 211, pitch: 1, fov: 66 },
+  { t: 117.0, p: [0, 1.65, -14.2], yaw: 31, pitch: -10, fov: 62 },
+  { t: 120.0, p: [0, 1.65, -14.2], yaw: 211, pitch: -15, fov: 66 },
   { t: 120.6, p: [0, 1.65, -14.2], yaw: 4, pitch: 0, fov: 68 },
   { t: 121.5, p: [0, 1.65, -14.2], yaw: 0, pitch: 0, fov: 70 },
   { t: 122.4, p: [1.6, 1.25, -16.6], yaw: -75, pitch: -5, fov: 70 },
@@ -207,7 +207,7 @@ export default class ThresholdZ5Motel extends Scene {
     this.cyl(this.s, 0.025, 0.025, 0.9, [-1.42, 0.45, -19.3], this.mat(0x1c1c20, 0.7), 8).rotation.z = 0.25;
 
     // Wet footprint decals leading to where the viewer stands.
-    const fpMat = this.mat(0x1b2b32, 0.12, 0.25, 0x071014, 0.08);
+    const fpMat = this.mat(0x243942, 0.1, 0.32, 0x0b1a20, 0.18);
     this.footprintMats.push(fpMat);
     for (let i = 0; i < 10; i++) {
       const fp = this.box(this.s, [0.2, 0.006, 0.42], [(i % 2 ? 0.18 : -0.18), 0.025, -8.5 - i * 0.62], fpMat, [0, 0.08 * (i % 2 ? 1 : -1), 0]);

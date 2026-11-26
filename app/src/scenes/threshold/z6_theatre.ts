@@ -120,6 +120,13 @@ export default class ThresholdZ6Theatre extends Scene {
     this.box(this.s, [9.5, 4.2, 0.12], [0, 2.1, 5.9], feltDark);
     this.box(this.s, [8.0, 0.42, 4.6], [0, 0.21, -6.7], stageFloor);
     this.box(this.s, [8.2, 0.16, 0.35], [0, 0.55, -4.45], wood);
+    for (let i = 0; i < 5; i++) {
+      const x = -2.6 + i * 1.3;
+      this.box(this.s, [0.28, 0.08, 0.12], [x, 0.65, -4.55], warm, [0.25, 0, 0]);
+      const foot = new THREE.PointLight(0xffa65a, 0.55, 4.5, 1.7);
+      foot.position.set(x, 0.9, -4.8);
+      this.s.add(foot);
+    }
 
     // Audience seats, 12 rows hinted through 6 visible blockout rows.
     for (let row = 0; row < 6; row++) {
