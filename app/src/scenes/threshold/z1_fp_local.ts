@@ -105,7 +105,7 @@ export function updateFlashlight(light: THREE.SpotLight, target: THREE.Object3D,
     const active = hash(cell) < flicker;
     f = active ? 0.15 + 0.5 * hash(cell + 9) : 1;
   }
-  light.intensity = 70 * battery * f;
+  light.intensity = 24 * battery * f;
 }
 
 export function drawTextOverlay(layer: { clear(): void; ctx: CanvasRenderingContext2D; upload(): THREE.Texture }, draw: (c: CanvasRenderingContext2D) => void) {

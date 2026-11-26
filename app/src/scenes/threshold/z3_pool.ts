@@ -120,6 +120,7 @@ export default class ThresholdZ3Pool extends Scene {
     }
     // reflection copy, not exact hierarchy but readable mirrored double
     this.reflection = this.mirrorling.clone(true); this.reflection.scale.y = -1; this.reflection.position.y = 0.45; this.reflection.visible = false; this.s.add(this.reflection);
+    this.reflection.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) { const mm = (m.material as THREE.MeshStandardMaterial).clone(); mm.emissive = new THREE.Color(0x2e8791); mm.emissiveIntensity = 0.45; m.material = mm; } });
 
     // huge Tenant silhouette far underwater
     this.tenant = box(this.s, 'z3_tenant_underwater', [1.2, 4.8, 0.5], [0, -1.8, -10], basic(0x02080a, 0.65));
@@ -145,7 +146,7 @@ export default class ThresholdZ3Pool extends Scene {
     this.reflection.visible = reflVisible;
     const advance = smooth(73.0, 75.0, t) * 3.2;
     const mz = -8 + advance;
-    this.reflection.position.set(Math.sin(t * 0.7) * 0.03, 0.45, mz - 0.35);
+    this.reflection.position.set(Math.sin(t * 0.7) * 0.03, 1.18, mz - 0.35);
     this.mirrorling.visible = t > 74.2;
     this.mirrorling.position.set(0, 0.45, mz);
     // arms copy laggingly; chrome figure reads as human silhouette even in grey-box

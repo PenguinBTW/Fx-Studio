@@ -13,9 +13,9 @@ const KEYS: CamKey[] = [
   { t: 44.5, pos: [1.0, 1.65, 4.55], look: [0, 0.75, 2.4], fov: 74, gait: 'hold' },
   { t: 47.5, pos: [1.0, 1.65, 4.55], look: [0.1, 0.85, 2.4], fov: 74, gait: 'hold' },
   { t: 49.5, pos: [1.0, 1.65, 4.55], look: [3.2, 0.72, 2.4], fov: 74, gait: 'hold' },
-  { t: 52.0, pos: [-3.8, 1.38, 5.3], look: [-5, 1.05, 9.8], fov: 76, gait: 'creep' },
-  { t: 53.5, pos: [-5, 1.16, 6.3], look: [-5, 1.0, 10.8], fov: 76, gait: 'creep' },
-  { t: 55, pos: [-5, 1.05, 8.9], look: [-5, 1.05, 11.5], fov: 78, gait: 'creep' },
+  { t: 52.0, pos: [-4.9, 0.82, 5.35], look: [-5, 0.78, 10.6], fov: 76, gait: 'creep' },
+  { t: 53.5, pos: [-5, 0.78, 6.3], look: [-5, 0.75, 10.8], fov: 76, gait: 'creep' },
+  { t: 55, pos: [-5, 0.74, 8.9], look: [-5, 0.78, 11.5], fov: 78, gait: 'creep' },
 ];
 
 export default class ThresholdZ2Playroom extends Scene {
@@ -109,6 +109,9 @@ export default class ThresholdZ2Playroom extends Scene {
     }
     for (let i = 0; i < 7; i++) box(this.s, `z2_step_block_${i}`, [0.7, 0.25, 0.7], [3.1 + (i % 2) * 0.8, 0.13 + i * 0.11, 3.8 - i * 0.55], mats[i % mats.length]!);
     // tube tunnel ribs along z
+    const shellMat = mat(0x255dcc, 0.32); shellMat.side = THREE.BackSide;
+    const shell = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.44, 6.4, 32, 1, true), shellMat);
+    shell.position.set(-5, 0.82, 8.35); shell.rotation.x = Math.PI / 2; shell.name = 'z2_tunnel_shell'; shell.userData.fx_entity = shell.name; this.s.add(shell);
     for (let i = 0; i < 16; i++) {
       const rib = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.035, 8, 28), blue);
       rib.position.set(-5, 0.82, 5.6 + i * 0.38); rib.rotation.x = Math.PI / 2; rib.castShadow = rib.receiveShadow = true;
@@ -164,7 +167,7 @@ export default class ThresholdZ2Playroom extends Scene {
     }
 
     // tall Tenant glimpse silhouette at tunnel end
-    this.tenant = box(this.s, 'z2_tenant_glimpse', [0.55, 3.8, 0.35], [-5, 1.9, 10.8], basic(0x070707, 0.82));
+    this.tenant = box(this.s, 'z2_tenant_glimpse', [0.65, 2.7, 0.35], [-5, 1.35, 10.45], basic(0x070707, 1));
     this.tenant.visible = false;
   }
 

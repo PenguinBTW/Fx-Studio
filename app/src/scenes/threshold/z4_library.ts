@@ -158,8 +158,8 @@ export default class ThresholdZ4Library extends Scene {
     this.faceMouth.scale.x = 0.2 + smooth(95.0, 96.0, t) * 1.2;
     this.archivistArms.forEach((a, i) => { a.scale.x = 0.5 + reveal * (0.9 + (i % 5) * 0.08); });
     // canyon closes like a book after 99
-    const close = smooth(99.0, 103.7, t);
-    const closeCurve = close * close;
+    const close = smooth(97.0, 103.7, t);
+    const closeCurve = close;
     this.leftStacks.forEach((g) => { g.position.x = -2.45 + closeCurve * 1.45; g.rotation.y = closeCurve * 0.18; });
     this.rightStacks.forEach((g) => { g.position.x = 2.45 - closeCurve * 1.45; g.rotation.y = -closeCurve * 0.18; });
     this.gapGlow.emissiveIntensity = 4 + smooth(99, 104, t) * 7;
