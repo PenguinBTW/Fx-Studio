@@ -49,33 +49,37 @@ const BODY: Record<ThresholdTransitionMode, string> = {
     fragColor = vec4(c, 1.0);`,
   tunnel: `
     vec2 q = (vUv - 0.5) * vec2(1.7778, 1.0);
-    float r = length(q);
     vec3 ca = texture(texA, vUv).rgb;
-    vec3 cb = texture(texB, vUv).rgb;
-    // Material morph rather than a ghosted dissolve: the outgoing playroom surface
-    // ceramicizes into pool tile in a ragged expanding shell, then the incoming pool
-    // is revealed behind the shell's hard leading edge.
-    float openRadius = mix(-0.18, 1.28, smoothstep(0.02, 0.98, u));
-    float rag = (fbm(vUv * vec2(7.0, 5.0) + vec2(u * 0.27, -u * 0.18), 4) - 0.5) * 0.115;
-    float rn = r + rag;
-    float inside = 1.0 - smoothstep(openRadius, openRadius + 0.014, rn);
-    float morphK = mix(1.0, smoothstep(openRadius, openRadius + 0.26, rn), smoothstep(0.02, 0.12, u));
-    vec2 tileUv = q * vec2(8.0, 10.0) + vec2(0.0, u * 0.32);
-    vec2 cell = floor(tileUv);
-    vec2 cellUv = fract(tileUv);
-    float edgeDist = min(min(cellUv.x, 1.0 - cellUv.x), min(cellUv.y, 1.0 - cellUv.y));
-    float groutLine = 1.0 - smoothstep(0.026, 0.055, edgeDist);
-    float lum = dot(ca, vec3(0.2126, 0.7152, 0.0722));
-    float shade = hash12(cell) * 0.24 + lum * 0.58;
-    vec3 tileCol = mix(vec3(0.010, 0.040, 0.052), vec3(0.032, 0.205, 0.245), shade);
-    vec3 groutCol = vec3(0.006, 0.015, 0.018);
-    vec3 tile = mix(tileCol, groutCol, groutLine);
-    float caustic = pow(0.5 + 0.5 * sin((q.x * 5.2 + q.y * 8.4 + u * 2.8) * TAU), 3.0) * 0.11;
-    tile += vec3(0.015, 0.11, 0.13) * caustic;
-    vec3 morphedA = mix(tile, ca, morphK);
-    vec3 c = mix(morphedA, cb, inside);
-    float lip = (1.0 - smoothstep(0.0, 0.026, abs(rn - openRadius))) * smoothstep(0.02, 0.12, u) * (1.0 - smoothstep(0.88, 1.0, u));
-    c = mix(c, groutCol * 1.8, lip * 0.62);
+    // Material transformation only: unmelted playroom ahead of the front,
+    // pool behind it, and ca-derived plastic fragments/foam after the front.
+    // The two scene textures are never blended at half alpha.
+    float n0 = fbm(vUv * vec2(5.0, 7.0) + vec2(0.0, u * 0.31), 5);
+    float front = mix(-0.22, 1.24, smoothstep(0.02, 0.98, u));
+    float edgeNoise = (n0 - 0.5) * 0.18;
+    float x = vUv.x + edgeNoise;
+    float behind = 1.0 - smoothstep(front - 0.012, front + 0.012, x);
+    float nearFront = 1.0 - smoothstep(0.0, 0.24, abs(x - front));
+    vec2 flow = vec2(0.0, nearFront * nearFront * (0.09 + 0.07 * fbm(vUv * 9.0 + u, 3)));
+    vec3 cb = texture(texB, vUv + flow * (1.0 - behind)).rgb;
+    vec3 ahead = ca;
+    float stretch = nearFront * smoothstep(front, front + 0.22, x);
+    vec2 meltUv = vUv + vec2((fbm(vUv * 16.0 + u, 3) - 0.5) * 0.025 * stretch, -0.16 * stretch * stretch);
+    vec3 melted = texture(texA, meltUv).rgb;
+    float lum = dot(melted, vec3(0.2126, 0.7152, 0.0722));
+    vec3 hotPlastic = mix(melted, vec3(0.22, 0.11, 0.012) + melted * vec3(0.35, 0.22, 0.06), sat(stretch * 1.4));
+    vec3 wetPlastic = mix(hotPlastic, vec3(0.015, 0.16, 0.19) * (0.35 + lum), smoothstep(0.48, 1.0, stretch));
+    ahead = mix(ca, wetPlastic, smoothstep(0.0, 0.24, stretch));
+    // Torn plastic ribbons persist briefly behind the front, but as opaque fragments.
+    float fragN = fbm(vUv * vec2(19.0, 8.0) + vec2(u * 0.8, 0.0), 4);
+    float strip = smoothstep(0.56, 0.74, fragN) * (1.0 - smoothstep(front + 0.05, front + 0.31, x));
+    strip *= smoothstep(0.08, 0.24, u) * (1.0 - smoothstep(0.78, 0.98, u));
+    vec3 rubber = vec3(0.20, 0.105, 0.018) * (0.55 + lum * 0.8);
+    vec3 pool = cb + vec3(0.0, 0.025, 0.032) * pow(0.5 + 0.5 * sin((q.x * 6.0 + q.y * 10.0 + u * 4.0) * TAU), 3.0);
+    vec3 behindC = mix(pool, rubber, strip);
+    // The leading lip is glossy melted plastic; no incoming imagery lives inside it.
+    float lip = (1.0 - smoothstep(0.0, 0.022, abs(x - front))) * smoothstep(0.02, 0.10, u) * (1.0 - smoothstep(0.90, 1.0, u));
+    vec3 c = mix(ahead, behindC, behind);
+    c = mix(c, vec3(0.34, 0.18, 0.025) * (0.55 + lum), lip * 0.72);
     fragColor = vec4(c, 1.0);`,
   ink: `
     vec3 ca = texture(texA, vUv).rgb;
