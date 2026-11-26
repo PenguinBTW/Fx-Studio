@@ -29,7 +29,7 @@ add(sphere('abdomen_glow', 0.012, (0, -0.002, -0.03), GLOW, scale=(0.78, 0.58, 1
 
 # Felt wings: flattened ellipsoids with stitched edge cords. Rest pose is half-open.
 for side in (-1, 1):
-    wing = add(sphere(f'wing_{side}', 0.025, (side * 0.026, 0.002, 0.006), FELT_EDGE, scale=(1.55, 0.12, 0.72), segments=32, rings=12), f'wing_{side}')
+    wing = add(sphere(f'wing_{side}', 0.025, (side * 0.026, 0.002, 0.006), FELT_EDGE, scale=(1.55, 0.12, 0.72), segments=32, rings=12), 'wing_l' if side < 0 else 'wing_r')
     wing.rotation_euler[1] = math.radians(side * 22)
     wing.rotation_euler[2] = math.radians(side * -12)
     seam_pts = [
