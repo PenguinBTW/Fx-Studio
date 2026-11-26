@@ -8,6 +8,7 @@ import { thresholdPost } from './sensor_post';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import beigePhoneUrl from './assets/beige_phone/model.glb?url';
 import z8HomeKitUrl from './assets/z8_home_kit/model.glb?url';
+import { buildOfficeLoopSet, type OfficeLoopSet } from './office_loop_set';
 
 const clamp = (x: number, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -59,6 +60,7 @@ export default class ThresholdZ8Home extends Scene {
   private handle!: THREE.Mesh;
   private phoneInst?: GLTFInstance;
   private homeKit?: GLTFInstance;
+  private officeLoop?: OfficeLoopSet;
   private receiver?: THREE.Object3D;
   private receiverHome = new THREE.Vector3();
   private lampGlow!: THREE.MeshStandardMaterial;
@@ -273,28 +275,14 @@ export default class ThresholdZ8Home extends Scene {
     this.receiver = this.phoneInst.parts.get('receiver');
     if (this.receiver) this.receiverHome.copy(this.receiver.position);
 
-    // Office loop beyond the door: mustard carpet, beige partitions, fluorescent ceiling, desk phone ahead.
-    const beige = this.mat(0xd0c19d, 0.45);
-    const mustard = this.mat(0x8a7a55, 0.82);
-    const officeWall = this.mat(0xaec2a4, 0.82);
-    const ceiling = this.mat(0xe5ead8, 0.78);
-    this.box(this.s, [8.8, 0.08, 3.2], [5.6, -0.04, -6.8], mustard);
-    this.box(this.s, [8.8, 2.7, 0.1], [5.6, 1.35, -8.45], officeWall);
-    this.box(this.s, [8.8, 2.7, 0.1], [5.6, 1.35, -5.15], officeWall);
-    this.box(this.s, [8.8, 0.1, 3.2], [5.6, 2.7, -6.8], ceiling);
-    for (let i = 0; i < 5; i++) {
-      const tm = this.mat(0xd8ffd0, 0.35, 0, 0xc9ffd2, 2.2);
-      this.officeTubeMats.push(tm);
-      this.box(this.s, [0.8, 0.03, 0.36], [2.7 + i * 1.35, 2.64, -6.8], tm);
-    }
-    this.box(this.s, [1.3, 0.75, 0.65], [7.25, 0.38, -6.85], this.mat(0x5b5348, 0.5));
-    this.box(this.s, [0.38, 0.2, 0.28], [7.18, 0.86, -6.8], beige);
-    this.box(this.s, [0.14, 0.1, 0.42], [7.15, 1.0, -6.8], beige);
-    for (let i = 0; i < 4; i++) this.box(this.s, [0.08, 1.45, 1.1], [3.1 + i * 1.2, 0.73, -5.45], officeWall, [0, 0.12 * (i % 2 ? 1 : -1), 0]);
-
-    const officeFluor = new THREE.PointLight(0xc9ffd2, 3.4, 9.5, 1.35);
-    officeFluor.position.set(3.8, 2.25, -6.8);
-    this.s.add(officeFluor);
+    // Office loop beyond the door: the same production Z1 opening set, rotated so its
+    // forward axis runs through the right-hand front door. Crossing the threshold therefore
+    // reveals the exact cubicle landscape/hero desk composition rather than a corridor proxy.
+    this.officeLoop = await buildOfficeLoopSet();
+    this.officeLoop.root.position.set(1.38, 0, -6.8);
+    this.officeLoop.root.rotation.y = -Math.PI / 2;
+    this.s.add(this.officeLoop.root);
+    this.officeTubeMats = this.officeLoop.tubeMats;
 
     this.s.add(this.flash.group);
 
@@ -348,6 +336,9 @@ export default class ThresholdZ8Home extends Scene {
   }
 
   override dispose() {
+    this.officeLoop?.phoneInst.dispose();
+    this.officeLoop?.officeKit.dispose();
+    this.officeLoop?.propPack.dispose();
     this.flash.dispose();
     for (const d of this.disposables) d.dispose();
   }
