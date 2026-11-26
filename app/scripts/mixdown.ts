@@ -491,13 +491,21 @@ export async function mixdown(o: MixOptions): Promise<MixReport> {
       writeWav(preWav, pre, sr, 32);
       const p1 = await run(['ffmpeg', '-hide_banner', '-nostats', '-i', preWav, '-af', `loudnorm=I=${I}:TP=${tp}:LRA=11:print_format=json`, '-f', 'null', '-']);
       const ms = parseLoudnormJson(p1.err);
-      report.loudnorm = ms;
-      const ln = `loudnorm=I=${I}:TP=${tp}:LRA=11:measured_I=${ms.input_i}:measured_TP=${ms.input_tp}:measured_LRA=${ms.input_lra}:measured_thresh=${ms.input_thresh}:offset=${ms.target_offset}:linear=true`;
-      const normWav = path.join(tmp, 'norm.wav');
-      await run(['ffmpeg', '-v', 'error', '-y', '-i', preWav, '-af', `${ln},aformat=channel_layouts=stereo,aresample=${sr},apad=whole_len=${frames},atrim=end_sample=${frames}`, '-c:a', 'pcm_f32le', normWav]);
-      const dec = await decodeStereoF32(normWav, sr);
+      // loudnorm's linear mode refuses high-dynamic-range cinema mixes (hard silence
+      // vacuums + loud stingers) and silently falls back to a conservative dynamic
+      // normalization several dB below target. The measurement itself is still the
+      // correct EBU R128 integrated loudness, so apply that gain explicitly and let
+      // the deterministic lookahead limiter below enforce the true-peak ceiling.
+      const inputI = Number.parseFloat(ms.input_i);
+      const gainDb = Number.isFinite(inputI) ? I - inputI : 0;
+      const gain = Math.pow(10, gainDb / 20);
       master = new Float32Array(frames * CH);
-      master.set(dec.subarray(0, Math.min(dec.length, master.length)));
+      for (let i = 0; i < master.length; i++) master[i] = pre[i]! * gain;
+      report.loudnorm = {
+        ...ms,
+        applied_gain_db: gainDb.toFixed(2),
+        normalization_mode: 'ebu_gain_plus_lookahead_limiter',
+      };
     } else if (!hasSignal) {
       log('[mixdown] mix is silent: skipping loudnorm');
     }
