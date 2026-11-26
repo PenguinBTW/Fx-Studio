@@ -126,6 +126,12 @@ const BODY: Record<ThresholdTransitionMode, string> = {
     part *= smoothstep(0.54, 0.62, u);
     float edgeGlow = (1.0 - smoothstep(0.0, 0.045, abs(centerDist - open * 0.54))) * smoothstep(0.54, 0.68, u) * (1.0 - open);
     vec3 c = mix(m, cb, part);
+    // Loose fibres overlap both sides of the parting line so the reveal keeps a physical
+    // textile fringe instead of cutting directly into the theatre's geometric seat grid.
+    float fringeBand = 1.0 - smoothstep(0.0, 0.085, abs(centerDist - open * 0.54 + ragged * 0.55));
+    float strandLines = 0.5 + 0.5 * sin(vUv.x * 430.0 + fibreLong * 24.0 + vUv.y * 18.0);
+    float fringe = fringeBand * smoothstep(0.56, 0.72, u) * (1.0 - smoothstep(0.91, 1.0, u)) * (0.35 + strandLines * 0.65);
+    c = mix(c, felt * 1.35 + vec3(0.055, 0.008, 0.004), fringe * 0.48);
     c += vec3(0.24, 0.055, 0.025) * edgeGlow;
     fragColor = vec4(c, 1.0);`,
   doorPush: `
