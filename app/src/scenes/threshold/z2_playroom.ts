@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
+import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { resolveAsset } from '../../engine/assets';
 import { thresholdPost } from './sensor_post';
 import { addFlashlight, applyFpCamera, basic, box, clamp, cyl, disposeTree, hash, mat, plane, smooth, sph, updateFlashlight, type CamKey } from './z1_scene_util';
@@ -42,10 +43,16 @@ export default class ThresholdZ2Playroom extends Scene {
   private dummy = new THREE.Object3D();
 
   private swimmerAsset!: GLTFInstance;
+  private playroomKit!: GLTFInstance;
+  private toyPack!: GLTFInstance;
 
   override async init() {
     const resolved = resolveAsset('threshold/z2_pit_swimmer');
     this.swimmerAsset = await GLTFManager.instantiate(resolved.url, { ...resolved.manifest.load, castShadow: true, receiveShadow: true });
+    const kitResolved = resolveAsset('threshold/z2_playroom_kit');
+    const toyResolved = resolveAsset('threshold/z2_toy_prop_pack');
+    this.playroomKit = await GLTFManager.instantiate(kitResolved.url, { ...kitResolved.manifest.load, castShadow: true, receiveShadow: true });
+    this.toyPack = await GLTFManager.instantiate(toyResolved.url, { ...toyResolved.manifest.load, castShadow: true, receiveShadow: true });
     const corpse = new THREE.Color(0xb8b2a2);
     this.swimmerAsset.root.traverse((o) => {
       const mesh = o as THREE.Mesh;
@@ -194,9 +201,51 @@ export default class ThresholdZ2Playroom extends Scene {
       this.ridge.push(r);
     }
 
+    // Modular Blender playroom kit: repeated padded panels, shelf/net/frame modules, straight slide, stepping blocks and tunnel ribs.
+    this.s.traverse((o) => {
+      if (/^z2_(tunnel_rib_|tunnel_grout_ring_|toy_piano|jack_in_box|xylophone|ball_cart|music_box|ballerina|block_)/.test(o.name)) o.visible = false;
+    });
+    this.toyPhone.visible = false;
+    for (let i = 0; i < 10; i++) {
+      this.cloneProp(this.playroomKit, 'padded_wall_panel_root', [-13.2 + i * 2.9, 0, i % 2 ? -10.31 : 10.31], i % 2 ? 0 : Math.PI, 1, `z2_wall_panel_asset_${i}`);
+    }
+    this.cloneProp(this.playroomKit, 'climbing_frame_module_root', [-5.7, 0, -4.7], 0, 1, 'z2_climbing_frame_asset');
+    this.cloneProp(this.playroomKit, 'net_panel_root', [-4.2, 1.15, -3.52], 0, 1, 'z2_net_panel_asset');
+    this.cloneProp(this.playroomKit, 'straight_slide_root', [-8.1, 0.02, -2.8], 0.55, 1, 'z2_straight_slide_asset');
+    this.cloneProp(this.playroomKit, 'shelf_module_root', [8.05, 0.42, -1.0], Math.PI / 2, 1, 'z2_shelf_asset');
+    for (let i = 0; i < 5; i++) this.cloneProp(this.playroomKit, 'stepping_block_root', [3.1 + (i % 2) * 0.8, i * 0.11, 3.8 - i * 0.55], hash(i) * 0.4, 1, `z2_step_asset_${i}`);
+    for (let i = 0; i < 16; i++) {
+      const rib = this.cloneProp(this.playroomKit, 'tunnel_rib_root', [-5, 0.82, 5.6 + i * 0.38], 0, 1, `z2_tunnel_rib_asset_${i}`);
+      if (rib) rib.rotation.x = Math.PI / 2;
+    }
+
+    // Named toy archetypes replace the simple primitive stand-ins while retaining their story placement.
+    this.cloneProp(this.toyPack, 'toy_piano_root', [5.3, 0, -4.8], -0.2, 1, 'z2_toy_piano_asset');
+    this.cloneProp(this.toyPack, 'jack_in_box_root', [-3.8, 0, 3.6], 0.4, 1, 'z2_jack_box_asset');
+    this.cloneProp(this.toyPack, 'xylophone_root', [2.2, 0, -4.7], 0.35, 1, 'z2_xylophone_asset');
+    this.cloneProp(this.toyPack, 'toy_phone_root', [3.2, 0.66, 2.4], -0.3, 1, 'z2_toy_phone_asset');
+    this.cloneProp(this.toyPack, 'rocking_horse_root', [6.4, 0, -2.4], -0.65, 1, 'z2_rocking_horse_asset');
+    this.cloneProp(this.toyPack, 'tin_robot_root', [7.75, 1.12, -2.8], -Math.PI / 2, 0.8, 'z2_robot_asset');
+    this.cloneProp(this.toyPack, 'stitched_teddy_root', [7.75, 1.72, -0.7], -Math.PI / 2, 0.85, 'z2_teddy_asset');
+    this.cloneProp(this.toyPack, 'stacking_rings_root', [4.7, 0, -2.7], 0, 1, 'z2_stacking_rings_asset');
+    this.cloneProp(this.toyPack, 'toy_car_root', [5.15, 0, -2.1], 0.55, 1, 'z2_toy_car_asset');
+    this.cloneProp(this.toyPack, 'music_box_root', [-7.8, 0, 1.8], 0.25, 1, 'z2_music_box_asset');
+
     // tall Tenant glimpse silhouette at tunnel end
     this.tenant = box(this.s, 'z2_tenant_glimpse', [0.65, 2.7, 0.35], [-5, 1.35, 10.45], basic(0x070707, 1));
     this.tenant.visible = false;
+  }
+
+  private cloneProp(source: GLTFInstance, part: string, pos: [number, number, number], rotY = 0, scale = 1, name = part) {
+    const src = source.part(part);
+    if (!src) return null;
+    const c = skeletonClone(src);
+    c.name = c.userData.fx_entity = name;
+    c.position.set(...pos);
+    c.rotation.set(0, rotY, 0);
+    c.scale.setScalar(scale);
+    this.s.add(c);
+    return c;
   }
 
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
