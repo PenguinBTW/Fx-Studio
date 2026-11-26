@@ -412,11 +412,11 @@ export default class ThresholdZ6Theatre extends Scene {
         m.needsUpdate = true;
       }
     });
-    const lintWingMat = this.mat(0xa66a3d, 1.0, 0, 0x5a2a12, 0.48);
+    const lintWingMat = this.mat(0x5f3824, 1.0, 0, 0x1f0d05, 0.18);
     lintWingMat.map = lintTex;
     lintWingMat.bumpMap = lintTex;
-    lintWingMat.bumpScale = 0.003;
-    const lintWingEdge = this.mat(0xc0834e, 0.98, 0, 0x653012, 0.42);
+    lintWingMat.bumpScale = 0.009;
+    const lintWingEdge = this.mat(0x704126, 1.0, 0, 0x2c1408, 0.22);
     lintWingEdge.map = lintTex;
     const lintButton = this.mat(0x070403, 0.96, 0, 0x020101, 0.03);
     const lintThread = this.mat(0x090504, 0.86);
@@ -433,6 +433,8 @@ export default class ThresholdZ6Theatre extends Scene {
     }
     for (const side of [-1, 1]) {
       const broadWing = this.sphere(this.lint, 0.028, [side * 0.034, -0.002, -0.006], lintWingMat, [1.28, 0.10, 1.42]);
+      broadWing.rotation.x = -0.42;
+      broadWing.rotation.y = side * 0.28;
       broadWing.userData.side = side;
       this.lintWings.push(broadWing);
       const rearLobe = this.sphere(this.lint, 0.021, [side * 0.029, -0.004, -0.026], lintWingEdge, [1.0, 0.08, 1.05]);
@@ -451,7 +453,7 @@ export default class ThresholdZ6Theatre extends Scene {
         this.disposables.push(vgeo);
       }
       for (let scallop = 0; scallop < 4; scallop++) {
-        this.sphere(this.lint, 0.009, [side * (0.018 + scallop * 0.014), -0.006, -0.029 - scallop * 0.002], lintWingEdge, [1.2, 0.16, 0.8]);
+        this.sphere(this.lint, 0.007 + hash(scallop * 4.3) * 0.005, [side * (0.016 + scallop * 0.014), -0.007 - hash(scallop * 2.1) * 0.005, -0.027 - scallop * 0.003], lintWingEdge, [1.25 + hash(scallop) * 0.45, 0.13, 0.7 + hash(scallop * 3) * 0.35]);
       }
       const stitchMat = this.mat(0xd49a62, 0.96, 0, 0x321406, 0.12);
       for (let stitch = 0; stitch < 6; stitch++) {
@@ -472,8 +474,9 @@ export default class ThresholdZ6Theatre extends Scene {
         const fz = -0.006 - q * 0.024;
         const fgeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
           new THREE.Vector3(fx, -0.001, fz),
-          new THREE.Vector3(fx + side * (0.004 + hash(fuzz * 3.7) * 0.004), -0.002, fz + (hash(fuzz * 5.1) - 0.5) * 0.005),
-        ]), 2, 0.00028, 4, false);
+          new THREE.Vector3(fx + side * (0.003 + hash(fuzz * 2.7) * 0.004), -0.006 - hash(fuzz * 4.3) * 0.004, fz + (hash(fuzz * 5.1) - 0.5) * 0.006),
+          new THREE.Vector3(fx + side * (0.006 + hash(fuzz * 3.7) * 0.006), -0.003 - hash(fuzz * 6.1) * 0.005, fz + (hash(fuzz * 5.1) - 0.5) * 0.009),
+        ]), 5, 0.00028, 4, false);
         const fm = new THREE.Mesh(fgeo, lintWingEdge);
         this.lint.add(fm);
         this.disposables.push(fgeo);
@@ -486,8 +489,9 @@ export default class ThresholdZ6Theatre extends Scene {
         const hy = 0.004 + hash(hair * 5.7) * 0.005;
         const hgeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
           new THREE.Vector3(hx, hy, hz),
-          new THREE.Vector3(hx + side * (0.007 + hash(hair) * 0.009), hy + 0.006 + hash(hair * 2) * 0.007, hz + (hash(hair * 4) - 0.5) * 0.006),
-        ]), 2, 0.00105, 4, false);
+          new THREE.Vector3(hx + side * (0.004 + hash(hair) * 0.007), hy + 0.009 + hash(hair * 2) * 0.006, hz + (hash(hair * 4) - 0.5) * 0.008),
+          new THREE.Vector3(hx + side * (0.008 + hash(hair) * 0.011), hy + 0.004 + hash(hair * 2) * 0.006, hz + (hash(hair * 4) - 0.5) * 0.012),
+        ]), 5, 0.00105, 4, false);
         const hm = new THREE.Mesh(hgeo, lintWingEdge);
         this.lint.add(hm);
         this.disposables.push(hgeo);
@@ -502,18 +506,21 @@ export default class ThresholdZ6Theatre extends Scene {
         const radial = Math.sqrt(Math.max(0.05, 1 - zq * zq));
         const dir = new THREE.Vector3(Math.cos(a) * radial, zq * 0.7, Math.sin(a) * radial).normalize();
         const start = dir.clone().multiplyScalar(0.018 + hash(bristle) * 0.004).add(new THREE.Vector3(0, 0.002, 0.008));
-        const end = dir.clone().multiplyScalar(0.025 + hash(bristle * 2.3) * 0.009).add(new THREE.Vector3((hash(bristle * 3.1) - 0.5) * 0.004, 0.002 + (hash(bristle * 5.7) - 0.5) * 0.004, 0.008));
-        const bgeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([start, end]), 2, 0.00032, 4, false);
+        const end = dir.clone().multiplyScalar(0.020 + hash(bristle * 2.3) * 0.006).add(new THREE.Vector3((hash(bristle * 3.1) - 0.5) * 0.004, 0.002 + (hash(bristle * 5.7) - 0.5) * 0.004, 0.008));
+        const curl = new THREE.Vector3(-dir.z, dir.x, dir.y).normalize().multiplyScalar((hash(bristle * 6.3) - 0.5) * 0.007);
+        const mid = start.clone().lerp(end, 0.55).add(curl).add(new THREE.Vector3(0, (hash(bristle * 8.1) - 0.5) * 0.004, 0));
+        const bgeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([start, mid, end]), 5, 0.00032, 4, false);
         const bm = new THREE.Mesh(bgeo, lintWingEdge);
         this.lint.add(bm);
         this.disposables.push(bgeo);
       }
       const pts = [
         new THREE.Vector3(side * 0.005, 0.006, 0.028),
-        new THREE.Vector3(side * 0.016, 0.026, 0.044),
-        new THREE.Vector3(side * 0.029, 0.038, 0.052),
+        new THREE.Vector3(side * 0.014, 0.023, 0.042),
+        new THREE.Vector3(side * 0.022, 0.032, 0.054),
+        new THREE.Vector3(side * 0.016, 0.039, 0.063),
       ];
-      const geo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 8, 0.00062, 6, false);
+      const geo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 12, 0.00048, 6, false);
       const antenna = new THREE.Mesh(geo, lintThread);
       antenna.castShadow = true;
       this.lint.add(antenna);
@@ -523,8 +530,9 @@ export default class ThresholdZ6Theatre extends Scene {
         const bx = side * (0.012 + q * 0.017), by = 0.018 + q * 0.018, bz = 0.037 + q * 0.014;
         const bgeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
           new THREE.Vector3(bx, by, bz),
-          new THREE.Vector3(bx + side * 0.006, by + 0.002, bz + 0.001),
-        ]), 2, 0.00028, 4, false);
+          new THREE.Vector3(bx + side * 0.0035, by + 0.004, bz - 0.001),
+          new THREE.Vector3(bx + side * 0.007, by + 0.002, bz + 0.002),
+        ]), 5, 0.00028, 4, false);
         const bm = new THREE.Mesh(bgeo, lintThread); this.lint.add(bm); this.disposables.push(bgeo);
       }
     }

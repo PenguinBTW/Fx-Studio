@@ -136,27 +136,39 @@ export default class ThresholdZ8Home extends Scene {
     const wg = wallCanvas.getContext('2d')!;
     wg.fillStyle = '#d8c9aa'; wg.fillRect(0, 0, 512, 512);
     for (let x = 0; x < 512; x += 64) {
-      wg.fillStyle = 'rgba(105,78,50,0.12)'; wg.fillRect(x, 0, 2, 512);
-      wg.fillStyle = 'rgba(255,246,220,0.095)'; wg.fillRect(x + 5, 0, 1, 512);
+      wg.fillStyle = 'rgba(72,42,22,0.58)'; wg.fillRect(x, 0, 3, 512);
+      wg.fillStyle = 'rgba(255,232,178,0.48)'; wg.fillRect(x + 6, 0, 2, 512);
     }
-    for (let i = 0; i < 1500; i++) {
+    for (let i = 0; i < 5200; i++) {
       const x = Math.floor(hash(i * 2.17) * 512);
       const y = Math.floor(hash(i * 3.91) * 512);
       const v = hash(i * 5.33);
-      wg.fillStyle = v > 0.55 ? `rgba(75,50,32,${0.018 + v * 0.025})` : `rgba(255,244,214,${0.018 + v * 0.02})`;
-      wg.fillRect(x, y, 1 + Math.floor(hash(i * 7.1) * 2), 1 + Math.floor(hash(i * 9.7) * 2));
+      wg.fillStyle = v > 0.55 ? `rgba(75,50,32,${0.22 + v * 0.28})` : `rgba(255,244,214,${0.18 + v * 0.23})`;
+      wg.fillRect(x, y, 3 + Math.floor(hash(i * 7.1) * 7), 2 + Math.floor(hash(i * 9.7) * 4));
     }
     for (let i = 0; i < 20; i++) {
       const x = hash(i * 11.3) * 512;
       const y = 270 + hash(i * 13.7) * 230;
       const r = 10 + hash(i * 17.9) * 42;
       const grad = wg.createRadialGradient(x, y, 1, x, y, r);
-      grad.addColorStop(0, `rgba(88,57,31,${0.035 + hash(i) * 0.045})`);
+      grad.addColorStop(0, `rgba(88,57,31,${0.13 + hash(i) * 0.14})`);
       grad.addColorStop(1, 'rgba(88,57,31,0)');
       wg.fillStyle = grad;
       wg.beginPath(); wg.arc(x, y, r, 0, Math.PI * 2); wg.fill();
     }
-    wg.strokeStyle = 'rgba(75,48,31,0.16)';
+    for (let px = 20; px < 512; px += 42) {
+      for (let py = 18; py < 512; py += 38) {
+        const ox = (hash(px * 0.7 + py) - 0.5) * 10;
+        const oy = (hash(px + py * 1.3) - 0.5) * 8;
+        wg.strokeStyle = 'rgba(72,38,18,0.68)';
+        wg.lineWidth = 2;
+        wg.beginPath();
+        wg.moveTo(px + ox, py - 9 + oy); wg.lineTo(px + 7 + ox, py + oy); wg.lineTo(px + ox, py + 9 + oy); wg.lineTo(px - 7 + ox, py + oy); wg.closePath();
+        wg.stroke();
+        wg.fillStyle = 'rgba(236,205,150,0.20)'; wg.fillRect(px - 1 + ox, py - 1 + oy, 3, 3);
+      }
+    }
+    wg.strokeStyle = 'rgba(65,38,22,0.34)';
     wg.lineWidth = 1;
     for (let c = 0; c < 7; c++) {
       let x = 40 + hash(c * 19.1) * 430;
@@ -174,7 +186,7 @@ export default class ThresholdZ8Home extends Scene {
     wallTex.wrapS = wallTex.wrapT = THREE.RepeatWrapping;
     wallTex.repeat.set(1.35, 2.2);
     wallTex.anisotropy = 4;
-    const cream = new THREE.MeshStandardMaterial({ map: wallTex, bumpMap: wallTex, bumpScale: 0.022, color: 0xffffff, roughness: 0.86, metalness: 0 });
+    const cream = new THREE.MeshStandardMaterial({ map: wallTex, bumpMap: wallTex, bumpScale: 0.034, color: 0xffffff, roughness: 0.86, metalness: 0 });
     this.disposables.push(wallTex, cream);
 
     const wood = this.mat(0x7b4d2b, 0.55);

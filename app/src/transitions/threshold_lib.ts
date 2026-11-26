@@ -70,6 +70,13 @@ const BODY: Record<ThresholdTransitionMode, string> = {
     float contactBand = (1.0 - smoothstep(0.0, 0.19, abs(x - front))) * smoothstep(0.42, 0.72, vUv.y) * smoothstep(0.03, 0.12, u);
     vec2 contactRipple = vec2(sin(vUv.y * 92.0 + u * 31.0 + n0 * 8.0) * 0.006, cos(vUv.x * 71.0 - u * 24.0) * 0.004) * contactBand;
     vec3 cb = texture(texB, vUv + flow * (1.0 - behind) + contactRipple).rgb;
+    // The first pool reveal is a dead interior skylight, not a sunny blue sky:
+    // desaturate/darken the incoming cyan only during the transformation, easing
+    // back to the authored pool grade before the seam ends.
+    float cbLum = dot(cb, vec3(0.2126, 0.7152, 0.0722));
+    float deadSky = 1.0 - smoothstep(0.68, 1.0, u);
+    vec3 deadened = mix(vec3(cbLum), cb, 0.58) * vec3(0.78, 0.86, 0.88);
+    cb = mix(cb, deadened, deadSky * 0.72);
     vec3 ahead = ca;
     float stretch = nearFront * smoothstep(front, front + 0.22, x);
     vec2 meltUv = vUv + vec2((fbm(vUv * 16.0 + u, 3) - 0.5) * 0.025 * stretch, -0.16 * stretch * stretch);
@@ -189,15 +196,33 @@ const BODY: Record<ThresholdTransitionMode, string> = {
     vec3 felt = vec3(0.105, 0.027, 0.020) * (0.48 + fibreLong * 0.08 + fibreFine * 0.04 + strand * 0.035);
     // Heavy drapery rather than a flat red noise field: broad vertical folds catch a
     // warm house light, with valleys falling into brown shadow and a top/bottom falloff.
-    float foldWide = 0.5 + 0.5 * sin(vUv.x * 43.0 + sin(vUv.x * 9.0 + vUv.y * 0.8) * 0.52 + fibreFine * 0.045);
+    // Irregular heavy folds: cell-hashed ridge positions avoid even sine spacing, while
+    // broad shadow valleys and edge-biased sheen imply cloth occluding itself in depth.
+    float warp = (fbm(vec2(vUv.x * 3.4, vUv.y * 0.55), 4) - 0.5) * 0.035;
+    float foldX = (vUv.x + warp) * 8.0;
+    float foldCell = floor(foldX);
+    float localX = fract(foldX);
+    float ridgeCenter = 0.30 + 0.40 * hash12(vec2(foldCell, 19.7));
+    ridgeCenter += (vUv.y - 0.5) * (hash12(vec2(foldCell, 31.1)) - 0.5) * 0.18;
+    float ridgeWidth = 0.28 + 0.18 * hash12(vec2(foldCell, 43.3));
+    float ridgeDist = abs(localX - ridgeCenter);
+    ridgeDist = min(ridgeDist, 1.0 - ridgeDist);
+    float foldShape = clamp(1.0 - ridgeDist / max(ridgeWidth, 0.04), 0.0, 1.0);
+    float foldWide = pow(foldShape, 0.72);
     float foldFine = 0.5 + 0.5 * sin(vUv.x * 137.0 + fibreFine * 1.7);
     float valley = pow(1.0 - foldWide, 2.2);
+    float occlusion = pow(1.0 - foldShape, 3.2) * smoothstep(0.04, 0.48, ridgeDist);
     float ridge = pow(foldWide, 18.0);
     float verticalFalloff = smoothstep(0.0, 0.16, vUv.y) * (1.0 - smoothstep(0.82, 1.0, vUv.y) * 0.55);
     float centerLight = 1.0 - abs(vUv.x - 0.5) * 0.72;
-    felt *= (0.16 + pow(foldWide, 1.7) * 0.96 + foldFine * 0.04) * (0.55 + verticalFalloff * 0.55) * centerLight;
+    float hem = smoothstep(0.16, 0.025, vUv.y);
+    float pool = hem * (0.55 + 0.45 * sin(vUv.x * 61.0 + fibreLong * 4.0));
+    felt *= (0.31 + pow(foldWide, 1.45) * 0.72 + foldFine * 0.035) * (0.55 + verticalFalloff * 0.55) * centerLight;
+    felt *= 1.0 - occlusion * 0.30;
     felt += vec3(0.38, 0.095, 0.032) * ridge * verticalFalloff * centerLight * 0.52;
-    felt -= vec3(0.055, 0.018, 0.01) * valley * 0.55;
+    felt -= vec3(0.045, 0.014, 0.008) * valley * 0.36;
+    felt -= vec3(0.040, 0.012, 0.008) * pool;
+    felt += vec3(0.09, 0.018, 0.008) * smoothstep(0.035, 0.0, vUv.y) * (0.4 + foldWide * 0.6);
     vec3 m = mix(a, felt, smoothstep(0.22, 0.52, u));
     // The curtain parts from the center outward, with an irregular fibrous leading edge.
     float open = smoothstep(0.56, 0.98, u);

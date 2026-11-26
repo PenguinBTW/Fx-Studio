@@ -240,10 +240,38 @@ export default class ThresholdZ5Motel extends Scene {
     this.s.background = new THREE.Color(0x050608);
     this.s.fog = new THREE.FogExp2(0x050608, 0.035);
 
-    const carpet = this.mat(0x351820, 0.32);
+    const carpetCanvas = document.createElement('canvas');
+    carpetCanvas.width = carpetCanvas.height = 256;
+    const cg = carpetCanvas.getContext('2d')!;
+    cg.fillStyle = '#351820'; cg.fillRect(0, 0, 256, 256);
+    for (let y = 0; y < 256; y += 32) for (let x = 0; x < 256; x += 32) {
+      cg.strokeStyle = (x + y) % 64 ? 'rgba(22,88,78,0.72)' : 'rgba(116,49,40,0.68)';
+      cg.lineWidth = 5;
+      cg.beginPath(); cg.moveTo(x + 16, y + 3); cg.lineTo(x + 29, y + 16); cg.lineTo(x + 16, y + 29); cg.lineTo(x + 3, y + 16); cg.closePath(); cg.stroke();
+      cg.fillStyle = 'rgba(8,8,8,0.24)'; cg.fillRect(x + 14, y + 14, 4, 4);
+    }
+    for (let i = 0; i < 900; i++) { const x=Math.floor(hash(i*2.1)*256), y=Math.floor(hash(i*3.7)*256); cg.fillStyle=`rgba(210,160,110,${0.025+hash(i)*0.05})`; cg.fillRect(x,y,1,1); }
+    const carpetTex = new THREE.CanvasTexture(carpetCanvas); carpetTex.colorSpace=THREE.SRGBColorSpace; carpetTex.wrapS=carpetTex.wrapT=THREE.RepeatWrapping; carpetTex.repeat.set(2.2,18); carpetTex.anisotropy=4;
+    const wallCanvas = document.createElement('canvas');
+    wallCanvas.width = wallCanvas.height = 256;
+    const wg = wallCanvas.getContext('2d')!;
+    wg.fillStyle = '#695442'; wg.fillRect(0,0,256,256);
+    for (let x=0;x<256;x+=32) { wg.fillStyle='rgba(36,24,18,0.44)'; wg.fillRect(x,0,2,256); wg.fillStyle='rgba(205,160,105,0.30)'; wg.fillRect(x+7,0,1,256); }
+    for (let x=16;x<256;x+=32) for(let y=14;y<256;y+=32){
+      const ox=(hash(x*3+y)*8-4), oy=(hash(x+y*5)*8-4);
+      wg.strokeStyle='rgba(24,11,7,0.84)'; wg.lineWidth=2;
+      wg.beginPath(); wg.moveTo(x+ox,y-9+oy); wg.lineTo(x+7+ox,y+oy); wg.lineTo(x+ox,y+9+oy); wg.lineTo(x-7+ox,y+oy); wg.closePath(); wg.stroke();
+      wg.fillStyle='rgba(220,170,105,0.22)'; wg.fillRect(x-1+ox,y-1+oy,3,3);
+    }
+    for(let i=0;i<4200;i++){const x=Math.floor(hash(i*4.1)*256),y=Math.floor(hash(i*5.3)*256);wg.fillStyle=hash(i)>.5?`rgba(30,18,12,${.28+hash(i*7)*.30})`:`rgba(230,190,140,${.22+hash(i*7)*.25})`;wg.fillRect(x,y,3+Math.floor(hash(i)*7),2+Math.floor(hash(i*3)*4));}
+    for(let i=0;i<13;i++){const x=hash(i*11)*256,y=120+hash(i*13)*130,r=18+hash(i)*45,gr=wg.createRadialGradient(x,y,1,x,y,r);gr.addColorStop(0,`rgba(34,21,14,${.08+hash(i)*.08})`);gr.addColorStop(1,'rgba(34,21,14,0)');wg.fillStyle=gr;wg.beginPath();wg.arc(x,y,r,0,Math.PI*2);wg.fill();}
+    const wallTex = new THREE.CanvasTexture(wallCanvas); wallTex.colorSpace=THREE.SRGBColorSpace; wallTex.wrapS=wallTex.wrapT=THREE.RepeatWrapping; wallTex.repeat.set(1.2,10); wallTex.anisotropy=4;
+    const carpet = new THREE.MeshStandardMaterial({ map: carpetTex, bumpMap: carpetTex, bumpScale: 0.012, color: 0xffffff, roughness: 0.34, metalness: 0.02 });
     const carpetTeal = this.mat(0x102321, 0.58);
-    const wall = this.mat(0x695442, 0.76, 0, 0x080403, 0.12);
-    const ceiling = this.mat(0x403b35, 0.82);
+    const wall = new THREE.MeshStandardMaterial({ map: wallTex, bumpMap: wallTex, bumpScale: 0.018, color: 0xffffff, roughness: 0.82, metalness: 0, emissive: 0x080403, emissiveIntensity: 0.08 });
+    this.disposables.push(carpetTex, wallTex, carpet, wall);
+    const ceiling = new THREE.MeshStandardMaterial({ map: wallTex, bumpMap: wallTex, bumpScale: 0.014, color: 0x6f675d, roughness: 0.86, metalness: 0 });
+    this.disposables.push(ceiling);
     const doorMat = this.mat(0x4b2418, 0.55);
     const trim = this.mat(0x302117, 0.62, 0, 0x180b05, 0.22);
     const brass = this.mat(0xa57328, 0.38, 0.65);
@@ -301,6 +329,28 @@ export default class ThresholdZ5Motel extends Scene {
     this.box(this.s, [0.08, 0.16, 43], [-1.58, 0.08, -18.8], trim);
     this.box(this.s, [0.08, 0.16, 43], [1.58, 0.08, -18.8], trim);
     this.box(this.s, [3.3, 2.7, 0.14], [0, 1.35, -40.2], wall);
+    // Corridor-scale architectural rhythm: stained chair rails and low ceiling beams
+    // create real occluding edges across the otherwise dominant wall/ceiling planes.
+    for (const side of [-1, 1]) {
+      this.box(this.s, [0.035, 0.045, 43], [side * 1.55, 0.92, -18.8], trim);
+      this.box(this.s, [0.025, 0.03, 43], [side * 1.57, 2.22, -18.8], trim);
+    }
+    for (let beam = 0; beam < 9; beam++) {
+      const z = 0.8 - beam * 4.7;
+      this.box(this.s, [3.28, 0.085, 0.11], [0, 2.62, z], trim);
+    }
+    // Acoustic ceiling tile grid and water staining: the large overhead plane carries
+    // manufactured seams and damage rather than reading as a smooth orange void.
+    for (let seam = 0; seam < 31; seam++) {
+      const z = 1.6 - seam * 1.38;
+      this.box(this.s, [3.22, 0.018, 0.026], [0, 2.665, z], trim);
+    }
+    for (const x of [-0.82, 0, 0.82]) this.box(this.s, [0.026, 0.018, 42.5], [x, 2.666, -18.8], trim);
+    for (let stain = 0; stain < 15; stain++) {
+      const x = (hash(stain * 4.7) - 0.5) * 2.35;
+      const z = 0.8 - hash(stain * 6.1) * 35;
+      this.box(this.s, [0.18 + hash(stain) * 0.44, 0.012, 0.12 + hash(stain * 2) * 0.5], [x, 2.655, z], trim, [0, hash(stain * 3) * 0.5, 0]);
+    }
 
     // Wet carpet pattern: alternating dim teal/burgundy woven diamonds.
     for (let zi = 0; zi < 34; zi++) {
@@ -382,6 +432,17 @@ export default class ThresholdZ5Motel extends Scene {
     const heroTvGlow = new THREE.PointLight(0x7db4ff, 2.4, 6.5, 1.5);
     heroTvGlow.position.set(1.62, 1.0, -17.92);
     this.s.add(heroTvGlow);
+    // Room 217 bed and lamp must survive the doorway view at 124-125: warm practical
+    // spill plus readable bed mass/pillows rather than a TV floating in a black void.
+    this.box(this.s, [1.05, 0.34, 1.75], [3.48, 0.22, -18.18], this.mat(0x3c1820, 0.78), [0, 0.04, 0]);
+    this.box(this.s, [1.0, 0.12, 1.62], [3.48, 0.45, -18.18], this.mat(0x6f5d4b, 0.9), [0, 0.04, 0]);
+    this.box(this.s, [0.72, 0.11, 0.32], [3.48, 0.56, -18.82], this.mat(0xb59d78, 0.92), [0, 0.04, 0]);
+    this.box(this.s, [0.34, 0.46, 0.34], [4.52, 0.34, -19.25], this.mat(0x3b2115, 0.68));
+    const shade = this.cyl(this.s, 0.18, 0.25, 0.28, [4.52, 0.88, -19.25], this.mat(0xc18a4e, 0.82, 0, 0xff8d32, 1.6), 18);
+    shade.scale.z = 0.78;
+    const lampSpill = new THREE.PointLight(0xffa04c, 3.8, 5.8, 1.45);
+    lampSpill.position.set(4.35, 1.05, -19.1);
+    this.s.add(lampSpill);
 
     // Window and rain-streaked neon vacancy sign at the corridor end.
     this.box(this.s, [2.15, 1.5, 0.04], [0, 1.35, -40.1], this.mat(0x0a1018, 0.2, 0, 0x071a24, 0.25));
@@ -424,17 +485,18 @@ export default class ThresholdZ5Motel extends Scene {
     kitAt('raincoat_umbrella', [-1.43, 0, -19.3], Math.PI / 2, 0.95);
 
     // Wet footprint decals leading to where the viewer stands.
-    const fpMat = this.mat(0x080706, 0.07, 0.04, 0x020607, 0.12);
+    const fpMat = new THREE.MeshPhysicalMaterial({ color: 0x15100c, roughness: 0.16, metalness: 0.03, clearcoat: 0.72, clearcoatRoughness: 0.18, emissive: 0x010304, emissiveIntensity: 0.04 });
+    this.disposables.push(fpMat);
     this.footprintMats.push(fpMat);
     for (let i = 0; i < 14; i++) {
-      const x = 0.28 + (i % 2 ? 0.11 : -0.11);
+      const x = 0.23 + (i % 2 ? 0.17 : -0.17);
       const z = -9.2 - i * 0.62;
-      const yaw = 0.08 * (i % 2 ? 1 : -1);
+      const yaw = 0.18 * (i % 2 ? 1 : -1);
       // Alternating wet foot shapes point back toward the viewer: long oval forefoot,
       // separate smaller oval heel, and three small toe ovals at the viewer-facing end.
-      const sole = this.sphere(this.s, 0.115, [x, 0.018, z + 0.03], fpMat, [0.62, 0.03, 1.55]);
+      const sole = this.sphere(this.s, 0.115, [x, 0.018, z + 0.03], fpMat, [0.74, 0.025, 1.34]);
       sole.rotation.y = yaw;
-      const heel = this.sphere(this.s, 0.084, [x, 0.0185, z - 0.15], fpMat, [0.74, 0.03, 0.86]);
+      const heel = this.sphere(this.s, 0.084, [x, 0.0185, z - 0.15], fpMat, [0.82, 0.025, 0.78]);
       heel.rotation.y = yaw;
       for (let toe = 0; toe < 3; toe++) {
         const toeMesh = this.sphere(this.s, 0.028, [x + (toe - 1) * 0.043, 0.019, z + 0.195], fpMat, [0.95, 0.028, 1.25]);

@@ -126,8 +126,8 @@ export function z7PoseAt(t: number) {
     const sp = sprintPoint(t);
     const u = clamp((t - SPRINT_T0) / (SPRINT_T1 - SPRINT_T0));
     const pos: [number, number, number] = [sp.x, lerp(1.6, JOIN_POSE.pos[1], u), sp.z];
-    const lookback = smooth((t - 168.0) / 0.5) * (1 - smooth((t - 169.3) / 0.42));
-    const secondGlance = smooth((t - 169.9) / 0.36) * (1 - smooth((t - 170.52) / 0.44));
+    const lookback = smooth((t - 168.0) / 0.65) * (1 - smooth((t - 169.25) / 0.75));
+    const secondGlance = smooth((t - 169.95) / 0.6) * (1 - smooth((t - 170.95) / 0.3));
     const yaw = Math.PI * lookback + Math.PI * secondGlance;
     const targetYaw = Math.atan2(JOIN_POSE.forward[0], -JOIN_POSE.forward[2]);
     const yawForward = targetYaw * smooth((u - 0.86) / 0.14);
@@ -366,12 +366,12 @@ export default class ThresholdZ7Cathedral extends Scene {
 
     // Long fluorescent reflections in the polished black stone: raster lights cannot
     // self-reflect, so thin additive streaks mirror the machine-wall rhythm down the aisle.
-    const reflMat = new THREE.MeshBasicMaterial({ color: 0x2d7fc5, transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending, depthWrite: false });
-    const reflWarmMat = new THREE.MeshBasicMaterial({ color: 0xb67535, transparent: true, opacity: 0.1, blending: THREE.AdditiveBlending, depthWrite: false });
+    const reflMat = new THREE.MeshBasicMaterial({ color: 0x2d7fc5, transparent: true, opacity: 0.13, blending: THREE.AdditiveBlending, depthWrite: false });
+    const reflWarmMat = new THREE.MeshBasicMaterial({ color: 0xb67535, transparent: true, opacity: 0.08, blending: THREE.AdditiveBlending, depthWrite: false });
     this.disposables.push(reflMat, reflWarmMat);
     for (let i = 0; i < 54; i++) {
       const z = -4 - i * 3.25;
-      if (z < -46) continue;
+      if (z < -112) continue;
       for (const side of [-1, 1]) {
         const x = side * (1.85 + hash(i + side) * 0.55);
         const len = 1.8 + hash(i * 3.3) * 3.8;
@@ -381,6 +381,40 @@ export default class ThresholdZ7Cathedral extends Scene {
         this.z7DetailObjects.push(strip);
       }
     }
+
+    // Broad uneven machine-light sheen across the polished nave floor. Unlike the
+    // discrete lane-like streaks, this low-frequency reflected wash is what lifts the
+    // pursuit floor out of crushed black while remaining motivated by the lit cabinets.
+    const sheenCanvas = document.createElement('canvas');
+    sheenCanvas.width = 256; sheenCanvas.height = 1024;
+    const sg = sheenCanvas.getContext('2d')!;
+    sg.clearRect(0, 0, 256, 1024);
+    for (let band = 0; band < 64; band++) {
+      const x = 28 + hash(band * 2.9) * 200;
+      const y = hash(band * 4.1) * 1024;
+      const w = 18 + hash(band * 5.3) * 68;
+      const len = 65 + hash(band * 7.7) * 190;
+      const warm = band % 6 === 0;
+      const grad = sg.createLinearGradient(x, y, x, y + len);
+      grad.addColorStop(0, warm ? 'rgba(190,105,42,0)' : 'rgba(72,160,230,0)');
+      grad.addColorStop(0.45, warm ? 'rgba(190,105,42,0.11)' : 'rgba(72,160,230,0.13)');
+      grad.addColorStop(1, warm ? 'rgba(190,105,42,0)' : 'rgba(72,160,230,0)');
+      sg.fillStyle = grad;
+      sg.fillRect(x - w * 0.5, y, w, len);
+    }
+    const sheenTex = new THREE.CanvasTexture(sheenCanvas);
+    sheenTex.colorSpace = THREE.SRGBColorSpace;
+    sheenTex.wrapS = THREE.ClampToEdgeWrapping;
+    sheenTex.wrapT = THREE.RepeatWrapping;
+    const sheenMat = new THREE.MeshBasicMaterial({ map: sheenTex, transparent: true, opacity: 0.17, blending: THREE.AdditiveBlending, depthWrite: false });
+    const sheenGeo = new THREE.PlaneGeometry(5.1, 150);
+    const sheen = new THREE.Mesh(sheenGeo, sheenMat);
+    sheen.rotation.x = -Math.PI / 2;
+    sheen.position.set(0, 0.037, -82);
+    sheen.castShadow = sheen.receiveShadow = false;
+    this.s.add(sheen);
+    this.z7DetailObjects.push(sheen);
+    this.disposables.push(sheenTex, sheenMat, sheenGeo);
 
     // Stacked vending-machine walls as instanced hard-surface bodies plus glowing glass fronts.
     const rows = 62;
@@ -781,12 +815,44 @@ export default class ThresholdZ7Cathedral extends Scene {
     // Specific falling machines, not abstract debris: cabinet carcasses with glowing
     // marquees, edge rails, glass fronts and product rows. They are staged along the
     // camera's falling path so several pass close enough to identify in one frame.
+    const cabinetCanvas = document.createElement('canvas');
+    cabinetCanvas.width = cabinetCanvas.height = 256;
+    const cabg = cabinetCanvas.getContext('2d')!;
+    cabg.fillStyle = '#17222b'; cabg.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 2400; i++) {
+      const x = hash(i * 1.91) * 256, y = hash(i * 3.17) * 256, v = hash(i * 5.23);
+      cabg.fillStyle = v < 0.58 ? `rgba(3,7,10,${0.08 + v * 0.18})` : `rgba(104,128,136,${0.035 + v * 0.06})`;
+      cabg.fillRect(x, y, 1 + hash(i * 7.1) * 5, 1 + hash(i * 9.7) * 2);
+    }
+    for (let scratch = 0; scratch < 95; scratch++) {
+      const x = hash(scratch * 4.1) * 256, y = hash(scratch * 6.3) * 256;
+      cabg.strokeStyle = scratch % 3 ? 'rgba(142,154,147,0.16)' : 'rgba(5,8,9,0.28)';
+      cabg.lineWidth = 0.7 + hash(scratch) * 1.2;
+      cabg.beginPath(); cabg.moveTo(x, y); cabg.lineTo(x + (hash(scratch * 2) - 0.5) * 72, y + (hash(scratch * 3) - 0.5) * 12); cabg.stroke();
+    }
+    for (let decal = 0; decal < 9; decal++) {
+      const x = 18 + hash(decal * 5.7) * 190, y = 16 + hash(decal * 8.9) * 205;
+      cabg.fillStyle = decal % 3 ? 'rgba(164,73,45,0.30)' : 'rgba(53,132,145,0.28)';
+      cabg.fillRect(x, y, 18 + hash(decal) * 26, 5 + hash(decal * 2) * 9);
+      cabg.fillStyle = 'rgba(5,8,9,0.24)'; cabg.fillRect(x + 2, y + 2, 10 + hash(decal * 3) * 14, 2);
+    }
+    const cabinetTex = new THREE.CanvasTexture(cabinetCanvas);
+    cabinetTex.colorSpace = THREE.SRGBColorSpace;
+    cabinetTex.wrapS = cabinetTex.wrapT = THREE.RepeatWrapping;
+    cabinetTex.repeat.set(1.4, 2.2);
+    this.disposables.push(cabinetTex);
     const shaftGlassMat = new THREE.MeshPhysicalMaterial({ color: 0x9fdcff, roughness: 0.12, metalness: 0.04, transparent: true, opacity: 0.24, depthWrite: false, emissive: 0x145073, emissiveIntensity: 0.62, side: THREE.DoubleSide });
     const shaftWarmMat = this.mat(0x9a5a2d, 0.58, 0.05, 0x3a1605, 0.26);
     const shaftEdgeMat = new THREE.MeshBasicMaterial({ color: 0xc8f2ff });
     const shaftDarkMat = this.mat(0x071018, 0.48, 0.62, 0x02070c, 0.18);
     const shaftSideMat = this.mat(0x111923, 0.5, 0.58, 0x010305, 0.08);
+    shaftSideMat.map = cabinetTex;
+    shaftSideMat.bumpMap = cabinetTex;
+    shaftSideMat.bumpScale = 0.018;
     const shaftTopMat = this.mat(0x1a252e, 0.43, 0.62, 0x020507, 0.1);
+    shaftTopMat.map = cabinetTex;
+    shaftTopMat.bumpMap = cabinetTex;
+    shaftTopMat.bumpScale = 0.012;
     const shaftInnerMat = this.mat(0x020509, 0.72, 0.2);
     const shaftWearMat = this.mat(0xb69b69, 0.86, 0.02, 0x160c04, 0.08);
     const shaftProductMats = [
@@ -882,6 +948,15 @@ export default class ThresholdZ7Cathedral extends Scene {
       for (const x of [-0.596, 0.596]) {
         for (const yy of [-0.55, 0.42]) this.box(g, [0.012, 0.018, 0.58], [x, yy, 0], chrome);
         this.box(g, [0.014, 0.42, 0.018], [x, -0.1, 0.24], chrome);
+        // Side-panel manufactured evidence: faded brand band, inspection decal,
+        // dented patch and scratch strips on the outer carcass rather than blank slab metal.
+        const sx = x + Math.sign(x) * 0.008;
+        this.box(g, [0.010, 0.18, 0.46], [sx, 0.58, 0.02], shaftProductMats[(i + (x > 0 ? 1 : 2)) % shaftProductMats.length]!);
+        this.box(g, [0.011, 0.075, 0.30], [sx, 0.22, -0.18], shaftWearMat, [0, 0, 0.04 * Math.sign(x)]);
+        this.box(g, [0.011, 0.32, 0.22], [sx, -0.36, 0.18], shaftDarkMat, [0, 0, -0.03 * Math.sign(x)]);
+        for (let scratch = 0; scratch < 3; scratch++) {
+          this.box(g, [0.012, 0.012, 0.20 + hash(i * 17 + scratch) * 0.18], [sx + Math.sign(x) * 0.003, -0.78 + scratch * 0.34, -0.22 + hash(i * 19 + scratch) * 0.38], shaftWearMat, [0, 0, (hash(i * 23 + scratch) - 0.5) * 0.35]);
+        }
       }
       // A few side rails keep the object readable as a manufactured cabinet even when
       // the tumble shows a side or three-quarter rather than the lit front.
@@ -931,7 +1006,13 @@ export default class ThresholdZ7Cathedral extends Scene {
     // ahead of the camera, then slide inward and drop through the widening floor crack.
     const riftGlassMat = new THREE.MeshPhysicalMaterial({ color: 0xbfe8ff, roughness: 0.18, metalness: 0.03, transparent: true, opacity: 0.13, depthWrite: false, emissive: 0x12384e, emissiveIntensity: 0.26, side: THREE.DoubleSide });
     const riftCarcassMat = this.mat(0x111923, 0.5, 0.58, 0x061522, 0.28);
+    riftCarcassMat.map = cabinetTex;
+    riftCarcassMat.bumpMap = cabinetTex;
+    riftCarcassMat.bumpScale = 0.018;
     const riftTopMat = this.mat(0x1b2731, 0.42, 0.64, 0x07131c, 0.22);
+    riftTopMat.map = cabinetTex;
+    riftTopMat.bumpMap = cabinetTex;
+    riftTopMat.bumpScale = 0.012;
     const riftInnerMat = this.mat(0x020509, 0.76, 0.18);
     const riftWearMat = this.mat(0xb69b69, 0.84, 0.02, 0x160c04, 0.1);
     this.disposables.push(riftGlassMat);
@@ -1350,7 +1431,7 @@ export default class ThresholdZ7Cathedral extends Scene {
     this.baseAmbient = new THREE.AmbientLight(0x152033, 0.24);
     for (let spill = 0; spill < 8; spill++) {
       const side = spill % 2 ? 1 : -1;
-      const machineSpill = new THREE.PointLight(spill % 3 ? 0x6fc9ff : 0xffa15c, 2.65, 12.5, 1.42);
+      const machineSpill = new THREE.PointLight(spill % 3 ? 0x6fc9ff : 0xffa15c, 7.2, 15.5, 1.28);
       machineSpill.position.set(side * 2.4, 1.9, -24 - spill * 8.5);
       this.s.add(machineSpill);
       this.z7DetailObjects.push(machineSpill);
