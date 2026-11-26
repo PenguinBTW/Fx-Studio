@@ -44,17 +44,19 @@ export default class Z0ColdOpen extends Scene {
   private machines!: THREE.InstancedMesh;
   private machineData: { x: number; z: number; h: number; hue: number }[] = [];
   private machineMat!: THREE.MeshStandardMaterial;
+  private panels!: THREE.InstancedMesh;
+  private panelMat!: THREE.MeshStandardMaterial;
 
   override init() {
     this.scene3d.background = new THREE.Color(0.0004, 0.0005, 0.0008);
     this.scene3d.fog = new THREE.FogExp2(0x020308, 0.035);
-    const floorMat = new THREE.MeshStandardMaterial({ color: 0x050508, roughness: 0.16, metalness: 0.55 });
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0x071018, roughness: 0.2, metalness: 0.62, emissive: 0x01070b, emissiveIntensity: 0.35 });
     const floor = new THREE.Mesh(new THREE.BoxGeometry(9, 0.12, 190), floorMat);
     floor.position.set(0, -0.06, -70);
     floor.receiveShadow = true;
     this.scene3d.add(floor);
 
-    this.machineMat = new THREE.MeshStandardMaterial({ color: 0x151b26, roughness: 0.34, metalness: 0.45, emissive: 0x24384e, emissiveIntensity: 1.2 });
+    this.machineMat = new THREE.MeshStandardMaterial({ color: 0x182233, roughness: 0.34, metalness: 0.45, emissive: 0x2c5d7c, emissiveIntensity: 1.55 });
     const geom = new THREE.BoxGeometry(0.85, 2.2, 0.62);
     const count = 96;
     this.machines = new THREE.InstancedMesh(geom, this.machineMat, count);
@@ -74,37 +76,72 @@ export default class Z0ColdOpen extends Scene {
     this.machines.instanceMatrix.needsUpdate = true;
     this.scene3d.add(this.machines);
 
+    // Inward-facing vending fascia panels: cool machine-light rectangles make the aisle
+    // readable even when the flashlight is weak.
+    this.panelMat = new THREE.MeshStandardMaterial({ color: 0x102334, roughness: 0.25, metalness: 0.2, emissive: 0x4bb7d7, emissiveIntensity: 1.8 });
+    const panelGeom = new THREE.BoxGeometry(0.026, 1.16, 0.4);
+    this.panels = new THREE.InstancedMesh(panelGeom, this.panelMat, count);
+    i = 0;
+    for (const side of [-1, 1]) for (let row = 0; row < 48; row++) {
+      const z = 4 - row * 3.2;
+      const h = 2.2 + 0.25 * hash(row * 2.13 + side);
+      const x = side * (2.25 + 0.08 * hash(row * 4.7)) - side * 0.44;
+      m4.compose(new THREE.Vector3(x, 1.18 * (h / 2.2), z - 0.02), q, new THREE.Vector3(1, h / 2.2, 1));
+      this.panels.setMatrixAt(i, m4);
+      this.panels.setColorAt(i, new THREE.Color().setHSL(row % 5 === 0 ? 0.08 : 0.53, 0.9, row % 5 === 0 ? 0.55 : 0.46));
+      i++;
+    }
+    this.panels.instanceMatrix.needsUpdate = true;
+    this.scene3d.add(this.panels);
+
+    // High cold strips establish the cathedral scale and vanishing aisle silhouette.
+    const stripMat = new THREE.MeshBasicMaterial({ color: 0x88d7ff, transparent: true, opacity: 0.55 });
+    for (let k = 0; k < 18; k++) {
+      const strip = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.035, 0.06), stripMat);
+      strip.position.set(0, 4.1, 2 - k * 8);
+      this.scene3d.add(strip);
+    }
+
     // Arm blockout: patchwork rods and five coil-like fingers, all named for later replacement.
-    const chrome = new THREE.MeshStandardMaterial({ color: 0x5b6570, roughness: 0.22, metalness: 0.85 });
-    const paper = new THREE.MeshStandardMaterial({ color: 0x9d8d6c, roughness: 0.82, metalness: 0.0 });
-    const tile = new THREE.MeshStandardMaterial({ color: 0x263c46, roughness: 0.28, metalness: 0.2 });
+    const chrome = new THREE.MeshStandardMaterial({ color: 0x8b98a6, roughness: 0.18, metalness: 0.82, emissive: 0x2a4c5f, emissiveIntensity: 0.82 });
+    const paper = new THREE.MeshStandardMaterial({ color: 0xc3ad7d, roughness: 0.76, metalness: 0.0, emissive: 0x4a2b0d, emissiveIntensity: 0.42 });
+    const tile = new THREE.MeshStandardMaterial({ color: 0x3f7385, roughness: 0.24, metalness: 0.16, emissive: 0x145066, emissiveIntensity: 0.75 });
     const mats = [chrome, paper, tile];
-    let p = new THREE.Vector3(0, 1.2, 0);
+    let p = new THREE.Vector3(0, 0, 0);
     for (let s = 0; s < 4; s++) {
-      const n = p.clone().add(new THREE.Vector3((hash(s * 4) - 0.5) * 0.18, -0.08, 1.1));
-      const seg = cylinderBetween(p, n, 0.09 - s * 0.01, mats[s % mats.length]!);
+      const n = p.clone().add(new THREE.Vector3((hash(s * 4) - 0.5) * 0.18, -0.06, -0.62));
+      const seg = cylinderBetween(p, n, 0.13 - s * 0.014, mats[s % mats.length]!);
       seg.name = `tenant_arm_seg_${s}`;
       this.arm.add(seg);
       p = n;
     }
     for (let f = 0; f < 5; f++) {
       const a = (f - 2) * 0.22;
-      const tip = p.clone().add(new THREE.Vector3(Math.sin(a) * 0.55, -0.15 + Math.abs(f - 2) * 0.04, 0.95));
-      const finger = cylinderBetween(p, tip, 0.025, chrome);
+      const tip = p.clone().add(new THREE.Vector3(Math.sin(a) * 0.38, -0.12 + Math.abs(f - 2) * 0.035, -0.55));
+      const finger = cylinderBetween(p, tip, 0.038, chrome);
       finger.name = `tenant_finger_${f}`;
       this.arm.add(finger);
     }
+    const armGlint = new THREE.PointLight(0x8fd8ff, 1.8, 4.5, 1.7);
+    armGlint.position.set(0, 0.1, -0.9);
+    this.arm.add(armGlint);
     this.scene3d.add(this.arm);
     this.scene3d.add(this.flash.group);
-    const ambient = new THREE.HemisphereLight(0x203040, 0x010102, 0.16);
+    const ambient = new THREE.HemisphereLight(0x2a4a66, 0x020204, 0.34);
     this.scene3d.add(ambient);
   }
 
   private poseArm(t: number, pose: FPPose) {
     const reach = sm(2.4, 3.25, t);
-    const behindZ = pose.pos[2] + lerp(7.5, 0.32, reach);
-    this.arm.position.set(pose.pos[0] + 0.2, 0.1 + 0.9 * (1 - reach), behindZ);
-    this.arm.rotation.set(0.12 * reach, Math.PI + 0.12 * Math.sin(t * 5), -0.18 * reach);
+    const dist = lerp(5.8, 1.55, reach);
+    this.arm.position.set(
+      pose.pos[0] + pose.forward[0] * dist,
+      pose.pos[1] - 0.12 + 0.62 * (1 - reach),
+      pose.pos[2] + pose.forward[2] * dist,
+    );
+    const towardCamera = new THREE.Vector3(-pose.forward[0], 0, -pose.forward[2]).normalize();
+    this.arm.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, -1), towardCamera);
+    this.arm.rotateX(0.1 * reach);
     this.arm.scale.setScalar(lerp(0.55, 1.25, reach));
     this.arm.visible = t > 1.15 && t < 3.32;
   }
@@ -120,7 +157,8 @@ export default class Z0ColdOpen extends Scene {
     // Machines switch off in a wave during the look-back: emissive intensity only in blockout;
     // W3's final cathedral animates per-machine relays and lamp glass.
     const wave = t < 1.2 ? 0 : clamp((t - 1.2) / 0.7);
-    this.machineMat.emissiveIntensity = lerp(1.2, 0.16, wave) * (t >= 3.3 ? 0 : 1);
+    this.machineMat.emissiveIntensity = lerp(1.55, 0.2, wave) * (t >= 3.3 ? 0 : 1);
+    this.panelMat.emissiveIntensity = lerp(1.8, 0.22, wave) * (t >= 3.3 ? 0 : 1);
     const r = this.ctx.renderer;
     r.setRenderTarget(out);
     r.setClearColor(0x000000, 1);
@@ -134,5 +172,6 @@ export default class Z0ColdOpen extends Scene {
   override dispose() {
     this.flash.dispose();
     this.machines.dispose();
+    this.panels.dispose();
   }
 }
