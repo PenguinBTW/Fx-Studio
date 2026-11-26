@@ -46,6 +46,7 @@ function stem(sec: number, fn: (t: number) => [number, number]): Float32Array {
   return out;
 }
 const env = (t: number, a: number, d: number) => t < 0 ? 0 : Math.min(1, t / Math.max(1e-4, a)) * Math.exp(-Math.max(0, t - a) / d);
+const hashLike = (t: number, salt: number) => { const x = Math.sin(Math.floor(t * 24) * 127.1 + salt * 311.7) * 43758.5453; return x - Math.floor(x); };
 
 // Fluorescent office bed: 60 Hz hum, odd harmonics, HVAC hiss, two failing-tube ticks.
 wav('z1_fluorescent_bed.wav', stem(27, (t) => {
@@ -163,4 +164,116 @@ wav('z1_door_jingle_hit.wav', stem(3.0, (t) => {
   return [v, v * 0.94];
 }));
 
-console.log(`wrote procedural Z1 stems to ${OUT}`);
+// Full-timeline room-tone beds. These are architectural continuity layers, not final creature/cue passes:
+// every zone has a distinct physical space tone and edge fades overlap the engine transition windows.
+function edgeFade(t: number, dur: number, fadeIn: number, fadeOut: number): number {
+  return Math.max(0, Math.min(1, t / fadeIn, (dur - t) / fadeOut));
+}
+function bed(file: string, dur: number, fadeIn: number, fadeOut: number, fn: (t: number, lp: () => number) => [number, number]): void {
+  let lpState = 0;
+  const lp = () => (lpState = lpState * 0.86 + noise() * 0.14);
+  wav(file, stem(dur, (t) => {
+    const [l, r] = fn(t, lp);
+    const e = edgeFade(t, dur, fadeIn, fadeOut);
+    return [l * e, r * e];
+  }));
+}
+
+bed('z0_machine_room_tone.wav', 4.2, 0.18, 0.42, (t, lp) => {
+  const hum = Math.sin(t * Math.PI * 2 * 58) * 0.018 + Math.sin(t * Math.PI * 2 * 117) * 0.006;
+  const fan = lp() * 0.036;
+  const relay = (t > 1.16 && t < 1.20) || (t > 2.04 && t < 2.075) ? noise() * 0.055 : 0;
+  const v = hum + fan + relay;
+  return [v, v * 0.86];
+});
+
+bed('z2_playroom_room_tone.wav', 25.8, 0.65, 0.85, (t, lp) => {
+  const air = noise() * 0.009 + lp() * 0.018;
+  const plastic = Math.sin(t * Math.PI * 2 * 310) * 0.0022 * Math.max(0, Math.sin(t * 0.71));
+  const balls = (hashLike(t, 3.1) > 0.988 ? noise() * 0.032 : 0);
+  const v = air + plastic + balls;
+  return [v * 0.92, v];
+});
+
+bed('z3_pool_room_tone.wav', 26.0, 0.75, 1.1, (t, lp) => {
+  const wet = lp() * 0.042;
+  const water = Math.sin(t * Math.PI * 2 * 0.53) * 0.006 + Math.sin(t * Math.PI * 2 * 1.17) * 0.003;
+  let drip = 0;
+  for (const at of [3.2, 8.9, 14.4, 21.7]) {
+    const u = t - at;
+    if (u > 0 && u < 0.28) drip += Math.sin(u * Math.PI * 2 * 930) * 0.035 * Math.exp(-u * 22);
+  }
+  const v = wet * 0.55 + water + drip;
+  return [v, v * 0.82];
+});
+
+bed('z4_library_room_tone.wav', 25.9, 0.9, 0.75, (t, lp) => {
+  const hush = lp() * 0.018;
+  const lamp = Math.sin(t * Math.PI * 2 * 118) * 0.004;
+  let flutter = 0;
+  for (const at of [4.4, 11.2, 18.8]) {
+    const u = t - at;
+    if (u > 0 && u < 0.5) flutter += noise() * 0.025 * Math.sin(Math.PI * u / 0.5);
+  }
+  const v = hush + lamp + flutter;
+  return [v * 0.9, v];
+});
+
+bed('z5_motel_room_tone.wav', 25.9, 0.55, 1.0, (t, lp) => {
+  const rain = noise() * 0.014 + lp() * 0.023;
+  const neon = Math.sin(t * Math.PI * 2 * 119) * 0.009 + Math.sin(t * Math.PI * 2 * 238) * 0.003;
+  const pipe = Math.sin(t * Math.PI * 2 * 47) * 0.004 * (0.5 + 0.5 * Math.sin(t * 0.23));
+  const v = rain + neon + pipe;
+  return [v, v * 0.9];
+});
+
+bed('z6_theatre_room_tone.wav', 21.1, 0.95, 0.9, (t, lp) => {
+  const feltAir = lp() * 0.014;
+  const cloth = Math.sin(t * Math.PI * 2 * 36) * 0.004;
+  let creak = 0;
+  for (const at of [5.1, 12.6, 17.4]) {
+    const u = t - at;
+    if (u > 0 && u < 0.65) creak += Math.sin(u * Math.PI * 2 * (112 - u * 35)) * 0.022 * Math.sin(Math.PI * u / 0.65);
+  }
+  const v = feltAir + cloth + creak;
+  return [v * 0.86, v];
+});
+
+bed('z7_cathedral_room_tone.wav', 46.1, 0.8, 1.1, (t, lp) => {
+  const fans = lp() * 0.045;
+  const hum = Math.sin(t * Math.PI * 2 * 59) * 0.015 + Math.sin(t * Math.PI * 2 * 177) * 0.004;
+  let relay = 0;
+  for (const at of [6.2, 13.5, 22.8, 34.1, 41.3]) {
+    const u = t - at;
+    if (u > 0 && u < 0.08) relay += noise() * 0.07 * Math.exp(-u * 40);
+  }
+  let coin = 0;
+  for (const at of [18.2, 31.7]) {
+    const u = t - at;
+    if (u > 0 && u < 0.38) coin += (Math.sin(u * Math.PI * 2 * 1730) + Math.sin(u * Math.PI * 2 * 2410) * 0.4) * 0.018 * Math.exp(-u * 12);
+  }
+  const v = fans + hum + relay + coin;
+  return [v, v * 0.88];
+});
+
+bed('z8_home_room_tone.wav', 30.6, 0.8, 1.8, (t, lp) => {
+  const room = lp() * 0.017;
+  const clock = t % 1 < 0.025 ? noise() * 0.022 : 0;
+  const warm = Math.sin(t * Math.PI * 2 * 60) * 0.004;
+  let settling = 0;
+  for (const at of [7.4, 18.9]) {
+    const u = t - at;
+    if (u > 0 && u < 0.22) settling += noise() * 0.028 * Math.exp(-u * 18);
+  }
+  const v = room + clock + warm + settling;
+  return [v * 0.94, v];
+});
+
+bed('end_office_afterimage_tone.wav', 10.0, 0.4, 2.4, (t, lp) => {
+  const hum = Math.sin(t * Math.PI * 2 * 60) * 0.011 + Math.sin(t * Math.PI * 2 * 180) * 0.003;
+  const hiss = noise() * 0.006 + lp() * 0.012;
+  const v = hum + hiss;
+  return [v, v * 0.96];
+});
+
+console.log(`wrote procedural THRESHOLD stems to ${OUT}`);

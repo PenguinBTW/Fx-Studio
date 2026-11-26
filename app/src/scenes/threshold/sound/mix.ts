@@ -6,7 +6,18 @@ export default defineMix({
   sampleRate: 48000,
   build: '../../../../scripts/threshold_build_stems.ts',
   stems: [
+    // Continuous zone room-tone architecture. Edge fades are baked into each generated bed,
+    // so overlapping transition windows crossfade physical spaces rather than hard-cutting them.
+    { id: 'z0_machine_room_tone', file: 'generated/z0_machine_room_tone.wav', bus: 'ambient', at: 0.0, gainDb: -7.0 },
     { id: 'z1_fluorescent_bed', file: 'generated/z1_fluorescent_bed.wav', bus: 'ambient', at: 4.0, gainDb: -5.5 },
+    { id: 'z2_playroom_room_tone', file: 'generated/z2_playroom_room_tone.wav', bus: 'ambient', at: 29.6, gainDb: -6.5 },
+    { id: 'z3_pool_room_tone', file: 'generated/z3_pool_room_tone.wav', bus: 'ambient', at: 54.6, gainDb: -6.0 },
+    { id: 'z4_library_room_tone', file: 'generated/z4_library_room_tone.wav', bus: 'ambient', at: 79.4, gainDb: -6.5 },
+    { id: 'z5_motel_room_tone', file: 'generated/z5_motel_room_tone.wav', bus: 'ambient', at: 104.7, gainDb: -6.0 },
+    { id: 'z6_theatre_room_tone', file: 'generated/z6_theatre_room_tone.wav', bus: 'ambient', at: 129.4, gainDb: -6.5 },
+    { id: 'z7_cathedral_room_tone', file: 'generated/z7_cathedral_room_tone.wav', bus: 'ambient', at: 149.5, gainDb: -5.5 },
+    { id: 'z8_home_room_tone', file: 'generated/z8_home_room_tone.wav', bus: 'ambient', at: 194.4, gainDb: -6.5 },
+    { id: 'end_office_afterimage_tone', file: 'generated/end_office_afterimage_tone.wav', bus: 'ambient', at: 225.0, gainDb: -7.0 },
     { id: 'z1_phone_ring', file: 'generated/z1_phone_ring.wav', bus: 'sfx', at: 8.28, gainDb: 2.5 },
     { id: 'z1_receiver_breath', file: 'generated/z1_receiver_breath.wav', bus: 'sfx', at: 11.05, gainDb: -1.5 },
     { id: 'z1_ceiling_breath', file: 'generated/z1_ceiling_breath.wav', bus: 'sfx', at: 12.75, gainDb: -1.0 },
