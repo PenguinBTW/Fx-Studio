@@ -507,7 +507,7 @@ export default class ThresholdZ4Library extends Scene {
     gl.setRenderTarget(out); gl.setClearColor(0x090806, 1); gl.clear(true, true, true); gl.render(this.s, this.cam); gl.resetState();
     return {
       ...thresholdPost(t, { darkness: 0.66, exposure: 1.0, stress: t > 94 ? 0.42 : 0.08, fade: endBlack }),
-      flash: 1 - smooth(80, 81.0, t),
+      flash: 0,
       shake: t > 99 ? [1.1 * Math.sin(t * 33), 0.8 * Math.cos(t * 29)] : [0, 0],
     };
   }

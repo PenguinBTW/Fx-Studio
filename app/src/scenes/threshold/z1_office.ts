@@ -708,6 +708,15 @@ export default class ThresholdZ1Office extends Scene {
         plane(m, `z1_drop_tile_crack_bottom_${i}_${c}`, cw, 0.007, [cx, -0.034 - c * 0.0004, cz], basic(0x15120e, 0.46), [Math.PI / 2, 0, ca]);
       }
       for (let c = 0; c < 2; c++) box(m, `z1_drop_tile_edge_chip_${i}_${c}`, [0.16 + hash(i + c) * 0.16, 0.018, 0.055], [(c ? 0.48 : -0.48), 0.036, (hash(i * 7 + c) - 0.5) * 0.72], mat(0x8f8875, 0.9), [0, hash(i * 4 + c) * 0.6, 0]);
+      // Exposed fibrous mineral core on all four sides keeps the fallen tiles legible
+      // edge-on; the face stays pale ceiling material while the thickness reads brown/damaged.
+      const core = mat(0xb09262, 0.94);
+      const char = mat(0x2b241b, 0.98);
+      box(m, `z1_drop_tile_core_n_${i}`, [1.10, 0.060, 0.034], [0, 0, -0.55], core);
+      box(m, `z1_drop_tile_core_s_${i}`, [1.10, 0.060, 0.034], [0, 0, 0.55], core);
+      box(m, `z1_drop_tile_core_e_${i}`, [0.034, 0.060, 1.10], [0.55, 0, 0], core);
+      box(m, `z1_drop_tile_core_w_${i}`, [0.034, 0.060, 1.10], [-0.55, 0, 0], core);
+      box(m, `z1_drop_tile_core_split_${i}`, [0.36 + hash(i * 8) * 0.22, 0.056, 0.012], [(hash(i * 11) - 0.5) * 0.42, 0, 0.565], char, [0, hash(i * 13) * 0.45, 0]);
       this.fallingTiles.push({ m, z, t0: 20.1 + i * 1.05, y0: 2.68 });
     }
   }

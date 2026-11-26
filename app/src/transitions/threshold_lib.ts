@@ -60,13 +60,21 @@ const BODY: Record<ThresholdTransitionMode, string> = {
     float behind = 1.0 - smoothstep(front - 0.012, front + 0.012, x);
     float nearFront = (1.0 - smoothstep(0.0, 0.24, abs(x - front))) * smoothstep(0.0, 0.04, u);
     vec2 flow = vec2(0.0, nearFront * nearFront * (0.09 + 0.07 * fbm(vUv * 9.0 + u, 3)));
-    vec3 cb = texture(texB, vUv + flow * (1.0 - behind)).rgb;
+    // Water contact locally disturbs the already-revealed pool surface: the molten
+    // front is not a decal pasted over it, but a hot object meeting liquid.
+    float contactBand = (1.0 - smoothstep(0.0, 0.19, abs(x - front))) * smoothstep(0.42, 0.72, vUv.y) * smoothstep(0.03, 0.12, u);
+    vec2 contactRipple = vec2(sin(vUv.y * 92.0 + u * 31.0 + n0 * 8.0) * 0.006, cos(vUv.x * 71.0 - u * 24.0) * 0.004) * contactBand;
+    vec3 cb = texture(texB, vUv + flow * (1.0 - behind) + contactRipple).rgb;
     vec3 ahead = ca;
     float stretch = nearFront * smoothstep(front, front + 0.22, x);
     vec2 meltUv = vUv + vec2((fbm(vUv * 16.0 + u, 3) - 0.5) * 0.025 * stretch, -0.16 * stretch * stretch);
     vec3 melted = texture(texA, meltUv).rgb;
     float lum = dot(melted, vec3(0.2126, 0.7152, 0.0722));
-    vec3 hotPlastic = mix(melted, vec3(0.22, 0.11, 0.012) + melted * vec3(0.35, 0.22, 0.06), sat(stretch * 1.4));
+    float plasticGrain = fbm(vUv * vec2(28.0, 13.0) + vec2(u * 0.23, -u * 0.11), 4);
+    float flowLine = 0.5 + 0.5 * sin((vUv.y * 34.0 + plasticGrain * 5.0 - u * 2.1) * TAU);
+    vec3 hotBase = vec3(0.20, 0.095, 0.010) + melted * vec3(0.33, 0.20, 0.055);
+    hotBase *= 0.72 + plasticGrain * 0.34 + flowLine * 0.09;
+    vec3 hotPlastic = mix(melted, hotBase, sat(stretch * 1.4));
     vec3 wetPlastic = mix(hotPlastic, vec3(0.015, 0.16, 0.19) * (0.35 + lum), smoothstep(0.48, 1.0, stretch));
     ahead = mix(ca, wetPlastic, smoothstep(0.0, 0.24, stretch));
     // Torn plastic ribbons persist briefly behind the front, but as opaque fragments.
@@ -76,10 +84,20 @@ const BODY: Record<ThresholdTransitionMode, string> = {
     vec3 rubber = vec3(0.20, 0.105, 0.018) * (0.55 + lum * 0.8);
     vec3 pool = cb + vec3(0.0, 0.025, 0.032) * pow(0.5 + 0.5 * sin((q.x * 6.0 + q.y * 10.0 + u * 4.0) * TAU), 3.0);
     vec3 behindC = mix(pool, rubber, strip);
-    // The leading lip is glossy melted plastic; no incoming imagery lives inside it.
+    // The leading lip is a dimensional glossy plastic bead: dark trailing thickness,
+    // hot body, narrow specular crown, and cyan foam/ripple where it meets the pool.
+    float lipWide = (1.0 - smoothstep(0.0, 0.048, abs(x - front + 0.018))) * smoothstep(0.02, 0.10, u) * (1.0 - smoothstep(0.90, 1.0, u));
     float lip = (1.0 - smoothstep(0.0, 0.022, abs(x - front))) * smoothstep(0.02, 0.10, u) * (1.0 - smoothstep(0.90, 1.0, u));
+    float crown = (1.0 - smoothstep(0.0, 0.006, abs(x - front - 0.010))) * smoothstep(0.02, 0.10, u) * (1.0 - smoothstep(0.90, 1.0, u));
+    float bodySpec = pow(0.5 + 0.5 * sin((vUv.y * 13.0 + n0 * 5.0 - u * 2.2) * TAU), 5.0) * lipWide;
     vec3 c = mix(ahead, behindC, behind);
-    c = mix(c, vec3(0.34, 0.18, 0.025) * (0.55 + lum), lip * 0.72);
+    vec3 thickEdge = vec3(0.075, 0.028, 0.006) * (0.65 + lum * 0.45);
+    vec3 hotLip = vec3(0.31, 0.15, 0.018) * (0.52 + lum * 0.65) + vec3(0.24, 0.12, 0.018) * bodySpec;
+    c = mix(c, thickEdge, lipWide * 0.42);
+    c = mix(c, hotLip, lip * 0.78);
+    c += vec3(0.55, 0.30, 0.055) * crown * (0.25 + lum * 0.55);
+    float foamBreak = smoothstep(0.48, 0.78, fbm(vUv * vec2(34.0, 16.0) + vec2(u * 1.7, 0.0), 3));
+    c += vec3(0.08, 0.34, 0.36) * contactBand * (0.25 + foamBreak * 0.55);
     fragColor = vec4(c, 1.0);`,
   ink: `
     vec3 ca = texture(texA, vUv).rgb;
@@ -94,14 +112,14 @@ const BODY: Record<ThresholdTransitionMode, string> = {
     float inside = 1.0 - smoothstep(front - 0.014, front + 0.014, d);
     float wetBand = (1.0 - smoothstep(0.0, 0.22, abs(d - front))) * smoothstep(0.02, 0.10, u);
     float inkSub = (1.0 - smoothstep(front - 0.02, front + 0.20, d)) * smoothstep(0.0, 0.04, u);
-    vec3 drowned = mix(ca, vec3(0.001, 0.004, 0.006), sat(inkSub * 1.25));
+    vec3 drowned = mix(ca, vec3(0.010, 0.022, 0.026), sat(inkSub * 1.25));
     // Paper fibre field: long torn cellulose threads and small dry pinholes.
     float fibreA = fbm(vec2(vUv.x * 42.0, vUv.y * 9.0), 5);
     float fibreB = fbm(vec2(vUv.x * 150.0, vUv.y * 28.0) + 3.7, 3);
     float fibre = fibreA * 0.65 + fibreB * 0.35;
-    vec3 paper = vec3(0.29, 0.245, 0.17) * (0.45 + fibre * 0.55);
-    vec3 wetInk = vec3(0.001, 0.003, 0.005);
-    float dryK = smoothstep(0.36, 0.86, u) * inside;
+    vec3 paper = vec3(0.34, 0.285, 0.20) * (0.48 + fibre * 0.55);
+    vec3 wetInk = vec3(0.018, 0.030, 0.034);
+    float dryK = smoothstep(0.24, 0.78, u) * inside;
     vec3 membrane = mix(wetInk, paper, dryK * (0.35 + 0.65 * smoothstep(0.30, 0.66, fibre)));
     // Library visibility is peeled open as a second opaque cellulose front.
     float peelN = (fbm(vUv * vec2(6.0, 5.0) + vec2(8.2, -u * 0.27), 4) - 0.5) * 0.16;
