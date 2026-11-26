@@ -27,6 +27,72 @@ const KEYS: CamKey[] = [
   { t: 30.0, pos: [-2.0, 1.54, 14.72], look: [-2, 1.15, 16], fov: 88, gait: 'run', roll: 0.08 },
 ];
 
+type SurfaceKind = 'carpet' | 'fabric' | 'ceiling' | 'paper' | 'plastic' | 'metal' | 'laminate';
+function surfaceNoise(x: number, y: number, seed: number) {
+  const v = Math.sin(x * 12.9898 + y * 78.233 + seed * 37.719) * 43758.5453;
+  return v - Math.floor(v);
+}
+function proceduralSurface(kind: SurfaceKind, repeat: number) {
+  const size = 256;
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const g = c.getContext('2d')!;
+  const img = g.createImageData(size, size);
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    const n = surfaceNoise(x, y, kind.length * 17);
+    const n2 = surfaceNoise(Math.floor(x / 4), Math.floor(y / 4), kind.length * 31);
+    let v = 220;
+    if (kind === 'carpet') {
+      const loop = Math.sin(x * 0.72) * 9 + Math.sin((x + y) * 0.31) * 7;
+      const damp = Math.max(0, Math.sin(x * 0.035 + 1.7) + Math.sin(y * 0.028 - 0.5) - 1.1) * 34;
+      v = 190 + loop + n * 24 + n2 * 12 - damp;
+    } else if (kind === 'fabric') {
+      v = 205 + Math.sin(x * 0.82) * 10 + Math.sin(y * 1.7) * 4 + n * 18;
+    } else if (kind === 'ceiling') {
+      const fissure = Math.abs(Math.sin(x * 0.08 + Math.sin(y * 0.06) * 2.4)) < 0.045 ? -34 : 0;
+      const pit = n > 0.955 ? -55 : 0;
+      v = 214 + n * 18 + n2 * 9 + fissure + pit;
+    } else if (kind === 'paper') {
+      const fibre = Math.sin(y * 1.9 + n * 3) * 8;
+      v = 219 + fibre + n * 15 - (n > 0.965 ? 28 : 0);
+    } else if (kind === 'plastic') {
+      v = 216 + n * 13 + Math.sin((x + y) * 0.11) * 5;
+    } else if (kind === 'metal') {
+      const scratch = Math.abs(Math.sin(y * 1.35 + n * 0.4)) < 0.03 ? -38 : 0;
+      v = 198 + n * 20 + scratch;
+    } else {
+      v = 207 + Math.sin(y * 0.65) * 8 + n2 * 16 + n * 8;
+    }
+    const id = (y * size + x) * 4;
+    img.data[id] = img.data[id + 1] = img.data[id + 2] = Math.max(80, Math.min(255, v));
+    img.data[id + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(repeat, repeat);
+  return tex;
+}
+function officeScreenTexture() {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 160;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#58d9d4'; g.fillRect(0, 0, 256, 160);
+  g.strokeStyle = 'rgba(5,45,48,.55)'; g.lineWidth = 2;
+  for (let i = 0; i < 8; i++) {
+    const inset = 14 + i * 9;
+    g.strokeRect(inset, inset * 0.55, 256 - inset * 2, 160 - inset * 1.1);
+  }
+  g.fillStyle = 'rgba(0,30,34,.28)';
+  for (let y = 0; y < 160; y += 4) g.fillRect(0, y, 256, 1);
+  g.fillStyle = 'rgba(255,255,255,.22)'; g.fillRect(34, 22, 74, 5);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+function surfaceMat(kind: SurfaceKind, color: string | number, roughness = 0.75, repeat = 2, metalness = 0) {
+  const map = proceduralSurface(kind, repeat);
+  return new THREE.MeshStandardMaterial({ color, roughness, metalness, map, roughnessMap: map, bumpMap: map, bumpScale: kind === 'metal' ? 0.006 : 0.014 });
+}
+
 export default class ThresholdZ1Office extends Scene {
   private s = new THREE.Scene();
   private cam = new THREE.PerspectiveCamera(74, 16 / 9, 0.04, 80);
@@ -58,17 +124,18 @@ export default class ThresholdZ1Office extends Scene {
     this.flash = addFlashlight(this.s);
     this.s.add(new THREE.AmbientLight(0x9a9278, 0.43));
 
-    const carpet = mat(0x756947, 0.92);
-    const wall = mat(0xa89354, 0.82);
-    const wallDark = mat(0x796a3f, 0.88);
-    const ceiling = mat(0xcfc8b1, 0.76);
-    const metal = mat(0x595c5b, 0.42, 0.35);
-    const plastic = mat(0xcdbd91, 0.48);
+    const carpet = surfaceMat('carpet', 0x756947, 0.94, 5.5);
+    const wall = surfaceMat('fabric', 0xa89354, 0.86, 3.5);
+    const wallDark = surfaceMat('fabric', 0x796a3f, 0.9, 3.5);
+    const ceiling = surfaceMat('ceiling', 0xcfc8b1, 0.82, 2.8);
+    const metal = surfaceMat('metal', 0x595c5b, 0.5, 2.2, 0.35);
+    const plastic = surfaceMat('plastic', 0xcdbd91, 0.56, 2.4);
     const dark = mat(0x101010, 0.9);
-    const paper = mat(0xd8d0b9, 0.88);
+    const paper = surfaceMat('paper', 0xd8d0b9, 0.9, 2.6);
     const green = mat(0x204020, 0.5, 0, 0x25ff56, 0.8);
     const red = mat(0x5d1512, 0.45, 0, 0xff1f18, 1.8);
-    const screen = mat(0x1c3032, 0.25, 0, 0x5de6e0, 1.35);
+    const screenTex = officeScreenTexture();
+    const screen = new THREE.MeshStandardMaterial({ color: 0x1c3032, roughness: 0.24, map: screenTex, emissive: 0x5de6e0, emissiveMap: screenTex, emissiveIntensity: 1.05 });
     this.doorGlow = mat(0xfff4c8, 0.3, 0, 0xfff2b0, 5) as THREE.MeshStandardMaterial;
 
     box(this.s, 'z1_floor', [30, 0.08, 48], [0, -0.04, -3], carpet);
@@ -88,7 +155,19 @@ export default class ThresholdZ1Office extends Scene {
       [-6.4, -4.6, 0.12, 1.45, 5.4], [6.5, -4.7, 0.12, 1.45, 5.5], [-1.4, 4.2, 0.12, 1.45, 4.5], [6.3, 7.2, 0.12, 1.45, 5.2],
       [-6.1, 7.4, 0.12, 1.45, 5.6], [1.6, 11.4, 5.0, 1.45, 0.12], [-6.8, 12.2, 4.5, 1.45, 0.12], [8.8, 3.3, 0.12, 1.45, 8],
     ];
-    partitions.forEach(([x, z, sx, sy, sz], i) => box(this.s, `z1_partition_${i}`, [sx, sy, sz], [x, sy / 2, z], i % 2 ? wall : wallDark));
+    partitions.forEach(([x, z, sx, sy, sz], i) => {
+      box(this.s, `z1_partition_${i}`, [sx, sy, sz], [x, sy / 2, z], i % 2 ? wall : wallDark);
+      // Metal/fabric edge caps make the half-height cubicle construction legible instead of infinitely thin grey planes.
+      box(this.s, `z1_partition_topcap_${i}`, [Math.max(sx, 0.14), 0.045, Math.max(sz, 0.14)], [x, sy + 0.022, z], metal);
+      box(this.s, `z1_partition_bottomrail_${i}`, [Math.max(sx, 0.13), 0.055, Math.max(sz, 0.13)], [x, 0.055, z], metal);
+      if (sx > sz) {
+        box(this.s, `z1_partition_endcap_l_${i}`, [0.055, sy, 0.065], [x - sx / 2, sy / 2, z], metal);
+        box(this.s, `z1_partition_endcap_r_${i}`, [0.055, sy, 0.065], [x + sx / 2, sy / 2, z], metal);
+      } else {
+        box(this.s, `z1_partition_endcap_l_${i}`, [0.065, sy, 0.055], [x, sy / 2, z - sz / 2], metal);
+        box(this.s, `z1_partition_endcap_r_${i}`, [0.065, sy, 0.055], [x, sy / 2, z + sz / 2], metal);
+      }
+    });
     // Deep repeated maze beyond the first desk: foreground/midground/background cubicle rows make the office read as endless.
     const deepTubeGlow = mat(0xdfe9d8, 0.24, 0, 0xd9ffd0, 1.7);
     for (let row = 0; row < 6; row++) {
@@ -108,8 +187,8 @@ export default class ThresholdZ1Office extends Scene {
     }
 
     // Dense workstation pods: repeated desks/chairs/monitors/props ground the maze as a working office rather than empty partitions.
-    const cubicleFabric = [mat(0xb09b6d, 0.92), mat(0x998b64, 0.95), mat(0x8b8270, 0.9)];
-    const deskTop = mat(0x807866, 0.62);
+    const cubicleFabric = [surfaceMat('fabric', 0xb09b6d, 0.94, 4.2), surfaceMat('fabric', 0x998b64, 0.95, 4.0), surfaceMat('fabric', 0x8b8270, 0.92, 3.8)];
+    const deskTop = surfaceMat('laminate', 0x807866, 0.66, 2.4);
     const keyboardMat = mat(0x242422, 0.7);
     const podChairMat = mat(0x343b42, 0.72);
     let pod = 0;
@@ -119,7 +198,7 @@ export default class ThresholdZ1Office extends Scene {
         // Keep the camera/run corridors open while filling both sides of the maze.
         if (z > 0.5 && z < 10.5 && side === 1 && zi % 2 === 0) continue;
         if (z > 8.5 && side === -1 && zi % 2 === 1) continue;
-        const lane = zi % 3 === 0 ? 6.7 : 4.15;
+        const lane = z < 0 ? (zi % 3 === 0 ? 5.2 : 3.65) : (zi % 3 === 0 ? 6.7 : 4.15);
         const x = side * lane;
         const face = -side;
         // cubicle shell: thicker fabric walls, top/bottom rails, pinboard patches
@@ -146,6 +225,19 @@ export default class ThresholdZ1Office extends Scene {
         pod++;
       }
     }
+    // Half-cropped foreground workstations establish the office as occupied space immediately around the opening camera.
+    for (const [i, x] of [0, 1].entries()) {
+      const side = i === 0 ? -1 : 1;
+      const px = side * 1.85, z = -2.15 - i * 0.35;
+      box(this.s, `z1_frontpod_desk_${i}`, [1.28, 0.07, 0.62], [px, 0.72, z], deskTop, [0, -side * 0.16, 0]);
+      box(this.s, `z1_frontpod_monitor_${i}`, [0.36, 0.29, 0.23], [px - side * 0.12, 0.95, z - 0.1], dark, [0, side * 0.28, 0]);
+      plane(this.s, `z1_frontpod_screen_${i}`, 0.27, 0.18, [px - side * 0.12, 0.96, z + 0.03], screen, [0, side * 0.28, 0]);
+      box(this.s, `z1_frontpod_keyboard_${i}`, [0.36, 0.024, 0.13], [px + side * 0.12, 0.765, z + 0.12], keyboardMat, [0, -side * 0.08, 0]);
+      box(this.s, `z1_frontpod_chair_${i}`, [0.42, 0.48, 0.42], [px + side * 0.42, 0.4, z + 0.48], podChairMat, [0, side * 0.8, i === 1 ? 0.35 : 0]);
+      box(this.s, `z1_frontpod_papers_${i}`, [0.28, 0.035, 0.32], [px + side * 0.35, 0.77, z - 0.12], paper, [0, hash(i) * 0.8, 0]);
+      plane(this.s, `z1_frontpod_contact_${i}`, 1.5, 1.05, [px, 0.008 + i * 0.00003, z + 0.1], basic(0x050403, 0.22), [-Math.PI / 2, 0, side * 0.2]);
+    }
+
     // Run-lane island workstations are deliberately close to the camera path so chase frames remain spatially dressed.
     const runPods: [number, number][] = [[-2.3, 1.7], [0.4, 3.6], [1.0, 5.8], [0.7, 8.0], [2.2, 10.4], [0.8, 12.4]];
     runPods.forEach(([x, z], i) => {
@@ -209,6 +301,29 @@ export default class ThresholdZ1Office extends Scene {
     cyl(this.s, 'z1_coffee_mug', 0.055, 0.11, [-0.18, 0.84, -5.78], mat(0xaaa18a, 0.5));
     cyl(this.s, 'z1_mould_ring', 0.065, 0.004, [-0.18, 0.905, -5.78], mat(0x25301d, 0.95), [Math.PI / 2, 0, 0], 24);
     for (let i = 0; i < 8; i++) box(this.s, `z1_sticky_${i}`, [0.09, 0.006, 0.09], [-0.75 + hash(i) * 0.4, 0.795, -5.78 + hash(i + 4) * 0.25], mat(i % 2 ? 0xd8c84e : 0xd89348, 0.8), [0, hash(i + 8) * 0.8, 0]);
+
+    // Hero beige phone detail: shell seams, handset endcaps, speaker holes, keypad legends, cord and worn laminate edges.
+    box(this.s, 'z1_phone_shell_seam_front', [0.39, 0.012, 0.012], [0.28, 0.888, -5.895], mat(0x7a684d, 0.7));
+    box(this.s, 'z1_phone_shell_seam_side', [0.012, 0.012, 0.24], [0.075, 0.888, -6.05], mat(0x7a684d, 0.7));
+    for (const side of [-1, 1]) {
+      cyl(this.s, `z1_receiver_endcap_${side}`, 0.058, 0.105, [0.28 + side * 0.19, 0.965, -6.05], plastic, [0, 0, Math.PI / 2], 20);
+      for (let h = 0; h < 5; h++) cyl(this.s, `z1_receiver_hole_${side}_${h}`, 0.005, 0.006, [0.28 + side * (0.16 + (h % 2) * 0.025), 1.018, -6.085 + Math.floor(h / 2) * 0.028], dark, [Math.PI / 2, 0, 0], 8);
+    }
+    for (let i = 0; i < 12; i++) {
+      const bx = 0.16 + (i % 3) * 0.055, bz = -5.94 + Math.floor(i / 3) * 0.045;
+      box(this.s, `z1_phone_button_legend_${i}`, [0.018, 0.004, 0.004], [bx, 0.921, bz], mat(0xd8cfb7, 0.75));
+    }
+    const cordPts = [
+      new THREE.Vector3(0.06, 0.91, -6.16), new THREE.Vector3(-0.02, 0.84, -6.22), new THREE.Vector3(-0.08, 0.78, -6.12),
+      new THREE.Vector3(-0.04, 0.76, -5.98), new THREE.Vector3(0.08, 0.82, -5.91), new THREE.Vector3(0.13, 0.88, -5.98),
+    ];
+    const cord = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(cordPts), 42, 0.007, 8), dark);
+    cord.name = cord.userData.fx_entity = 'z1_phone_coiled_cord'; cord.castShadow = cord.receiveShadow = true; this.s.add(cord);
+    for (let i = 0; i < 7; i++) box(this.s, `z1_desk_scratch_${i}`, [0.055 + hash(i) * 0.13, 0.002, 0.0035], [-0.55 + hash(i * 2) * 1.1, 0.792, -5.82 + hash(i * 3) * 0.38], mat(0x62594a, 0.9), [0, hash(i) * 0.8, 0]);
+    box(this.s, 'z1_desk_front_edge_worn', [2.02, 0.035, 0.025], [0, 0.735, -5.54], mat(0x3f392f, 0.82));
+    const mugHandle = new THREE.Mesh(new THREE.TorusGeometry(0.042, 0.008, 8, 18, Math.PI * 1.45), mat(0xaaa18a, 0.55));
+    mugHandle.position.set(-0.125, 0.855, -5.78); mugHandle.rotation.set(0, Math.PI / 2, 0.2); mugHandle.name = mugHandle.userData.fx_entity = 'z1_coffee_mug_handle'; mugHandle.castShadow = mugHandle.receiveShadow = true; this.s.add(mugHandle);
+    for (let i = 0; i < 5; i++) box(this.s, `z1_monitor_control_${i}`, [0.025, 0.009, 0.008], [-0.66 + i * 0.045, 0.82, -5.93], mat(0x0c0c0c, 0.8));
 
     // chairs/cubicle desks/printer/paper clutter along run path
     const chairMat = mat(0x343b42, 0.72);
