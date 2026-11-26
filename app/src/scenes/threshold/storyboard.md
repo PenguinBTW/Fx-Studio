@@ -21,7 +21,7 @@ On-screen line (Short frame 0, long-form title card at 0:04): **"every room down
 
 1. **The beige phone.** A 1980s beige office desk phone appears in every zone, rebuilt in that zone's material (real plastic in the office, a toy phone in the playroom, floating on the pool, folded paper in the library, the motel room phone, a felt puppet phone, sold in a vending machine, on the wall at home). It rings in every zone. Each time it is answered (the receiver lifts by itself: no hands are ever shown) you hear the room tone of the PREVIOUS zone. Payoff at home (Z8): the receiver lifts and you hear the office buzz from Z1, then the door opens onto the office. Loop.
 2. **The flicker rule.** Beam flicker = something near. Taught in Z1 (flicker, then the eyes). Used honestly every time after. Broken once on purpose in Z6 (it flickers, and the thing is friendly).
-3. **The battery.** The beam starts at full and dims in steps after each chase: 100% (Z1), 85% (after Z1 run), 70% (after Z4 run), 50% (after Z5), 25% (Z7 chase), dead at 172 s, relit by Lint (Z6's helper) at 174 s.
+3. **The battery.** The beam starts at full and dims in steps after each chase: 100% in Z1; 85% after the Z1 run and through Z2; 70% by the Z3 retreat and at Z4 entry; 50% at the end of the Z4 chase and through Z5/Z6; 25% in Z7/Z8; dead at 173.4 s; relit warm by Lint (Z6's helper) at 174 s.
 4. **The Tenant.** The main antagonist, a tall patchwork thing made of pieces of every zone. It is only glimpsed, each time a little more: Z2 a shape at the far end of the play tunnel (0.5 s); Z3 a pale shape deep under the water; Z4 a long shadow sliding across paper stacks; Z5 it is on the TV behind you, then in front of you; Z7 full reveal and chase. The cold open (0:00) is a flash-forward of its arm reaching into the beam at 172 s.
 5. **Lint the felt moth.** A small felt moth that first appears as a speck in the beam in Z4 (a felt moth among paper moths: out of place, sharp viewers notice), then in Z5 batting at the neon, then it is the helper in Z6, and it relights the flashlight in Z7. Tiny, warm, the only friend.
 
@@ -40,7 +40,7 @@ On-screen line (Short frame 0, long-form title card at 0:04): **"every room down
 | Z8 | home | 195.0-225.0 | 3:15-3:45 | Warm realistic home, golden hour | approach the phone | the house itself |
 | END | endscreen | 225.0-235.0 | 3:45-3:55 | Office loop frame, darkened | -- | end-screen slots |
 
-Adjacent entries overlap by the transition length in section I. Zone lengths obey R5 (20-45 s, and the 45 s cathedral changes rules twice).
+Adjacent entries overlap by the transition length in section F. Zone lengths obey R5 (20-45 s, and the 45 s cathedral changes rules twice).
 
 ## E. Zone storyboards
 
@@ -131,7 +131,7 @@ Transition T4 (104.7-105.3): page slam to black, neon flickers on (section F).
 
 ### Z5 -- Motel corridor at night (105.0-130.0 s) -- slow turn-around, then HIDE, beam OFF
 
-Purpose: relief (rain, a vacancy sign), then the most patient scare of the film: the CCTV TVs. The Tenant is shown in part. Battery drops to 50%.
+Purpose: relief (rain, a vacancy sign), then the most patient scare of the film: the CCTV TVs. The Tenant is shown in part. The battery is already at 50% entering the motel.
 
 | Beat | Time | Camera | In frame | Action | Beam | Audio | NEW |
 |---|---|---|---|---|---|---|---|
@@ -172,8 +172,8 @@ Purpose: the climax. The largest space, the best creature reveal (after the midp
 | 7.2 | 154.00-158.00 | `still`, eyes forward | The machines wake in a ripple from the far end toward you: row by row, lights on, a wave of blue-white light running 200 m in 3 s | -- | ON | Each row's relay clunk + compressor hum adding up to an organ chord | The cathedral lives |
 | 7.3 | 158.00-163.00 | `walk` along the first wall, look L at the machines, FOV 66 | Up close: machines selling things from every zone: a beige phone (row A3), a red ball (A4), a pool tile (A5), a paper page (B1), a felt puppet (B2), a flashlight identical to yours (B3, price "0") | -- | ON | Machine hum, one machine's phone item RINGING through the glass | Everything ends up here |
 | 7.4 | 163.00-168.00 | `still`, `look R 40` | All machines in the aisle dispense at once: items drop and roll out across the floor toward the centre and assemble: balls, tiles, paper, felt and coils pile into the Tenant, standing up to 4.2 m tall | The full reveal | flicker hard | A cascade of drops, rattles, then a sound of everything snapping together | Tenant: full |
-| 7.5 | 168.00-172.00 | `run` FOV 84 down the aisle; this is the cold-open path | Exactly the cold open: walls racing, machines switching off behind you | Chase | ON 25%, swinging | Footsteps, machines thunking off, the Tenant's rattling run | -- |
-| 7.6 | 172.00-174.00 | Same as cold-open beats 0.2-0.4 (look back, stumble, floor, arm in beam). Reuse the SAME timing and camera so the viewer recognises it | The arm reaching | Payoff of the open loop | flicker -> DEAD at 173.4 | Same as cold open | We've caught up |
+| 7.5 | 168.00-171.30 | `run` FOV 84 down the aisle; this is the cold-open path | Exactly the cold open: walls racing, machines switching off behind you | Chase | ON 25%, swinging | Footsteps, machines thunking off, the Tenant's rattling run | -- |
+| 7.6 | 171.30-174.00 | Same as cold-open beats 0.2-0.4 (look back, stumble, floor, arm in beam). Reuse the SAME timing and camera so the viewer recognises it. The exact 2.1 s replay occupies 171.30-173.40, then the frame stays black for the remaining 0.6 s | The arm reaching | Payoff of the open loop | flicker -> DEAD at 173.4 | Same as cold open | We've caught up |
 | 7.7 | 174.00-176.00 | Black, then a warm point of light: Lint lands on the dead flashlight | Lint's abdomen glows bright orange-warm; the beam comes back ON | The arm recoils from Lint's light | ON (relit, warm-tinted, 40%) | A felt flutter, a warm hum, the Tenant's screech | The helper pays off |
 | 7.8 | 176.00-186.00 | `run` again; the floor ahead cracks open: a long rift; the machines on the walls tip toward you | Machines toppling; the rift widening | Run into the rift | ON | Machines crashing, glass shattering, a rising roar | -- |
 | 7.9 | 186.00-192.00 | Fall into the rift: FOV 95, slow tumble (roll 360 over 6 s), looking up then down | The cathedral receding above; upside-down machines streaming past, their lights blurring into streaks; then soft warm light below | Falling | ON | Wind roar, then a calm descending tone | A new mode: the fall |
