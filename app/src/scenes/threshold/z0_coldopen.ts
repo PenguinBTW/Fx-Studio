@@ -185,6 +185,7 @@ export default class Z0ColdOpen extends Scene {
     this.arm.add(fingerGlint);
     this.tenantInst.root.traverse((obj) => {
       if (!(obj instanceof THREE.Mesh)) return;
+      if (obj.name === 'shoulder_collage') obj.scale.multiplyScalar(0.72);
       const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
       for (const m of mats) {
         if (!(m instanceof THREE.MeshStandardMaterial)) continue;
