@@ -174,6 +174,9 @@ export default class Z0ColdOpen extends Scene {
     this.tenantInst = await GLTFManager.instantiate(resolveAsset('tenant_arm', this.ctx.project ?? 'threshold').url, {});
     this.arm = new THREE.Group();
     this.arm.add(this.tenantInst.root);
+    const machineGlint = new THREE.PointLight(0x7fc9ff, 0.85, 2.4, 1.6);
+    machineGlint.position.set(-0.18, 0.18, -0.95);
+    this.arm.add(machineGlint);
     this.arm.visible = false;
     this.scene3d.add(this.arm);
     this.scene3d.add(this.flash.group);
@@ -183,11 +186,11 @@ export default class Z0ColdOpen extends Scene {
 
   private poseArm(t: number, pose: FPPose) {
     const reach = sm(2.4, 3.25, t);
-    const dist = lerp(5.8, 2.7, reach);
+    const dist = lerp(5.8, 3.9, reach);
     this.arm.position.set(
-      pose.pos[0] + pose.forward[0] * dist + pose.right[0] * 0.55,
+      pose.pos[0] + pose.forward[0] * dist + pose.right[0] * 0.78,
       pose.pos[1] - 0.24 + 0.62 * (1 - reach),
-      pose.pos[2] + pose.forward[2] * dist + pose.right[2] * 0.55,
+      pose.pos[2] + pose.forward[2] * dist + pose.right[2] * 0.78,
     );
     const towardCamera = new THREE.Vector3(
       -pose.forward[0] + pose.right[0] * 1.35,
@@ -196,7 +199,7 @@ export default class Z0ColdOpen extends Scene {
     ).normalize();
     this.arm.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, -1), towardCamera);
     this.arm.rotateX(0.1 * reach);
-    this.arm.scale.setScalar(lerp(0.95, 1.28, reach));
+    this.arm.scale.setScalar(lerp(0.95, 1.36, reach));
     this.arm.visible = t > 1.15 && t < 3.32;
   }
 
@@ -210,8 +213,11 @@ export default class Z0ColdOpen extends Scene {
     this.flash.update(pose, t, state, (time) => {
       const fwd = coldOpenPose(clamp(time, 0, 4)).forward;
       const down = lerp(0.18, 0, sm(1.8, 2.35, time));
-      const len = Math.hypot(fwd[0], fwd[1] - down, fwd[2]) || 1;
-      return [fwd[0] / len, (fwd[1] - down) / len, fwd[2] / len];
+      const side = 0.16 * sm(2.0, 2.65, time);
+      const x = fwd[0] + pose.right[0] * side;
+      const z = fwd[2] + pose.right[2] * side;
+      const len = Math.hypot(x, fwd[1] - down, z) || 1;
+      return [x / len, (fwd[1] - down) / len, z / len];
     });
     // Machines switch off in a wave during the look-back: emissive intensity only in blockout;
     // W3's final cathedral animates per-machine relays and lamp glass.
