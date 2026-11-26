@@ -155,6 +155,7 @@ export default class ThresholdZ6Theatre extends Scene {
         const seat = seatTemplate.clone(true);
         seat.position.set(x, 0, z);
         seat.rotation.y = Math.PI;
+        seat.scale.setScalar(1.18);
         seat.rotation.z = (hash(row * 19 + col * 7) - 0.5) * 0.018;
         this.s.add(seat);
       }
@@ -163,12 +164,35 @@ export default class ThresholdZ6Theatre extends Scene {
     // Center aisle edges keep the auditorium geography readable in the dark.
     for (const side of [-1, 1]) this.box(this.s, [0.055, 0.018, 5.2], [side * 0.78, 0.02, 3.05], seatEdge);
 
+    // Auditorium sightline craft: low row lamps, side-wall sconces and balcony rails
+    // give the wide frames a receding theatre volume instead of a dark empty floor.
+    const rowLampMat = this.mat(0xffb36b, 0.55, 0, 0xff8f35, 1.7);
+    for (let row = 0; row < 6; row++) {
+      const z = 1.05 + row * 0.72;
+      for (const side of [-1, 1]) this.box(this.s, [0.09, 0.025, 0.18], [side * 0.83, 0.07, z], rowLampMat, [0, 0, side * 0.05]);
+    }
+    for (const side of [-1, 1]) {
+      this.box(this.s, [0.08, 0.09, 10.8], [side * 4.58, 2.72, -0.8], gold);
+      this.box(this.s, [0.12, 0.42, 10.8], [side * 4.66, 2.45, -0.8], woodDark);
+      for (let i = 0; i < 5; i++) {
+        const z = 3.7 - i * 2.15;
+        this.cyl(this.s, 0.055, 0.075, 0.18, [side * 4.61, 2.02, z], gold, 10);
+        this.sphere(this.s, 0.09, [side * 4.54, 2.17, z], rowLampMat, [1, 0.72, 1]);
+      }
+    }
+
     // Proscenium arch, stitched gold strips and tassel-like trim blocks.
     this.box(this.s, [0.55, 3.65, 0.5], [-4.0, 2.05, -4.35], wood);
     this.box(this.s, [0.55, 3.65, 0.5], [4.0, 2.05, -4.35], wood);
     this.box(this.s, [8.5, 0.55, 0.5], [0, 3.78, -4.35], wood);
     this.box(this.s, [7.5, 0.08, 0.08], [0, 3.43, -4.05], gold);
     for (let i = 0; i < 13; i++) this.cyl(this.s, 0.025, 0.04, 0.18, [-3.4 + i * 0.56, 3.24, -4.0], gold, 8);
+    for (const side of [-1, 1]) {
+      this.box(this.s, [0.09, 3.15, 0.09], [side * 3.68, 2.02, -4.02], gold);
+      this.box(this.s, [0.18, 3.35, 0.12], [side * 3.9, 2.05, -3.98], feltDark);
+      for (let j = 0; j < 5; j++) this.sphere(this.s, 0.055, [side * 3.58, 1.0 + j * 0.52, -3.92], rowLampMat, [1, 0.75, 1]);
+    }
+    for (let i = 0; i < 9; i++) this.sphere(this.s, 0.06, [-3.0 + i * 0.75, 3.48, -3.94], rowLampMat, [1, 0.72, 1]);
 
     // Red felt curtains; they open in stepped stop-motion.
     this.curtainL = this.box(this.s, [2.25, 3.0, 0.22], [-1.25, 2.0, -4.2], feltRed);
@@ -258,8 +282,8 @@ export default class ThresholdZ6Theatre extends Scene {
       houseModule.position.z = -6.8;
       this.houseTableau.add(houseModule);
     }
-    this.houseTableau.scale.setScalar(2.1);
-    this.houseTableau.position.set(0, -0.6, 8.32);
+    this.houseTableau.scale.setScalar(2.65);
+    this.houseTableau.position.set(0, -0.6, 12.0);
     this.houseTableau.visible = false;
     this.s.add(this.houseTableau);
 
@@ -271,20 +295,29 @@ export default class ThresholdZ6Theatre extends Scene {
       this.backstageObjects.push(backstageModule);
     }
     const hanging: [string, number, number][] = [
-      ['flashlight_puppet', -1.85, 0.48],
-      ['tenant_puppet', -1.05, 0.58],
-      ['flashlight_puppet', -0.25, 0.48],
+      ['flashlight_puppet', -1.85, 0.78],
+      ['tenant_puppet', -1.05, 0.92],
+      ['flashlight_puppet', -0.25, 0.78],
     ];
     hanging.forEach(([part, x, scale], i) => {
       const puppet = cloneKitPart(part);
       if (!puppet) return;
       puppet.scale.setScalar(scale);
-      puppet.position.set(x, 1.18 - i * 0.04, -8.72);
+      puppet.position.set(x, 1.18 - i * 0.04, -8.15);
       puppet.rotation.z = (i - 1) * 0.16;
       puppet.rotation.x = 0.08;
       this.s.add(puppet);
       this.backstageObjects.push(puppet);
     });
+    // Readable backstage rigging at wide scale: ropes, sandbags and hook rails.
+    const ropeMat = this.mat(0x9b7650, 0.88);
+    for (let i = 0; i < 7; i++) {
+      const x = -2.5 + i * 0.55;
+      this.cyl(this.s, 0.008, 0.008, 2.6, [x, 2.0, -8.35 - (i % 2) * 0.28], ropeMat, 6);
+      if (i % 2 === 0) this.box(this.s, [0.14, 0.32, 0.09], [x, 0.58, -8.35 - (i % 2) * 0.28], this.mat(0x5b3922, 0.94), [0.04, 0, 0.08]);
+    }
+    this.box(this.s, [3.8, 0.055, 0.07], [-0.8, 3.18, -8.38], wood);
+
     this.box(this.s, [0.2, 0.025, 0.12], [1.6, 0.9, 2.2], paper, [0, 0.3, 0]);
 
     // Backstage EXIT door and cold cathedral-blue slit beyond it.
@@ -365,6 +398,13 @@ export default class ThresholdZ6Theatre extends Scene {
     spot.position.set(0, 4.0, 0.5);
     spot.target.position.set(0, 1.0, -6.5);
     this.s.add(spot, spot.target);
+    const beamGeo = new THREE.ConeGeometry(1.45, 3.25, 32, 1, true);
+    const beamMat = new THREE.MeshBasicMaterial({ color: 0xffa65a, transparent: true, opacity: 0.016, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+    const beamCone = new THREE.Mesh(beamGeo, beamMat);
+    beamCone.position.set(0, 2.35, -5.3);
+    beamCone.rotation.x = -0.08;
+    this.s.add(beamCone);
+    this.disposables.push(beamGeo, beamMat);
     this.s.add(new THREE.AmbientLight(0x3a2028, 0.68));
 
     this.s.add(this.flash.group);
