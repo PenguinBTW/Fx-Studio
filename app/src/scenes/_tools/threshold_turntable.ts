@@ -7,11 +7,12 @@ import { evalFirstPerson, applyFirstPersonCamera, type FPKey } from '../threshol
 import { FlashlightRig, beamStateAt } from '../threshold/flashlight';
 import { thresholdPost } from '../threshold/sensor_post';
 
-const IDS = ['beige_phone', 'lint', 'tenant_arm'] as const;
+const IDS = ['beige_phone', 'lint', 'tenant_arm', 'tenant_full'] as const;
 const META = [
   { dist: 0.72, height: 0.72, target: 0.08, scale: 1 },
   { dist: 0.24, height: 0.15, target: 0.055, scale: 1 },
   { dist: 3.8, height: 1.05, target: 0.05, scale: 1 },
+  { dist: 7.2, height: 2.05, target: 2.0, scale: 1 },
 ];
 
 export default class ThresholdTurntable extends Scene {
@@ -38,7 +39,7 @@ export default class ThresholdTurntable extends Scene {
   }
 
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
-    const t = Math.max(0, Math.min(29.999, f.t));
+    const t = Math.max(0, Math.min(39.999, f.t));
     const segment = Math.floor(t / 10);
     const view = Math.floor(t % 10);
     const meta = META[segment]!;
