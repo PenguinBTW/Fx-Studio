@@ -519,7 +519,7 @@ export default class ThresholdZ2Playroom extends Scene {
     const gl = this.ctx.renderer;
     gl.setRenderTarget(out); gl.setClearColor(0xcfe8ff, 1); gl.clear(true, true, true); gl.render(this.s, this.cam); gl.resetState();
     return {
-      ...thresholdPost(t, { darkness: 0.12, exposure: 0.18, stress: t > 40.5 && t < 49.5 ? 0.22 : 0.02 }),
+      ...thresholdPost(t, { darkness: 0.12, exposure: 0.18 + (t >= 29.6 ? 0.75 * Math.exp(-Math.max(0, t - 29.7) / 0.25) : 0), stress: t > 40.5 && t < 49.5 ? 0.22 : 0.02 }),
       // T1 now owns the eye-adaptation bridge. Do not re-impose a zone-local whiteout
       // after the seam or the exposure decay reverses when transition post is unsuppressed.
       flash: 0,

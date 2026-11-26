@@ -38,6 +38,13 @@ const BODY: Record<ThresholdTransitionMode, string> = {
     revealB = max(revealB, smoothstep(0.78, 0.94, u));
     vec3 daylight = vec3(5.8, 5.45, 4.8) * (0.32 + 0.68 * blast);
     vec3 c = mix(daylight, cb, revealB);
+    // After the fire-door peak the mean white level decays exponentially in
+    // absolute seconds; z2's exposure envelope continues the same eye-adapt tail
+    // after the spec-fixed 0.8 s shader seam ends.
+    float adaptT = max(0.0, u * 0.8 - 0.07);
+    float whiteK = 0.84 * exp(-9.7 * adaptT);
+    vec3 adaptC = mix(cb, vec3(5.8, 5.45, 4.8), whiteK);
+    c = mix(c, adaptC, smoothstep(0.0, 0.08, adaptT));
     c = mix(ca, c, smoothstep(0.0, 0.10, u));
     fragColor = vec4(c, 1.0);`,
   tunnel: `
@@ -204,7 +211,7 @@ export class ThresholdShaderTransition implements Transition {
       void main() {
         ${BODY[mode]}
         vec3 endB = texture(texB, vUv).rgb;
-        fragColor = vec4(mix(fragColor.rgb, endB, smoothstep(0.965, 1.0, u)), 1.0);
+        fragColor = vec4(mix(fragColor.rgb, endB, smoothstep(${mode === 'exposure' ? '0.82' : '0.965'}, 1.0, u)), 1.0);
       }
     `, {
       texA: { value: null },
