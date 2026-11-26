@@ -152,8 +152,13 @@ export function z7PoseAt(t: number) {
     // compositionally imperceptible but makes the 50ms velocity samples continuous.
     const base = poseAt(t, z7Gait(t));
     const dt = Math.max(0, t - 149.5);
-    const u = clamp(dt / 0.8);
-    const push = u < 1 ? -1.5 * 0.8 * (u - 0.5 * u * u) : -0.6;
+    const dur = 1.8;
+    const v0 = 1.15;
+    const endRatio = 0.22;
+    const u = clamp(dt / dur);
+    const eased = v0 * dur * (u - 0.5 * (1 - endRatio) * u * u);
+    const overrun = Math.max(0, dt - dur) * v0 * endRatio;
+    const push = -(eased + overrun);
     const pos: [number, number, number] = [base.pos[0], base.pos[1], base.pos[2] + push];
     return { ...base, pos, target: [pos[0] + base.forward[0], pos[1] + base.forward[1], pos[2] + base.forward[2]] as [number, number, number] };
   }

@@ -203,19 +203,19 @@ const BODY: Record<ThresholdTransitionMode, string> = {
     vec3 ca = texture(texA, vUv).rgb;
     // Incoming cathedral is slightly magnified and lowered at first, then settles:
     // a small scale/eye-height jump rather than a flat lateral wipe.
-    float settle = smoothstep(0.30, 0.92, u);
+    float settle = smoothstep(0.10, 1.00, u);
     float zoom = mix(1.075, 1.0, settle);
     vec2 buv = (vUv - vec2(0.5, 0.5)) / zoom + vec2(0.5, mix(0.535, 0.5, settle));
     vec3 cb = texture(texB, clamp(buv, 0.0, 1.0)).rgb;
-    float whip = smoothstep(0.0, 0.30, u);
+    float whip = smoothstep(0.0, 0.62, u);
     float edgePos = mix(1.18, -0.16, whip);
     float open = 1.0 - smoothstep(edgePos - 0.018, edgePos + 0.018, vUv.x);
     float blur = 0.018 * (1.0 - whip);
     vec3 aa = texture(texA, vUv + vec2(blur, 0.0)).rgb * 0.5 + texture(texA, vUv - vec2(blur, 0.0)).rgb * 0.5;
     float fibre = fbm(vUv * vec2(150.0, 26.0), 4) * 0.5 + 0.5;
     aa *= 0.74 + fibre * 0.18;
-    float edgeBand = (1.0 - smoothstep(0.0, 0.055, abs(vUv.x - edgePos))) * (1.0 - smoothstep(0.28, 0.38, u));
-    float shadow = smoothstep(edgePos, edgePos + 0.24, vUv.x) * (1.0 - smoothstep(0.2, 0.42, u));
+    float edgeBand = (1.0 - smoothstep(0.0, 0.055, abs(vUv.x - edgePos))) * (1.0 - smoothstep(0.52, 0.68, u));
+    float shadow = smoothstep(edgePos, edgePos + 0.24, vUv.x) * (1.0 - smoothstep(0.42, 0.66, u));
     vec3 edgeCol = vec3(0.09, 0.018, 0.012) * (0.65 + fibre * 0.5);
     vec3 c = mix(cb, aa, open);
     c = mix(c, edgeCol, edgeBand * 0.92);
