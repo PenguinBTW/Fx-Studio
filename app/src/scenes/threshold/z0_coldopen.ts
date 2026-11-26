@@ -89,12 +89,15 @@ export default class Z0ColdOpen extends Scene {
   private panelMat!: THREE.MeshStandardMaterial;
   private vents!: THREE.InstancedMesh;
   private ambientDust!: THREE.InstancedMesh;
+  private floorMat!: THREE.MeshStandardMaterial;
+  private ambientLight!: THREE.HemisphereLight;
+  private reflectionMats: THREE.MeshBasicMaterial[] = [];
 
   override async init() {
     this.scene3d.background = new THREE.Color(0.0004, 0.0005, 0.0008);
     this.scene3d.fog = new THREE.FogExp2(0x020308, 0.035);
-    const floorMat = new THREE.MeshStandardMaterial({ color: 0x182b3e, roughness: 0.2, metalness: 0.5, emissive: 0x061622, emissiveIntensity: 0.72 });
-    const floor = new THREE.Mesh(new THREE.BoxGeometry(9, 0.12, 190), floorMat);
+    this.floorMat = new THREE.MeshStandardMaterial({ color: 0x182b3e, roughness: 0.2, metalness: 0.5, emissive: 0x061622, emissiveIntensity: 0.72 });
+    const floor = new THREE.Mesh(new THREE.BoxGeometry(9, 0.12, 190), this.floorMat);
     floor.position.set(0, -0.06, -70);
     floor.receiveShadow = true;
     this.scene3d.add(floor);
@@ -222,6 +225,7 @@ export default class Z0ColdOpen extends Scene {
         blending: THREE.AdditiveBlending,
         depthWrite: false,
       });
+      this.reflectionMats.push(reflMat);
       const refl = new THREE.Mesh(reflGeom, reflMat);
       refl.rotation.x = -Math.PI / 2;
       refl.position.set(side * (1.54 + 0.05 * hash(row * 3.1)), 0.012, 3.15 - row * 3.2);
@@ -229,6 +233,7 @@ export default class Z0ColdOpen extends Scene {
       this.scene3d.add(refl);
     }
     const centerReflMat = new THREE.MeshBasicMaterial({ color: 0x4b9dcc, transparent: true, opacity: 0.13, blending: THREE.AdditiveBlending, depthWrite: false });
+    this.reflectionMats.push(centerReflMat);
     for (let k = 0; k < 16; k++) {
       const refl = new THREE.Mesh(new THREE.PlaneGeometry(0.18, 3.8), centerReflMat);
       refl.rotation.x = -Math.PI / 2;
@@ -277,8 +282,8 @@ export default class Z0ColdOpen extends Scene {
     this.arm.visible = false;
     this.scene3d.add(this.arm);
     this.scene3d.add(this.flash.group);
-    const ambient = new THREE.HemisphereLight(0x456f91, 0x080606, 1.05);
-    this.scene3d.add(ambient);
+    this.ambientLight = new THREE.HemisphereLight(0x456f91, 0x080606, 1.05);
+    this.scene3d.add(this.ambientLight);
   }
 
   private poseArm(t: number, pose: FPPose) {
@@ -314,6 +319,10 @@ export default class Z0ColdOpen extends Scene {
     const wave = t < 1.2 ? 0 : clamp((t - 1.2) / 0.7);
     this.machineMat.emissiveIntensity = lerp(0.95, 0.14, wave) * (t >= 3.3 ? 0 : 1);
     this.panelMat.emissiveIntensity = lerp(1.8, 0.22, wave) * (t >= 3.3 ? 0 : 1);
+    const hookDim = 1 - sm(1.15, 1.85, t);
+    this.floorMat.emissiveIntensity = lerp(0.18, 0.72, hookDim);
+    this.ambientLight.intensity = lerp(0.62, 1.05, hookDim);
+    for (const m of this.reflectionMats) m.opacity = m === this.reflectionMats[this.reflectionMats.length - 1] ? 0.13 * hookDim : (m.color.getHex() === 0xffa864 ? 0.12 : 0.16) * hookDim;
     const r = this.ctx.renderer;
     r.setRenderTarget(out);
     r.setClearColor(0x000000, 1);
