@@ -48,7 +48,7 @@ export default class ThresholdEndscreen extends Scene {
     // Same frame, intentionally darkened about 60%; modest radial/depth softness reads as endscreen blur
     // while grain/CA preserve the film's sensor language. No text or UI: slots are added by the user.
     return {
-      exposure: 0.68 - fade * 0.22,
+      exposure: 0.22 - fade * 0.04,
       bloom: 0.09,
       bloomThreshold: 1.05,
       vignette: 0.42,

@@ -111,6 +111,39 @@ export default class ThresholdZ5Motel extends Scene {
     return mesh;
   }
 
+
+  private motelPrintMaterial() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 128;
+    const g = canvas.getContext('2d')!;
+    g.fillStyle = '#9a805d';
+    g.fillRect(0, 0, 128, 128);
+    g.fillStyle = 'rgba(239,218,177,0.55)';
+    g.fillRect(8, 8, 112, 112);
+    g.strokeStyle = '#2b2118';
+    g.lineWidth = 4;
+    g.beginPath();
+    g.moveTo(10, 83); g.lineTo(38, 55); g.lineTo(62, 76); g.lineTo(91, 43); g.lineTo(119, 72);
+    g.stroke();
+    g.strokeStyle = 'rgba(42,31,22,0.72)';
+    g.lineWidth = 2;
+    for (let i = 0; i < 7; i++) {
+      const x = 18 + i * 15;
+      g.beginPath(); g.moveTo(x, 104); g.lineTo(x + (i % 2 ? 5 : -4), 78 - (i % 3) * 6); g.stroke();
+    }
+    g.fillStyle = 'rgba(67,35,18,0.58)';
+    g.beginPath(); g.ellipse(82, 94, 24, 12, -0.25, 0, Math.PI * 2); g.fill();
+    g.fillStyle = 'rgba(31,23,18,0.5)';
+    for (let i = 0; i < 32; i++) g.fillRect(Math.floor(hash(i * 2) * 126), Math.floor(hash(i * 3) * 126), 2, 1);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    this.disposables.push(tex);
+    const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.78, metalness: 0, emissive: 0x241507, emissiveIntensity: 0.16, map: tex });
+    this.disposables.push(mat);
+    return mat;
+  }
+
   private cctvMaterial(seed: number) {
     const canvas = document.createElement('canvas');
     canvas.width = 160;
@@ -258,20 +291,19 @@ export default class ThresholdZ5Motel extends Scene {
     const wallpaperStripeB = this.mat(0x40362b, 0.88);
     const stainMat = this.mat(0x1b1712, 0.96);
     const frameMat = this.mat(0x392718, 0.65);
-    const printMat = this.mat(0x766047, 0.82, 0, 0x1a1008, 0.08);
+    const printMat = this.motelPrintMaterial();
     for (const side of [-1, 1]) {
       const x = side * 1.515;
       for (let i = 0; i < 16; i++) {
         const z = -8.6 - i * 0.66;
         this.box(this.s, [0.018, 2.05, 0.035], [x, 1.28, z], i % 2 ? wallpaperStripe : wallpaperStripeB);
       }
-      for (const [z, y, w, h] of [[-16.15, 1.42, 0.48, 0.58], [-17.68, 1.38, 0.72, 0.82], [-18.75, 1.48, 0.56, 0.68], [-20.65, 1.38, 0.42, 0.52]] as const) {
-        const yaw = side < 0 ? Math.PI / 2 : -Math.PI / 2;
-        this.box(this.s, [0.035, h, w], [x - side * 0.018, y, z], frameMat, [0, 0, 0]);
-        this.box(this.s, [0.04, h - 0.1, w - 0.1], [x - side * 0.038, y, z], printMat, [0, yaw, 0]);
-        this.box(this.s, [0.043, 0.08, 0.12], [x - side * 0.045, y - h * 0.12, z + w * 0.12], stainMat, [0, yaw, 0]);
+      for (const [z, y, w, h] of [[-16.15, 1.42, 0.48, 0.58], [-17.68, 1.38, 0.72, 0.82], [-18.86, 1.47, 0.56, 0.68], [-19.76, 1.38, 0.58, 0.72], [-20.65, 1.38, 0.42, 0.52]] as const) {
+        this.box(this.s, [0.035, h, w], [x - side * 0.018, y, z], frameMat);
+        this.box(this.s, [0.04, h - 0.1, w - 0.1], [x - side * 0.038, y, z], printMat);
+        this.box(this.s, [0.043, 0.08, 0.12], [x - side * 0.045, y - h * 0.12, z + w * 0.12], stainMat);
       }
-      for (const [z, y] of [[-10.4, 1.42], [-12.35, 1.36], [-14.35, 1.46]] as const) {
+      for (const [z, y] of [[-10.4, 1.42], [-12.78, 1.46], [-14.35, 1.46]] as const) {
         this.box(this.s, [0.035, 0.62, 0.5], [x - side * 0.018, y, z], frameMat);
         this.box(this.s, [0.04, 0.5, 0.38], [x - side * 0.038, y, z], printMat);
         this.box(this.s, [0.043, 0.11, 0.15], [x - side * 0.045, y - 0.12, z + 0.08], stainMat);

@@ -119,6 +119,30 @@ export default class ThresholdZ7Cathedral extends Scene {
     return m;
   }
 
+
+  private productMaterial(base: string, accent: string, seed: number) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const g = canvas.getContext('2d')!;
+    g.fillStyle = base;
+    g.fillRect(0, 0, 64, 64);
+    g.fillStyle = accent;
+    g.fillRect(0, 8 + Math.floor(hash(seed) * 12), 64, 12);
+    g.fillStyle = 'rgba(255,244,210,0.88)';
+    g.fillRect(7, 28, 50, 17);
+    g.fillStyle = 'rgba(25,18,14,0.75)';
+    for (let i = 0; i < 5; i++) g.fillRect(11 + i * 8, 32 + (i % 2) * 3, 5, 2);
+    g.fillStyle = 'rgba(255,255,255,0.24)';
+    for (let i = 0; i < 9; i++) g.fillRect(Math.floor(hash(seed + i * 2) * 62), Math.floor(hash(seed + i * 3) * 62), 2, 1);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    this.disposables.push(tex);
+    const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.48, metalness: 0.04, emissive: 0x1a1008, emissiveIntensity: 0.16, map: tex });
+    this.disposables.push(mat);
+    return mat;
+  }
+
   private box(parent: THREE.Object3D, size: [number, number, number], pos: [number, number, number], mat: THREE.Material, rot: [number, number, number] = [0, 0, 0]) {
     const g = new THREE.BoxGeometry(...size);
     const mesh = new THREE.Mesh(g, mat);
@@ -335,13 +359,25 @@ export default class ThresholdZ7Cathedral extends Scene {
     this.box(this.s, [0.09, 0.38, 0.09], [-13.75, 1.32, -10.0], chrome);
     this.box(this.s, [0.28, 0.08, 0.02], [-13.72, 1.7, -10.0], new THREE.MeshBasicMaterial({ color: 0xd8f2ff }));
 
-    // Assembly debris pieces that converge into the Tenant silhouette.
-    const pieceMats = [productRed, productTeal, paper, chrome, beige];
+    // Assembly debris pieces that converge into the Tenant silhouette: labelled cartons,
+    // cans and crumpled packets with visible print/barcode surfaces, not bare primitives.
+    const pieceMats = [
+      this.productMaterial('#8e2f24', '#e0b13e', 3),
+      this.productMaterial('#1c6d73', '#d8e7d2', 7),
+      this.productMaterial('#b58a35', '#692919', 11),
+      this.productMaterial('#5d3376', '#d57a2c', 17),
+      this.productMaterial('#294f8d', '#c8d6dd', 23),
+    ];
     for (let i = 0; i < 28; i++) {
       const m = pieceMats[i % pieceMats.length]!;
-      const piece = i % 3 === 0
-        ? this.sphere(this.s, 0.09 + 0.04 * hash(i), [0, -20, 0], m)
-        : this.box(this.s, [0.16 + 0.1 * hash(i), 0.12 + 0.12 * hash(i * 2), 0.1 + 0.1 * hash(i * 3)], [0, -20, 0], m);
+      const kind = i % 4;
+      const piece = kind === 0
+        ? this.cyl(this.s, 0.07 + 0.025 * hash(i), 0.07 + 0.025 * hash(i), 0.19 + 0.06 * hash(i * 2), [0, -20, 0], m, 14)
+        : kind === 1
+          ? this.box(this.s, [0.16 + 0.06 * hash(i), 0.22 + 0.08 * hash(i * 2), 0.11 + 0.04 * hash(i * 3)], [0, -20, 0], m)
+          : kind === 2
+            ? this.box(this.s, [0.22 + 0.08 * hash(i), 0.035 + 0.025 * hash(i * 2), 0.16 + 0.06 * hash(i * 3)], [0, -20, 0], m, [0.18, 0.1, 0.12])
+            : this.sphere(this.s, 0.09 + 0.025 * hash(i), [0, -20, 0], m, [1, 0.72, 0.88]);
       const side = i % 2 ? -1 : 1;
       const start = new THREE.Vector3(side * (11 + hash(i) * 2), 0.7 + hash(i * 2) * 1.6, -8 - hash(i * 3) * 16);
       const end = new THREE.Vector3((hash(i * 4) - 0.5) * 0.9, 0.5 + hash(i * 5) * 3.0, -18 + (hash(i * 6) - 0.5) * 0.5);
@@ -722,8 +758,8 @@ export default class ThresholdZ7Cathedral extends Scene {
     }
 
     // Assembly cascade: debris rolls inward and stacks into the full Tenant.
-    const asm = smooth((t - 163) / 5);
-    const showPieces = t >= 163 && t < 167.5;
+    const asm = smooth((t - 163) / 2.4);
+    const showPieces = t >= 163 && t < 166.4;
     for (const a of this.assembly) {
       a.mesh.visible = showPieces;
       if (!showPieces) continue;
@@ -741,7 +777,7 @@ export default class ThresholdZ7Cathedral extends Scene {
     if (this.heroMachinesR) this.heroMachinesR.root.visible = !exactReplay;
 
     // Tenant stop-start motion and pursuit position.
-    const tenantVisible = t >= 167.2 && t < 186 && !exactReplay;
+    const tenantVisible = t >= 165.6 && t < 186 && !exactReplay;
     this.tenant.visible = tenantVisible;
     if (tenantVisible) {
       let z = -18;
