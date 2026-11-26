@@ -757,12 +757,37 @@ wav('z7_cathedral_events.wav', stem(45.8,(t)=>{
  if(at>=174&&at<175){const u=at-174;add(z7lp*.055*Math.abs(Math.sin(u*Math.PI*2*7))+Math.sin(u*Math.PI*2*940)*.013*Math.exp(-u*4),.12)}
  // Tenant composite recoil screech: metal, tile shriek, tearing paper
  if(at>=174.7&&at<176){const u=at-174.7;add((Math.sin((700*u+350*u*u)*Math.PI*2)*.045+noise()*.045+z7lp*.06)*Math.sin(Math.PI*u/1.3),-.1)}
- // floor rift fracture and cascading debris
- if(at>=176&&at<180){const u=at-176;add((Math.sin(u*Math.PI*2*(42+u*8))*.070+z7lp*.11+noise()*.025)*Math.min(1,u/.5)*(1-smoothstep(3.1,4,u)),0)}
- // intermittent vending-machine topples, glass and metal crash tails
- for(const [hit,pan] of[[176.4,-.45],[178.1,.42],[180.0,-.36],[182.2,.38],[184.4,-.28]] as const){const u=at-hit;if(u>0&&u<1.6)add((noise()*.09+z7lp*.12+Math.sin(u*Math.PI*2*70)*.04)*Math.exp(-u*3.2),pan)}
- // overwhelming machine/glass/stone roar as rift widens
- if(at>=180&&at<186){const k=(at-180)/6;add((noise()*(.045+k*.075)+z7lp*(.07+k*.05))*(.5+.5*Math.sin(at*3)),0)}
+ // floor rift fracture and cascading debris: subsonic stone displacement first, then granular rockfall
+ if(at>=176&&at<180.8){
+   const u=at-176;
+   const fracture=(Math.sin(u*Math.PI*2*(34+u*7))*.105+Math.sin(u*Math.PI*2*(68+u*11))*.036+z7lp*.10+noise()*.018)*Math.min(1,u/.35)*(1-smoothstep(3.4,4.8,u));
+   add(fracture,0);
+   const cell=Math.floor(u*18);
+   const cu=(u*18-cell)/18;
+   if(cu<.09)add((noise()*.038+Math.sin(cu*Math.PI*2*(240+hash01(cell,22)*420))*.010)*Math.exp(-cu*55)*(1-smoothstep(3.2,4.4,u)),(hash01(cell,23)-.5)*.75);
+ }
+ // intermittent vending-machine topples: heavy shell/sub impact, glass spray, then long staggered nave tails
+ for(const [hit,pan] of[[176.4,-.45],[178.1,.42],[180.0,-.36],[182.2,.38],[184.4,-.28]] as const){
+   const u=at-hit;
+   if(u>0&&u<3.4){
+     const attack=Math.min(1,u/.028);
+     const sub=Math.sin(u*Math.PI*2*(47-u*7))*.115*Math.exp(-u*2.15)*attack;
+     const shell=(noise()*.052+z7lp*.082+Math.sin(u*Math.PI*2*(82-u*13))*.046)*Math.exp(-u*2.8)*attack;
+     add(sub+shell,pan);
+     for(const [eo,m,spread] of[[.34,.42,.18],[.78,.24,-.24],[1.38,.13,.31],[2.15,.07,-.18]] as const){
+       const q=u-eo;
+       if(q>0&&q<.72)add((z7lp*.075+Math.sin(q*Math.PI*2*(64-q*5))*.024+noise()*.012)*Math.exp(-q*4.4)*m,pan+spread);
+     }
+     const glassCell=Math.floor(u*34);
+     const gu=(u*34-glassCell)/34;
+     if(u<1.45&&gu<.055&&hash01(glassCell+hit,24)<.72){
+       const hz=1450+hash01(glassCell,25)*2900;
+       add((noise()*.032+Math.sin(gu*Math.PI*2*hz)*.010)*Math.exp(-gu*95),pan+(hash01(glassCell,26)-.5)*.62);
+     }
+   }
+ }
+ // overwhelming machine/glass/stone roar as rift widens, with slower pressure motion rather than a flat noise shelf
+ if(at>=180&&at<186){const k=(at-180)/6;add((noise()*(.040+k*.060)+z7lp*(.065+k*.045)+Math.sin(at*Math.PI*2*(31+k*9))*(.012+k*.020))*(.58+.42*Math.sin(at*2.1)),0)}
  // abrupt fall wind narrowing into warmer descent
  if(at>=186&&at<192){const u=at-186;const narrow=smoothstep(1.2,5,u);add(noise()*(.13-narrow*.075)+z7lp*(.04+narrow*.035),0)}
  // upward-passing machine/glass streaks during fall
