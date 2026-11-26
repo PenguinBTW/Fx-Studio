@@ -24,8 +24,6 @@ def padded_panel(x):
  add(box('panel_top_seam',(1.14,.018,.018),(x,-.065,1.04),BLUE,.004),r)
  add(box('panel_bottom_seam',(1.14,.018,.018),(x,-.065,.06),BLUE,.004),r)
  for sx in (-.54,.54): add(box('panel_side_seam',(.018,.018,.96),(x+sx,-.065,.55),BLUE,.003),r)
- for xx in (-.28,.28):
-  for zz in (.32,.78): add(cyl('panel_vinyl_button',.028,.014,(x+xx,-.073,zz),YELLOW,rot=(math.pi/2,0,0),verts=16),r)
  return r
 
 def climbing_frame(x):

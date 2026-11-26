@@ -191,15 +191,15 @@ export default class ThresholdZ2Playroom extends Scene {
     for (let fg = 0; fg < 18; fg++) {
       plane(this.s, `z2_floor_ground_in_grime_${fg}`, 1.0 + hash(fg) * 2.4, 0.7 + hash(fg + 3) * 1.8, [-13 + hash(fg * 2.1) * 26, 0.006, -8.5 + hash(fg * 4.7) * 17], basic(0x241b14, 0.22 + hash(fg + 5) * 0.15), [-Math.PI / 2, 0, hash(fg + 7) * Math.PI]);
     }
-    const geom = new THREE.SphereGeometry(0.075, 8, 5);
+    const geom = new THREE.SphereGeometry(0.075, 12, 8);
     const inst = new THREE.InstancedMesh(geom, new THREE.MeshStandardMaterial({ roughness: 0.78, metalness: 0, map: grimeTex, roughnessMap: grimeTex }), 4900);
     inst.castShadow = false; inst.receiveShadow = true;
     let bi = 0;
     for (let ix = 0; ix < 86 && bi < 4900; ix++) for (let iz = 0; iz < 57 && bi < 4900; iz++) {
-      const x = -5.95 + ix * 0.14 + (hash(ix * 91 + iz * 17) - 0.5) * 0.035;
-      const z = -3.95 + iz * 0.14 + (hash(ix * 19 + iz * 71) - 0.5) * 0.035;
+      const x = -5.95 + ix * 0.14 + (hash(ix * 91 + iz * 17) - 0.5) * 0.068;
+      const z = -3.95 + iz * 0.14 + (hash(ix * 19 + iz * 71) - 0.5) * 0.068;
       const dome = 0.03 * (1 - (x / 6) ** 2) + 0.025 * (1 - (z / 4) ** 2);
-      const y = 0.55 + dome + (hash(ix * 7 + iz * 13) - 0.5) * 0.025;
+      const y = 0.55 + dome + (hash(ix * 7 + iz * 13) - 0.5) * 0.045;
       const c = bi % mats.length;
       this.ballBase.push({ x, z, y, c });
       const ballColor = new THREE.Color((mats[c]!.color as THREE.Color).getHex());
@@ -321,11 +321,12 @@ export default class ThresholdZ2Playroom extends Scene {
     const distressPanel = (panel: THREE.Object3D | null | undefined, seed: number) => {
       if (!panel) return;
       // Sparse actual losses/misalignment break the toy-catalogue grid at delivery distance.
-      if (hash(seed * 1.913) < 0.045) { panel.visible = false; return; }
-      panel.position.x += (hash(seed + 1.1) - 0.5) * 0.055;
-      panel.position.y += (hash(seed + 2.3) - 0.5) * 0.045;
-      panel.position.z += (hash(seed + 3.7) - 0.5) * 0.035;
-      panel.rotation.z += (hash(seed + 4.9) - 0.5) * 0.045;
+      if (hash(seed * 1.913) < 0.10) { panel.visible = false; return; }
+      panel.position.x += (hash(seed + 1.1) - 0.5) * 0.105;
+      panel.position.y += (hash(seed + 2.3) - 0.5) * 0.085;
+      panel.position.z += (hash(seed + 3.7) - 0.5) * 0.055;
+      panel.rotation.z += (hash(seed + 4.9) - 0.5) * 0.085;
+      panel.scale.x *= 0.94 + hash(seed + 8.2) * 0.10; panel.scale.y *= 0.95 + hash(seed + 9.4) * 0.09;
     };
     const distressPadMaterial = (mm: THREE.MeshStandardMaterial, seed: number) => {
       mm.map = grimeTex; mm.roughnessMap = grimeTex; mm.bumpMap = grimeTex; mm.bumpScale = 0.012;
