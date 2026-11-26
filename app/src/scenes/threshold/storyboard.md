@@ -21,8 +21,8 @@ On-screen line (Short frame 0, long-form title card at 0:04): **"every room down
 
 1. **The beige phone.** A 1980s beige office desk phone appears in every zone, rebuilt in that zone's material (real plastic in the office, a toy phone in the playroom, floating on the pool, folded paper in the library, the motel room phone, a felt puppet phone, sold in a vending machine, on the wall at home). It rings in every zone. Each time it is answered (the receiver lifts by itself: no hands are ever shown) you hear the room tone of the PREVIOUS zone. Payoff at home (Z8): the receiver lifts and you hear the office buzz from Z1, then the door opens onto the office. Loop.
 2. **The flicker rule.** Beam flicker = something near. Taught in Z1 (flicker, then the eyes). Used honestly every time after. Broken once on purpose in Z6 (it flickers, and the thing is friendly).
-3. **The battery.** The beam starts at full and dims in steps after each chase: 100% in Z1; 85% after the Z1 run and through Z2; 70% by the Z3 retreat and at Z4 entry; 50% at the end of the Z4 chase and through Z5/Z6; 25% in Z7/Z8; dead at 173.4 s; relit warm by Lint (Z6's helper) at 174 s.
-4. **The Tenant.** The main antagonist, a tall patchwork thing made of pieces of every zone. It is only glimpsed, each time a little more: Z2 a shape at the far end of the play tunnel (0.5 s); Z3 a pale shape deep under the water; Z4 a long shadow sliding across paper stacks; Z5 it is on the TV behind you, then in front of you; Z7 full reveal and chase. The cold open (0:00) is a flash-forward of its arm reaching into the beam at 172 s.
+3. **The battery.** The beam starts at full and dims in steps after each chase: 100% in Z1; 85% after the Z1 run and through Z2; 70% by the Z3 retreat and at Z4 entry; 50% at the end of the Z4 chase and through Z5/Z6; 25% in the Z7 chase; dead at 173.4 s; relit warm by Lint (Z6's helper) at 40% at 174 s; 25% again by the Z8 landing.
+4. **The Tenant.** The main antagonist, a tall patchwork thing made of pieces of every zone. It is only glimpsed, each time a little more: Z2 a shape at the far end of the play tunnel (0.5 s); Z3 a pale shape deep under the water; Z4 a long shadow sliding across paper stacks; Z5 it is on the TV behind you, then in front of you; Z7 full reveal and chase. The cold open (0:00) is a flash-forward of its arm reaching into the beam at 172.5 s.
 5. **Lint the felt moth.** A small felt moth that first appears as a speck in the beam in Z4 (a felt moth among paper moths: out of place, sharp viewers notice), then in Z5 batting at the neon, then it is the helper in Z6, and it relights the flashlight in Z7. Tiny, warm, the only friend.
 
 ## D. Master timeline (long form, 1920x1080, 60 fps, 235 s)
@@ -44,7 +44,7 @@ Adjacent entries overlap by the transition length in section F. Zone lengths obe
 
 ## E. Zone storyboards
 
-### Z0 -- Cold open (0.0-4.0 s) -- flash-forward of Z7 at 172 s
+### Z0 -- Cold open (0.0-4.0 s) -- flash-forward of the Z7 arm reveal
 
 Purpose: frame 0 hook (R2). Already running, already something behind. Re-uses the Z7 cathedral set and the Tenant.
 
