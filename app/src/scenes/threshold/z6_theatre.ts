@@ -7,6 +7,7 @@ import { FlashlightRig, beamStateAt } from './flashlight';
 import { thresholdPost } from './sensor_post';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import lintUrl from './assets/lint/model.glb?url';
+import theatreKitUrl from './assets/z6_theatre_kit/model.glb?url';
 
 const clamp = (x: number, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -54,8 +55,12 @@ export default class ThresholdZ6Theatre extends Scene {
   private curtainR!: THREE.Mesh;
   private lint = new THREE.Group();
   private lintInst?: GLTFInstance;
+  private theatreKit?: GLTFInstance;
   private tableau = new THREE.Group();
   private houseTableau = new THREE.Group();
+  private houseLight?: THREE.PointLight;
+  private backstageLight?: THREE.PointLight;
+  private backstageObjects: THREE.Object3D[] = [];
   private recapScenes: THREE.Group[] = [];
   private backdropPanels: THREE.Mesh[] = [];
   private exitGlow!: THREE.MeshStandardMaterial;
@@ -132,17 +137,25 @@ export default class ThresholdZ6Theatre extends Scene {
       this.s.add(foot);
     }
 
-    // Audience seats, 12 rows hinted through 6 visible blockout rows.
+    // Audience seats use the stitched felt theatre-seat module, cloned per position.
+    this.theatreKit = await GLTFManager.instantiate(theatreKitUrl, { castShadow: true, receiveShadow: true });
+    const cloneKitPart = (part: string) => {
+      const src = this.theatreKit?.parts.get(part);
+      const c = src?.clone(true);
+      if (c) c.position.set(0, 0, 0);
+      return c;
+    };
+    const seatTemplate = cloneKitPart('seat_module');
     for (let row = 0; row < 6; row++) {
       const z = 1.2 + row * 0.72;
       for (let col = 0; col < 8; col++) {
         const x = -3.2 + col * 0.9;
-        if (Math.abs(x) < 0.9) continue;
-        this.box(this.s, [0.58, 0.16, 0.48], [x, 0.48, z], seatFelt);
-        this.box(this.s, [0.58, 0.48, 0.13], [x, 0.72, z + 0.22], seatFelt, [-0.1, 0, 0]);
-        this.box(this.s, [0.56, 0.035, 0.025], [x, 0.98, z + 0.15], seatEdge, [-0.1, 0, 0]);
-        this.box(this.s, [0.08, 0.34, 0.42], [x - 0.33, 0.52, z], wood);
-        this.box(this.s, [0.08, 0.34, 0.42], [x + 0.33, 0.52, z], wood);
+        if (Math.abs(x) < 0.9 || !seatTemplate) continue;
+        const seat = seatTemplate.clone(true);
+        seat.position.set(x, 0, z);
+        seat.rotation.y = Math.PI;
+        seat.rotation.z = (hash(row * 19 + col * 7) - 0.5) * 0.018;
+        this.s.add(seat);
       }
     }
 
@@ -185,6 +198,7 @@ export default class ThresholdZ6Theatre extends Scene {
     this.box(this.tableau, [0.75, 0.08, 0.48], [0.72, 0.72, -6.7], aqua);
     this.box(this.tableau, [0.12, 0.45, 0.12], [0.42, 0.95, -6.7], aqua);
     this.box(this.tableau, [0.65, 0.5, 0.08], [1.55, 0.92, -6.7], paper, [0, 0.25, 0]);
+    this.tableau.visible = false;
     this.s.add(this.tableau);
 
     // One centered recap scene at a time. The greybox mistake to avoid is four tiny zones
@@ -199,78 +213,78 @@ export default class ThresholdZ6Theatre extends Scene {
       return g;
     };
     const officeRecap = makeRecap();
-    this.box(officeRecap, [1.45, 0.95, 0.08], [0, 1.25, -6.28], beige);
-    this.box(officeRecap, [1.15, 0.24, 0.52], [0, 0.78, -5.82], this.mat(0x6b5138, 0.8));
-    this.box(officeRecap, [0.24, 0.58, 0.16], [-0.28, 1.02, -5.55], paper);
-    this.sphere(officeRecap, 0.15, [-0.28, 1.42, -5.52], paper, [0.9, 1.1, 0.85]);
-    this.box(officeRecap, [0.08, 0.48, 0.08], [-0.5, 1.02, -5.5], paper, [0, 0, -0.35]);
-    this.box(officeRecap, [0.08, 0.48, 0.08], [-0.06, 1.02, -5.5], paper, [0, 0, 0.35]);
-    this.box(officeRecap, [0.28, 0.045, 0.045], [0.02, 1.05, -5.42], this.mat(0xfff0b0, 0.35, 0, 0xffe38a, 1.8));
     const pitRecap = makeRecap();
-    this.box(pitRecap, [1.55, 0.36, 0.82], [0, 0.68, -5.9], blue);
-    for (let i = 0; i < 11; i++) this.sphere(pitRecap, 0.11, [-0.62 + (i % 6) * 0.25, 0.91 + Math.floor(i / 6) * 0.12, -5.72 - (i % 2) * 0.25], i % 2 ? red : yellow);
-    this.box(pitRecap, [0.42, 0.24, 0.08], [0.25, 1.12, -5.5], this.mat(0x151719, 0.8));
-    this.sphere(pitRecap, 0.15, [0.25, 1.36, -5.48], red, [0.9, 1.05, 0.85]);
-    this.box(pitRecap, [0.08, 0.45, 0.08], [0.02, 1.08, -5.46], red, [0, 0, -0.6]);
-    this.box(pitRecap, [0.08, 0.45, 0.08], [0.48, 1.08, -5.46], red, [0, 0, 0.6]);
     const poolRecap = makeRecap();
-    this.box(poolRecap, [1.6, 0.08, 0.9], [0, 0.72, -5.85], aqua);
-    this.box(poolRecap, [1.6, 0.86, 0.08], [0, 1.16, -6.28], this.mat(0xb9d9d7, 0.8));
-    this.box(poolRecap, [0.18, 0.58, 0.14], [0.42, 1.02, -5.52], this.mat(0x26343a, 0.9));
-    this.sphere(poolRecap, 0.14, [0.42, 1.42, -5.52], this.mat(0x26343a, 0.9), [0.85, 1.1, 0.8]);
-    this.box(poolRecap, [0.07, 0.52, 0.07], [0.2, 1.08, -5.5], this.mat(0x26343a, 0.9), [0, 0, -0.55]);
-    this.box(poolRecap, [0.07, 0.52, 0.07], [0.64, 1.08, -5.5], this.mat(0x26343a, 0.9), [0, 0, 0.55]);
-    this.box(poolRecap, [0.72, 0.055, 0.05], [0, 1.48, -6.2], aqua);
     const bookRecap = makeRecap();
-    this.box(bookRecap, [0.95, 1.2, 0.08], [-0.36, 1.22, -5.9], paper, [0, -0.34, 0]);
-    this.box(bookRecap, [0.95, 1.2, 0.08], [0.36, 1.22, -5.9], paper, [0, 0.34, 0]);
-    this.box(bookRecap, [0.18, 0.55, 0.12], [0, 0.98, -5.45], this.mat(0x2a2025, 0.92));
-    this.sphere(bookRecap, 0.14, [0, 1.38, -5.45], this.mat(0x2a2025, 0.92), [0.85, 1.1, 0.8]);
-    this.box(bookRecap, [0.07, 0.46, 0.07], [-0.22, 1.03, -5.43], this.mat(0x2a2025, 0.92), [0, 0, -0.45]);
-    this.box(bookRecap, [0.07, 0.46, 0.07], [0.22, 1.03, -5.43], this.mat(0x2a2025, 0.92), [0, 0, 0.45]);
+    const recapParts: [THREE.Group, string][] = [
+      [officeRecap, 'office_recap'],
+      [pitRecap, 'ballpit_recap'],
+      [poolRecap, 'pool_recap'],
+      [bookRecap, 'book_recap'],
+    ];
+    for (const [parent, part] of recapParts) {
+      const module = cloneKitPart(part);
+      if (module) {
+        module.position.z = -5.9;
+        parent.add(module);
+      }
+      const protagonist = cloneKitPart('flashlight_puppet');
+      if (protagonist) {
+        protagonist.scale.setScalar(0.55);
+        protagonist.position.set(part === 'office_recap' ? -0.28 : part === 'ballpit_recap' ? -0.42 : part === 'pool_recap' ? -0.36 : -0.28, 0, -5.38);
+        parent.add(protagonist);
+      }
+    }
 
     const stageActionLight = new THREE.PointLight(0xffc37a, 2.8, 10, 1.45);
     stageActionLight.position.set(0, 3.2, -3.9);
     this.s.add(stageActionLight);
+    this.houseLight = new THREE.PointLight(0xffb28a, 0, 7, 1.55);
+    this.houseLight.position.set(0, 2.4, -4.8);
+    this.s.add(this.houseLight);
+    this.backstageLight = new THREE.PointLight(0xffa76b, 0, 5.5, 1.45);
+    this.backstageLight.position.set(-0.65, 2.1, -8.15);
+    this.s.add(this.backstageLight);
 
     // Stage steps make the follow route physically readable before any dressing/polish.
     for (let i = 0; i < 4; i++) this.box(this.s, [1.05, 0.11, 0.38], [0.9, 0.06 + i * 0.11, -3.7 - i * 0.34], wood);
 
     this.s.add(this.tableau);
 
-    // Final puppet tableau: felt house, faceless flashlight puppet and felt Tenant silhouette.
-    this.box(this.houseTableau, [0.9, 0.72, 0.58], [0.45, 0.95, -6.82], this.mat(0x7b3b2c, 0.94));
-    this.box(this.houseTableau, [1.05, 0.34, 0.68], [0.45, 1.43, -6.82], this.mat(0x3e1c19, 0.94), [0, 0, 0.12]);
-    this.box(this.houseTableau, [0.28, 0.46, 0.04], [0.45, 0.72, -6.5], this.mat(0x1b1110, 0.9));
-    this.box(this.houseTableau, [0.16, 0.42, 0.12], [-0.35, 0.86, -6.52], this.mat(0xd8c49a, 0.95));
-    this.box(this.houseTableau, [0.12, 0.36, 0.08], [-0.08, 0.86, -6.54], this.mat(0xe5d8a6, 0.95));
-    this.box(this.houseTableau, [0.16, 0.65, 0.12], [-0.8, 1.05, -6.56], this.mat(0x2b2024, 0.95));
-    this.box(this.houseTableau, [0.42, 0.08, 0.1], [-0.8, 1.34, -6.56], this.mat(0x51323b, 0.95));
+    // Final puppet tableau: production felt house, faceless flashlight puppet and Tenant puppet.
+    const houseModule = cloneKitPart('house_tableau');
+    if (houseModule) {
+      houseModule.position.z = -6.8;
+      this.houseTableau.add(houseModule);
+    }
     this.houseTableau.scale.setScalar(2.1);
     this.houseTableau.position.set(0, -0.6, 8.32);
     this.houseTableau.visible = false;
     this.s.add(this.houseTableau);
 
-    // Theatre props: ropes, sandbags, prompt box, ticket, music box, ladder and backstage hooks.
-    this.box(this.s, [0.5, 0.22, 0.36], [-3.55, 0.72, -4.1], wood);
+    // Production backstage kit: wire armature, hooks, ropes, sandbags, prompt/music boxes and ladder.
+    const backstageModule = cloneKitPart('backstage_props');
+    if (backstageModule) {
+      backstageModule.position.set(-1.45, 0, -9.0);
+      this.s.add(backstageModule);
+      this.backstageObjects.push(backstageModule);
+    }
+    const hanging: [string, number, number][] = [
+      ['flashlight_puppet', -1.85, 0.48],
+      ['tenant_puppet', -1.05, 0.58],
+      ['flashlight_puppet', -0.25, 0.48],
+    ];
+    hanging.forEach(([part, x, scale], i) => {
+      const puppet = cloneKitPart(part);
+      if (!puppet) return;
+      puppet.scale.setScalar(scale);
+      puppet.position.set(x, 1.18 - i * 0.04, -8.72);
+      puppet.rotation.z = (i - 1) * 0.16;
+      puppet.rotation.x = 0.08;
+      this.s.add(puppet);
+      this.backstageObjects.push(puppet);
+    });
     this.box(this.s, [0.2, 0.025, 0.12], [1.6, 0.9, 2.2], paper, [0, 0.3, 0]);
-    this.box(this.s, [0.35, 0.18, 0.28], [2.8, 0.68, -4.8], gold);
-    this.cyl(this.s, 0.08, 0.08, 0.32, [2.8, 0.95, -4.8], gold, 12);
-    for (let i = 0; i < 4; i++) {
-      this.cyl(this.s, 0.018, 0.018, 2.7, [-4.2 + i * 0.3, 2.4, -7.8], wood, 6);
-      this.box(this.s, [0.18, 0.34, 0.16], [-4.2 + i * 0.3, 0.62, -7.8], this.mat(0x76624d, 0.9));
-    }
-    for (let i = 0; i < 6; i++) this.box(this.s, [0.035, 1.7, 0.05], [3.6 + i * 0.16, 1.25, -8.9], wood, [0, 0, 0.4]);
-    for (let i = 0; i < 7; i++) this.cyl(this.s, 0.025, 0.025, 0.28, [-2.8 + i * 0.8, 2.7, -9.3], gold, 8).rotation.x = Math.PI / 2;
-
-    // Limp puppets on backstage hooks clarify that the camera has crossed behind the set.
-    for (let i = 0; i < 3; i++) {
-      const x = -1.8 + i * 0.7;
-      this.cyl(this.s, 0.012, 0.012, 0.55, [x, 2.05, -8.75], gold, 6);
-      this.box(this.s, [0.22, 0.42, 0.08], [x, 1.55, -8.75], i === 1 ? paper : this.mat(0x6d3f35, 0.95), [0, 0, (i - 1) * 0.12]);
-      this.box(this.s, [0.08, 0.32, 0.06], [x - 0.16, 1.48, -8.75], feltRed, [0, 0, 0.35]);
-      this.box(this.s, [0.08, 0.32, 0.06], [x + 0.16, 1.48, -8.75], feltRed, [0, 0, -0.35]);
-    }
 
     // Backstage EXIT door and cold cathedral-blue slit beyond it.
     this.box(this.s, [1.0, 2.0, 0.12], [2.3, 1.0, -9.65], wood);
@@ -279,8 +293,10 @@ export default class ThresholdZ6Theatre extends Scene {
     this.box(this.s, [0.06, 1.72, 0.035], [2.05, 1.0, -9.55], this.exitGlow);
 
     // Viewer seat armrest: the closeup needs a physical perch or Lint reads as a floating streak.
-    this.box(this.s, [0.13, 0.2, 0.62], [0.62, 0.82, 3.66], wood);
-    this.box(this.s, [0.18, 0.08, 0.66], [0.62, 0.96, 3.66], seatEdge);
+    this.box(this.s, [0.11, 0.2, 0.5], [0.62, 0.82, 3.66], woodDark);
+    this.box(this.s, [0.13, 0.055, 0.52], [0.62, 0.95, 3.66], wood);
+    this.box(this.s, [0.065, 0.018, 0.42], [0.62, 0.99, 3.66], seatFelt);
+    for (const z of [3.48, 3.84]) this.cyl(this.s, 0.012, 0.012, 0.01, [0.62, 1.005, z], gold, 10);
 
     // Production Lint asset: real felt fibres, stitched wings, button eyes and emissive abdomen.
     this.lintInst = await GLTFManager.instantiate(lintUrl, { castShadow: true, receiveShadow: true });
@@ -339,6 +355,10 @@ export default class ThresholdZ6Theatre extends Scene {
     const recapIndex = Math.max(0, Math.min(3, Math.floor((t - 133) / 1.5)));
     this.recapScenes.forEach((g, i) => { g.visible = t >= 133 && t < 139 && i === recapIndex; });
     this.houseTableau.visible = t >= 139.0 && t < 141.5;
+    if (this.houseLight) this.houseLight.intensity = this.houseTableau.visible ? 3.8 : 0;
+
+    for (const obj of this.backstageObjects) obj.visible = t >= 143.5;
+    if (this.backstageLight) this.backstageLight.intensity = t >= 143.5 ? 1.45 : 0;
 
     // Lint appears on the armrest, then leads backstage; stop-motion inside Z6.
     const lintOn = t >= 141.5;
@@ -377,6 +397,7 @@ export default class ThresholdZ6Theatre extends Scene {
   override dispose() {
     this.flash.dispose();
     this.lintInst?.dispose();
+    this.theatreKit?.dispose();
     for (const d of this.disposables) d.dispose();
   }
 }
