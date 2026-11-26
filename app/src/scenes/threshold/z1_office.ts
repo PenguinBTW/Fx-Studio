@@ -54,7 +54,7 @@ export default class ThresholdZ1Office extends Scene {
     this.breather.root.position.set(0,2.72,-6.02); this.breather.root.visible = false; this.s.add(this.breather.root);
     this.layer = new Layer2D(this.ctx.W, this.ctx.H);
     this.s.background = new THREE.Color(0x050505);
-    this.s.fog = new THREE.FogExp2(0x111008, 0.035);
+    this.s.fog = new THREE.FogExp2(0x111008, 0.026);
     this.flash = addFlashlight(this.s);
     this.s.add(new THREE.AmbientLight(0x8b866f, 0.32));
 
@@ -72,6 +72,11 @@ export default class ThresholdZ1Office extends Scene {
     this.doorGlow = mat(0xfff4c8, 0.3, 0, 0xfff2b0, 5) as THREE.MeshStandardMaterial;
 
     box(this.s, 'z1_floor', [30, 0.08, 48], [0, -0.04, -3], carpet);
+    // Damp carpet variation and fake contact shadows: the lights are too flat for real shadowing alone.
+    for (let i = 0; i < 18; i++) {
+      const stain = plane(this.s, `z1_carpet_damp_${i}`, 0.7 + hash(i) * 1.5, 0.35 + hash(i + 2) * 0.8, [(hash(i * 3) - 0.5) * 18, 0.006, -10 + hash(i * 5) * 24], basic(0x2b2418, 0.12 + hash(i) * 0.08), [-Math.PI / 2, 0, hash(i) * 3]);
+      stain.renderOrder = 1;
+    }
     box(this.s, 'z1_ceiling_slab', [30, 0.08, 48], [0, 2.76, -3], ceiling);
     // perimeter walls and a deliberately non-grid maze of drywall partitions
     box(this.s, 'z1_wall_back', [30, 2.7, 0.16], [0, 1.35, -26], wall);
@@ -85,6 +90,7 @@ export default class ThresholdZ1Office extends Scene {
     ];
     partitions.forEach(([x, z, sx, sy, sz], i) => box(this.s, `z1_partition_${i}`, [sx, sy, sz], [x, sy / 2, z], i % 2 ? wall : wallDark));
     // Deep repeated maze beyond the first desk: foreground/midground/background cubicle rows make the office read as endless.
+    const deepTubeGlow = mat(0xdfe9d8, 0.24, 0, 0xd9ffd0, 1.7);
     for (let row = 0; row < 6; row++) {
       const z = -8.2 - row * 2.8;
       for (const side of [-1, 1]) {
@@ -96,7 +102,8 @@ export default class ThresholdZ1Office extends Scene {
       }
       if (row % 2 === 0) {
         box(this.s, `z1_deep_troffer_${row}`, [1.1, 0.05, 0.32], [row % 4 ? -2.2 : 2.1, 2.62, z], metal);
-        box(this.s, `z1_deep_tube_${row}`, [0.85, 0.025, 0.08], [row % 4 ? -2.2 : 2.1, 2.58, z], this.tubeMats[0] ?? ceiling);
+        box(this.s, `z1_deep_tube_${row}`, [0.85, 0.025, 0.08], [row % 4 ? -2.2 : 2.1, 2.58, z], deepTubeGlow);
+        const dp = new THREE.PointLight(0xdfffd2, 0.75, 4.5, 1.7); dp.position.set(row % 4 ? -2.2 : 2.1, 2.35, z); this.s.add(dp);
       }
     }
 
@@ -171,6 +178,12 @@ export default class ThresholdZ1Office extends Scene {
     for (let i = 0; i < 5; i++) cyl(this.s, `z1_cable_${i}`, 0.012, 0.9, [0.65 + i * 0.05, 0.04, -5.45 + hash(i) * 0.3], dark, [Math.PI / 2, hash(i) * 0.5, 0], 8);
     this.slidingPrintout = plane(this.s, 'z1_sliding_printout', 0.22, 0.3, [0.55, 0.79, -5.76], paper, [-Math.PI / 2, 0, 0.2]);
 
+    for (let i = 0; i < 7; i++) {
+      const x = [-3.5, 3.7, -5.3, 5.4, -2.4, 6.7, -6.2][i]!, z = [-1.5, -0.5, 2.7, 3.6, 6.2, 8.3, 10.5][i]!;
+      plane(this.s, `z1_contact_shadow_${i}`, 1.7, 1.1, [x + 0.15, 0.008, z + 0.2], basic(0x050403, 0.24), [-Math.PI / 2, 0, hash(i) * 0.4]);
+    }
+    plane(this.s, 'z1_contact_shadow_desk', 2.25, 1.15, [0, 0.009, -6], basic(0x050403, 0.3), [-Math.PI / 2, 0, 0]);
+
     // fire door, push bar, sign and daylight slit
     box(this.s, 'z1_fire_door', [1.0, 2.1, 0.09], [-2, 1.05, 15.92], mat(0x4c5a4e, 0.55));
     box(this.s, 'z1_fire_pushbar', [0.72, 0.07, 0.08], [-2, 1.02, 15.84], metal);
@@ -241,7 +254,8 @@ export default class ThresholdZ1Office extends Scene {
         const emerge = smooth(15.8 + (bi % 4) * 0.32, 16.35 + (bi % 4) * 0.32, t);
         fp.visible = emerge > 0.03;
         const side = bi < 5 ? -1 : 1;
-        fp.rotation.x = (Math.sin(t * 0.9 + bi) * 0.075 - 0.08 * emerge) * eyesOn;
+        const lash = smooth(18.35, 19.1, t);
+        fp.rotation.x = (Math.sin(t * 0.9 + bi) * 0.075 - 0.08 * emerge + lash * (0.34 + (bi % 3) * 0.09)) * eyesOn;
         fp.rotation.z = side * (0.045 + (bi % 3) * 0.025 + Math.sin(t * 0.55 + bi * 1.7) * 0.018) * eyesOn;
         fp.rotation.y = Math.sin(t * 0.42 + bi) * 0.025 * eyesOn;
       }
