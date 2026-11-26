@@ -8,6 +8,7 @@ import { thresholdPost } from './sensor_post';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import tenantFullUrl from './assets/tenant_full/model.glb?url';
 import lintUrl from './assets/lint/model.glb?url';
+import z5MotelKitUrl from './assets/z5_motel_kit/model.glb?url';
 
 const clamp = (x: number, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -61,6 +62,7 @@ export default class ThresholdZ5Motel extends Scene {
   private tenant = new THREE.Group();
   private tenantInst?: GLTFInstance;
   private lintInst?: GLTFInstance;
+  private motelKit?: GLTFInstance;
   private lint = new THREE.Group();
   private tvScreens: THREE.MeshStandardMaterial[] = [];
   private neonMats: THREE.MeshStandardMaterial[] = [];
@@ -191,6 +193,33 @@ export default class ThresholdZ5Motel extends Scene {
     const neonTeal = this.mat(0x25e7dc, 0.3, 0, 0x25e7dc, 4.0);
     this.neonMats.push(neonPink, neonTeal);
 
+    // Production motel kit: cloned module roots are wrapped so GLTF source transforms remain untouched.
+    this.motelKit = await GLTFManager.instantiate(z5MotelKitUrl, { castShadow: true, receiveShadow: true });
+    const cloneKitPart = (part: string) => {
+      const src = this.motelKit?.parts.get(part);
+      const c = src?.clone(true);
+      if (c) c.position.set(0, 0, 0);
+      return c;
+    };
+    const kitAt = (part: string, pos: [number, number, number], yaw = 0, scale = 1) => {
+      const obj = cloneKitPart(part);
+      if (!obj) return undefined;
+      if (part === 'crt_tv') {
+        // CCTV canvas planes are the emissive image; the asset contributes the curved bezel,
+        // shell and controls rather than an opaque duplicate glass/scanline layer.
+        obj.traverse((child) => {
+          if (child.name.startsWith('crt_curved_glass') || child.name.startsWith('crt_scanline')) child.visible = false;
+        });
+      }
+      const wrap = new THREE.Group();
+      wrap.add(obj);
+      wrap.position.set(...pos);
+      wrap.rotation.y = yaw;
+      wrap.scale.setScalar(scale);
+      this.s.add(wrap);
+      return wrap;
+    };
+
     // Corridor shell: wet carpet, walls, low ceiling, skirting and end window.
     this.box(this.s, [3.2, 0.08, 43], [0, -0.04, -18.8], carpet);
     // Segmented side walls leave real door apertures; the CRTs and room 217 are visible
@@ -237,35 +266,32 @@ export default class ThresholdZ5Motel extends Scene {
           const door = this.box(this.s, [0.08, 1.95, 0.82], [x - side * 0.02, 1.02, z], doorMat, [0, ajar ? side * 0.42 : 0, 0]);
           door.position.x += ajar ? side * 0.22 : 0;
         }
-        this.box(this.s, [0.025, 0.12, 0.18], [x - side * 0.09, 1.62, z - 0.28], brass);
-        this.box(this.s, [0.035, 0.05, 0.18], [x - side * 0.12, 1.0, z + 0.25], brass);
+        kitAt(is217 ? 'room217_hardware' : 'door_hardware', [x - side * 0.105, 0.55, z], side < 0 ? Math.PI / 2 : -Math.PI / 2, 0.92);
       }
     }
 
     // CRTs glow inside the ajar rooms; screen geometry stands in for low-res CCTV feeds.
-    const crtBody = this.mat(0x151719, 0.45);
     for (let i = 1; i <= 4; i++) {
       const z = -4 - i * 4 - 0.35;
-      this.box(this.s, [0.72, 0.52, 0.55], [2.25, 0.85, z], crtBody, [0, -0.35, 0]);
+      kitAt('crt_tv', [2.25, 0.30, z], -Math.PI / 2 - 0.18, 1.25);
       const smat = this.cctvMaterial(10 + i);
       this.tvScreens.push(smat);
-      this.box(this.s, [0.5, 0.34, 0.025], [1.98, 0.9, z + 0.02], smat, [0, -1.18, 0]);
+      this.box(this.s, [0.45, 0.30, 0.025], [1.91, 0.90, z - 0.06], smat, [0, -Math.PI / 2 - 0.18, 0]);
     }
 
     // Room 217 interior blockout: bed, lamp, dresser, curtain and TV.
     this.box(this.s, [3.7, 0.08, 4.4], [3.35, -0.04, -18.2], this.mat(0x2a1518, 0.55));
     this.box(this.s, [3.7, 2.7, 0.1], [3.35, 1.35, -20.35], wall);
     this.box(this.s, [0.1, 2.7, 4.4], [5.15, 1.35, -18.2], wall);
-    this.box(this.s, [1.8, 0.48, 0.95], [4.05, 0.24, -19.25], this.mat(0x6a4c3a, 0.75));
-    this.box(this.s, [1.7, 0.16, 0.8], [4.05, 0.58, -19.25], this.mat(0xb7a893, 0.8));
-    this.box(this.s, [0.75, 0.75, 0.55], [2.35, 0.38, -19.45], this.mat(0x3a2419, 0.6));
-    this.cyl(this.s, 0.09, 0.12, 0.58, [2.35, 1.05, -19.45], brass, 10);
-    this.cyl(this.s, 0.26, 0.18, 0.28, [2.35, 1.4, -19.45], orange, 16);
-    this.box(this.s, [1.16, 0.82, 0.64], [2.25, 0.85, -17.2], crtBody, [0, 0.85, 0]);
+    kitAt('room217_kit', [3.72, 0, -19.45], 0, 0.82);
+    this.box(this.s, [1.22, 0.28, 0.64], [2.22, 0.14, -17.25], this.mat(0x28150e, 0.66), [0, -2.35, 0]);
+    kitAt('crt_tv', [2.22, -0.16, -17.25], -2.35, 2.4);
     const heroTvMat = this.cctvMaterial(99);
     this.tvScreens.push(heroTvMat);
-    this.box(this.s, [1.08, 0.7, 0.025], [1.93, 0.94, -17.55], heroTvMat, [0, Math.PI + 0.12, 0]);
-    this.box(this.s, [0.08, 1.8, 1.1], [4.95, 1.1, -17.15], this.mat(0x381f2d, 0.9));
+    this.box(this.s, [0.86, 0.56, 0.025], [1.75, 0.94, -17.72], heroTvMat, [0, -2.35, 0]);
+    const heroTvGlow = new THREE.PointLight(0x7db4ff, 0.72, 3.4, 1.8);
+    heroTvGlow.position.set(1.62, 1.0, -17.92);
+    this.s.add(heroTvGlow);
 
     // Window and rain-streaked neon vacancy sign at the corridor end.
     this.box(this.s, [2.15, 1.5, 0.04], [0, 1.35, -40.1], this.mat(0x0a1018, 0.2, 0, 0x071a24, 0.25));
@@ -285,9 +311,8 @@ export default class ThresholdZ5Motel extends Scene {
     for (let i = 0; i < 6; i++) {
       const z = -3.5 - i * 6.5;
       const side = i % 2 ? -1 : 1;
-      this.box(this.s, [0.14, 0.32, 0.22], [side * 1.5, 1.85, z], brass);
       const on = i !== 4;
-      this.box(this.s, [0.2, 0.18, 0.28], [side * 1.44, 1.82, z], on ? orange : dark);
+      kitAt(on ? 'sconce' : 'broken_sconce', [side * 1.48, 1.28, z], side < 0 ? Math.PI / 2 : -Math.PI / 2, 0.95);
       if (on) {
         const l = new THREE.PointLight(0xff8a2a, 1.35, 8.5, 1.7);
         l.position.set(side * 1.25, 1.75, z);
@@ -295,16 +320,14 @@ export default class ThresholdZ5Motel extends Scene {
       }
     }
 
-    // Motel dressing blockout: ice machine, housekeeping cart, payphone, small vending machine, tray, umbrella.
-    this.box(this.s, [0.9, 1.45, 0.75], [-1.05, 0.72, -30], this.mat(0x5d666c, 0.4, 0.35));
-    this.box(this.s, [0.65, 0.16, 0.08], [-1.05, 1.12, -29.6], this.mat(0x9fb5c2, 0.28, 0.5));
-    this.box(this.s, [0.9, 0.7, 0.55], [1.0, 0.36, -11.6], this.mat(0x4c4a42, 0.7));
-    this.box(this.s, [0.8, 0.08, 0.5], [1.0, 0.78, -11.6], this.mat(0xb8a37f, 0.65));
-    this.box(this.s, [0.46, 1.3, 0.28], [-1.35, 0.75, -7.4], this.mat(0x1f2d36, 0.45, 0.2));
-    this.box(this.s, [0.52, 1.35, 0.55], [1.25, 0.68, -27.5], this.mat(0x243b54, 0.42, 0.2));
-    this.box(this.s, [0.4, 0.52, 0.04], [1.22, 0.95, -27.2], this.mat(0x7db4ff, 0.2, 0, 0x497aff, 0.9));
-    this.box(this.s, [0.58, 0.035, 0.42], [-0.6, 0.05, -13.5], this.mat(0x806f54, 0.65));
-    this.cyl(this.s, 0.025, 0.025, 0.9, [-1.42, 0.45, -19.3], this.mat(0x1c1c20, 0.7), 8).rotation.z = 0.25;
+    // Detailed corridor dressing: ice machine, housekeeping cart, payphone, vending machine, tray, signage and wet rain gear.
+    kitAt('ice_machine', [-1.17, 0, -30.0], Math.PI / 2, 0.92);
+    kitAt('housekeeping_cart', [0.94, 0, -11.6], -Math.PI / 2 + 0.12, 0.9);
+    kitAt('payphone', [-1.47, 0.02, -7.4], Math.PI / 2, 0.94);
+    kitAt('vending_small', [1.31, 0, -27.5], -Math.PI / 2, 0.9);
+    kitAt('service_tray', [-0.6, 0, -13.5], 0.2, 1);
+    kitAt('signage', [-1.46, 0.75, -15.7], Math.PI / 2, 0.8);
+    kitAt('raincoat_umbrella', [-1.43, 0, -19.3], Math.PI / 2, 0.95);
 
     // Wet footprint decals leading to where the viewer stands.
     const fpMat = this.mat(0x5f8d95, 0.08, 0.38, 0x183a42, 0.45);
@@ -443,6 +466,7 @@ export default class ThresholdZ5Motel extends Scene {
     this.flash.dispose();
     this.tenantInst?.dispose();
     this.lintInst?.dispose();
+    this.motelKit?.dispose();
     for (const d of this.disposables) d.dispose();
   }
 }

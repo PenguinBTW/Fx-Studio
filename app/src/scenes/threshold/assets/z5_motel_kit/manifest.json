@@ -1,0 +1,24 @@
+{
+  "id": "z5_motel_kit",
+  "version": 1,
+  "source": "build.py",
+  "budgets": { "tris": 45000, "textureMB": 0 },
+  "scale": 1,
+  "parts": {
+    "root": "z5_motel_kit_root",
+    "crt_tv": "crt_tv_root",
+    "door_hardware": "door_hardware_root",
+    "room217_hardware": "room217_hardware_root",
+    "payphone": "payphone_root",
+    "ice_machine": "ice_machine_root",
+    "housekeeping_cart": "housekeeping_cart_root",
+    "service_tray": "service_tray_root",
+    "signage": "signage_root",
+    "vending_small": "vending_small_root",
+    "raincoat_umbrella": "raincoat_umbrella_root",
+    "sconce": "sconce_root",
+    "broken_sconce": "broken_sconce_root",
+    "room217_kit": "room217_kit_root"
+  },
+  "notes": "THRESHOLD Z5 motel dressing modules. Real scale 1 unit = 1 m. Modules are spatially separated; clone/reset positions when integrating. Storyboard beats 5.1-5.9: corridor CRTs, doors/217, payphone, ice machine, housekeeping cart, tray, signage, vending foreshadow, rain gear, sconces and room 217 interior."
+}
