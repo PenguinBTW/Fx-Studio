@@ -3,7 +3,9 @@
 import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { Layer2D } from '../../engine/gl';
+import { thresholdPost } from './sensor_post';
 import { addFlashlight, applyFpCamera, basic, box, clamp, cyl, disposeTree, hash, mat, plane, smooth, sph, updateFlashlight, type CamKey } from './z1_fp_local';
+import { drawPremiseLine } from './premise';
 
 const KEYS: CamKey[] = [
   { t: 4.0, pos: [0, 1.65, 0], look: [0, 1.35, -6], fov: 74, gait: 'still' },
@@ -62,10 +64,10 @@ export default class ThresholdZ1Office extends Scene {
     const screen = mat(0x1c3032, 0.25, 0, 0x5de6e0, 0.65);
     this.doorGlow = mat(0xfff4c8, 0.3, 0, 0xfff2b0, 5) as THREE.MeshStandardMaterial;
 
-    box(this.s, 'z1_floor', [26, 0.08, 34], [0, -0.04, 3], carpet);
-    box(this.s, 'z1_ceiling_slab', [26, 0.08, 34], [0, 2.76, 3], ceiling);
+    box(this.s, 'z1_floor', [30, 0.08, 48], [0, -0.04, -3], carpet);
+    box(this.s, 'z1_ceiling_slab', [30, 0.08, 48], [0, 2.76, -3], ceiling);
     // perimeter walls and a deliberately non-grid maze of drywall partitions
-    box(this.s, 'z1_wall_back', [26, 2.7, 0.16], [0, 1.35, -14], wall);
+    box(this.s, 'z1_wall_back', [30, 2.7, 0.16], [0, 1.35, -26], wall);
     box(this.s, 'z1_wall_left', [0.16, 2.7, 34], [-13, 1.35, 3], wallDark);
     box(this.s, 'z1_wall_right', [0.16, 2.7, 34], [13, 1.35, 3], wallDark);
     box(this.s, 'z1_wall_fire', [26, 2.7, 0.16], [0, 1.35, 16], wall);
@@ -75,6 +77,21 @@ export default class ThresholdZ1Office extends Scene {
       [-6.1, 7.4, 0.12, 2.1, 5.6], [1.6, 11.4, 5.0, 2.1, 0.12], [-6.8, 12.2, 4.5, 2.1, 0.12], [8.8, 3.3, 0.12, 2.1, 8],
     ];
     partitions.forEach(([x, z, sx, sy, sz], i) => box(this.s, `z1_partition_${i}`, [sx, sy, sz], [x, sy / 2, z], i % 2 ? wall : wallDark));
+    // Deep repeated maze beyond the first desk: foreground/midground/background cubicle rows make the office read as endless.
+    for (let row = 0; row < 6; row++) {
+      const z = -8.2 - row * 2.8;
+      for (const side of [-1, 1]) {
+        box(this.s, `z1_deep_partition_${row}_${side}`, [0.12, 2.05, 1.9], [side * (2.7 + (row % 2) * 1.2), 1.02, z], row % 2 ? wall : wallDark);
+        box(this.s, `z1_deep_cross_${row}_${side}`, [2.5, 1.85, 0.11], [side * 4.3, 0.93, z - 0.85], row % 2 ? wallDark : wall);
+        box(this.s, `z1_deep_desk_${row}_${side}`, [1.25, 0.07, 0.62], [side * (3.7 + (row % 2) * 0.8), 0.72, z + 0.35], mat(0x6f695c, 0.65));
+        box(this.s, `z1_deep_monitor_${row}_${side}`, [0.36, 0.28, 0.28], [side * (3.7 + (row % 2) * 0.8), 1.0, z + 0.18], dark, [0, -side * 0.25, 0]);
+        if ((row + (side > 0 ? 1 : 0)) % 2 === 0) plane(this.s, `z1_deep_screen_${row}_${side}`, 0.24, 0.16, [side * (3.7 + (row % 2) * 0.8), 1.01, z + 0.03], screen, [0, -side * 0.25, 0]);
+      }
+      if (row % 2 === 0) {
+        box(this.s, `z1_deep_troffer_${row}`, [1.1, 0.05, 0.32], [row % 4 ? -2.2 : 2.1, 2.62, z], metal);
+        box(this.s, `z1_deep_tube_${row}`, [0.85, 0.025, 0.08], [row % 4 ? -2.2 : 2.1, 2.58, z], this.tubeMats[0] ?? ceiling);
+      }
+    }
 
     // suspended ceiling T-bar grid and individual tiles around the camera path
     const gridMat = mat(0x8c8879, 0.48, 0.2);
@@ -154,13 +171,15 @@ export default class ThresholdZ1Office extends Scene {
     plane(this.s, 'z1_exit_text_proxy', 0.42, 0.12, [-2, 2.32, 15.77], basic(0xff4038), [0, 0, 0]);
     plane(this.s, 'z1_daylight_slit', 0.92, 0.045, [-2, 0.035, 15.76], basic(0xfff0ba), [-Math.PI / 2, 0, 0]);
 
+    // true dark rectangular opening behind the creature details; the ordinary slab otherwise reads as solid ceiling
+    box(this.s, 'z1_ceiling_gap_black', [1.35, 0.035, 0.92], [0, 2.655, -6.02], basic(0x010101));
     // creature read in the ceiling gap: eyes, lids, fingers, breathing fused tiles
-    const eyeMat = mat(0xd9d07b, 0.06, 0, 0xbfff77, 1.5);
+    const eyeMat = mat(0xd9d07b, 0.22, 0, 0x718c35, 0.32);
     const pupilMat = basic(0x050505);
     for (const x of [-0.35, 0.35]) {
       const e = sph(this.s, x < 0 ? 'z1_eye_l' : 'z1_eye_r', 0.06, [x, 2.58, -6.03], eyeMat, 24);
-      e.scale.set(1.0, 0.58, 0.65); this.eyes.push(e);
-      const p = box(this.s, x < 0 ? 'z1_pupil_l' : 'z1_pupil_r', [0.012, 0.035, 0.012], [x, 2.57, -5.96], pupilMat);
+      e.scale.set(1.15, 0.52, 0.58); this.eyes.push(e);
+      const p = box(this.s, x < 0 ? 'z1_pupil_l' : 'z1_pupil_r', [0.055, 0.014, 0.012], [x, 2.57, -5.96], pupilMat);
       const lid = box(this.s, x < 0 ? 'z1_lid_l' : 'z1_lid_r', [0.13, 0.02, 0.07], [x, 2.62, -5.98], mat(0x5b5b53, 0.55));
       this.lids.push(lid); void p;
     }
@@ -185,7 +204,8 @@ export default class ThresholdZ1Office extends Scene {
     applyFpCamera(this.cam, KEYS, t, out.width / out.height);
     // flicker teaches the creature rule; hard irregular drops from 13s onward
     const flicker = t < 13 ? 0 : t < 15.5 ? 0.14 : t < 19.3 ? 0.32 : t < 27.5 ? 0.16 : 0.06;
-    updateFlashlight(this.flash.light, this.flash.target, this.cam, t, t > 27.5 ? 0.85 : 1, flicker);
+    const eyeBeam = 1 - 0.58 * smooth(15.3, 15.8, t) * (1 - smooth(19.2, 19.8, t));
+    updateFlashlight(this.flash.light, this.flash.target, this.cam, t, eyeBeam * 0.32, flicker);
 
     // fluorescent life: one ticking starter and one dying tube
     for (let i = 0; i < this.tubeLights.length; i++) {
@@ -233,27 +253,13 @@ export default class ThresholdZ1Office extends Scene {
     // premise typography: typed, held, then gone; it is the only non-diegetic line in the film
     this.layer.clear();
     const c = this.layer.ctx;
-    const line = 'every room down here is a different world';
-    const chars = Math.floor(clamp((t - 4.05) / 1.7) * line.length);
-    const alpha = smooth(4.0, 4.4, t) * (1 - smooth(7.6, 8.5, t));
-    if (alpha > 0.01 && chars > 0) {
-      c.save(); c.globalAlpha = alpha;
-      c.font = '46px monospace'; c.fillStyle = '#EDE8DC'; c.shadowColor = '#000'; c.shadowBlur = 8;
-      c.fillText(line.slice(0, chars) + (chars < line.length ? '▌' : ''), 118, 865);
-      c.restore();
-    }
+    drawPremiseLine(c, t, 4.05, 96, 884, 980);
     this.ctx.comp.draw(gl, this.layer.upload(), out, { mode: 'normal' });
     gl.resetState();
 
     return {
-      fade: 1 - smooth(4.0, 5.0, t),
+      ...thresholdPost(t, { darkness: 0.58, stress: t > 19.3 && t < 30 ? 0.7 : 0.12, fade: 1 - smooth(4.0, 5.0, t) }),
       flash: smooth(29.35, 30.0, t) * 1.8,
-      exposure: 0.92,
-      bloom: 0.16,
-      bloomThreshold: 0.9,
-      vignette: 0.28,
-      grain: 0.035,
-      ca: 0.08,
       shake: t > 19.3 && t < 30 ? [1.2 * Math.sin(t * 37), 1.0 * Math.cos(t * 31)] : [0, 0],
     };
   }

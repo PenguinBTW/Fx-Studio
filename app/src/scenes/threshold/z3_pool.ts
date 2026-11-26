@@ -2,20 +2,21 @@
 // Z3 tiled pool halls: deterministic grey-box beat blockout with real scale/camera path; local rig is W2 scaffolding pending W1's shared kit.
 import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
+import { thresholdPost } from './sensor_post';
 import { addFlashlight, applyFpCamera, basic, box, clamp, cyl, disposeTree, hash, mat, plane, smooth, sph, updateFlashlight, type CamKey } from './z1_fp_local';
 
 const KEYS: CamKey[] = [
-  { t: 55, pos: [0, 1.65, 6.4], look: [0, 1.25, -4], fov: 76, gait: 'still' },
-  { t: 56.5, pos: [0, 1.65, 5.1], look: [0, 0.55, 1], fov: 76, gait: 'walk' },
-  { t: 59.8, pos: [0, 1.65, 2.2], look: [0, 0.48, -2], fov: 76, gait: 'walk' },
-  { t: 62.5, pos: [0, 1.65, 0.2], look: [0, 1.05, -8], fov: 76, gait: 'walk' },
-  { t: 65, pos: [0, 1.65, -2], look: [0, 1.0, -9], fov: 76, gait: 'walk' },
-  { t: 68.2, pos: [0, 1.65, -3.2], look: [0, 0.25, -5.5], fov: 76, gait: 'walk' },
-  { t: 71, pos: [0, 1.65, -3.6], look: [3, 0.5, -2], fov: 76, gait: 'still' },
-  { t: 73.5, pos: [0, 1.65, -3.6], look: [0, 1.05, -11], fov: 76, gait: 'still' },
-  { t: 75.5, pos: [0, 1.65, -3.4], look: [0, 1.15, -4.6], fov: 76, gait: 'still' },
-  { t: 77.5, pos: [0, 1.65, -0.5], look: [0, 1.15, -4.6], fov: 78, gait: 'run' },
-  { t: 79.2, pos: [0, 1.35, 4.6], look: [0, 1.05, -4.5], fov: 84, gait: 'run', roll: -0.18 },
+  { t: 55, pos: [0, 1.65, 6.4], look: [0, 1.2, -2], fov: 74, gait: 'walk' },
+  { t: 56.5, pos: [0, 1.65, 5.1], look: [0, 0.5, 1], fov: 74, gait: 'walk' },
+  { t: 59.8, pos: [0, 1.65, 3.0], look: [0, 0.42, 0.8], fov: 74, gait: 'walk' },
+  { t: 62.5, pos: [0, 1.65, 1.2], look: [0, 0.45, -2.4], fov: 74, gait: 'still' },
+  { t: 65, pos: [0, 1.65, 0.55], look: [0, 0.55, -2.8], fov: 74, gait: 'creep' },
+  { t: 68.2, pos: [0, 1.65, 1.25], look: [0, 0.2, -2.0], fov: 74, gait: 'walk' },
+  { t: 71, pos: [0, 1.65, 1.8], look: [3, 0.5, -1.6], fov: 74, gait: 'still' },
+  { t: 72.4, pos: [0, 1.65, 1.8], look: [0, 1.05, -2.8], fov: 76, gait: 'still' },
+  { t: 74.5, pos: [0, 1.65, 2.2], look: [0, 1.3, -2.8], fov: 78, gait: 'walk' },
+  { t: 76.5, pos: [0, 1.65, 3.5], look: [0, 1.35, -2.8], fov: 80, gait: 'run' },
+  { t: 78.8, pos: [0, 1.5, 4.9], look: [0, 2.5, -1.5], fov: 88, gait: 'run', roll: -0.3 },
   { t: 80, pos: [0, -0.35, 5.8], look: [0, -0.8, 1.5], fov: 90, gait: 'hold', roll: -0.65 },
 ];
 
@@ -44,12 +45,12 @@ export default class ThresholdZ3Pool extends Scene {
     const tileB = mat(0x78cbd2, 0.18);
     const grout = mat(0x356d72, 0.75);
     const metal = mat(0x617678, 0.28, 0.55);
-    const chrome = mat(0xbcecf1, 0.04, 0.9);
+    const chrome = mat(0xd8f4f2, 0.22, 0.28, 0x102c30, 0.12);
     const dark = mat(0x071014, 0.9);
     const leaf = mat(0x5a6f27, 0.85);
 
     // hall volume, stepped entry shelf and tiled grid strips
-    box(this.s, 'z3_floor_deep', [8, 0.12, 31], [0, -0.05, -7], grout);
+    box(this.s, 'z3_floor_deep', [8, 0.12, 31], [0, -0.18, -7], grout);
     box(this.s, 'z3_step_shelf', [8, 0.55, 2.4], [0, 0.22, 6.4], tileA);
     box(this.s, 'z3_step_face', [8, 0.55, 0.1], [0, 0.22, 5.2], tileB);
     box(this.s, 'z3_wall_l', [0.18, 5.5, 31], [-4.1, 2.4, -7], tileA);
@@ -68,9 +69,43 @@ export default class ThresholdZ3Pool extends Scene {
       box(this.s, `z3_arch_lintel_${z}`, [7.4, 0.28, 0.35], [0, 3.5, z], tileA);
     }
     // water plane and lane-rope/pipe details
-    this.waterMat = mat(0x1a8c9d, 0.08, 0.05, 0x073f4a, 0.35) as THREE.MeshStandardMaterial;
-    this.waterMat.transparent = true; this.waterMat.opacity = 0.58;
+    this.waterMat = mat(0x1a8c9d, 0.04, 0.18, 0x073f4a, 0.28) as THREE.MeshStandardMaterial;
+    this.waterMat.transparent = true; this.waterMat.opacity = 0.46;
+    const wc = document.createElement('canvas'); wc.width = wc.height = 256;
+    const wg = wc.getContext('2d')!;
+    wg.fillStyle = 'rgba(20,120,135,0.35)'; wg.fillRect(0, 0, 256, 256);
+    wg.strokeStyle = 'rgba(190,255,250,0.55)'; wg.lineWidth = 2;
+    for (let y = 8; y < 256; y += 18) {
+      wg.beginPath();
+      for (let x = 0; x <= 256; x += 8) {
+        const yy = y + Math.sin(x * 0.08 + y * 0.31) * 4 + Math.sin(x * 0.19 + y) * 1.5;
+        if (x === 0) wg.moveTo(x, yy); else wg.lineTo(x, yy);
+      }
+      wg.stroke();
+    }
+    const waterTex = new THREE.CanvasTexture(wc); waterTex.wrapS = waterTex.wrapT = THREE.RepeatWrapping; waterTex.repeat.set(4, 14);
+    this.waterMat.map = waterTex;
     this.water = plane(this.s, 'z3_water_surface', 8, 27, [0, 0.45, -6], this.waterMat, [-Math.PI / 2, 0, 0]);
+    // knee-deep pool cues: submerged entry steps, floor lane markings, depth tiles, caustic strips and floating equipment
+    for (let st = 0; st < 3; st++) {
+      box(this.s, `z3_submerged_step_${st}`, [7.6, 0.16, 0.55], [0, 0.28 - st * 0.18, 4.75 - st * 0.55], st % 2 ? tileA : tileB);
+      box(this.s, `z3_step_noseline_${st}`, [7.6, 0.025, 0.035], [0, 0.37 - st * 0.18, 4.49 - st * 0.55], mat(0x103c45, 0.5));
+    }
+    for (const x of [-1.6, 0, 1.6]) box(this.s, `z3_floor_lane_${x}`, [0.09, 0.012, 25], [x, -0.105, -6.5], mat(0x083b55, 0.42));
+    for (let i = 0; i < 22; i++) {
+      const side = i % 2 ? -1 : 1;
+      const z = 4 - i * 1.15;
+      const cm = mat(0x9ffff2, 0.18, 0, 0x6ffff0, 0.55);
+      const c = box(this.s, `z3_caustic_wall_${i}`, [0.018, 0.018, 0.45 + hash(i) * 0.5], [side * 4.0, 1.0 + hash(i + 3) * 2.6, z], cm, [0, 0, (hash(i + 5) - 0.5) * 0.7]);
+      c.scale.z = 1;
+    }
+    box(this.s, 'z3_no_diving_sign', [1.1, 0.42, 0.025], [2.8, 1.45, 5.08], mat(0xe8e1cf, 0.5));
+    box(this.s, 'z3_no_diving_red_bar', [0.78, 0.09, 0.03], [2.8, 1.45, 5.05], mat(0xd3352c, 0.4), [0, 0, -0.35]);
+    box(this.s, 'z3_bench', [2.0, 0.12, 0.42], [-3.65, 0.65, -1.5], metal);
+    box(this.s, 'z3_lifeguard_chair_seat', [0.62, 0.1, 0.55], [3.45, 1.75, 3.6], mat(0xf0ead6, 0.5));
+    for (const dx of [-0.22, 0.22]) cyl(this.s, `z3_lifeguard_leg_${dx}`, 0.025, 1.8, [3.45 + dx, 0.9, 3.6], metal, [0.12, 0, 0], 8);
+    for (let i = 0; i < 4; i++) box(this.s, `z3_kickboard_${i}`, [0.34, 0.045, 0.48], [-3.0 + i * 0.55, 0.49, -4.5 - i * 1.1], i % 2 ? mat(0xff6138, 0.35) : mat(0x2e7fe6, 0.35), [0, hash(i) * 0.7, 0]);
+    sph(this.s, 'z3_rubber_duck', 0.11, [-2.5, 0.54, -7.5], mat(0xffd13b, 0.35), 16).scale.set(1.15, 0.8, 0.85);
     for (let z = -20; z <= 6; z += 4) {
       const light = new THREE.PointLight(0x8cecff, 1.3, 8, 1.8); light.position.set((z / 4) % 2 ? -2.8 : 2.8, 3.9, z); this.s.add(light);
       const strip = box(this.s, `z3_light_strip_${z}`, [1.2, 0.05, 0.08], [(z / 4) % 2 ? -2.8 : 2.8, 4.55, z], mat(0xd7ffff, 0.2, 0, 0xbfffff, 2.0));
@@ -114,13 +149,17 @@ export default class ThresholdZ3Pool extends Scene {
     const torso = sph(this.mirrorling, 'z3_mirrorling_torso', 0.34, [0, 1.25, 0], chrome, 24); torso.scale.set(0.55, 2.4, 0.35);
     const head = sph(this.mirrorling, 'z3_mirrorling_teardrop_head', 0.23, [0, 2.45, 0], chrome, 24); head.scale.set(0.72, 1.35, 0.55);
     for (const side of [-1, 1]) {
-      const upper = cyl(this.mirrorling, `z3_mirrorling_arm_upper_${side}`, 0.035, 1.25, [side * 0.35, 1.62, 0], chrome, [0, 0, side * 0.7], 12);
-      const lower = cyl(this.mirrorling, `z3_mirrorling_arm_lower_${side}`, 0.025, 1.35, [side * 0.88, 0.95, 0], chrome, [0, 0, side * 0.3], 12);
+      const upper = cyl(this.mirrorling, `z3_mirrorling_arm_upper_${side}`, 0.035, 1.1, [side * 0.31, 1.65, 0], chrome, [0, 0, side * 0.28], 12);
+      const lower = cyl(this.mirrorling, `z3_mirrorling_arm_lower_${side}`, 0.025, 1.15, [side * 0.48, 0.86, 0], chrome, [0, 0, side * 0.08], 12);
       this.arms.push(upper, lower);
+      cyl(this.mirrorling, `z3_mirrorling_leg_${side}`, 0.045, 1.05, [side * 0.12, 0.05, 0], chrome, [0, 0, side * 0.025], 12);
+      // black grout bands across the white-tile silhouette
+      box(this.mirrorling, `z3_mirrorling_arm_grout_${side}`, [0.018, 0.52, 0.018], [side * 0.43, 1.2, 0.02], mat(0x071014, 0.8), [0, 0, side * 0.18]);
     }
+    for (let band = 0; band < 5; band++) box(this.mirrorling, `z3_mirrorling_torso_grout_${band}`, [0.42, 0.018, 0.02], [0, 0.72 + band * 0.28, 0.13], mat(0x071014, 0.8));
     // reflection copy, not exact hierarchy but readable mirrored double
     this.reflection = this.mirrorling.clone(true); this.reflection.scale.y = -1; this.reflection.position.y = 0.45; this.reflection.visible = false; this.s.add(this.reflection);
-    this.reflection.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) { const mm = (m.material as THREE.MeshStandardMaterial).clone(); mm.emissive = new THREE.Color(0x2e8791); mm.emissiveIntensity = 0.45; m.material = mm; } });
+    this.reflection.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) { const mm = (m.material as THREE.MeshStandardMaterial).clone(); mm.emissive = new THREE.Color(0x2e8791); mm.emissiveIntensity = 0.10; mm.transparent = true; mm.opacity = 0.55; m.material = mm; } });
 
     // huge Tenant silhouette far underwater
     this.tenant = box(this.s, 'z3_tenant_underwater', [1.2, 4.8, 0.5], [0, -1.8, -10], basic(0x02080a, 0.65));
@@ -130,10 +169,10 @@ export default class ThresholdZ3Pool extends Scene {
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
     const t = f.t;
     applyFpCamera(this.cam, KEYS, t, out.width / out.height);
-    const battery = t > 70 ? 0.7 : 0.85;
-    updateFlashlight(this.flash.light, this.flash.target, this.cam, t, battery, t > 73 ? 0.16 : 0.04);
+    updateFlashlight(this.flash.light, this.flash.target, this.cam, t, 0.38, t > 73 ? 0.16 : 0.04);
     // deterministic surface shimmer and drifting floaters
     this.water.position.y = 0.45 + Math.sin(t * 1.8) * 0.008;
+    if (this.waterMat.map) { this.waterMat.map.offset.set((t * 0.012) % 1, (t * 0.018) % 1); }
     this.waterMat.emissiveIntensity = 0.35 + Math.sin(t * 2.4) * 0.08;
     this.surfaceLeaves.forEach((l, i) => { l.position.x += Math.sin(t * 0.25 + i) * 0.0008; l.rotation.z = hash(i) * 6 + Math.sin(t * 0.35 + i) * 0.1; });
     this.underwaterBits.forEach((b, i) => { b.position.y += Math.sin(t * 0.7 + i) * 0.0007; b.position.x += Math.cos(t * 0.4 + i) * 0.0005; });
@@ -144,10 +183,10 @@ export default class ThresholdZ3Pool extends Scene {
     // Mirrorling rule approximation: reflection first, surface reveal only after look-away
     const reflVisible = t > 59.5 && t < 75.0;
     this.reflection.visible = reflVisible;
-    const advance = smooth(73.0, 75.0, t) * 3.2;
-    const mz = -8 + advance;
-    this.reflection.position.set(Math.sin(t * 0.7) * 0.03, 1.18, mz - 0.35);
-    this.mirrorling.visible = t > 74.2;
+    const advance = smooth(72.0, 74.5, t) * 1.2;
+    const mz = -3.4 + advance;
+    this.reflection.position.set(Math.sin(t * 0.7) * 0.03, 0.9, mz - 0.35);
+    this.mirrorling.visible = t > 72.0;
     this.mirrorling.position.set(0, 0.45, mz);
     // arms copy laggingly; chrome figure reads as human silhouette even in grey-box
     this.arms.forEach((a, i) => { a.rotation.z += Math.sin(t * 1.4 + i) * 0.002; });
@@ -168,13 +207,8 @@ export default class ThresholdZ3Pool extends Scene {
     const gl = this.ctx.renderer;
     gl.setRenderTarget(out); gl.setClearColor(underwater > 0.4 ? 0x03151a : 0x08262d, 1); gl.clear(true, true, true); gl.render(this.s, this.cam); gl.resetState();
     return {
+      ...thresholdPost(t, { darkness: 0.32 + underwater * 0.28, exposure: 1.02 - underwater * 0.28, stress: 0.08 + underwater * 0.45 }),
       flash: 1 - smooth(55, 56.1, t),
-      exposure: 0.9 - underwater * 0.35,
-      bloom: 0.18,
-      bloomThreshold: 0.85,
-      vignette: 0.22 + underwater * 0.2,
-      grain: 0.03,
-      ca: 0.12 + underwater * 0.35,
       shake: t > 77 ? [0.8 * Math.sin(t * 29), 0.7 * Math.cos(t * 31)] : [0, 0],
     };
   }

@@ -2,6 +2,7 @@
 // Z2 ball-pit playroom: deterministic grey-box beat blockout with real scale/camera path; local rig is W2 scaffolding pending W1's shared kit.
 import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
+import { thresholdPost } from './sensor_post';
 import { addFlashlight, applyFpCamera, basic, box, clamp, cyl, disposeTree, hash, mat, plane, smooth, sph, updateFlashlight, type CamKey } from './z1_fp_local';
 
 const KEYS: CamKey[] = [
@@ -52,6 +53,8 @@ export default class ThresholdZ2Playroom extends Scene {
     const green = mat(0x3bbf5a, 0.3);
     const plasticDark = mat(0x204074, 0.3);
     const mats = [red, yellow, blue, green, mat(0xff7b2e, 0.28)];
+    const swimmerPale = [mat(0xc9bca5, 0.72), mat(0xa9b0aa, 0.76), mat(0xd2c788, 0.7), mat(0xb99e96, 0.74), mat(0x8d9aa4, 0.72)];
+    const mouthMat = mat(0xd9b83c, 0.62);
 
     box(this.s, 'z2_floor', [31, 0.1, 21], [0, -0.05, 0], foam);
     box(this.s, 'z2_wall_n', [31, 6, 0.16], [0, 3, -10.5], foam);
@@ -153,10 +156,10 @@ export default class ThresholdZ2Playroom extends Scene {
     this.swimmer.position.set(0, 0.62, 2.4); this.swimmer.visible = false; this.s.add(this.swimmer);
     for (let i = 0; i < 44; i++) {
       const a = hash(i) * Math.PI * 2, r = 0.22 + hash(i + 1) * 0.38, y = (hash(i + 2) - 0.45) * 0.34;
-      sph(this.swimmer, `z2_swimmer_skull_ball_${i}`, 0.11 + hash(i + 4) * 0.035, [Math.cos(a) * r, y, Math.sin(a) * r * 0.62], mats[i % mats.length]!, 10);
+      sph(this.swimmer, `z2_swimmer_skull_ball_${i}`, 0.11 + hash(i + 4) * 0.035, [Math.cos(a) * r, y, Math.sin(a) * r * 0.62], swimmerPale[i % swimmerPale.length]!, 10);
     }
-    this.mouthUpper = box(this.swimmer, 'z2_slide_mouth_upper', [0.62, 0.16, 0.58], [0, 0.05, 0.42], yellow, [-0.2, 0, 0]);
-    this.mouthLower = box(this.swimmer, 'z2_slide_mouth_lower', [0.62, 0.14, 0.58], [0, -0.13, 0.42], yellow, [0.2, 0, 0]);
+    this.mouthUpper = box(this.swimmer, 'z2_slide_mouth_upper', [0.62, 0.16, 0.58], [0, 0.05, 0.42], mouthMat, [-0.2, 0, 0]);
+    this.mouthLower = box(this.swimmer, 'z2_slide_mouth_lower', [0.62, 0.14, 0.58], [0, -0.13, 0.42], mouthMat, [0.2, 0, 0]);
     this.eyeL = sph(this.swimmer, 'z2_swimmer_eye_l', 0.095, [-0.24, 0.24, 0.3], basic(0xffffff), 16);
     this.eyeR = sph(this.swimmer, 'z2_swimmer_eye_r', 0.095, [0.24, 0.24, 0.3], basic(0xffffff), 16);
     sph(this.eyeL, 'z2_swimmer_pupil_l', 0.035, [0, 0, 0.085], basic(0x111111), 10);
@@ -174,7 +177,8 @@ export default class ThresholdZ2Playroom extends Scene {
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
     const t = f.t;
     applyFpCamera(this.cam, KEYS, t, out.width / out.height);
-    updateFlashlight(this.flash.light, this.flash.target, this.cam, t, 0.85, t > 40.5 && t < 49.5 ? 0.3 : 0.05);
+    const closeBeam = 1 - 0.68 * smooth(44.0, 45.0, t) * (1 - smooth(49.0, 50.0, t));
+    updateFlashlight(this.flash.light, this.flash.target, this.cam, t, closeBeam * 0.24, t > 40.5 && t < 49.5 ? 0.3 : 0.05);
     // clouded skylight dimming after 40s
     const dim = 1 - smooth(39.5, 41.5, t) * 0.5;
     this.sun.intensity = 2.5 * dim;
@@ -241,13 +245,8 @@ export default class ThresholdZ2Playroom extends Scene {
     const gl = this.ctx.renderer;
     gl.setRenderTarget(out); gl.setClearColor(0xcfe8ff, 1); gl.clear(true, true, true); gl.render(this.s, this.cam); gl.resetState();
     return {
+      ...thresholdPost(t, { darkness: 0.12, exposure: 1.16, stress: t > 40.5 && t < 49.5 ? 0.22 : 0.02 }),
       flash: 1 - smooth(30, 31.0, t),
-      exposure: 1.08,
-      bloom: 0.12,
-      bloomThreshold: 1.1,
-      vignette: 0.16,
-      grain: 0.025,
-      ca: 0.05,
       shake: t > 40.5 && t < 44.5 ? [0.15 * (hash(Math.floor(t * 90)) - 0.5), 0.15 * (hash(Math.floor(t * 90) + 3) - 0.5)] : [0, 0],
     };
   }

@@ -1,6 +1,8 @@
 // Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
 // W2-local deterministic first-person scaffolding, isolated so W1's shared rig can replace it without rewriting zone content.
 import * as THREE from 'three';
+import { evalFirstPerson, applyFirstPersonCamera as applySharedFirstPersonCamera, type FPKey, type FPPose } from './fp_cam';
+import { FlashlightRig, beamStateAt } from './flashlight';
 
 export type V3 = [number, number, number];
 export type Gait = 'still' | 'walk' | 'run' | 'creep' | 'hold';
@@ -31,37 +33,24 @@ export function evalCam(keys: CamKey[], t: number) {
 }
 
 export function applyFpCamera(cam: THREE.PerspectiveCamera, keys: CamKey[], t: number, aspect: number) {
-  const k = evalCam(keys, t);
-  const pos = vec(k.pos);
-  const look = vec(k.look);
-  const forward = look.clone().sub(pos).normalize();
-  const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
-  const gait = k.gait;
-  const rate = gait === 'run' ? 3.0 : gait === 'walk' ? 1.9 : gait === 'creep' ? 1.2 : 0;
-  const bobAmp = gait === 'run' ? 0.045 : gait === 'walk' ? 0.022 : gait === 'creep' ? 0.008 : 0;
-  const swayAmp = gait === 'run' ? 0.025 : gait === 'walk' ? 0.014 : gait === 'creep' ? 0.010 : 0;
-  let roll = k.roll;
-  if (rate > 0) {
-    const ph = t * Math.PI * 2 * rate;
-    pos.y += Math.sin(ph) * bobAmp;
-    pos.addScaledVector(right, Math.sin(ph * 0.5) * swayAmp);
-    roll += Math.sin(ph * 0.5) * (gait === 'run' ? 0.035 : 0.010);
-  } else if (gait === 'still') {
-    pos.y += Math.sin(t * Math.PI * 0.5) * 0.006;
-    pos.addScaledVector(right, Math.sin(t * 0.31 + 1.7) * 0.003);
-    roll += Math.sin(t * 0.23) * 0.002;
-  } else if (gait === 'hold') {
-    pos.x += (hash(Math.floor(t * 90)) - 0.5) * 0.0008;
-    pos.y += (hash(Math.floor(t * 90) + 5) - 0.5) * 0.0008;
-  }
-  cam.position.copy(pos);
-  cam.fov = k.fov;
-  cam.aspect = aspect;
-  cam.updateProjectionMatrix();
-  cam.up.set(0, 1, 0);
-  cam.lookAt(look);
-  cam.rotateZ(roll);
-  return k;
+  // Adapter into W1's shared rig. Zone choreography still uses explicit look targets,
+  // converted here to yaw/pitch keys so gait, breath, sway and noise stay centralized.
+  const fpKeys: FPKey[] = keys.map((k) => {
+    const dx = k.look[0] - k.pos[0], dy = k.look[1] - k.pos[1], dz = k.look[2] - k.pos[2];
+    const len = Math.hypot(dx, dy, dz) || 1;
+    return {
+      t: k.t,
+      pos: k.pos,
+      yaw: Math.atan2(dx / len, -dz / len),
+      pitch: Math.asin(dy / len),
+      roll: k.roll ?? 0,
+      fov: k.fov,
+      gait: k.gait === 'hold' ? 'holdBreath' : k.gait ?? 'still',
+    };
+  });
+  const pose = evalFirstPerson(fpKeys, t);
+  applySharedFirstPersonCamera(cam, pose, aspect);
+  return evalCam(keys, t);
 }
 
 export function mat(color: string | number, roughness = 0.65, metalness = 0, emissive?: string | number, ei = 0) {
@@ -88,24 +77,33 @@ export function disposeTree(root: THREE.Object3D) {
 }
 
 export function addFlashlight(scene: THREE.Scene) {
-  const light = new THREE.SpotLight(0xffddb0, 0, 35, THREE.MathUtils.degToRad(22), 0.55, 1.2);
-  const target = new THREE.Object3D();
-  scene.add(light, target);
-  light.target = target;
-  return { light, target };
+  const rig = new FlashlightRig();
+  scene.add(rig.group);
+  return { rig, light: rig, target: rig.group };
 }
-export function updateFlashlight(light: THREE.SpotLight, target: THREE.Object3D, cam: THREE.PerspectiveCamera, t: number, battery: number, flicker: number) {
-  const dir = cam.getWorldDirection(new THREE.Vector3());
-  const right = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
-  light.position.copy(cam.position).addScaledVector(right, 0.25).addScaledVector(new THREE.Vector3(0, 1, 0), -0.2).addScaledVector(dir, 0.1);
-  target.position.copy(cam.position).addScaledVector(dir, 8).addScaledVector(new THREE.Vector3(0, 1, 0), -0.25);
-  let f = 1;
-  if (flicker > 0) {
-    const cell = Math.floor(t * 18);
-    const active = hash(cell) < flicker;
-    f = active ? 0.15 + 0.5 * hash(cell + 9) : 1;
-  }
-  light.intensity = 24 * battery * f;
+
+export function updateFlashlight(light: FlashlightRig, _target: THREE.Object3D, cam: THREE.PerspectiveCamera, t: number, beamScale: number, threat: number) {
+  const forwardV = cam.getWorldDirection(new THREE.Vector3()).normalize();
+  const rightV = new THREE.Vector3().crossVectors(forwardV, cam.up).normalize();
+  const upV = new THREE.Vector3().crossVectors(rightV, forwardV).normalize();
+  const pose: FPPose = {
+    pos: [cam.position.x, cam.position.y, cam.position.z],
+    target: [cam.position.x + forwardV.x, cam.position.y + forwardV.y, cam.position.z + forwardV.z],
+    forward: [forwardV.x, forwardV.y, forwardV.z],
+    right: [rightV.x, rightV.y, rightV.z],
+    up: [upV.x, upV.y, upV.z],
+    roll: 0,
+    fov: cam.fov,
+    gait: 'still',
+    stepPhase: 0,
+    stepImpulse: 0,
+    breath: 0,
+  };
+  const state = beamStateAt(t, clamp(threat * 3, 0, 1));
+  state.intensity *= beamScale;
+  light.update(pose, t, state);
+  // Zone scenes already carry strong practicals; keep the shared haze present but soft enough not to become a solid triangular sheet.
+  (light as unknown as { hazeMat: THREE.MeshBasicMaterial }).hazeMat.opacity *= 0.32;
 }
 
 export function drawTextOverlay(layer: { clear(): void; ctx: CanvasRenderingContext2D; upload(): THREE.Texture }, draw: (c: CanvasRenderingContext2D) => void) {

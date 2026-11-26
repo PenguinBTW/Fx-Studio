@@ -2,6 +2,7 @@
 // Z4 paper library: deterministic grey-box beat blockout with real scale/camera path; local rig is W2 scaffolding pending W1's shared kit.
 import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
+import { thresholdPost } from './sensor_post';
 import { addFlashlight, applyFpCamera, basic, box, clamp, cyl, disposeTree, hash, mat, plane, smooth, sph, updateFlashlight, type CamKey } from './z1_fp_local';
 
 const KEYS: CamKey[] = [
@@ -11,7 +12,7 @@ const KEYS: CamKey[] = [
   { t: 87.8, pos: [0, 1.65, 4.0], look: [0, 0.95, 6.0], fov: 74, gait: 'walk' },
   { t: 90.5, pos: [0, 1.65, 5.0], look: [2.4, 2.8, 10], fov: 74, gait: 'still' },
   { t: 92.7, pos: [0, 1.65, 5.2], look: [0.8, 1.0, 7.0], fov: 74, gait: 'still' },
-  { t: 94.8, pos: [0, 1.65, 5.2], look: [0, 4.5, 9.0], fov: 76, gait: 'still' },
+  { t: 94.8, pos: [0, 1.65, 5.2], look: [1.2, 3.0, 1.3], fov: 76, gait: 'still' },
   { t: 97.0, pos: [0, 1.65, 4.5], look: [0, 2.8, 9.0], fov: 78, gait: 'run' },
   { t: 99.0, pos: [0, 1.65, 3.6], look: [0, 2.2, 9.5], fov: 82, gait: 'run' },
   { t: 101.5, pos: [0, 1.55, 7.0], look: [0, 1.0, 25], fov: 84, gait: 'run' },
@@ -114,26 +115,44 @@ export default class ThresholdZ4Library extends Scene {
     }
 
     // Archivist: folded-paper silhouette high in canyon, fanned torso pages, accordion arms
-    this.archivist = new THREE.Group(); this.archivist.position.set(0, 2.7, 9.0); this.archivist.visible = false; this.s.add(this.archivist);
+    this.archivist = new THREE.Group(); this.archivist.position.set(1.15, 2.0, 1.35); this.archivist.visible = false; this.s.add(this.archivist);
     for (let i = 0; i < 12; i++) {
-      const pg = box(this.archivist, `z4_archivist_torso_page_${i}`, [0.65, 1.55, 0.025], [0, 0.8 + i * 0.015, 0], paper, [0, (i - 5.5) * 0.06, (i - 5.5) * 0.025]);
+      const pg = box(this.archivist, `z4_archivist_torso_page_${i}`, [0.52, 1.55, 0.025], [(i - 5.5) * 0.012, 0.8 + i * 0.015, -0.018 * i], i % 2 ? paper : paper2, [0, (i - 5.5) * 0.12, (i - 5.5) * 0.018]);
       pg.scale.x = 1 - Math.abs(i - 5.5) * 0.035;
     }
-    plane(this.archivist, 'z4_archivist_blank_face', 0.56, 0.75, [0, 1.75, 0.02], paper, [0, 0, 0]);
-    this.faceMouth = box(this.archivist, 'z4_archivist_mouth_crease', [0.34, 0.018, 0.02], [0, 1.62, 0.06], ink);
+    plane(this.archivist, 'z4_archivist_blank_face', 0.62, 0.82, [0, 1.78, 0.02], paper, [0, 0, 0]);
+    box(this.archivist, 'z4_archivist_face_edge_l', [0.035, 0.88, 0.025], [-0.34, 1.78, -0.025], mat(0x352719, 0.82));
+    box(this.archivist, 'z4_archivist_face_edge_r', [0.035, 0.88, 0.025], [0.34, 1.78, -0.025], mat(0x352719, 0.82));
+    box(this.archivist, 'z4_archivist_brow_fold', [0.68, 0.04, 0.03], [0, 2.18, -0.02], mat(0x352719, 0.82));
+    this.faceMouth = box(this.archivist, 'z4_archivist_mouth_crease', [0.42, 0.022, 0.025], [0, 1.62, 0.065], ink);
+    // long vertical anatomy: spine/book roll, hanging waist and folded paper legs, so the proxy reads as a tall librarian rather than a sign
+    cyl(this.archivist, 'z4_archivist_spine_roll', 0.075, 1.65, [0, 0.72, -0.08], mat(0x3b2c1e, 0.72), [0, 0, 0], 18);
+    box(this.archivist, 'z4_archivist_waist_roll', [0.62, 0.2, 0.22], [0, 0.02, 0], paper2, [0, 0, 0.05]);
+    for (const side of [-1, 1]) {
+      for (let l = 0; l < 4; l++) {
+        box(this.archivist, `z4_archivist_leg_strip_${side}_${l}`, [0.07, 1.05 - l * 0.08, 0.035], [side * (0.13 + l * 0.055), -0.58 - l * 0.04, -0.03 + l * 0.035], l % 2 ? paper : paper2, [0.05 * side, 0, side * (0.08 + l * 0.04)]);
+      }
+    }
     for (const side of [-1, 1]) {
       for (let j = 0; j < 5; j++) {
-        const a = box(this.archivist, `z4_archivist_arm_${side}_${j}`, [0.48, 0.045, 0.09], [side * (0.45 + j * 0.34), 1.1 - j * 0.08, 0], paper2, [0, 0, side * (0.12 + j * 0.07)]);
+        const zig = (j % 2 ? -1 : 1);
+        const a = box(this.archivist, `z4_archivist_arm_${side}_${j}`, [0.68, 0.045, 0.09], [side * (0.52 + j * 0.42), 1.18 - j * 0.06, -0.02 + zig * 0.05], j % 2 ? paper : paper2, [zig * 0.18, side * zig * 0.28, side * (0.34 - j * 0.05)]);
         this.archivistArms.push(a);
       }
-      for (let fi = 0; fi < 5; fi++) box(this.archivist, `z4_archivist_finger_${side}_${fi}`, [0.04, 0.025, 0.34], [side * 2.05, 0.74 - fi * 0.015, -0.12 + fi * 0.06], paper, [0, side * 0.15, 0]);
+      // forward party-blower reach toward the viewer/camera (+Z in local asset space)
+      for (let j = 0; j < 6; j++) {
+        const zig = (j % 2 ? -1 : 1);
+        const r = box(this.archivist, `z4_archivist_reach_${side}_${j}`, [0.08, 0.04, 0.62], [side * (0.42 + zig * 0.08), 1.05 - j * 0.025, 0.34 + j * 0.42], j % 2 ? paper2 : paper, [0, zig * 0.16, 0]);
+        this.archivistArms.push(r);
+      }
+      for (let fi = 0; fi < 5; fi++) box(this.archivist, `z4_archivist_finger_${side}_${fi}`, [0.035, 0.025, 0.38], [side * (0.48 - fi * 0.04), 0.88 - fi * 0.025, 2.85 + fi * 0.03], paper, [0.25, side * 0.15, 0]);
     }
   }
 
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
     const t = f.t;
     applyFpCamera(this.cam, KEYS, t, out.width / out.height);
-    updateFlashlight(this.flash.light, this.flash.target, this.cam, t, t > 96 ? 0.5 : 0.7, t > 98 ? 0.22 : 0.04);
+    updateFlashlight(this.flash.light, this.flash.target, this.cam, t, 0.45, t > 98 ? 0.22 : 0.04);
     // motes hang and drift deterministically
     this.motes.forEach((m, i) => { m.position.y += Math.sin(t * 0.35 + i) * 0.0008; m.position.x += Math.cos(t * 0.27 + i * 2) * 0.0005; });
     // ledger writes itself: pages lift one by one, ink lines emerge as thin dark strips
@@ -153,10 +172,10 @@ export default class ThresholdZ4Library extends Scene {
     // archivist reveal, page fan and arms extension
     this.archivist.visible = t > 94.2;
     const reveal = smooth(94.2, 95.4, t);
-    this.archivist.scale.setScalar(0.45 + reveal * 0.55);
-    this.archivist.position.y = 2.2 + reveal * 0.55;
+    this.archivist.scale.setScalar(0.65 + reveal * 0.5);
+    this.archivist.position.y = 1.45 + reveal * 0.65;
     this.faceMouth.scale.x = 0.2 + smooth(95.0, 96.0, t) * 1.2;
-    this.archivistArms.forEach((a, i) => { a.scale.x = 0.5 + reveal * (0.9 + (i % 5) * 0.08); });
+    this.archivistArms.forEach((a, i) => { const ext = 0.5 + reveal * (0.9 + (i % 5) * 0.08); if (a.name.includes('_reach_')) a.scale.z = ext; else a.scale.x = ext; });
     // canyon closes like a book after 99
     const close = smooth(97.0, 103.7, t);
     const closeCurve = close;
@@ -168,14 +187,8 @@ export default class ThresholdZ4Library extends Scene {
     const gl = this.ctx.renderer;
     gl.setRenderTarget(out); gl.setClearColor(0x090806, 1); gl.clear(true, true, true); gl.render(this.s, this.cam); gl.resetState();
     return {
+      ...thresholdPost(t, { darkness: 0.66, exposure: 1.0, stress: t > 94 ? 0.42 : 0.08, fade: endBlack }),
       flash: 1 - smooth(80, 81.0, t),
-      fade: endBlack,
-      exposure: 0.86,
-      bloom: 0.18,
-      bloomThreshold: 0.88,
-      vignette: 0.28 + close * 0.12,
-      grain: 0.04,
-      ca: 0.1,
       shake: t > 99 ? [1.1 * Math.sin(t * 33), 0.8 * Math.cos(t * 29)] : [0, 0],
     };
   }
