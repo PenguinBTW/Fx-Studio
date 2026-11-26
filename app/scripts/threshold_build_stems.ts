@@ -878,7 +878,7 @@ wav('end_office_events.wav', stem(10.0,(t)=>{
  const at=t+225;let l=0,r=0;const add=(v:number,pan=0)=>{const a=(pan+1)*Math.PI/4;l+=v*Math.cos(a);r+=v*Math.sin(a)};
  // beige phone repeats, each 2 dB quieter, while office air loses high-frequency content
  const idx=Math.floor((at-225)/2.8);for(const base of[225,227.8,230.6,233.4])for(const off of[.02,1.18]){if(base+off+.88>235)continue;const u=at-base-off;if(u>=0&&u<.88){const trem=.45+.55*(Math.sin(u*Math.PI*40)>0?1:0);const gain=Math.pow(.794,idx);add((Math.sin(u*Math.PI*2*1280)*.0025+Math.sin(u*Math.PI*2*1735)*.0008+Math.sin(u*Math.PI*2*960)*.005+Math.sin(u*Math.PI*2*640)*.013+Math.sin(u*Math.PI*2*320)*.007+noise()*.010)*Math.exp(-u*3.1)*trem*gain,.14)}}
- const airloss=1-smoothstep(225,235,at);add((Math.sin(at*Math.PI*2*60)*.0045+Math.sin(at*Math.PI*2*120)*.0018+noise()*.0018*airloss),.05);
+ const airloss=1-smoothstep(225,235,at);add((Math.sin(at*Math.PI*2*60)*.0025+Math.sin(at*Math.PI*2*120)*.0008+noise()*.0032*airloss),.05);
  const endFade=1-smoothstep(234.15,235,at);
  return[l*endFade,r*endFade]
 }));
@@ -1096,8 +1096,8 @@ bed('z8_home_room_tone.wav', 30.6, 0.8, 1.8, (t, lp) => {
 });
 
 bed('end_office_afterimage_tone.wav', 10.0, 0.4, 2.4, (t, lp) => {
-  const hum = Math.sin(t * Math.PI * 2 * 60) * 0.011 + Math.sin(t * Math.PI * 2 * 120) * 0.001 + Math.sin(t * Math.PI * 2 * 180) * 0.0008;
-  const hiss = noise() * 0.006 + lp() * 0.012;
+  const hum = Math.sin(t * Math.PI * 2 * 60) * 0.0065 + Math.sin(t * Math.PI * 2 * 120) * 0.0006 + Math.sin(t * Math.PI * 2 * 180) * 0.0004;
+  const hiss = noise() * 0.008 + lp() * 0.016;
   const endFade = 1 - smoothstep(9.15, 10.0, t);
   const v = (hum + hiss) * endFade;
   return [v, v * 0.96];
