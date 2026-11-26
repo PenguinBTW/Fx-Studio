@@ -95,7 +95,7 @@ export default class ThresholdZ4Library extends Scene {
       const remapPaper = (m: THREE.Material) => {
         const hit = archivistMatCache.get(m); if (hit) return hit;
         const mm = m.clone() as THREE.MeshStandardMaterial;
-        if (/paper|ivory|torn/.test(mm.name)) {
+        if (/paper|ivory|torn|page|card|fold/i.test(mm.name) || !/mouth_crease_ink|book_spine_leather/i.test(mm.name)) {
           mm.map = archivistPaperTex; mm.roughnessMap = archivistPaperTex; mm.bumpMap = archivistPaperTex; mm.bumpScale = 0.012;
           mm.roughness = Math.max(mm.roughness, 0.86);
           if (/greyed/.test(mm.name)) mm.color.multiplyScalar(0.82);

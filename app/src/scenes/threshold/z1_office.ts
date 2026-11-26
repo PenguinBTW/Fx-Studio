@@ -103,6 +103,59 @@ function proceduralSurface(kind: SurfaceKind, repeat: number) {
   tex.repeat.set(repeat, repeat);
   return tex;
 }
+function wetGoatEyeTexture() {
+  const size = 128;
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const g = c.getContext('2d')!;
+  const img = g.createImageData(size, size);
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    const dx = x / size - 0.5, dy = y / size - 0.5;
+    const radial = Math.sqrt(dx * dx + dy * dy);
+    const n = surfaceNoise(x, y, 241);
+    const striae = Math.sin(Math.atan2(dy, dx) * 9 + radial * 28) * 10;
+    const edge = Math.max(0, radial - 0.32) * 120;
+    const v = 226 + (n - 0.5) * 24 + striae - edge;
+    const id = (y * size + x) * 4;
+    img.data[id] = Math.max(115, Math.min(255, v + 14));
+    img.data[id + 1] = Math.max(92, Math.min(255, v));
+    img.data[id + 2] = Math.max(42, Math.min(205, v - 64));
+    img.data[id + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function organicSkinTexture(repeat: number) {
+  const size = 256;
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const g = c.getContext('2d')!;
+  const img = g.createImageData(size, size);
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    const n = surfaceNoise(x, y, 113);
+    const blotch = surfaceNoise(Math.floor(x / 13), Math.floor(y / 11), 151);
+    const pore = surfaceNoise(Math.floor(x / 2), Math.floor(y / 2), 197);
+    const crease = Math.abs(Math.sin(x * 0.055 + Math.sin(y * 0.035) * 2.1)) < 0.035 ? -24 : 0;
+    const wetBand = Math.max(0, Math.sin(y * 0.021 + blotch * 4.5) - 0.58) * 24;
+    const v = 198 + (n - 0.5) * 24 + (blotch - 0.5) * 46 + (pore > 0.91 ? -34 : 0) + crease + wetBand;
+    const id = (y * size + x) * 4;
+    img.data[id] = Math.max(82, Math.min(255, v + 8));
+    img.data[id + 1] = Math.max(72, Math.min(255, v));
+    img.data[id + 2] = Math.max(68, Math.min(255, v - 5));
+    img.data[id + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  // Sparse longer wet streaks; subtle enough not to become painted stripes.
+  for (let i = 0; i < 52; i++) {
+    const x = hash(i * 3.1) * size, y = hash(i * 7.7) * size, len = 10 + hash(i) * 30;
+    g.strokeStyle = `rgba(255,226,210,${0.025 + hash(i + 2) * 0.055})`; g.lineWidth = 0.7 + hash(i + 4) * 1.2;
+    g.beginPath(); g.moveTo(x, y); g.lineTo(x + (hash(i + 6) - 0.5) * 5, y + len); g.stroke();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace; tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(repeat, repeat);
+  return tex;
+}
+
 function officeScreenTexture() {
   const c = document.createElement('canvas'); c.width = 256; c.height = 160;
   const g = c.getContext('2d')!;
@@ -158,8 +211,9 @@ export default class ThresholdZ1Office extends Scene {
     // Corpse-pale organic material separation: the accepted silhouette remains unchanged, but skin,
     // veins, pads and nails must not collapse into uniform grey pipe plastic under the beam.
     const breatherMatCache = new Map<THREE.Material, THREE.Material>();
-    const breatherSkinTex = proceduralSurface('fabric', 7);
+    const breatherSkinTex = organicSkinTexture(2.4);
     const breatherPadTex = proceduralSurface('plastic', 5);
+    const breatherEyeTex = wetGoatEyeTexture();
     this.breather.root.traverse((o) => {
       const mesh = o as THREE.Mesh;
       if (!mesh.isMesh) return;
@@ -168,14 +222,14 @@ export default class ThresholdZ1Office extends Scene {
         if (hit) return hit;
         const mm = m.clone() as THREE.MeshStandardMaterial;
         if (/wet_eye_yellow/.test(mm.name)) {
-          mm.color.setHex(0xd6dc63); mm.emissive.setHex(0xc8f05a); mm.emissiveIntensity = 1.15; mm.roughness = 0.025; mm.metalness = 0.05;
+          mm.color.setHex(0xc9b84f); mm.emissive.setHex(0x5c4b12); mm.emissiveIntensity = 0.045; mm.roughness = 0.018; mm.metalness = 0.0; mm.map = breatherEyeTex;
           this.breatherEyeMats.push(mm);
         } else if (/purple_vein/.test(mm.name)) {
           mm.color.setHex(0x551047); mm.emissive.setHex(0x250029); mm.emissiveIntensity = 0.18; mm.roughness = 0.42;
         } else if (/tile_skin_warm_grey/.test(mm.name)) {
-          mm.color.setHex(0xa47d68); mm.roughness = 0.66; mm.emissive.setHex(0x1a0905); mm.emissiveIntensity = 0.12; mm.map = breatherSkinTex; mm.roughnessMap = breatherSkinTex; mm.bumpMap = breatherSkinTex; mm.bumpScale = 0.022;
+          mm.color.setHex(0xa8877c); mm.roughness = 0.43; mm.emissive.setHex(0x1a0905); mm.emissiveIntensity = 0.12; mm.map = breatherSkinTex; mm.roughnessMap = breatherSkinTex; mm.bumpMap = breatherSkinTex; mm.bumpScale = 0.022;
         } else if (/tile_skin_pressure_edges/.test(mm.name)) {
-          mm.color.setHex(0xc09479); mm.roughness = 0.58; mm.emissive.setHex(0x1d0b06); mm.emissiveIntensity = 0.10; mm.map = breatherSkinTex; mm.roughnessMap = breatherSkinTex; mm.bumpMap = breatherSkinTex; mm.bumpScale = 0.018;
+          mm.color.setHex(0xb59588); mm.roughness = 0.36; mm.emissive.setHex(0x1d0b06); mm.emissiveIntensity = 0.10; mm.map = breatherSkinTex; mm.roughnessMap = breatherSkinTex; mm.bumpMap = breatherSkinTex; mm.bumpScale = 0.018;
         } else if (/cracked_nail_yellow/.test(mm.name)) {
           mm.color.setHex(0xb98f32); mm.roughness = 0.42; mm.map = breatherPadTex; mm.bumpMap = breatherPadTex; mm.bumpScale = 0.007;
         } else if (/suction_pad_pale/.test(mm.name)) {

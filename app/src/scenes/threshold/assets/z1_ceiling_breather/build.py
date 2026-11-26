@@ -70,6 +70,8 @@ nail=material('cracked_nail_yellow',(0.58,0.46,0.16),.5)
 padmat=material('suction_pad_pale',(0.46,0.36,0.29),.52)
 crackmat=material('nail_crack_dark',(0.08,0.045,0.015),.9)
 veinmat=material('purple_vein_low_flash',(0.16,0.035,0.19),.48)
+wetdrop=material('wet_skin_specular_droplets',(0.82,0.68,0.62),.06)
+catchmat=material('wet_eye_catchlight',(0.95,0.98,0.72),.015,0,(0.45,0.52,0.18),.18)
 root=empty('ceiling_breather_root',part='root')
 
 # Twelve fused acoustic-tile skin plates. They are the creature's back, not ordinary loose tiles.
@@ -93,12 +95,14 @@ for row in range(2):
 for side,x in [('l',-.35),('r',.35)]:
     e=sphere(f'eye_{side}',(x,-.015,-.105),(.06,.042,.035),eye,f'eye_{side}',40,20); e.parent=root
     # horizontal goat pupil: a black slit, deliberately wider than tall
-    p=cube(f'pupil_{side}',(x,-.055,-.128),(.072,.012,.012),pupil,f'pupil_{side}',.006); p.parent=root
+    p=cube(f'pupil_{side}',(x,-.058,-.128),(.052,.008,.010),pupil,f'pupil_{side}',.005); p.parent=root
+    for px in (-.026,.026): sphere(f'pupil_round_end_{side}_{px}',(x+px,-.058,-.128),(.010,.004,.006),pupil,f'pupil_{side}',12,6).parent=root
     # bottom-heavy upper/lower lid shells with independent blink hooks
     lid1=sphere(f'lid_{side}_upper',(x,-.018,-.088),(.067,.045,.018),skin,f'lid_{side}_upper',28,12); lid1.scale.z=.55; lid1.parent=root
     lid2=sphere(f'lid_{side}_lower',(x,-.018,-.12),(.067,.045,.014),skin_hi,f'lid_{side}_lower',28,12); lid2.scale.z=.45; lid2.parent=root
     # wet rim
     torus(f'eye_rim_{side}',(x,-.022,-.108),.064,.008,skin_hi,f'eye_{side}',(math.pi/2,0,0)).parent=root
+    sphere(f'eye_catchlight_{side}',(x-.018,-.063,-.104),(.012,.004,.008),catchmat,f'eye_{side}',14,7).parent=root
 
 # Eight curling four-segment fingers. Each phalanx is tapered and overlapped at the knuckle,
 # with asymmetrical curl rather than straight pipe runs.
@@ -139,6 +143,12 @@ for fi in range(8):
             va=Vector(pts[j])+Vector((off[0],off[1],0)); vb=Vector(pts[j+1])+Vector((off[0]*.65,off[1],0))
             vein=cyl_between(f'finger_{fi+1}_vein_{j+1}_{vi+1}',va,vb,.0026,veinmat,f'finger_{fi+1}',vertices=8)
             vein.parent=rootE; vein.matrix_parent_inverse=rootE.matrix_world.inverted()
+        for wd in range(1):
+            uu=.48+random.uniform(-.18,.18)
+            pp=Vector(pts[j]).lerp(Vector(pts[j+1]),min(.92,max(.08,uu)))
+            rr=max(.012,.052-j*.008)
+            drop=sphere(f'finger_{fi+1}_wet_bead_{j+1}_{wd+1}',pp+Vector((random.uniform(-.006,.006),-rr*.82,random.uniform(-.006,.006))),(.0048,.0026,.0038),wetdrop,f'finger_{fi+1}',10,5)
+            drop.parent=rootE; drop.matrix_parent_inverse=rootE.matrix_world.inverted()
     tip=Vector(pts[-1])
     # fleshy rounded fingertip under the cracked yellow nail
     tipbulb=sphere(f'finger_{fi+1}_tip_pad',tip,(.027,.023,.032),skin_hi,f'finger_{fi+1}',18,9)
