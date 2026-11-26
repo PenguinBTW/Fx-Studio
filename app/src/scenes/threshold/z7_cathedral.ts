@@ -28,7 +28,7 @@ const KEYS: PoseKey[] = [
   { t: 168.0, p: [0, 1.6, -13.0], yaw: 0, pitch: 0, roll: 0, fov: 84 },
   { t: 170.0, p: [0, 1.6, -24.0], yaw: 0, pitch: 0, roll: 2, fov: 84 },
   { t: 172.0, p: [0, 1.15, -33.5], yaw: 163, pitch: -12, roll: 12, fov: 86 },
-  { t: 173.4, p: [0, 0.35, -34.6], yaw: 184, pitch: -5, roll: 70, fov: 90 },
+  { t: 173.4, p: [0.1001, 0.3399, -34.0001], yaw: 154.88, pitch: 0, roll: 69.89, fov: 82 },
   { t: 175.0, p: [0, 0.48, -34.6], yaw: 174, pitch: 2, roll: 58, fov: 86 },
   { t: 176.0, p: [0, 1.6, -35.8], yaw: 0, pitch: 0, roll: 0, fov: 86 },
   { t: 181.0, p: [0, 1.6, -63.0], yaw: -7, pitch: -16, roll: -2, fov: 88 },
@@ -53,14 +53,15 @@ function poseAt(t: number, gait?: GaitName) {
 }
 
 function z7Gait(t: number): GaitName {
-  if ((t >= 168 && t < 172) || (t >= 176 && t < 186)) return 'run';
+  if ((t >= 168.2 && t < 172) || (t >= 176 && t < 186)) return 'run';
   if (t >= 158 && t < 163) return 'walk';
   if (t >= COLD_OPEN_REPLAY.z7BeamDead && t < 174.55) return 'holdBreath';
   return 'still';
 }
 
 const REPLAY_Z_OFFSET = -28.5;
-const REPLAY_T_OFFSET = COLD_OPEN_REPLAY.z7Start - COLD_OPEN_REPLAY.z0Start;
+// Literal 170.1 avoids floating-point drift in z7Start-z0Start; exact equality gates the join frame.
+const REPLAY_T_OFFSET = 170.1;
 function replayPoseAt(t: number) {
   const local = clamp(t - REPLAY_T_OFFSET, 0, 4);
   const p = coldOpenPose(local);
@@ -70,27 +71,61 @@ function replayPoseAt(t: number) {
     target: [p.target[0], p.target[1], p.target[2] + REPLAY_Z_OFFSET] as [number, number, number],
   };
 }
-function rotateForwardYaw(v: [number, number, number], yaw: number): [number, number, number] {
-  const c = Math.cos(yaw), s = Math.sin(yaw);
-  return [c * v[0] - s * v[2], v[1], s * v[0] + c * v[2]];
+
+const JOIN_POSE = coldOpenPose(0);
+const JOIN_Z = JOIN_POSE.pos[2] + REPLAY_Z_OFFSET;
+const SPRINT_T0 = 168.0;
+const SPRINT_T1 = REPLAY_T_OFFSET;
+let SPRINT_SPEED = 8;
+const SPRINT_SAMPLES = 160;
+const sprintTable: { u: number; x: number; z: number; d: number }[] = [];
+{
+  let d = 0;
+  let px = 0;
+  let pz = -13;
+  for (let i = 0; i <= SPRINT_SAMPLES; i++) {
+    const u = i / SPRINT_SAMPLES;
+    const x = 1.75 * Math.sin(Math.PI * 4 * u) + JOIN_POSE.pos[0] * u;
+    const z = lerp(-13, JOIN_Z, u);
+    if (i) d += Math.hypot(x - px, z - pz);
+    sprintTable.push({ u, x, z, d });
+    px = x; pz = z;
+  }
+  SPRINT_SPEED = sprintTable[SPRINT_SAMPLES]!.d / (SPRINT_T1 - SPRINT_T0);
+}
+function sprintPoint(t: number) {
+  const targetD = clamp((t - SPRINT_T0) * SPRINT_SPEED, 0, sprintTable[SPRINT_SAMPLES]!.d);
+  let hi = SPRINT_SAMPLES;
+  while (hi > 0 && sprintTable[hi]!.d > targetD) hi--;
+  const a = sprintTable[hi]!;
+  const b = sprintTable[Math.min(SPRINT_SAMPLES, hi + 1)]!;
+  const q = b.d > a.d ? (targetD - a.d) / (b.d - a.d) : 0;
+  return { x: lerp(a.x, b.x, q), z: lerp(a.z, b.z, q) };
+}
+function poseFromYawPitch(base: ReturnType<typeof poseAt>, pos: [number, number, number], yaw: number, pitch: number, roll: number, fov: number): ReturnType<typeof poseAt> {
+  const cp = Math.cos(pitch);
+  const forward = [Math.sin(yaw) * cp, Math.sin(pitch), -Math.cos(yaw) * cp] as [number, number, number];
+  const right = [Math.cos(yaw), 0, Math.sin(yaw)] as [number, number, number];
+  return { ...base, pos, forward, right, up: base.up, roll, fov, target: [pos[0] + forward[0], pos[1] + forward[1], pos[2] + forward[2]] as [number, number, number] };
 }
 
 function z7PoseAt(t: number) {
   if (t >= REPLAY_T_OFFSET && t <= COLD_OPEN_REPLAY.z7BeamDead) return replayPoseAt(t);
-  const pose = poseAt(t, z7Gait(t));
-  const glanceU = clamp((t - 168.05) / 1.05);
-  const glanceYaw = t >= 168.05 && t < 169.1 ? Math.pow(Math.sin(Math.PI * glanceU), 0.65) * 1.2 : 0;
-  if (!glanceYaw) return pose;
-  const forward = rotateForwardYaw(pose.forward, glanceYaw);
-  const right = rotateForwardYaw(pose.right, glanceYaw);
-  const up = rotateForwardYaw(pose.up, glanceYaw);
-  return {
-    ...pose,
-    forward,
-    right,
-    up,
-    target: [pose.pos[0] + forward[0], pose.pos[1] + forward[1], pose.pos[2] + forward[2]] as [number, number, number],
-  };
+  if (t >= SPRINT_T0 && t < REPLAY_T_OFFSET) {
+    const base = poseAt(t, z7Gait(t));
+    const sp = sprintPoint(t);
+    const u = clamp((t - SPRINT_T0) / (SPRINT_T1 - SPRINT_T0));
+    const pos: [number, number, number] = [sp.x, lerp(1.6, JOIN_POSE.pos[1], u), sp.z];
+    const lookback = smooth((t - 168.0) / 0.18) * (1 - smooth((t - 168.7) / 0.24));
+    const yaw = Math.PI * lookback;
+    const targetYaw = Math.atan2(JOIN_POSE.forward[0], -JOIN_POSE.forward[2]);
+    const yawForward = targetYaw * smooth((u - 0.86) / 0.14);
+    const pitch = lerp(0, Math.asin(JOIN_POSE.forward[1]), u);
+    const fov = lerp(84 + 10 * smooth((t - 168.2) / 0.3), JOIN_POSE.fov, smooth((t - 169.75) / 0.35));
+    const roll = lerp(0, JOIN_POSE.roll, u) + 2 * Math.PI / 180 * Math.sin(Math.PI * u);
+    return poseFromYawPitch(base, pos, yaw + yawForward, pitch, roll, fov);
+  }
+  return poseAt(t, z7Gait(t));
 }
 
 export default class ThresholdZ7Cathedral extends Scene {
@@ -850,7 +885,10 @@ export default class ThresholdZ7Cathedral extends Scene {
         const chaseOff = 168 + clamp((-camZ + d.z) / 34) * 4;
         if (d.z > camZ - 2) on *= 1 - smooth((t - chaseOff) / 0.28);
       }
-      if (t >= 170.1 && t <= 173.4) on *= 0.06;
+      if (t >= 168 && t < 176) {
+        const innerPassageFade = 1 - smooth((-camZ - 20) / 8);
+        on *= lerp(1, 0.08, innerPassageFade);
+      }
       const flick = 0.88 + 0.12 * hash(Math.floor(t * 8) + i);
       const brightness = 0.42 + 0.78 * hash(i * 11.7 + 2.0);
       const band = 0.72 + 0.28 * Math.sin(d.row * 0.83 + d.side * 0.4) + 0.1 * Math.sin(d.lev * 0.57 + d.row * 0.21);
@@ -922,14 +960,14 @@ export default class ThresholdZ7Cathedral extends Scene {
       let z = -16.6;
       let x = 0.15 * Math.sin(t * 1.7);
       if (t >= 168) {
-        const pursuitZ = this.cam.position.z + 6.3 + 0.4 * Math.sin(Math.floor(t * 3.3) * 2.1);
-        z = lerp(-16.6, pursuitZ, chaseK);
-        x = lerp(x, -1.25 + 0.22 * Math.sin(t * 1.9), chaseK);
+        const pursuitZ = this.cam.position.z + 8.6 + 0.4 * Math.sin(Math.floor(t * 3.3) * 2.1);
+        z = pursuitZ;
+        x = lerp(1.2, -1.25 + 0.22 * Math.sin(t * 1.9), chaseK);
       }
       const burst = hash(Math.floor(t * 3.3)) > 0.45 ? 1 : 0;
       this.tenant.position.set(x, 0, z);
       this.tenant.rotation.z = 0.12 * burst + 0.05 * Math.sin(t * 2.2);
-      this.tenant.rotation.y = t >= 168 ? 0 : Math.PI;
+      this.tenant.rotation.y = t >= 168 ? lerp(Math.PI, 0, chaseK) : Math.PI;
       const reach = smooth((t - 172.4) / 0.8) * (1 - smooth((t - 174.0) / 0.5));
       const revealScale = t < 168 ? 1.18 : lerp(1.18, 1, chaseK);
       this.tenant.scale.set(revealScale * (1 + reach * 0.12), revealScale, revealScale * (1 + reach * 0.35));
@@ -1000,7 +1038,7 @@ export default class ThresholdZ7Cathedral extends Scene {
     });
 
     const replayLocal = t - REPLAY_T_OFFSET;
-    this.replayEnvironment.visible = exactReplay;
+    this.replayEnvironment.visible = t >= 168.0 && t <= 174.55;
     if (this.baseAmbient) this.baseAmbient.intensity = exactReplay ? 0 : 0.18;
     const replayHookDim = 1 - smooth((replayLocal - 1.15) / 0.7);
     if (this.replayFloorMat) this.replayFloorMat.emissiveIntensity = lerp(0.18, 0.72, replayHookDim);
