@@ -7,6 +7,7 @@ import { FlashlightRig, beamStateAt } from './flashlight';
 import { thresholdPost } from './sensor_post';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import tenantFullUrl from './assets/tenant_full/model.glb?url';
+import lintUrl from './assets/lint/model.glb?url';
 
 const clamp = (x: number, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -59,6 +60,7 @@ export default class ThresholdZ5Motel extends Scene {
   private flash = new FlashlightRig();
   private tenant = new THREE.Group();
   private tenantInst?: GLTFInstance;
+  private lintInst?: GLTFInstance;
   private lint = new THREE.Group();
   private tvScreens: THREE.MeshStandardMaterial[] = [];
   private neonMats: THREE.MeshStandardMaterial[] = [];
@@ -326,14 +328,10 @@ export default class ThresholdZ5Motel extends Scene {
       heel.castShadow = false;
     }
 
-    // Lint blockout at the sconce: small brown felt body and two wings.
-    const felt = this.mat(0x6b3f24, 0.95);
-    const wing = this.mat(0x8a5631, 0.96);
-    const glow = this.mat(0xff8c2a, 0.55, 0, 0xff7a18, 2.8);
-    this.cyl(this.lint, 0.025, 0.035, 0.1, [0, 0, 0], felt, 10).rotation.x = Math.PI / 2;
-    this.box(this.lint, [0.14, 0.018, 0.07], [-0.07, 0, 0], wing, [0, 0, 0.35]);
-    this.box(this.lint, [0.14, 0.018, 0.07], [0.07, 0, 0], wing, [0, 0, -0.35]);
-    this.cyl(this.lint, 0.025, 0.025, 0.035, [0, 0, 0.06], glow, 10).rotation.x = Math.PI / 2;
+    // Production Lint asset batting at the sconce.
+    this.lintInst = await GLTFManager.instantiate(lintUrl, { castShadow: true, receiveShadow: true });
+    this.lint.add(this.lintInst.root);
+    this.lint.scale.setScalar(2.2);
     this.lint.position.set(-1.25, 1.9, -10.0);
     this.s.add(this.lint);
 
@@ -411,8 +409,10 @@ export default class ThresholdZ5Motel extends Scene {
     this.lint.visible = lintOn;
     if (lintOn) {
       const flap = Math.sign(Math.sin(t * Math.PI * 12)) * 0.45;
-      this.lint.children[1]!.rotation.z = 0.35 + flap;
-      this.lint.children[2]!.rotation.z = -0.35 - flap;
+      const wl = this.lintInst?.parts.get('wing_l');
+      const wr = this.lintInst?.parts.get('wing_r');
+      if (wl) wl.rotation.z = 0.35 + flap;
+      if (wr) wr.rotation.z = -0.35 - flap;
       this.lint.position.y = 1.9 + 0.05 * Math.sin(t * 31);
     }
 
@@ -442,6 +442,7 @@ export default class ThresholdZ5Motel extends Scene {
   override dispose() {
     this.flash.dispose();
     this.tenantInst?.dispose();
+    this.lintInst?.dispose();
     for (const d of this.disposables) d.dispose();
   }
 }

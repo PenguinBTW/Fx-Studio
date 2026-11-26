@@ -8,6 +8,7 @@ import { thresholdPost } from './sensor_post';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import vendingMachinesUrl from './assets/z7_vending_machines/model.glb?url';
 import tenantFullUrl from './assets/tenant_full/model.glb?url';
+import lintUrl from './assets/lint/model.glb?url';
 import { resolveAsset } from '../../engine/assets';
 import { coldOpenPose, coldOpenArmReference, COLD_OPEN_REPLAY } from './z0_coldopen';
 
@@ -85,6 +86,7 @@ export default class ThresholdZ7Cathedral extends Scene {
   private heroMachinesR?: GLTFInstance;
   private tenantArmInst?: GLTFInstance;
   private tenantInst?: GLTFInstance;
+  private lintInst?: GLTFInstance;
   private replayArm = new THREE.Group();
   private replayHeroMachines = new THREE.Group();
   private replayMachines?: THREE.InstancedMesh;
@@ -495,14 +497,9 @@ export default class ThresholdZ7Cathedral extends Scene {
       this.s.add(strip);
     }
 
-    // Lint with warm relight glow.
-    const lintBody = this.mat(0x704222, 0.98);
-    const lintWing = this.mat(0x9a6035, 0.98);
-    const glow = this.mat(0xff8c2a, 0.5, 0, 0xff7418, 2.8);
-    this.cyl(this.lint, 0.032, 0.045, 0.14, [0, 0, 0], lintBody, 10).rotation.x = Math.PI / 2;
-    this.box(this.lint, [0.17, 0.02, 0.09], [-0.085, 0, 0.005], lintWing, [0, 0, 0.35]);
-    this.box(this.lint, [0.17, 0.02, 0.09], [0.085, 0, 0.005], lintWing, [0, 0, -0.35]);
-    this.cyl(this.lint, 0.03, 0.035, 0.05, [0, -0.005, -0.07], glow, 10).rotation.x = Math.PI / 2;
+    // Production Lint asset for the macro relight beat.
+    this.lintInst = await GLTFManager.instantiate(lintUrl, { castShadow: true, receiveShadow: true });
+    this.lint.add(this.lintInst.root);
     this.lint.visible = false;
     this.s.add(this.lint);
 
@@ -612,8 +609,10 @@ export default class ThresholdZ7Cathedral extends Scene {
       this.lint.position.copy(lp);
       this.lint.scale.setScalar(1.55);
       const flap = Math.sign(Math.sin(t * Math.PI * 12)) * 0.42;
-      this.lint.children[1]!.rotation.z = 0.35 + flap;
-      this.lint.children[2]!.rotation.z = -0.35 - flap;
+      const wl = this.lintInst?.parts.get('wing_l');
+      const wr = this.lintInst?.parts.get('wing_r');
+      if (wl) wl.rotation.z = 0.35 + flap;
+      if (wr) wr.rotation.z = -0.35 - flap;
     }
 
     // Rift opens ahead after the relit run, with edge slabs tipping outward.
@@ -668,6 +667,7 @@ export default class ThresholdZ7Cathedral extends Scene {
     this.heroMachinesR?.dispose();
     this.tenantArmInst?.dispose();
     this.tenantInst?.dispose();
+    this.lintInst?.dispose();
     this.replayMachines?.dispose();
     this.replayPanels?.dispose();
     for (const d of this.disposables) d.dispose();

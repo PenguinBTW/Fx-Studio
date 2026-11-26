@@ -5,6 +5,8 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { evalFirstPerson, applyFirstPersonCamera, type FPKey, type GaitName } from './fp_cam';
 import { FlashlightRig, beamStateAt } from './flashlight';
 import { thresholdPost } from './sensor_post';
+import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
+import lintUrl from './assets/lint/model.glb?url';
 
 const clamp = (x: number, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -51,6 +53,7 @@ export default class ThresholdZ6Theatre extends Scene {
   private curtainL!: THREE.Mesh;
   private curtainR!: THREE.Mesh;
   private lint = new THREE.Group();
+  private lintInst?: GLTFInstance;
   private tableau = new THREE.Group();
   private houseTableau = new THREE.Group();
   private recapScenes: THREE.Group[] = [];
@@ -99,7 +102,7 @@ export default class ThresholdZ6Theatre extends Scene {
     return mesh;
   }
 
-  override init() {
+  override async init() {
     this.s.background = new THREE.Color(0x090507);
     this.s.fog = new THREE.FogExp2(0x090507, 0.045);
 
@@ -279,24 +282,10 @@ export default class ThresholdZ6Theatre extends Scene {
     this.box(this.s, [0.13, 0.2, 0.62], [0.62, 0.82, 3.66], wood);
     this.box(this.s, [0.18, 0.08, 0.66], [0.62, 0.96, 3.66], seatEdge);
 
-    // Lint: felt body, stitched wing panels, buttons and warm abdomen glow.
-    const lintBody = this.mat(0x7b4a28, 0.98, 0, 0x3a180a, 0.48);
-    const lintWing = this.mat(0xaa6b3c, 0.98, 0, 0x5a250e, 0.78);
-    const button = this.mat(0x050505, 0.28);
-    const glow = this.mat(0xff8c2a, 0.55, 0, 0xff7418, 4.2);
-    this.cyl(this.lint, 0.032, 0.045, 0.14, [0, 0, 0], lintBody, 10).rotation.x = Math.PI / 2;
-    this.sphere(this.lint, 0.07, [-0.12, 0, 0.005], lintWing, [1.3, 0.13, 0.75]).rotation.z = 0.35;
-    this.sphere(this.lint, 0.07, [0.12, 0, 0.005], lintWing, [1.3, 0.13, 0.75]).rotation.z = -0.35;
-    this.sphere(this.lint, 0.015, [-0.018, 0.025, 0.065], button);
-    this.sphere(this.lint, 0.015, [0.018, 0.025, 0.065], button);
-    this.sphere(this.lint, 0.005, [-0.014, 0.032, 0.077], this.mat(0xffe0b0, 0.5, 0, 0xffc47a, 1.2));
-    this.sphere(this.lint, 0.005, [0.014, 0.032, 0.077], this.mat(0xffe0b0, 0.5, 0, 0xffc47a, 1.2));
-    this.cyl(this.lint, 0.0025, 0.0025, 0.07, [-0.018, 0.04, 0.095], lintBody, 5).rotation.z = 0.55;
-    this.cyl(this.lint, 0.0025, 0.0025, 0.07, [0.018, 0.04, 0.095], lintBody, 5).rotation.z = -0.55;
-    this.cyl(this.lint, 0.025, 0.03, 0.045, [0, -0.005, -0.07], glow, 10).rotation.x = Math.PI / 2;
-    for (let i = 0; i < 6; i++) this.cyl(this.lint, 0.003, 0.003, 0.08, [(i - 2.5) * 0.012, -0.035, -0.01], lintBody, 5).rotation.z = (i - 2.5) * 0.25;
-    const lintLight = new THREE.PointLight(0xff8c2a, 0.75, 2.2, 1.6);
-    lintLight.intensity = 1.35;
+    // Production Lint asset: real felt fibres, stitched wings, button eyes and emissive abdomen.
+    this.lintInst = await GLTFManager.instantiate(lintUrl, { castShadow: true, receiveShadow: true });
+    this.lint.add(this.lintInst.root);
+    const lintLight = new THREE.PointLight(0xff8c2a, 1.35, 2.2, 1.6);
     lintLight.position.set(0, 0, -0.05);
     this.lint.add(lintLight);
     this.lint.visible = false;
@@ -361,8 +350,10 @@ export default class ThresholdZ6Theatre extends Scene {
       this.lint.position.y += 0.035 * Math.sin(st * 19);
       const landed = t < 143.5;
       const flap = landed ? 0.1 * Math.sin(st * Math.PI * 12) : Math.sign(Math.sin(st * Math.PI * 12)) * 0.42;
-      this.lint.children[1]!.rotation.z = (landed ? 0.08 : 0.28) + flap;
-      this.lint.children[2]!.rotation.z = -(landed ? 0.08 : 0.28) - flap;
+      const wl = this.lintInst?.parts.get('wing_l');
+      const wr = this.lintInst?.parts.get('wing_r');
+      if (wl) wl.rotation.z = (landed ? 0.08 : 0.28) + flap;
+      if (wr) wr.rotation.z = -(landed ? 0.08 : 0.28) - flap;
       this.lint.rotation.y = t < 143.5 ? 0.7 : -0.3 + 0.18 * Math.sin(st * 5);
     }
 
@@ -385,6 +376,7 @@ export default class ThresholdZ6Theatre extends Scene {
 
   override dispose() {
     this.flash.dispose();
+    this.lintInst?.dispose();
     for (const d of this.disposables) d.dispose();
   }
 }
