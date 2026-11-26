@@ -41,9 +41,12 @@ root=empty('mirrorling_root')
 # narrow leg columns taper to points in the water: no feet ever read
 for side,x in [('l',-.12),('r',.12)]:
     hip=(x,0,1.35); knee=(x+(.025 if side=='l' else -.02),0,.72); tip=(x+(.04 if side=='l' else -.035),0,.03)
+    cyl_between(f'leg_{side}_upper_tendril',(hip[0],hip[1]-.033,hip[2]),(knee[0],knee[1]-.033,knee[2]),.015,.012,grout,vertices=20).parent=root
+    cyl_between(f'leg_{side}_lower_tendril',(knee[0],knee[1]-.033,knee[2]),(tip[0],tip[1]-.033,tip[2]),.012,.006,grout,vertices=20).parent=root
     a=cyl_between(f'leg_{side}_upper',hip,knee,.065,.045,chrome); a.parent=root
     b=cyl_between(f'leg_{side}_lower',knee,tip,.045,.012,chrome); b.parent=root
     sphere(f'knee_{side}',knee,(.07,.055,.075),chrome2,24,12).parent=root
+    sphere(f'hip_socket_{side}',hip,(.09,.065,.095),chrome2,28,14).parent=root
     for band,z in enumerate((.38,.68,1.02)):
         torus(f'leg_{side}_grout_{band}',(x,0,z),.052,.006,grout).parent=root
 # impossibly narrow ribbed torso, slightly asymmetric
@@ -63,8 +66,13 @@ sphere('blank_mirror_face',(0,-.125,2.28),(.125,.018,.22),chrome2,32,16).parent=
 # very long two-segment arms, bony joints, tile banding
 for side,sgn in [('l',-1),('r',1)]:
     shoulder=(sgn*.28,0,1.94); elbow=(sgn*.62,-.015,1.28); wrist=(sgn*.43,-.025,.64)
+    # exposed black-grout tendrils run just in front of the white tile bones, making the
+    # limb continuity deliberate even where the ceramic segments taper apart.
+    cyl_between(f'arm_{side}_upper_tendril',(shoulder[0],shoulder[1]-.035,shoulder[2]),(elbow[0],elbow[1]-.035,elbow[2]),.014,.011,grout,vertices=20).parent=root
+    cyl_between(f'arm_{side}_lower_tendril',(elbow[0],elbow[1]-.035,elbow[2]),(wrist[0],wrist[1]-.035,wrist[2]),.011,.007,grout,vertices=20).parent=root
     upper=cyl_between(f'arm_{side}_upper',shoulder,elbow,.045,.032,chrome); upper.parent=root
     lower=cyl_between(f'arm_{side}_lower',elbow,wrist,.032,.019,chrome); lower.parent=root
+    sphere(f'shoulder_socket_{side}',shoulder,(.082,.06,.082),chrome2,28,14).parent=root
     sphere(f'elbow_{side}',elbow,(.055,.045,.06),chrome2,24,12).parent=root
     sphere(f'wrist_{side}',wrist,(.04,.035,.045),chrome2,20,10).parent=root
     for j in range(4):

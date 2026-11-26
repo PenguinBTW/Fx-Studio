@@ -189,11 +189,20 @@ export default class ThresholdZ3Pool extends Scene {
     // the transparent surface, with a separate warm beam patch computed from the camera pose 0.42s ago.
     const pc = document.createElement('canvas'); pc.width = 256; pc.height = 256;
     const pg = pc.getContext('2d')!; pg.clearRect(0, 0, 256, 256);
-    pg.fillStyle = 'rgba(0,5,7,0.9)';
-    pg.beginPath(); pg.ellipse(128, 54, 28, 35, 0, 0, Math.PI * 2); pg.fill();
-    pg.beginPath(); pg.ellipse(128, 145, 48, 88, 0, 0, Math.PI * 2); pg.fill();
-    pg.beginPath(); pg.ellipse(77, 140, 15, 72, -0.18, 0, Math.PI * 2); pg.fill();
-    pg.beginPath(); pg.ellipse(179, 140, 15, 72, 0.18, 0, Math.PI * 2); pg.fill();
+    pg.fillStyle = 'rgba(0,5,7,0.92)';
+    pg.beginPath(); pg.ellipse(128, 38, 20, 25, 0, 0, Math.PI * 2); pg.fill();
+    pg.fillRect(121, 58, 14, 14);
+    pg.beginPath();
+    pg.moveTo(91, 78); pg.lineTo(165, 78); pg.lineTo(153, 190); pg.lineTo(103, 190); pg.closePath(); pg.fill();
+    pg.beginPath(); pg.ellipse(88, 132, 13, 66, -0.18, 0, Math.PI * 2); pg.fill();
+    pg.save(); pg.translate(164, 105); pg.rotate(-0.62);
+    pg.fillRect(0, -9, 58, 18);
+    pg.fillRect(48, -12, 22, 24);
+    pg.restore();
+    const beam = pg.createLinearGradient(205, 78, 252, 50);
+    beam.addColorStop(0, 'rgba(255,238,190,0.72)'); beam.addColorStop(1, 'rgba(255,238,190,0.02)');
+    pg.fillStyle = beam;
+    pg.beginPath(); pg.moveTo(203, 77); pg.lineTo(252, 38); pg.lineTo(252, 92); pg.closePath(); pg.fill();
     const playerTex = new THREE.CanvasTexture(pc); playerTex.colorSpace = THREE.SRGBColorSpace;
     this.playerReflectionMat = new THREE.MeshBasicMaterial({ map: playerTex, transparent: true, opacity: 0, depthWrite: false });
     this.playerReflection = plane(this.s, 'z3_player_proxy_reflection', 0.86, 1.78, [0, 0.448, 3.0], this.playerReflectionMat, [-Math.PI / 2, 0, 0]);
@@ -405,12 +414,12 @@ export default class ThresholdZ3Pool extends Scene {
     const stepPulse = smooth(0.54, 0.7, gaitPhase) * (1 - smooth(0.78, 0.95, gaitPhase));
     for (const side of [-1, 1] as const) {
       const arm = this.mirrorlingAsset.part(side < 0 ? 'arm_l_upper' : 'arm_r_upper');
-      if (arm) arm.rotation.z = (side < 0 ? -1 : 1) * Math.sin(t * 1.15 + (side < 0 ? 0 : 0.7)) * 0.045;
+      if (arm) arm.rotation.z = 0;
       const lead = (stepIndex % 2 === 0 ? 1 : -1) === side;
       const upperLeg = this.mirrorlingAsset.part(side < 0 ? 'leg_l_upper' : 'leg_r_upper');
       const lowerLeg = this.mirrorlingAsset.part(side < 0 ? 'leg_l_lower' : 'leg_r_lower');
-      if (upperLeg) upperLeg.rotation.x = (lead ? -1 : 0.45) * stepPulse * 0.24;
-      if (lowerLeg) lowerLeg.rotation.x = (lead ? 0.75 : -0.3) * stepPulse * 0.18;
+      if (upperLeg) upperLeg.rotation.x = 0;
+      if (lowerLeg) lowerLeg.rotation.x = 0;
     }
     for (let ri = 1; ri <= 3; ri++) {
       const ring = this.mirrorlingAsset.part(`water_ripple_ring_${ri}`);

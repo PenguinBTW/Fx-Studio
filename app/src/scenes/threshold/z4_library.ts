@@ -121,6 +121,8 @@ export default class ThresholdZ4Library extends Scene {
     inkLines.forEach(([txt], li) => {
       const c = document.createElement('canvas'); c.width = 768; c.height = 104;
       const g = c.getContext('2d')!; g.clearRect(0, 0, c.width, c.height);
+      g.fillStyle = 'rgba(216,205,177,0.82)';
+      g.fillRect(0, 8, c.width, c.height - 16);
       // Handwritten ink rather than placeholder rule marks: per-letter pressure, baseline wander,
       // and slight rotation remain deterministic while staying legible in the close scare frame.
       let x = 22;
@@ -142,7 +144,7 @@ export default class ThresholdZ4Library extends Scene {
       const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.repeat.set(-1, -1); tex.offset.set(1, 1);
       const mm = new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.9, polygonOffset: true, polygonOffsetFactor: -1 });
       const line = new THREE.Mesh(new THREE.PlaneGeometry(0.27, 0.052), mm);
-      line.position.set(0.18, 0.932 + li * 0.002, 5.86 + li * 0.072); line.rotation.x = -Math.PI / 2;
+      line.position.set(0.18, 0.944 + li * 0.002, 5.86 + li * 0.072); line.rotation.x = -Math.PI / 2;
       line.rotation.z = (li - 1.5) * 0.012;
       line.name = line.userData.fx_entity = `z4_ledger_ink_line_${li}`; line.visible = false; this.s.add(line); this.ledgerLines.push(line);
     });

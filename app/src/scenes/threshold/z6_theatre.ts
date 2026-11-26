@@ -300,7 +300,32 @@ export default class ThresholdZ6Theatre extends Scene {
 
     // Production Lint asset: real felt fibres, stitched wings, button eyes and emissive abdomen.
     this.lintInst = await GLTFManager.instantiate(lintUrl, { castShadow: true, receiveShadow: true });
+    this.lintInst.root.rotation.x = Math.PI / 2;
     this.lint.add(this.lintInst.root);
+    // Close-up readability augment: camera-facing button eyes, long antennae, and broad
+    // scalloped wings in the outer group's horizontal plane. These make the body plan read
+    // as a moth at delivery scale rather than relying on tiny GLB details alone.
+    const lintWingMat = this.mat(0x70401f, 0.94);
+    const lintWingEdge = this.mat(0xaa6632, 0.9);
+    const lintButton = this.mat(0x070403, 0.22, 0, 0x090302, 0.18);
+    const lintThread = this.mat(0x090504, 0.86);
+    for (const side of [-1, 1]) {
+      this.sphere(this.lint, 0.028, [side * 0.034, -0.002, -0.006], lintWingMat, [1.65, 0.12, 0.86]);
+      for (let scallop = 0; scallop < 4; scallop++) {
+        this.sphere(this.lint, 0.009, [side * (0.018 + scallop * 0.014), -0.006, -0.029 - scallop * 0.002], lintWingEdge, [1.2, 0.16, 0.8]);
+      }
+      this.sphere(this.lint, 0.0038, [side * 0.0062, 0.006, 0.038], lintButton, [1, 0.72, 0.5]);
+      const pts = [
+        new THREE.Vector3(side * 0.005, 0.006, 0.028),
+        new THREE.Vector3(side * 0.016, 0.026, 0.044),
+        new THREE.Vector3(side * 0.029, 0.038, 0.052),
+      ];
+      const geo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 8, 0.00062, 6, false);
+      const antenna = new THREE.Mesh(geo, lintThread);
+      antenna.castShadow = true;
+      this.lint.add(antenna);
+      this.disposables.push(geo);
+    }
     const lintLight = new THREE.PointLight(0xff8c2a, 1.35, 2.2, 1.6);
     lintLight.position.set(0, 0, -0.05);
     this.lint.add(lintLight);
@@ -372,9 +397,9 @@ export default class ThresholdZ6Theatre extends Scene {
       const flap = landed ? 0.1 * Math.sin(st * Math.PI * 12) : Math.sign(Math.sin(st * Math.PI * 12)) * 0.42;
       const wl = this.lintInst?.parts.get('wing_l');
       const wr = this.lintInst?.parts.get('wing_r');
-      if (wl) wl.rotation.z = (landed ? 0.08 : 0.28) + flap;
-      if (wr) wr.rotation.z = -(landed ? 0.08 : 0.28) - flap;
-      this.lint.rotation.y = t < 143.5 ? 0.7 : -0.3 + 0.18 * Math.sin(st * 5);
+      if (wl) wl.rotation.z = (landed ? 0.34 : 0.28) + flap;
+      if (wr) wr.rotation.z = -(landed ? 0.34 : 0.28) - flap;
+      this.lint.rotation.y = t < 143.5 ? -0.75 : -0.3 + 0.18 * Math.sin(st * 5);
     }
 
     // Shared beam adapter: 50% battery with the deliberate friendly-Lint flicker.
