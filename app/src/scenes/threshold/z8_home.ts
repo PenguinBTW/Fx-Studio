@@ -295,9 +295,9 @@ export default class ThresholdZ8Home extends Scene {
     this.flash.position.copy(lp);
     this.flashTarget.position.copy(lt);
     this.flash.intensity = 0.75 * 0.25 * this.flicker(t);
-    (this.beamCone.material as THREE.MeshBasicMaterial).opacity = 0.012 * this.flicker(t);
+    (this.beamCone.material as THREE.MeshBasicMaterial).opacity = 0.005 * this.flicker(t);
     this.beamCone.position.copy(lp.clone().lerp(lt, 0.5));
-    this.beamCone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), lagDir.clone().normalize());
+    this.beamCone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), lagDir.clone().negate().normalize());
 
     const rr = this.ctx.renderer;
     rr.setRenderTarget(out);

@@ -125,9 +125,9 @@ export default class ThresholdZ6Theatre extends Scene {
       const z = 1.2 + row * 0.72;
       for (let col = 0; col < 8; col++) {
         const x = -3.2 + col * 0.9;
-        if (Math.abs(x) < 0.35) continue;
+        if (Math.abs(x) < 0.9) continue;
         this.box(this.s, [0.58, 0.16, 0.48], [x, 0.48, z], seatFelt);
-        this.box(this.s, [0.58, 0.62, 0.13], [x, 0.8, z + 0.22], seatFelt, [-0.1, 0, 0]);
+        this.box(this.s, [0.58, 0.48, 0.13], [x, 0.72, z + 0.22], seatFelt, [-0.1, 0, 0]);
         this.box(this.s, [0.08, 0.34, 0.42], [x - 0.33, 0.52, z], wood);
         this.box(this.s, [0.08, 0.34, 0.42], [x + 0.33, 0.52, z], wood);
       }
@@ -309,9 +309,9 @@ export default class ThresholdZ6Theatre extends Scene {
     this.flash.position.copy(lp);
     this.flashTarget.position.copy(lt);
     this.flash.intensity = 2.1 * 0.5 * this.flicker(t);
-    (this.beamCone.material as THREE.MeshBasicMaterial).opacity = 0.026 * this.flicker(t);
+    (this.beamCone.material as THREE.MeshBasicMaterial).opacity = 0.007 * this.flicker(t);
     this.beamCone.position.copy(lp.clone().lerp(lt, 0.5));
-    this.beamCone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), lagDir.clone().normalize());
+    this.beamCone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), lagDir.clone().negate().normalize());
 
     // EXIT slit swells near the threshold.
     this.exitGlow.emissiveIntensity = 2.4 + 2.2 * smooth((t - 147) / 3);
@@ -323,7 +323,7 @@ export default class ThresholdZ6Theatre extends Scene {
     rr.render(this.s, this.cam);
     rr.resetState();
 
-    return { exposure: 0.92, bloom: 0.18, bloomThreshold: 0.95, vignette: 0.3, grain: 0.038, ca: 0.07 };
+    return { exposure: 1.08, bloom: 0.18, bloomThreshold: 0.95, vignette: 0.3, grain: 0.038, ca: 0.07 };
   }
 
   override dispose() {

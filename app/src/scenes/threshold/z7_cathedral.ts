@@ -414,9 +414,9 @@ export default class ThresholdZ7Cathedral extends Scene {
     this.flash.intensity = dead ? 0 : (relit ? 1.4 : 1.1) * this.flicker(t);
     const cm = this.beamCone.material as THREE.MeshBasicMaterial;
     cm.color.setHex(relit ? 0xff9a42 : 0xffc98a);
-    cm.opacity = dead ? 0 : 0.018 * this.flicker(t);
+    cm.opacity = dead ? 0 : 0.006 * this.flicker(t);
     this.beamCone.position.copy(lp.clone().lerp(lt, 0.5));
-    this.beamCone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), lagDir.clone().normalize());
+    this.beamCone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), lagDir.clone().negate().normalize());
 
     const rr = this.ctx.renderer;
     rr.setRenderTarget(out);

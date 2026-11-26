@@ -253,7 +253,7 @@ export default class ThresholdZ5Motel extends Scene {
     this.disposables.push(coneGeo, coneMat);
     this.s.add(this.beamCone);
 
-    const ambient = new THREE.AmbientLight(0x273040, 0.28);
+    const ambient = new THREE.AmbientLight(0x273040, 0.42);
     this.s.add(ambient);
   }
 
@@ -294,11 +294,11 @@ export default class ThresholdZ5Motel extends Scene {
     const lt = lp.clone().add(lagDir.clone().multiplyScalar(7));
     this.flash.position.copy(lp);
     this.flashTarget.position.copy(lt);
-    this.flash.intensity = beamOn ? 3.5 * 0.5 * this.flicker(t) : 0;
+    this.flash.intensity = beamOn ? 4.8 * 0.5 * this.flicker(t) : 0;
     const coneMat = this.beamCone.material as THREE.MeshBasicMaterial;
-    coneMat.opacity = beamOn ? 0.04 * this.flicker(t) : 0;
+    coneMat.opacity = beamOn ? 0.007 * this.flicker(t) : 0;
     this.beamCone.position.copy(lp.clone().lerp(lt, 0.5));
-    this.beamCone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), lagDir.clone().normalize());
+    this.beamCone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), lagDir.clone().negate().normalize());
     this.beamCone.scale.set(1, 1, 1);
 
     // Tenant partial reveal and head-tilt tell.
@@ -335,7 +335,7 @@ export default class ThresholdZ5Motel extends Scene {
     rr.render(this.s, this.cam);
     rr.resetState();
 
-    return { exposure: 0.95, bloom: 0.22, bloomThreshold: 0.9, vignette: 0.28, grain: 0.035, ca: 0.08 };
+    return { exposure: 1.14, bloom: 0.22, bloomThreshold: 0.9, vignette: 0.28, grain: 0.035, ca: 0.08 };
   }
 
   override dispose() {
