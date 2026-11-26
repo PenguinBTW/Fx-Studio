@@ -545,7 +545,7 @@ export async function mixdown(o: MixOptions): Promise<MixReport> {
     if (m.limiter !== false && hasSignal) {
       const tpCeiling = m.truePeak ?? -1.0;
       const lookaheadMs = m.limiterLookaheadMs ?? 1.5;
-      const preLimit = new Float32Array(master);
+      const preLimit = master;
       const limitedWav = path.join(tmp, 'limited.wav');
       let marginDb = 0;
       let measuredTp = Infinity;

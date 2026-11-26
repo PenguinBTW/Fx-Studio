@@ -92,6 +92,7 @@ export default class Z0ColdOpen extends Scene {
   private floorMat!: THREE.MeshStandardMaterial;
   private ambientLight!: THREE.HemisphereLight;
   private reflectionMats: THREE.MeshBasicMaterial[] = [];
+  private reflectionGeoms: THREE.BufferGeometry[] = [];
 
   override async init() {
     this.scene3d.background = new THREE.Color(0.0004, 0.0005, 0.0008);
@@ -216,6 +217,7 @@ export default class Z0ColdOpen extends Scene {
     // Polished-black-floor reflection catches: broken cyan/amber streaks under the
     // vending rows and ceiling tubes. They are geometric floor-plane glints, not a screen overlay.
     const reflGeom = new THREE.PlaneGeometry(0.28, 2.65);
+    this.reflectionGeoms.push(reflGeom);
     for (const side of [-1, 1]) for (let row = 0; row < 18; row++) {
       const warm = row % 5 === 0;
       const reflMat = new THREE.MeshBasicMaterial({
@@ -234,8 +236,10 @@ export default class Z0ColdOpen extends Scene {
     }
     const centerReflMat = new THREE.MeshBasicMaterial({ color: 0x4b9dcc, transparent: true, opacity: 0.13, blending: THREE.AdditiveBlending, depthWrite: false });
     this.reflectionMats.push(centerReflMat);
+    const centerReflGeom = new THREE.PlaneGeometry(0.18, 3.8);
+    this.reflectionGeoms.push(centerReflGeom);
     for (let k = 0; k < 16; k++) {
-      const refl = new THREE.Mesh(new THREE.PlaneGeometry(0.18, 3.8), centerReflMat);
+      const refl = new THREE.Mesh(centerReflGeom, centerReflMat);
       refl.rotation.x = -Math.PI / 2;
       refl.position.set((hash(k * 8.3) - 0.5) * 0.55, 0.014, 1.5 - k * 8);
       this.scene3d.add(refl);
@@ -268,6 +272,7 @@ export default class Z0ColdOpen extends Scene {
     this.tenantInst.root.traverse((obj) => {
       if (!(obj instanceof THREE.Mesh)) return;
       if (obj.name === 'shoulder_collage') obj.scale.multiplyScalar(0.72);
+      obj.material = Array.isArray(obj.material) ? obj.material.map((m) => m.clone()) : obj.material.clone();
       const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
       for (const m of mats) {
         if (!(m instanceof THREE.MeshStandardMaterial)) continue;
@@ -341,5 +346,7 @@ export default class Z0ColdOpen extends Scene {
     this.panels.dispose();
     this.vents.dispose();
     disposeDecalParticleTree(this.ambientDust);
+    for (const g of this.reflectionGeoms) g.dispose();
+    for (const m of this.reflectionMats) m.dispose();
   }
 }
