@@ -241,7 +241,7 @@ export default class ThresholdZ5Motel extends Scene {
     this.s.fog = new THREE.FogExp2(0x050608, 0.035);
 
     const carpet = this.mat(0x351820, 0.32);
-    const carpetTeal = this.mat(0x153a38, 0.42);
+    const carpetTeal = this.mat(0x102321, 0.58);
     const wall = this.mat(0x695442, 0.76, 0, 0x080403, 0.12);
     const ceiling = this.mat(0x403b35, 0.82);
     const doorMat = this.mat(0x4b2418, 0.55);
@@ -397,7 +397,7 @@ export default class ThresholdZ5Motel extends Scene {
       this.rainLines.push(line);
     }
 
-    const corridorFill = new THREE.PointLight(0xff7d32, 0.68, 15, 1.9);
+    const corridorFill = new THREE.PointLight(0xff7d32, 1.05, 16, 1.9);
     corridorFill.position.set(0, 2.05, -8.5);
     this.s.add(corridorFill);
 
@@ -424,20 +424,20 @@ export default class ThresholdZ5Motel extends Scene {
     kitAt('raincoat_umbrella', [-1.43, 0, -19.3], Math.PI / 2, 0.95);
 
     // Wet footprint decals leading to where the viewer stands.
-    const fpMat = this.mat(0x5f8d95, 0.08, 0.38, 0x183a42, 0.45);
+    const fpMat = this.mat(0x0b0908, 0.16, 0.02, 0x010202, 0.035);
     this.footprintMats.push(fpMat);
     for (let i = 0; i < 14; i++) {
-      const x = 0.35 + (i % 2 ? 0.18 : -0.18);
-      const z = -9.2 - i * 0.7;
-      const yaw = 0.1 * (i % 2 ? 1 : -1);
+      const x = 0.28 + (i % 2 ? 0.11 : -0.11);
+      const z = -9.2 - i * 0.62;
+      const yaw = 0.08 * (i % 2 ? 1 : -1);
       // Alternating wet foot shapes point back toward the viewer: long oval forefoot,
       // separate smaller oval heel, and three small toe ovals at the viewer-facing end.
-      const sole = this.sphere(this.s, 0.125, [x, 0.018, z + 0.04], fpMat, [0.64, 0.045, 1.55]);
+      const sole = this.sphere(this.s, 0.095, [x, 0.014, z + 0.03], fpMat, [0.58, 0.028, 1.42]);
       sole.rotation.y = yaw;
-      const heel = this.sphere(this.s, 0.092, [x, 0.019, z - 0.18], fpMat, [0.74, 0.045, 0.85]);
+      const heel = this.sphere(this.s, 0.069, [x, 0.0145, z - 0.145], fpMat, [0.7, 0.028, 0.78]);
       heel.rotation.y = yaw;
       for (let toe = 0; toe < 3; toe++) {
-        const toeMesh = this.sphere(this.s, 0.031, [x + (toe - 1) * 0.052, 0.02, z + 0.24], fpMat, [0.9, 0.04, 1.25]);
+        const toeMesh = this.sphere(this.s, 0.022, [x + (toe - 1) * 0.039, 0.015, z + 0.18], fpMat, [0.9, 0.026, 1.18]);
         toeMesh.rotation.y = yaw;
         toeMesh.castShadow = false;
       }
@@ -452,7 +452,7 @@ export default class ThresholdZ5Motel extends Scene {
     this.lint.position.set(-1.25, 1.9, -10.0);
     this.s.add(this.lint);
 
-    // Tenant partial reveal uses the production collage asset, upper-body LOD only.
+    // Tenant partial reveal uses the production collage asset at reduced scale.
     // Scale and placement preserve the accepted continuous-silhouette read inside the 2.7 m motel ceiling.
     this.tenantInst = await GLTFManager.instantiate(tenantFullUrl, { castShadow: true, receiveShadow: true });
     const materialClones = new Map<THREE.Material, THREE.Material>();
@@ -471,8 +471,6 @@ export default class ThresholdZ5Motel extends Scene {
       });
       obj.material = Array.isArray(obj.material) ? cloned : cloned[0]!;
     });
-    const lowerBody = this.tenantInst.parts.get('lower_body');
-    if (lowerBody) lowerBody.visible = false;
     this.tenantInst.root.traverse((obj) => {
       if (!(obj instanceof THREE.Mesh)) return;
       const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
@@ -484,24 +482,27 @@ export default class ThresholdZ5Motel extends Scene {
       }
     });
     this.tenant.add(this.tenantInst.root);
-    this.tenant.scale.setScalar(0.62);
+    this.tenant.scale.setScalar(0.48);
     this.tenant.rotation.y = Math.PI - 0.55;
-    this.tenant.position.set(0.05, 0, -21.6);
+    this.tenant.position.set(0.02, 0, -24.2);
+    const chestGlow = new THREE.PointLight(0x5bb9d7, 2.2, 4.2, 1.55);
+    chestGlow.position.set(0, 2.5, 0.45);
+    this.tenant.add(chestGlow);
     // Rim/fill lights live in scene space (not inside the translated Tenant group):
     // cool edge light separates the mirror/head and hanging arms, warm motel bounce
     // gives the foosball torso and ball-coil arms just enough shape at delivery exposure.
-    const tenantRim = new THREE.PointLight(0x9adbe4, 4.4, 5.2, 1.45);
-    tenantRim.position.set(-0.55, 2.18, -22.35);
+    const tenantRim = new THREE.PointLight(0x9adbe4, 3.4, 5.2, 1.45);
+    tenantRim.position.set(-0.55, 2.05, -25.05);
     this.s.add(tenantRim);
-    const tenantFill = new THREE.PointLight(0xff9a4c, 2.4, 3.8, 1.5);
-    tenantFill.position.set(0.38, 1.25, -19.85);
+    const tenantFill = new THREE.PointLight(0xff9a4c, 1.5, 3.8, 1.5);
+    tenantFill.position.set(0.38, 1.15, -22.4);
     this.s.add(tenantFill);
     this.tenant.visible = false;
     this.s.add(this.tenant);
 
     this.s.add(this.flash.group);
 
-    const ambient = new THREE.AmbientLight(0x273040, 0.58);
+    const ambient = new THREE.AmbientLight(0x273040, 0.82);
     this.s.add(ambient);
   }
 
@@ -559,7 +560,7 @@ export default class ThresholdZ5Motel extends Scene {
     rr.render(this.s, this.cam);
     rr.resetState();
 
-    return thresholdPost(t, { exposure: 1.14, darkness: 0.82, stress: threat * 0.55 });
+    return thresholdPost(t, { exposure: 1.2, darkness: 0.68, stress: threat * 0.55 });
   }
 
   override dispose() {
