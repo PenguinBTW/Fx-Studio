@@ -127,7 +127,7 @@ export default class ThresholdZ4Library extends Scene {
       for (let ci = 0; ci < txt.length; ci++) {
         const ch = txt[ci]!;
         const seed = li * 131 + ci * 17;
-        const size = 43 + (hash(seed) - 0.5) * 7;
+        const size = 82 + (hash(seed) - 0.5) * 10;
         g.save();
         g.translate(x, 57 + (hash(seed + 1) - 0.5) * 7);
         g.rotate((hash(seed + 2) - 0.5) * 0.12);
@@ -137,11 +137,11 @@ export default class ThresholdZ4Library extends Scene {
         g.fillText(ch, 0, 0);
         const cw = g.measureText(ch).width;
         g.restore();
-        x += Math.max(10, cw * 0.78) + (ch === ' ' ? 8 : 1.5);
+        x += Math.max(18, cw * 0.64) + (ch === ' ' ? 9 : 1.2);
       }
       const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.repeat.set(-1, -1); tex.offset.set(1, 1);
       const mm = new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.9, polygonOffset: true, polygonOffsetFactor: -1 });
-      const line = new THREE.Mesh(new THREE.PlaneGeometry(0.27, 0.038), mm);
+      const line = new THREE.Mesh(new THREE.PlaneGeometry(0.27, 0.052), mm);
       line.position.set(0.18, 0.932 + li * 0.002, 5.86 + li * 0.072); line.rotation.x = -Math.PI / 2;
       line.rotation.z = (li - 1.5) * 0.012;
       line.name = line.userData.fx_entity = `z4_ledger_ink_line_${li}`; line.visible = false; this.s.add(line); this.ledgerLines.push(line);
