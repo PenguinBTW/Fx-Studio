@@ -457,14 +457,15 @@ export default class ThresholdZ8Home extends Scene {
     const lampLevel = lerp(1.75, 0.24, smooth((t - 209.5) / 1.2));
     if (this.lampLight) this.lampLight.intensity = lampLevel;
     this.lampGlow.emissiveIntensity = (2.2 + 0.15 * Math.sin(t * 2.1)) * (0.55 + 0.45 * lampLevel / 1.75);
-    this.officeTubeMats.forEach((m, i) => { m.emissiveIntensity = 1.65 + (i === 2 ? 0.5 * hash(Math.floor(t * 7) + i) : 0.12 * hash(Math.floor(t * 3) + i)); });
+    const tubeCap = t >= 218 ? 0.34 : 1;
+    this.officeTubeMats.forEach((m, i) => { m.emissiveIntensity = tubeCap * (1.65 + (i === 2 ? 0.5 * hash(Math.floor(t * 7) + i) : 0.12 * hash(Math.floor(t * 3) + i))); });
 
     // Shared beam adapter: weak 25% battery in daylight, with the low-battery stutter.
     const threat = t >= 206 && t < 218 ? 0.55 : 0.1;
     const beam = beamStateAt(t, threat);
     // At the wall-phone payoff the beam is inches from the wall; soften only this close-range
     // adapter window so the handset/cord silhouette remains readable instead of washing to white.
-    if (t >= 210 && t < 218.5) beam.intensity *= 0.028;
+    if (t >= 210 && t < 222.5) beam.intensity *= t >= 218 ? 0.012 : 0.028;
     this.flash.update(pose, t, beam, (time) => z8PoseAt(time, z8Gait(time)).forward);
 
     const rr = this.ctx.renderer;

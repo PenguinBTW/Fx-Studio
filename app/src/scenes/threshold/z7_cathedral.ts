@@ -100,7 +100,7 @@ function sprintDistanceAt(t: number) {
   // into the finite-difference speed of the exact replay at local z0=1.2. The
   // replay itself is immutable, so the custom approach absorbs its run-up shape.
   const u = clamp((t - SPRINT_T0) / (SPRINT_T1 - SPRINT_T0));
-  const shaped = u - 0.064 * Math.sin(Math.PI * 2 * u);
+  const shaped = u;
   return sprintTable[SPRINT_SAMPLES]!.d * shaped;
 }
 function sprintPoint(t: number) {
@@ -128,14 +128,14 @@ export function z7PoseAt(t: number) {
     const pos: [number, number, number] = [sp.x, lerp(1.6, JOIN_POSE.pos[1], u), sp.z];
     const lookback = smooth((t - 168.0) / 0.5) * (1 - smooth((t - 169.3) / 0.42));
     const secondGlance = smooth((t - 169.9) / 0.36) * (1 - smooth((t - 170.52) / 0.44));
-    const yaw = Math.PI * lookback + Math.PI * 0.78 * secondGlance;
+    const yaw = Math.PI * lookback + Math.PI * secondGlance;
     const targetYaw = Math.atan2(JOIN_POSE.forward[0], -JOIN_POSE.forward[2]);
     const yawForward = targetYaw * smooth((u - 0.86) / 0.14);
     const pitch = lerp(0, Math.asin(JOIN_POSE.forward[1]), u);
     const fov = lerp(84 + 4 * smooth((t - 168.2) / 0.3), JOIN_POSE.fov, smooth((t - 170.55) / 0.45));
-    const stumble = smooth((t - 170.38) / 0.18) * (1 - smooth((t - 171.08) / 0.22));
+    const stumble = smooth((t - 171.12) / 0.035) * (1 - smooth((t - 171.255) / 0.04));
     const stumbleSeed = Math.sin((t - 170.38) * 31.0);
-    pos[1] -= 0.17 * stumble * (0.72 + 0.28 * Math.sin((t - 170.38) * 17.0));
+    pos[1] -= 0.13 * stumble * (0.72 + 0.28 * Math.sin((t - 170.38) * 17.0));
     const roll = lerp(0, JOIN_POSE.roll, u) + 2 * Math.PI / 180 * Math.sin(Math.PI * u)
       + stumble * (0.13 * stumbleSeed + 0.055 * Math.sin((t - 170.38) * 47.0));
     const stumbledPitch = pitch - stumble * (0.19 + 0.035 * Math.sin((t - 170.38) * 23.0));
@@ -143,12 +143,12 @@ export function z7PoseAt(t: number) {
   }
   if (t >= 149.5 && t < 163) {
     // T6 handoff: z6 pre-decays into the doorway, then z7 keeps a very small
-    // forward creep instead of stepping to a dead stop. The total 6cm push is
+    // forward push instead of stepping to a dead stop. The 60cm impulse is
     // compositionally imperceptible but makes the 50ms velocity samples continuous.
     const base = poseAt(t, z7Gait(t));
     const dt = Math.max(0, t - 149.5);
     const u = clamp(dt / 0.8);
-    const push = u < 1 ? -0.16 * 0.8 * (u - 0.5 * u * u) : -0.064;
+    const push = u < 1 ? -1.5 * 0.8 * (u - 0.5 * u * u) : -0.6;
     const pos: [number, number, number] = [base.pos[0], base.pos[1], base.pos[2] + push];
     return { ...base, pos, target: [pos[0] + base.forward[0], pos[1] + base.forward[1], pos[2] + base.forward[2]] as [number, number, number] };
   }
@@ -194,6 +194,7 @@ export default class ThresholdZ7Cathedral extends Scene {
   private riftEdges: THREE.Mesh[] = [];
   private shaftLights: THREE.MeshBasicMaterial[] = [];
   private fallDebris: { mesh: THREE.Mesh; seed: number; baseY: number }[] = [];
+  private topplingMachines: { group: THREE.Group; seed: number; start: number }[] = [];
   private z7DetailObjects: THREE.Object3D[] = [];
   private disposables: { dispose(): void }[] = [];
   private tmpM = new THREE.Matrix4();
@@ -653,12 +654,29 @@ export default class ThresholdZ7Cathedral extends Scene {
       this.fallDebris.push({ mesh, seed, baseY: y });
     }
 
-    const warmGlow = this.mat(0xffbd65, 0.6, 0, 0xff9b38, 2.8);
-    this.box(this.s, [7.5, 0.08, 7.5], [0, -30.05, -101.5], warmGlow);
+    const warmGlow = this.mat(0xffbd65, 0.6, 0, 0xff9b38, 0.55);
+    this.box(this.s, [4.5, 0.08, 4.5], [0, -31.2, -101.5], warmGlow);
     this.box(this.s, [5.5, 0.025, 5.5], [0, -29.98, -101.5], this.mat(0x8a5b35, 0.7));
     for (let i = 0; i < 9; i++) this.box(this.s, [5.3, 0.012, 0.025], [0, -29.94, -103.8 + i * 0.58], this.mat(0x3a2115, 0.82));
     this.box(this.s, [1.05, 0.018, 4.3], [0, -29.91, -101.4], this.mat(0x6f2521, 0.9));
     for (let i = 0; i < 5; i++) this.box(this.s, [0.86, 0.012, 0.055], [0, -29.89, -103.0 + i * 0.78], this.mat(i % 2 ? 0x28434a : 0xa56b34, 0.9));
+
+    // Rift-collapse machine sequence: multiple full cabinet volumes tip into the widening crack,
+    // staggered so collapse density continues through the fall rather than front-loading one crash.
+    for (let i = 0; i < 9; i++) {
+      const side = i % 2 ? -1 : 1;
+      const g = new THREE.Group();
+      const z = -55 - i * 4.6;
+      g.position.set(side * (2.65 + hash(i * 4) * 0.55), 0, z);
+      const body = this.box(g, [0.9, 2.0, 1.05], [0, 1.0, 0], darkMetal);
+      const face = new THREE.MeshBasicMaterial({ color: i % 3 ? 0x77c9ff : 0xffb36a, transparent: true, opacity: 0.65 });
+      this.disposables.push(face);
+      this.box(g, [0.055, 1.45, 0.72], [-side * 0.47, 1.08, 0], face);
+      body.castShadow = true;
+      this.s.add(g);
+      this.z7DetailObjects.push(g);
+      this.topplingMachines.push({ group: g, seed: hash(i * 9.7), start: 176.8 + i * 0.82 });
+    }
 
     // Cathedral dressing: coin piles, toppled machine, cables/chains, receipt strips, altar-like change machine.
     for (let i = 0; i < 9; i++) {
@@ -1089,13 +1107,22 @@ export default class ThresholdZ7Cathedral extends Scene {
       const chaseK = smooth((t - 168.05) / 0.45);
       let z = -16.6;
       let x = 0.15 * Math.sin(t * 1.7);
+      const passU = smooth((t - 167.2) / 1.06);
+      const handoffCamZ = z7PoseAt(168.26).pos[2];
+      const landingZ = handoffCamZ + 4.25;
+      if (t >= 167.2 && t < 168.26) {
+        // Continuous overhead lunge: the predator leaves its reveal position,
+        // passes over the camera during the whip, and lands behind it. No teleport.
+        z = lerp(-16.6, landingZ, passU);
+        x = lerp(0.15 * Math.sin(t * 1.7), 1.2, passU);
+      }
       if (t >= 168.26) {
         const gain = smooth((t - 168.26) / 1.55);
-        const gap = lerp(4.25, 2.72, gain) + 0.16 * Math.sin(t * 3.3 * 2.1);
-        const pursuitZ = this.cam.position.z + gap;
-        z = pursuitZ;
+        const gap = lerp(4.25, 2.72, gain);
+        z = this.cam.position.z + gap;
         x = lerp(1.2, -1.25 + 0.22 * Math.sin(t * 1.9), chaseK);
       }
+      const overheadLift = Math.sin(Math.PI * passU) * (t >= 167.2 && t < 168.26 ? 1.12 : 0);
       // Stop-start predator language: a 30 deg head-tilt tell, then one fast 0.3 s
       // burst into the next held pose. During pursuit the same pose steps become a
       // four-beat all-fours gallop rather than continuous toylike swaying.
@@ -1115,7 +1142,7 @@ export default class ThresholdZ7Cathedral extends Scene {
       const beatNext = beatShapes[(beat + 1) % 4]!;
       const gallopShape = lerp(beatNow, beatNext, smooth(beatFrac / 0.35));
       const gallop = t >= 168 ? gallopShape : 0;
-      this.tenant.position.set(x, t >= 168 ? 0.035 * Math.abs(gallop) : 0, z);
+      this.tenant.position.set(x, overheadLift + (t >= 168 ? 0.035 * Math.abs(gallop) : 0), z);
       this.tenant.rotation.x = t >= 168 ? -0.08 + 0.025 * gallop : 0;
       this.tenant.rotation.z = 0.045 * heldPose + (t >= 168 ? 0.018 * gallop : 0);
       this.tenant.rotation.y = t >= 168 ? lerp(Math.PI - 0.55, 0, chaseK) : Math.PI - 0.55;
@@ -1212,6 +1239,15 @@ export default class ThresholdZ7Cathedral extends Scene {
       e.position.x = (i === 0 ? -1 : 1) * (0.4 + riftOpen * 3.7);
       e.rotation.z = (i === 0 ? 1 : -1) * riftOpen * 0.24;
     });
+
+    for (const m of this.topplingMachines) {
+      const u = smooth((t - m.start) / 1.35);
+      const side = Math.sign(m.group.position.x || 1);
+      m.group.rotation.z = side * u * (1.05 + m.seed * 0.35);
+      m.group.rotation.x = u * (0.18 + m.seed * 0.2);
+      m.group.position.y = -u * u * (1.2 + m.seed * 0.8);
+      m.group.position.x += 0; // position is otherwise static; rotation carries the topple read
+    }
 
     // Falling streaks slide upward past the camera as a pure function of time.
     this.shaftLights.forEach((m, i) => {

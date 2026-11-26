@@ -5,6 +5,7 @@ import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { evalFirstPerson, applyFirstPersonCamera, type FPKey, type GaitName } from './fp_cam';
 import { FlashlightRig, beamStateAt } from './flashlight';
 import { thresholdPost } from './sensor_post';
+import { hermite1D, type ScalarKey } from './motion';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import lintUrl from './assets/lint/model.glb?url';
 import theatreKitUrl from './assets/z6_theatre_kit/model.glb?url';
@@ -40,8 +41,14 @@ const FP_KEYS: FPKey[] = KEYS.map((k) => ({
   fov: k.fov,
 }));
 
+const EXIT_KEYS = KEYS.slice(6);
+const EXIT_X: ScalarKey[] = EXIT_KEYS.map((k) => [k.t, k.p[0]]);
+const EXIT_Z: ScalarKey[] = EXIT_KEYS.map((k) => [k.t, k.p[2]]);
 export function z6PoseAt(t: number, gait?: GaitName) {
-  return evalFirstPerson(FP_KEYS, clamp(t, FP_KEYS[0]!.t, FP_KEYS[FP_KEYS.length - 1]!.t), gait);
+  const pose = evalFirstPerson(FP_KEYS, clamp(t, FP_KEYS[0]!.t, FP_KEYS[FP_KEYS.length - 1]!.t), gait);
+  if (t < EXIT_KEYS[0]!.t || t > EXIT_KEYS[EXIT_KEYS.length - 1]!.t) return pose;
+  const pos: [number, number, number] = [hermite1D(t, EXIT_X), pose.pos[1], hermite1D(t, EXIT_Z)];
+  return { ...pose, pos, target: [pos[0] + pose.forward[0], pos[1] + pose.forward[1], pos[2] + pose.forward[2]] as [number, number, number] };
 }
 
 function z6Gait(t: number): GaitName {

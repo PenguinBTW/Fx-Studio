@@ -166,6 +166,7 @@ def build_ball_arm(side):
             y = 0.02 + 0.92 * (u ** 1.16) - 0.04 * math.sin(u * math.pi)
             z = 3.23 - 2.38 * u + 0.25 * math.sin(u * math.pi)
         centers.append((x, y, z))
+    add(curve(f'arm_{side}_fused_limb_volume', centers, 0.118, BALL_DARK), upper_g, 'fused_limb_volume')
     add(curve(f'arm_{side}_coil_core', centers, 0.027, CHROME), upper_g, 'coil_core')
     for bi in range(len(centers) - 1):
         add(curve(f'arm_{side}_fused_bridge_{bi}', [centers[bi], centers[bi + 1]], 0.031, RUBBER), upper_g if bi < 14 else lower_g, 'melted_seams')
@@ -240,6 +241,8 @@ def build_leg(side):
     def along(a, b, u):
         return tuple(a[j] * (1 - u) + b[j] * u for j in range(3))
 
+    add(curve(f'leg_{side}_upper_fused_volume', [hip, knee], 0.125, PAPER_DARK), upper_g, 'fused_limb_volume')
+    add(curve(f'leg_{side}_lower_fused_volume', [knee, ankle], 0.112, PAPER_DARK), lower_g, 'fused_limb_volume')
     add(sphere(f'leg_{side}_hip_joint', 0.19, hip, RUBBER, scale=(1.2, 0.86, 0.92), segments=24, rings=12), upper_g, 'joints')
     add(sphere(f'leg_{side}_knee_joint', 0.19, knee, RUBBER, scale=(1.28, 0.82, 0.86), segments=24, rings=12), upper_g, 'joints')
 
@@ -333,7 +336,7 @@ for ob in list(bpy.data.objects):
     # Pull the head and felt neck down into the torso silhouette. A hunched predator's
     # head is carried low in front of the ribcage, not balanced upright like a balloon.
     if ob.name.startswith('head_'):
-        ob.matrix_world = mathutils.Matrix.Translation((-0.10, 0.62, -0.82)) @ ob.matrix_world
+        ob.matrix_world = mathutils.Matrix.Translation((-0.12, 0.72, -1.10)) @ ob.matrix_world
     elif ob.name.startswith('neck_'):
         ob.matrix_world = mathutils.Matrix.Translation((-0.04, 0.26, -0.36)) @ ob.matrix_world
 bpy.context.view_layer.update()
