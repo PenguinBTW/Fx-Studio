@@ -100,7 +100,53 @@ export function criticallyDampedTurn(x: number): number {
   return raw(clamp(x)) / raw(1);
 }
 
-export function keyAt(keys: FPKey[], t: number): Required<Omit<FPKey, 'gait'>> & { gait: GaitName; gaitA: GaitName; gaitB: GaitName; gaitK: number } {
+function rawSplineTangent(sorted: FPKey[], j: number, d: number): number {
+  if (j === 0) {
+    const n = sorted[Math.min(1, sorted.length - 1)]!;
+    return (n.pos[d]! - sorted[0]!.pos[d]!) / Math.max(1e-6, n.t - sorted[0]!.t);
+  }
+  if (j === sorted.length - 1) {
+    const p = sorted[sorted.length - 2]!;
+    return (sorted[j]!.pos[d]! - p.pos[d]!) / Math.max(1e-6, sorted[j]!.t - p.t);
+  }
+  const p = sorted[j - 1]!, n = sorted[j + 1]!;
+  return (n.pos[d]! - p.pos[d]!) / Math.max(1e-6, n.t - p.t);
+}
+
+function monotoneTangents(sorted: FPKey[], i: number, d: number): [number, number] {
+  const a = sorted[i]!;
+  const b = sorted[Math.min(i + 1, sorted.length - 1)]!;
+  const span = Math.max(1e-6, b.t - a.t);
+  const delta = (b.pos[d]! - a.pos[d]!) / span;
+  let m0 = rawSplineTangent(sorted, i, d);
+  let m1 = rawSplineTangent(sorted, Math.min(i + 1, sorted.length - 1), d);
+  if (Math.abs(delta) < 1e-9) return [0, 0];
+  const alpha = m0 / delta, beta = m1 / delta;
+  const q = alpha * alpha + beta * beta;
+  if (q > 9) {
+    const scale = 3 / Math.sqrt(q);
+    m0 = scale * alpha * delta;
+    m1 = scale * beta * delta;
+  }
+  return [m0, m1];
+}
+
+function splinePos(sorted: FPKey[], i: number, u: number): V3 {
+  const a = sorted[i]!;
+  const b = sorted[Math.min(i + 1, sorted.length - 1)]!;
+  if (a === b) return a.pos;
+  const span = Math.max(1e-6, b.t - a.t);
+  const h00 = 2 * u ** 3 - 3 * u ** 2 + 1;
+  const h10 = u ** 3 - 2 * u ** 2 + u;
+  const h01 = -2 * u ** 3 + 3 * u ** 2;
+  const h01t = u ** 3 - u ** 2;
+  return [0, 1, 2].map((d) => {
+    const [m0, m1] = monotoneTangents(sorted, i, d);
+    return h00 * a.pos[d]! + h10 * span * m0 + h01 * b.pos[d]! + h01t * span * m1;
+  }) as V3;
+}
+
+export function keyAt(keys: FPKey[], t: number, positionMode: 'smooth' | 'spline' = 'smooth'): Required<Omit<FPKey, 'gait'>> & { gait: GaitName; gaitA: GaitName; gaitB: GaitName; gaitK: number } {
   if (!keys.length) return { t, pos: [0, EYE_HEIGHT, 0], yaw: 0, pitch: 0, roll: 0, fov: 74, height: EYE_HEIGHT, gait: 'still', gaitA: 'still', gaitB: 'still', gaitK: 0 };
   const sorted = [...keys].sort((a, b) => a.t - b.t);
   let i = 0;
@@ -113,7 +159,7 @@ export function keyAt(keys: FPKey[], t: number): Required<Omit<FPKey, 'gait'>> &
   const turnK = criticallyDampedTurn(u);
   const base = {
     t,
-    pos: mixv(a.pos, b.pos, moveK),
+    pos: positionMode === 'spline' ? splinePos(sorted, i, u) : mixv(a.pos, b.pos, moveK),
     yaw: a.yaw + angleDelta(a.yaw, b.yaw) * turnK,
     pitch: lerp(a.pitch ?? 0, b.pitch ?? 0, turnK),
     roll: lerp(a.roll ?? 0, b.roll ?? 0, turnK),
@@ -151,8 +197,8 @@ function stepPhaseAt(keys: FPKey[], t: number, gaitOverride?: GaitName): number 
  * Evaluate a first-person pose at time `t`. `keys` describe the deliberate camera path;
  * this function adds breath, gait bob/sway/roll and micro head noise without mutable state.
  */
-export function evalFirstPerson(keys: FPKey[], t: number, gaitOverride?: GaitName): FPPose {
-  const k = keyAt(keys, t);
+export function evalFirstPerson(keys: FPKey[], t: number, gaitOverride?: GaitName, positionMode: 'smooth' | 'spline' = 'smooth'): FPPose {
+  const k = keyAt(keys, t, positionMode);
   const gaitName = gaitOverride ?? k.gait;
   const ga = GAITS[gaitOverride ?? k.gaitA];
   const gb = GAITS[gaitOverride ?? k.gaitB];

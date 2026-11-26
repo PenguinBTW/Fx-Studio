@@ -30,7 +30,7 @@ function fpKeys(): FPKey[] {
 export function coldOpenPose(t: number): FPPose {
   // Keyed gait blending ramps run→still across 2.05-2.4s; a hard override here
   // caused a one-frame 10° FOV snap at 2.15s and in Z7's exact replay.
-  return evalFirstPerson(fpKeys(), clamp(t, 0, 4));
+  return evalFirstPerson(fpKeys(), clamp(t, 0, 4), undefined, 'spline');
 }
 
 export const COLD_OPEN_REPLAY = { z7Start: 171.3, z7BeamDead: 173.4, z7End: 174.0, z0Start: 1.2, z0End: 3.3 } as const;
