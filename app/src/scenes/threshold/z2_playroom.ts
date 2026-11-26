@@ -79,6 +79,7 @@ export default class ThresholdZ2Playroom extends Scene {
     const mats = [red, yellow, blue, green, mat(0xff7b2e, 0.28)];
     const swimmerPale = [mat(0xbdb4a4, 0.38), mat(0x99a7a4, 0.42), mat(0xc8bd8e, 0.36), mat(0xa88f8b, 0.44), mat(0x81939c, 0.4)];
     const mouthMat = mat(0xd9b83c, 0.62);
+    const submergedRidgeMat = mat(0x3f4b4e, 0.30, 0, 0x101a1c, 0.10);
 
     box(this.s, 'z2_floor', [31, 0.1, 21], [0, -0.05, 0], foam);
     box(this.s, 'z2_wall_n', [31, 6, 0.16], [0, 3, -10.5], foam);
@@ -197,7 +198,8 @@ export default class ThresholdZ2Playroom extends Scene {
     sph(this.eyeL, 'z2_swimmer_pupil_l', 0.035, [0, 0, 0.085], basic(0x111111), 10);
     sph(this.eyeR, 'z2_swimmer_pupil_r', 0.035, [0, 0, 0.085], basic(0x111111), 10);
     for (let i = 0; i < 10; i++) {
-      const r = sph(this.s, `z2_swimmer_ridge_${i}`, 0.1, [0, 0.55, -1 - i * 0.35], mats[i % mats.length]!, 10);
+      const r = sph(this.s, `z2_swimmer_ridge_${i}`, 0.165, [0, 0.55, -1 - i * 0.35], submergedRidgeMat, 12);
+      r.scale.set(1.35, 0.72, 1.65);
       this.ridge.push(r);
     }
 
@@ -346,9 +348,12 @@ export default class ThresholdZ2Playroom extends Scene {
       const b = this.ballBase[i]!;
       const dx = b.x - sx, dz = b.z - sz;
       const d2 = dx * dx + dz * dz;
-      const bulge = Math.exp(-d2 / 0.55) * (t > 38 && t < 49.2 ? 0.24 : 0.0);
-      const trail = Math.exp(-((b.x - sx * 0.5) ** 2 + (b.z - sz + 0.8) ** 2) / 1.8) * 0.05;
-      this.dummy.position.set(b.x, b.y + bulge + trail, b.z);
+      const activeWake = t > 38 && t < 49.2 ? 1 : 0;
+      const bulge = Math.exp(-d2 / 0.85) * 0.36 * activeWake;
+      const trail = Math.exp(-((b.x - sx * 0.5) ** 2 + (b.z - sz + 0.8) ** 2) / 1.8) * 0.11;
+      const dist = Math.sqrt(d2) + 0.001;
+      const parting = Math.exp(-d2 / 1.35) * 0.16 * activeWake;
+      this.dummy.position.set(b.x + (dx / dist) * parting, b.y + bulge + trail, b.z + (dz / dist) * parting);
       this.dummy.rotation.set(hash(i) * 3, hash(i + 1) * 3, hash(i + 2) * 3);
       this.dummy.updateMatrix();
       this.balls.setMatrixAt(i, this.dummy.matrix);
@@ -356,8 +361,8 @@ export default class ThresholdZ2Playroom extends Scene {
     this.balls.instanceMatrix.needsUpdate = true;
     this.ridge.forEach((r, i) => {
       const w = Math.sin(t * 2.8 - i * 0.55) * 0.12;
-      r.position.set(sx + w, 0.52 + Math.sin(t * 3.2 - i) * 0.035, sz - 0.5 - i * 0.34);
-      r.visible = t > 38 && t < 49.2 && i < 5;
+      r.position.set(sx + w, 0.68 + Math.sin(t * 3.2 - i) * 0.045, sz - 0.5 - i * 0.34);
+      r.visible = t > 38 && t < 49.2 && i < 9;
     });
 
     // toy phone ring vibrate and tunnel material wetting cue

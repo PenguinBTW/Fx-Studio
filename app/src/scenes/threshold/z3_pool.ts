@@ -315,7 +315,12 @@ export default class ThresholdZ3Pool extends Scene {
     // Mirrorling rule approximation: reflection first, surface reveal only after look-away
     const reflVisible = t > 59.5 && t < 75.0;
     this.reflection.visible = reflVisible;
-    const advance = smooth(72.0, 74.5, t) * 1.2;
+    // Surface advance happens as discrete wet-tile steps rather than continuous drifting:
+    // each step lands late in a 0.9 s cycle, then holds while eye contact continues.
+    const stepU = clamp((t - 72.0) / 0.9, 0, 3.0);
+    const stepIndex = Math.floor(stepU);
+    const stepK = smooth(0.56, 0.86, stepU - stepIndex);
+    const advance = Math.min(3, stepIndex + stepK) * 0.68;
     const mz = -3.4 + advance;
     this.reflection.visible = false;
     this.mirrorling.visible = false;
@@ -327,9 +332,24 @@ export default class ThresholdZ3Pool extends Scene {
     this.mirrorlingAsset.root.visible = t > 72.0;
     this.mirrorlingAsset.root.position.set(0, 0.45, mz);
     this.mirrorlingAsset.root.rotation.y = smooth(72.2, 74.8, t) * 0.16;
+    const gaitPhase = stepU - stepIndex;
+    const stepPulse = smooth(0.54, 0.7, gaitPhase) * (1 - smooth(0.78, 0.95, gaitPhase));
     for (const side of [-1, 1] as const) {
       const arm = this.mirrorlingAsset.part(side < 0 ? 'arm_l_upper' : 'arm_r_upper');
       if (arm) arm.rotation.z = (side < 0 ? -1 : 1) * Math.sin(t * 1.15 + (side < 0 ? 0 : 0.7)) * 0.045;
+      const lead = (stepIndex % 2 === 0 ? 1 : -1) === side;
+      const upperLeg = this.mirrorlingAsset.part(side < 0 ? 'leg_l_upper' : 'leg_r_upper');
+      const lowerLeg = this.mirrorlingAsset.part(side < 0 ? 'leg_l_lower' : 'leg_r_lower');
+      if (upperLeg) upperLeg.rotation.x = (lead ? -1 : 0.45) * stepPulse * 0.24;
+      if (lowerLeg) lowerLeg.rotation.x = (lead ? 0.75 : -0.3) * stepPulse * 0.18;
+    }
+    for (let ri = 1; ri <= 3; ri++) {
+      const ring = this.mirrorlingAsset.part(`water_ripple_ring_${ri}`);
+      if (!ring) continue;
+      if (!ring.userData.baseScale) ring.userData.baseScale = ring.scale.clone();
+      const bs = ring.userData.baseScale as THREE.Vector3;
+      const ringPulse = 1 + stepPulse * (0.55 + ri * 0.18);
+      ring.scale.set(bs.x * ringPulse, bs.y * ringPulse, bs.z * ringPulse);
     }
     // phone eye opens, drifts, rotates to face viewer
     const eye = smooth(70.4, 71.0, t);

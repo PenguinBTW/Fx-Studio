@@ -296,15 +296,49 @@ export default class ThresholdZ4Library extends Scene {
     this.archivistLight.intensity = 2.1 * reveal * (1 - smooth(98.0, 99.0, t));
     this.archivistAsset.root.visible = t > 94.2;
     this.archivistAsset.root.scale.setScalar(0.64 + reveal * 0.52);
-    this.archivistAsset.root.position.y = 0.02 + (1 - reveal) * 0.45;
+    // Repeated topple/unfold locomotion: the body pitches forward, collapses onto a new base,
+    // then rights itself in stepped 1.2 s cycles while pursuing down the canyon.
+    const chase = smooth(95.45, 96.05, t);
+    const cycleLen = 1.2;
+    const lu = Math.max(0, (t - 95.5) / cycleLen);
+    const cycle = Math.floor(lu);
+    const phase = lu - cycle;
+    const stepInCycle = smooth(0.42, 0.82, phase);
+    const travelSteps = Math.min(7, cycle + stepInCycle);
+    const topple = (smooth(0.02, 0.30, phase) * (1 - smooth(0.38, 0.76, phase))) * chase;
+    this.archivistAsset.root.position.x = 1.15 - chase * 0.55;
+    this.archivistAsset.root.position.z = 2.35 + travelSteps * 2.35 * chase;
+    this.archivistAsset.root.position.y = 0.02 + (1 - reveal) * 0.45 + topple * 0.10;
+    this.archivistAsset.root.rotation.x = topple * 0.42;
     this.archivistAsset.root.rotation.y = -0.08 + reveal * 0.08;
     const mouth = this.archivistAsset.part('mouth_crease_main');
     if (mouth) mouth.scale.x = 0.25 + smooth(95.0, 96.0, t) * 1.4;
     for (const [pid, sign] of [['arm_l_root', -1], ['arm_r_root', 1]] as const) {
       const arm = this.archivistAsset.part(pid);
       if (arm) {
-        arm.scale.x = 0.35 + reveal * 1.05;
+        arm.scale.x = 0.72 + reveal * 0.34;
         arm.rotation.z = sign * (0.06 + Math.sin(t * 0.9) * 0.018) * reveal;
+        arm.rotation.y = sign * Math.sin(t * 0.55 + sign) * 0.035 * reveal;
+      }
+      // Segment-by-segment accordion extension keeps the paper hinges visible instead of
+      // reading as a uniformly scaled rubber tube. Base transforms are captured once and
+      // all per-frame transforms remain absolute functions of t.
+      for (let ai = 1; ai <= 12; ai++) {
+        const panel = this.archivistAsset.part(`arm_${pid.includes('_l_') ? 'l' : 'r'}_accordion_panel_${String(ai).padStart(2, '0')}`);
+        if (!panel) continue;
+        if (!panel.userData.basePos) {
+          panel.userData.basePos = panel.position.clone();
+          panel.userData.baseScale = panel.scale.clone();
+          panel.userData.baseRotZ = panel.rotation.z;
+        }
+        const bp = panel.userData.basePos as THREE.Vector3;
+        const bs = panel.userData.baseScale as THREE.Vector3;
+        const unfold = reveal * (0.62 + 0.38 * smooth(95.2, 96.2, t));
+        const ripple = Math.sin(t * 4.6 - ai * 0.72 + sign) * 0.055 * unfold;
+        const stage = 0.78 + unfold * 0.46 + ai * 0.006 * unfold;
+        panel.position.x = bp.x * stage;
+        panel.scale.x = bs.x * (0.88 + unfold * 0.20 + ripple);
+        panel.rotation.z = (panel.userData.baseRotZ as number) + sign * ripple * 0.55;
       }
     }
     for (let pi = 1; pi <= 12; pi++) {
