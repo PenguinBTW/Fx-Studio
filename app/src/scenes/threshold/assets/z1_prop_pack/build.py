@@ -9,6 +9,7 @@ LAM=mat('worn_laminate',(0.31,0.29,0.24),.62)
 EDGE=mat('worn_edge_dark',(0.08,0.07,0.055),.82)
 METAL=mat('scuffed_office_metal',(0.28,0.29,0.28),.48,metal=.55)
 DARK=mat('blackened_plastic',(0.025,0.028,0.026),.68)
+KEYCAP=mat('keycap_beige',(0.38,0.34,0.25),.62)
 FABRIC=mat('chair_fabric_bluegrey',(0.12,0.16,0.18),.86)
 PAPER=mat('aged_paper',(0.72,0.68,0.55),.9)
 CORK=mat('corkboard',(0.34,0.19,0.09),.9)
@@ -71,7 +72,7 @@ def build_keyboard(x):
  r=root('keyboard_root',x)
  add(box('keyboard_case',(0.48,0.17,0.028),(x,0,0.018),BEIGE,.008,2,rot=(math.radians(4),0,0)),r)
  for row in range(4):
-  for col in range(12): add(box('key',(0.024,0.022,0.008),(x-.204+col*.037,-.062+row*.036,0.037+row*.001),DARK,.0015),r)
+  for col in range(12): add(box('key',(0.024,0.022,0.008),(x-.204+col*.037,-.062+row*.036,0.037+row*.001),KEYCAP,.0015,2),r)
  return r
 
 def build_filecab(x):

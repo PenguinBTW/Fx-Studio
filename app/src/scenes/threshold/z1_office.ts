@@ -83,10 +83,10 @@ function officeScreenTexture() {
     const inset = 14 + i * 9;
     g.strokeRect(inset, inset * 0.55, 256 - inset * 2, 160 - inset * 1.1);
   }
-  g.fillStyle = 'rgba(0,30,34,.28)';
+  g.fillStyle = 'rgba(0,30,34,.11)';
   for (let y = 0; y < 160; y += 4) g.fillRect(0, y, 256, 1);
   g.fillStyle = 'rgba(255,255,255,.22)'; g.fillRect(34, 22, 74, 5);
-  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.center.set(0.5, 0.5); tex.rotation = Math.PI / 2;
   return tex;
 }
 function surfaceMat(kind: SurfaceKind, color: string | number, roughness = 0.75, repeat = 2, metalness = 0) {
@@ -119,6 +119,7 @@ export default class ThresholdZ1Office extends Scene {
   private officeKit!: GLTFInstance;
   private propPack!: GLTFInstance;
   private glbReceiver?: THREE.Object3D;
+  private assetMats: Record<string, THREE.Material> = {};
 
   override async init() {
     const resolved = resolveAsset('threshold/z1_ceiling_breather');
@@ -126,11 +127,20 @@ export default class ThresholdZ1Office extends Scene {
     this.breather.root.position.set(0,2.72,-6.02); this.breather.root.visible = false; this.s.add(this.breather.root);
     const phoneResolved = resolveAsset('threshold/beige_phone');
     this.phoneAsset = await GLTFManager.instantiate(phoneResolved.url, { ...phoneResolved.manifest.load, castShadow: true, receiveShadow: true });
-    this.phoneAsset.root.position.set(0.28, 0.785, -6.05);
-    this.phoneAsset.root.rotation.y = -0.12;
-    this.phoneAsset.root.scale.setScalar(1.15);
+    this.phoneAsset.root.position.set(0.38, 0.785, -5.76);
+    this.phoneAsset.root.rotation.y = -0.48;
+    this.phoneAsset.root.scale.setScalar(1.2);
     this.s.add(this.phoneAsset.root);
     this.glbReceiver = this.phoneAsset.part('receiver') ?? undefined;
+    // W1's shared phone mesh is deliberately detailed but undersized through the base; widen only the base-side parts
+    // in this zone assembly so the cradle/keypad silhouette reads as a desk telephone at close range.
+    this.phoneAsset.root.traverse((o) => {
+      if (/^(base_|bell_|cradle_|front_lip|hook_|key_|vent_|wear_nick_)/.test(o.name)) {
+        o.scale.x = 1.55;
+        o.scale.z = 1.22;
+      }
+      if (/^key_(mark_)?/.test(o.name)) { o.position.y -= 0.012; o.position.z -= 0.018; }
+    });
     const kitResolved = resolveAsset('threshold/z1_office_kit');
     const packResolved = resolveAsset('threshold/z1_prop_pack');
     this.officeKit = await GLTFManager.instantiate(kitResolved.url, { ...kitResolved.manifest.load, castShadow: true, receiveShadow: true });
@@ -153,6 +163,27 @@ export default class ThresholdZ1Office extends Scene {
     const red = mat(0x5d1512, 0.45, 0, 0xff1f18, 1.8);
     const screenTex = officeScreenTexture();
     const screen = new THREE.MeshStandardMaterial({ color: 0x1c3032, roughness: 0.24, map: screenTex, emissive: 0x5de6e0, emissiveMap: screenTex, emissiveIntensity: 1.05 });
+    this.assetMats = {
+      crt_phosphor: screen,
+      worn_laminate: surfaceMat('laminate', 0x8b8066, 0.76, 2.5),
+      scuffed_office_metal: surfaceMat('metal', 0x5b5d59, 0.54, 2.2, 0.35),
+      worn_edge_dark: surfaceMat('plastic', 0x292a26, 0.74, 2),
+      blackened_plastic: surfaceMat('plastic', 0x151615, 0.7, 2.2),
+      chair_fabric_bluegrey: surfaceMat('fabric', 0x46515a, 0.9, 5),
+      old_beige_plastic: surfaceMat('plastic', 0xc9bb96, 0.58, 2.3),
+      aged_paper: surfaceMat('paper', 0xb8ae92, 0.94, 2.7),
+      corkboard: surfaceMat('paper', 0x765333, 0.94, 4),
+      cardboard: surfaceMat('paper', 0x7b5f42, 0.92, 2),
+      cardboard_dark: surfaceMat('paper', 0x54412e, 0.94, 2),
+      cubicle_fabric_mustard: surfaceMat('fabric', 0xa89255, 0.9, 6),
+      cubicle_fabric_faded: surfaceMat('fabric', 0x83764e, 0.93, 6),
+      cubicle_trim_metal: surfaceMat('metal', 0x555851, 0.56, 2.4, 0.28),
+      pinboard_cork: surfaceMat('paper', 0x6d4d2e, 0.95, 4),
+      ceiling_tile_fissured: surfaceMat('ceiling', 0xc9c1aa, 0.86, 2.6),
+      tile_water_stain: surfaceMat('ceiling', 0x8e8269, 0.94, 2.4),
+      ceiling_grid_oxidized: surfaceMat('metal', 0x53554e, 0.58, 2.2, 0.32),
+      firedoor_paint: surfaceMat('metal', 0x5b5648, 0.72, 2.4, 0.12),
+    };
     this.doorGlow = mat(0xfff4c8, 0.3, 0, 0xfff2b0, 5) as THREE.MeshStandardMaterial;
 
     box(this.s, 'z1_floor', [30, 0.08, 48], [0, -0.04, -3], carpet);
@@ -384,17 +415,17 @@ export default class ThresholdZ1Office extends Scene {
     const cord = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(cordPts), 42, 0.007, 8), dark);
     cord.name = cord.userData.fx_entity = 'z1_phone_coiled_cord'; cord.castShadow = cord.receiveShadow = true; this.s.add(cord);
     // The authored Blender beige phone is the visible hero prop; the engine primitives remain only as hidden fallback geometry.
-    this.s.traverse((o) => { if (/^z1_phone_/.test(o.name)) o.visible = false; });
+    this.s.traverse((o) => { if (/^z1_(phone|receiver)_/.test(o.name) || o.name === 'z1_mould_ring' || o.name.startsWith('z1_monitor_control_')) o.visible = false; });
 
     // Blender-built kit/prop modules replace the most scrutinized primitive office objects.
     this.s.traverse((o) => {
       if (/^z1_(desk_top|desk_leg_|crt_monitor|monitor_screen|coffee_mug|frontpod_(desk|monitor|screen|keyboard|chair)|opening_tucked_chair|runisland_(desk|monitor|screen|keyboard|chair))/.test(o.name)) o.visible = false;
-      if (/^z1_partition_([01]|topcap_[01]|bottomrail_[01]|scuff_[01]|endcap_[lr]_[01]|fabricseam_[01]|pinboard_[01])$/.test(o.name)) o.visible = false;
+      if (o.name.startsWith('z1_partition_')) o.visible = false;
     });
     this.cloneProp(this.propPack, 'desk_root', [0, 0, -6], 0, 1.08, 'z1_hero_desk_asset');
     this.cloneProp(this.propPack, 'crt_root', [-0.52, 0.77, -6.17], 0.22, 1.0, 'z1_hero_crt_asset');
-    this.cloneProp(this.propPack, 'keyboard_root', [-0.2, 0.77, -5.78], -0.08, 1.0, 'z1_hero_keyboard_asset');
-    this.cloneProp(this.propPack, 'mug_root', [-0.18, 0.77, -5.78], 0, 1.0, 'z1_hero_mug_asset');
+    this.cloneProp(this.propPack, 'keyboard_root', [-0.34, 0.77, -5.74], -0.08, 1.0, 'z1_hero_keyboard_asset');
+    this.cloneProp(this.propPack, 'mug_root', [0.02, 0.77, -5.62], 0, 1.0, 'z1_hero_mug_asset');
     for (const [i, x] of [0, 1].entries()) {
       const side = i === 0 ? -1 : 1, px = side * 1.85, z = -2.15 - i * 0.35;
       this.cloneProp(this.propPack, 'desk_root', [px, 0, z], -side * 0.16, 0.78, `z1_frontdesk_asset_${i}`);
@@ -404,6 +435,17 @@ export default class ThresholdZ1Office extends Scene {
     for (const side of [-1, 1]) for (let j = 0; j < 2; j++) {
       this.cloneProp(this.officeKit, 'cubicle_panel_180_root', [side * 2.2, 0, -3.15 + j * 1.78], Math.PI / 2, 1, `z1_opening_panel_asset_${side}_${j}`);
     }
+    partitions.forEach(([x, z, sx, , sz], i) => {
+      const horizontal = sx > sz;
+      const len = horizontal ? sx : sz;
+      const count = Math.max(1, Math.ceil(len / 1.78));
+      for (let j = 0; j < count; j++) {
+        const off = (j - (count - 1) / 2) * 1.78;
+        const pos: [number, number, number] = horizontal ? [x + off, 0, z] : [x, 0, z + off];
+        const part = (i + j) % 5 === 4 ? 'cubicle_panel_120_root' : 'cubicle_panel_180_root';
+        this.cloneProp(this.officeKit, part, pos, horizontal ? 0 : Math.PI / 2, 1, `z1_partition_asset_${i}_${j}`);
+      }
+    });
     this.cloneProp(this.propPack, 'chair_missing_wheel_root', [-1.35, 0, -3.25], -0.7, 0.95, 'z1_opening_tucked_chair_asset');
     const assetRunPods: [number, number][] = [[-2.3, 1.7], [0.4, 3.6], [1.0, 5.8], [0.7, 8.0], [2.2, 10.4], [0.8, 12.4]];
     assetRunPods.forEach(([x, z], i) => {
@@ -503,6 +545,13 @@ export default class ThresholdZ1Office extends Scene {
     c.position.set(...pos);
     c.rotation.set(0, rotY, 0);
     c.scale.setScalar(scale);
+    c.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      const mapped = mats.map((m) => this.assetMats[m.name] ?? m);
+      mesh.material = Array.isArray(mesh.material) ? mapped : mapped[0]!;
+    });
     this.s.add(c);
     return c;
   }
@@ -527,14 +576,14 @@ export default class ThresholdZ1Office extends Scene {
 
     // phone rings then receiver levitates
     const ring = t > 8.3 && t < 11 ? Math.sin(t * Math.PI * 40) * 0.006 : 0;
-    const lift = smooth(11.65, 12.15, t) * 0.04;
+    const lift = smooth(11.02, 11.48, t) * 0.04;
     this.receiver.position.y = 0.96 + lift + ring;
     this.receiver.rotation.z = ring * 4;
     for (const rp of this.receiverParts) rp.position.y = (rp.userData.baseY as number) + lift + ring;
     if (this.glbReceiver) {
       if (!this.glbReceiver.userData.basePos) this.glbReceiver.userData.basePos = this.glbReceiver.position.clone();
       const bp = this.glbReceiver.userData.basePos as THREE.Vector3;
-      this.glbReceiver.position.y = bp.y + (lift + ring) / 1.15;
+      this.glbReceiver.position.y = bp.y + (lift + ring) / 1.2;
       this.glbReceiver.rotation.z = ring * 4;
     }
 
