@@ -155,13 +155,12 @@ const BODY: Record<ThresholdTransitionMode, string> = {
     vec3 cb = texture(texB, vUv).rgb;
     // Several machine-light streaks decelerate, lengthen, and warm into hallway god-rays.
     float warm = smoothstep(0.12, 0.88, u);
-    float slow = mix(1.0, 0.25, smoothstep(0.0, 0.9, u));
     float lenBoost = mix(0.45, 1.45, smoothstep(0.18, 0.9, u));
     vec3 streakCol = vec3(0.0);
     for (int i = 0; i < 4; i++) {
       float fi = float(i);
       float lane = -0.34 + fi * 0.23 + (hash12(vec2(fi, 3.7)) - 0.5) * 0.08;
-      float travel = fract(vUv.y * 0.32 + u * 0.42 * slow + fi * 0.29);
+      float travel = fract(vUv.y * 0.32 + u * (1.0 - 0.32 * u) * 0.42 + fi * 0.29);
       float x = vUv.x - 0.5 - lane - (vUv.y - 0.5) * mix(0.11, 0.28, warm);
       float core = pow(max(0.0, 1.0 - abs(x) * mix(18.0, 8.0, warm)), 5.0);
       float lengthMask = smoothstep(0.0, 0.12 * lenBoost, travel) * (1.0 - smoothstep(0.52 * lenBoost, 0.92 * lenBoost, travel));
