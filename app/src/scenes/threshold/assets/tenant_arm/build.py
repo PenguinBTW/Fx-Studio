@@ -65,19 +65,22 @@ add(sphere('palm', 0.14, (0.025, -0.01, -1.61), CHROME, scale=(1.15, 0.7, 0.85),
 add(torus('wrist_cuff', 0.105, 0.018, (0.02, -0.005, -1.49), RUBBER, rot=(math.radians(90), 0, 0), major_segments=40, minor_segments=8), 'wrist')
 
 # Five too-long fingers. Each is a helix/vending spiral ending in a blunt chrome tip.
+fan_x = [-0.28, -0.17, 0.0, 0.17, 0.27]
+fan_y = [-0.18, 0.015, 0.085, 0.025, -0.055]
 for finger in range(5):
     spread = (finger - 2) / 2
-    base = (0.025 + spread * 0.075, -0.02 + abs(spread) * 0.012, -1.69)
+    base = (0.025 + spread * 0.082, -0.02 + abs(spread) * 0.012, -1.69)
     length = 0.46 + (0.08 if finger == 2 else 0.0) - abs(spread) * 0.035
     pts = []
     coils = 5.2
     for j in range(80):
         u = j / 79
         z = -u * length
-        x = spread * 0.06 * u + math.sin(u * coils * math.tau) * 0.018 * (1 - 0.25*u)
-        y = math.cos(u * coils * math.tau) * 0.018 * (1 - 0.25*u)
+        coil_amp = 0.023 * (1 - 0.18*u)
+        x = fan_x[finger] * u + math.sin(u * coils * math.tau) * coil_amp
+        y = fan_y[finger] * u + math.cos(u * coils * math.tau) * coil_amp
         pts.append((base[0] + x, base[1] + y, base[2] + z))
-    ob = curve(f'finger_coil_{finger}', pts, 0.0125, CHROME)
+    ob = curve(f'finger_coil_{finger}', pts, 0.0145, CHROME)
     add(ob, f'finger_{finger}')
     tip = pts[-1]
     add(sphere(f'finger_tip_{finger}', 0.023, tip, CHROME, scale=(0.75, 0.75, 1.3), segments=28, rings=14), f'finger_{finger}')

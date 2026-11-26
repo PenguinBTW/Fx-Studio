@@ -93,6 +93,7 @@ export default class Z0ColdOpen extends Scene {
   private ambientLight!: THREE.HemisphereLight;
   private reflectionMats: THREE.MeshBasicMaterial[] = [];
   private reflectionGeoms: THREE.BufferGeometry[] = [];
+  private armOwnedMats = new Set<THREE.Material>();
 
   override async init() {
     this.scene3d.background = new THREE.Color(0.0004, 0.0005, 0.0008);
@@ -274,6 +275,7 @@ export default class Z0ColdOpen extends Scene {
       if (obj.name === 'shoulder_collage') obj.scale.multiplyScalar(0.72);
       obj.material = Array.isArray(obj.material) ? obj.material.map((m) => m.clone()) : obj.material.clone();
       const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      for (const m of mats) this.armOwnedMats.add(m);
       for (const m of mats) {
         if (!(m instanceof THREE.MeshStandardMaterial)) continue;
         if (m.name === 'TenantChrome') { m.emissive.setHex(0x243548); m.emissiveIntensity = 0.55; m.roughness = 0.16; }
@@ -348,5 +350,6 @@ export default class Z0ColdOpen extends Scene {
     disposeDecalParticleTree(this.ambientDust);
     for (const g of this.reflectionGeoms) g.dispose();
     for (const m of this.reflectionMats) m.dispose();
+    for (const m of this.armOwnedMats) m.dispose();
   }
 }
