@@ -4,36 +4,63 @@ sys.dont_write_bytecode=True
 HERE=os.path.dirname(os.path.abspath(__file__));sys.path.insert(0,os.path.dirname(HERE))
 from _bl import *
 reset()
-PAPER=mat('aged_page_ivory',(.68,.61,.45),.86);PAPER2=mat('compressed_page_edge',(.58,.49,.34),.9);EDGE=mat('dark_page_edge',(.38,.29,.17),.86);WOOD=mat('dark_library_wood',(.16,.075,.025),.66);BRASS=mat('aged_brass',(.45,.28,.055),.32,metal=.55);INK=mat('ink_dark',(.025,.018,.012),.92);RED=mat('bookmark_red',(.42,.025,.018),.7);GREEN=mat('lamp_green_glass',(.025,.22,.08),.28,emit=(.01,.12,.03),strength=.25)
+PAPER=mat('aged_page_ivory',(.78,.71,.55),.9);PAPER2=mat('compressed_page_edge',(.66,.58,.42),.92);EDGE=mat('dark_page_edge',(.34,.25,.14),.9);WOOD=mat('dark_library_wood',(.16,.075,.025),.66);BRASS=mat('aged_brass',(.45,.28,.055),.32,metal=.55);INK=mat('ink_dark',(.025,.018,.012),.92);RED=mat('bookmark_red',(.42,.025,.018),.7);GREEN=mat('lamp_green_glass',(.025,.22,.08),.28,emit=(.01,.12,.03),strength=.25)
 def root(n,x):r=empty(n,(x,0,0));r['fx_part']=n;return r
 def add(o,r):o.location.x-=r.location.x;o.parent=r;return o
 
+def join_local(name,objects,r,x):
+ ob=join_named(name,objects)
+ ob.location.x-=x;ob.parent=r
+ return ob
+
+def torn_sheet(name,loc,width,height,material,rot=(0,0,0)):
+ x,y,z=loc
+ # irregular deckled sheet silhouette: six uneven vertices with a torn upper edge.
+ verts=[(-.5,0,0),(.5,0,.02),(.52,0,height*.64),(.28,0,height*.92),(.05,0,height*.78),(-.22,0,height),(-.5,0,height*.72)]
+ verts=[(a*width,0,c*height) for a,y,c in verts]
+ faces=[(0,1,2,3,4,5,6)]
+ mesh=bpy.data.meshes.new(name+'_mesh');mesh.from_pydata(verts,[],faces);mesh.update()
+ o=bpy.data.objects.new(name,mesh);bpy.context.collection.objects.link(o);o.location=(x,y,z);o.rotation_euler=rot
+ sol=o.modifiers.new('paper_thickness','SOLIDIFY');sol.thickness=.004
+ bevel=o.modifiers.new('soft_torn_edge','BEVEL');bevel.width=.002;bevel.segments=1
+ assign(o,material)
+ return o
+
 def stack_bay(x):
  r=root('paper_stack_bay_root',x)
- add(box('stack_back',(.72,.10,5.4),(x,.04,2.7),PAPER2,.018,2),r)
- # compressed irregular paper lifts stacked directly on one another: a canyon wall of pages,
- # not a conventional bookcase with shelves and individual books.
- for layer in range(24):
-  z=.12+layer*.225+((layer*7)%5)*.008
-  w=.56+((layer*5)%7)*.025
-  d=.20+((layer*3)%5)*.018
-  h=.13+((layer*4)%6)*.014
-  xx=x+(((layer*11)%9)-4)*.008
-  yy=-.015+(((layer*13)%7)-3)*.006
-  rotz=(((layer*17)%11)-5)*.006
-  add(box('compressed_page_lift',(w,d,h),(xx,yy,z),PAPER if layer%2 else PAPER2,.006,2,rot=(0,0,rotz)),r)
-  # exposed dark laminated edge at the front of each lift
-  add(box('compressed_page_edge_line',(w*.92,.010,.010),(xx,yy-d*.54,z+h*.30),EDGE,.001,1,rot=(0,0,rotz)),r)
-  if layer%3==1:
-   # slipped loose signatures protrude unevenly from the compressed stack
+ add(box('stack_back',(.66,.075,5.35),(x,.055,2.68),PAPER2,.012,2),r)
+ slabs=[];lines=[];inserts=[]
+ # Thin compressed sheaves, not wooden beams: many shallow lifts with ragged widths,
+ # uneven offsets and fine exposed page-edge striations.
+ for layer in range(46):
+  z=.08+layer*.108+((layer*7)%5)*.004
+  w=.48+((layer*5)%9)*.018+((layer*11)%5)*.010
+  d=.17+((layer*3)%7)*.012
+  h=.052+((layer*4)%6)*.008
+  xx=x+(((layer*11)%13)-6)*.006
+  yy=-.005+(((layer*13)%9)-4)*.005
+  rotz=(((layer*17)%11)-5)*.009
+  slabs.append(box('compressed_thin_sheave',(w,d,h),(xx,yy,z),PAPER if layer%3 else PAPER2,.0025,1,rot=(0,0,rotz)))
+  # one dark compressed cut line and a lighter sheet line make each lift visibly laminated
+  lines.append(box('compressed_page_edge_line',(w*.94,.008,.006),(xx,yy-d*.54,z+h*.28),EDGE,.0005,1,rot=(0,0,rotz)))
+  if layer%2==0:
+   lines.append(box('individual_sheet_edge',(w*(.78+((layer*3)%5)*.035),.006,.004),(xx+(((layer*7)%7)-3)*.008,yy-d*.55,z-h*.18),PAPER,.0004,1,rot=(0,0,rotz)))
+  if layer%4==1:
    sx=x-.24+((layer*5)%6)*.09
-   add(box('protruding_loose_signature',(.18,.028,.16),(sx,-.155,z+.03),PAPER,.002,1,rot=(.05,0,(((layer*3)%7)-3)*.04)),r)
-  if layer%4==2:
-   # vertical leaning card pieces break the horizontal barcode rhythm
-   sx=x-.27+((layer*7)%8)*.07
-   add(box('leaning_card_insert',(.045,.15,.34),(sx,-.03,z+.12),PAPER2,.003,1,rot=(0,.08,(((layer*5)%7)-3)*.08)),r)
-  if layer%5==0:
-   add(box('paper_layer_line',(.62,.012,.008),(x,-.155,z+.10),PAPER,.001),r)
+   inserts.append(box('protruding_loose_signature',(.16,.020,.13),(sx,-.145,z+.025),PAPER,.0015,1,rot=(.04,0,(((layer*3)%7)-3)*.045)))
+  if layer%5==2:
+   sx=x-.25+((layer*7)%8)*.065
+   inserts.append(box('leaning_card_insert',(.038,.13,.27),(sx,-.025,z+.10),PAPER2,.002,1,rot=(0,.07,(((layer*5)%7)-3)*.075)))
+ join_local('compressed_thin_page_sheaves',slabs,r,x)
+ join_local('dense_compressed_page_edges',lines,r,x)
+ join_local('slipped_signatures_and_cards',inserts,r,x)
+ # torn sheets crown the bay so the skyline reads as paper instead of machined timber.
+ tops=[]
+ for i in range(5):
+  xx=x-.25+i*.12+(((i*7)%5)-2)*.008
+  hh=.38+((i*11)%5)*.085
+  tops.append(torn_sheet('torn_top_sheet',(xx,-.035+((i*3)%5)*.012,4.86+((i*5)%4)*.055),.11+((i*3)%4)*.025,hh,PAPER if i%2 else PAPER2,rot=(0,(((i*5)%7)-3)*.035,(((i*7)%9)-4)*.04)))
+ join_local('torn_sheet_top_profile',tops,r,x)
  add(box('bay_index_label',(.24,.018,.12),(x,-.16,2.20),PAPER,.004),r)
  add(box('bay_red_bookmark',(.035,.012,.46),(x+.19,-.17,3.05),RED,.003),r)
  return r

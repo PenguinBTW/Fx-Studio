@@ -14,17 +14,19 @@ function paperFiberTexture() {
   const g = c.getContext('2d')!;
   const img = g.createImageData(size, size);
   for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
-    const n = hash(x * 0.173 + y * 3.71) * 30 + Math.sin(y * 0.55 + hash(x) * 2) * 7 + Math.sin((x + y) * 0.07) * 6;
-    const stain = Math.max(0, Math.sin(x * 0.021 + y * 0.013) - 0.72) * 42;
-    const v = 214 + n - stain - (hash(x * 4.1 + y * 0.37) > 0.975 ? 34 : 0);
+    const n = hash(x * 0.173 + y * 3.71) * 20 + Math.sin((x - y) * 0.09) * 4 + Math.sin((x + y) * 0.043) * 4;
+    const stain = Math.max(0, Math.sin(x * 0.017 + y * 0.011) - 0.76) * 30;
+    const v = 220 + n - stain - (hash(x * 4.1 + y * 0.37) > 0.982 ? 24 : 0);
     const id = (y * size + x) * 4;
-    img.data[id] = img.data[id + 1] = img.data[id + 2] = Math.max(105, Math.min(255, v)); img.data[id + 3] = 255;
+    img.data[id] = img.data[id + 1] = img.data[id + 2] = Math.max(135, Math.min(255, v)); img.data[id + 3] = 255;
   }
   g.putImageData(img, 0, 0);
-  for (let i = 0; i < 180; i++) {
-    const y = hash(i * 2.17) * size, x = hash(i * 5.91) * size, len = 8 + hash(i) * 34;
-    g.strokeStyle = `rgba(72,54,34,${0.035 + hash(i + 4) * 0.07})`; g.lineWidth = 0.45 + hash(i + 2) * 0.65;
-    g.beginPath(); g.moveTo(x, y); g.lineTo(x + len, y + (hash(i + 7) - 0.5) * 3); g.stroke();
+  // Paper fibres are short and directionally scattered. Long strictly horizontal strokes read as wood grain at distance.
+  for (let i = 0; i < 240; i++) {
+    const y = hash(i * 2.17) * size, x = hash(i * 5.91) * size, len = 2.5 + hash(i) * 12;
+    const a = hash(i * 8.3) * Math.PI * 2;
+    g.strokeStyle = `rgba(72,54,34,${0.018 + hash(i + 4) * 0.042})`; g.lineWidth = 0.35 + hash(i + 2) * 0.5;
+    g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len); g.stroke();
   }
   for (let i = 0; i < 55; i++) {
     g.fillStyle = `rgba(92,70,42,${0.05 + hash(i) * 0.08})`;
