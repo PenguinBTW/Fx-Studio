@@ -764,7 +764,7 @@ wav('z7_cathedral_events.wav', stem(45.8,(t)=>{
    add(fracture,0);
    const cell=Math.floor(u*18);
    const cu=(u*18-cell)/18;
-   if(cu<.09)add((noise()*.038+Math.sin(cu*Math.PI*2*(240+hash01(cell,22)*420))*.010)*Math.exp(-cu*55)*(1-smoothstep(3.2,4.4,u)),(hash01(cell,23)-.5)*.75);
+   if(cu<.045)add((noise()*.038+Math.sin(cu*Math.PI*2*(240+hash01(cell,22)*420))*.010)*Math.exp(-cu*55)*(1-smoothstep(3.2,4.4,u)),(hash01(cell,23)-.5)*.75);
  }
  // intermittent vending-machine topples: heavy shell/sub impact, glass spray, then long staggered nave tails
  for(const [hit,pan] of[[176.4,-.45],[178.1,.42],[180.0,-.36],[182.2,.38],[184.4,-.28]] as const){
@@ -780,7 +780,7 @@ wav('z7_cathedral_events.wav', stem(45.8,(t)=>{
      }
      const glassCell=Math.floor(u*34);
      const gu=(u*34-glassCell)/34;
-     if(u<1.45&&gu<.055&&hash01(glassCell+hit,24)<.72){
+     if(u<1.45&&gu<.022&&hash01(glassCell+hit,24)<.72){
        const hz=1450+hash01(glassCell,25)*2900;
        add((noise()*.032+Math.sin(gu*Math.PI*2*hz)*.010)*Math.exp(-gu*95),pan+(hash01(glassCell,26)-.5)*.62);
      }
