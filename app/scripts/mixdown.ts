@@ -21,6 +21,8 @@ import {
   applyVocalSanctuary,
   applySplitBandDuck,
   applyLookaheadLimiter,
+  applyLowLevelLift,
+  applyDownwardCompressor,
   applyPreDropVacuum,
 } from '../src/engine/audio';
 
@@ -77,7 +79,7 @@ export interface MixManifest {
   vocalSanctuary?: { centerHz?: number; q?: number; cutDb?: number };
   mutes?: MixMute[];
   /** fadeOut: linear master fade over [at, at + dur] in project time (s), applied after loudnorm. */
-  master?: { lufs?: number; truePeak?: number; normalize?: boolean; limiterLookaheadMs?: number; limiter?: boolean; fadeOut?: { at: number; dur: number } };
+  master?: { lufs?: number; truePeak?: number; normalize?: boolean; limiterLookaheadMs?: number; limiter?: boolean; fadeOut?: { at: number; dur: number }; lowLevelLift?: { thresholdDb?: number; ratio?: number; maxLiftDb?: number }; downwardCompress?: { thresholdDb?: number; ratio?: number } };
   /** Optional second output: foley_guide bus only. */
   foleyGuide?: { out?: string };
 }
@@ -105,8 +107,11 @@ export interface MixReport {
   cues: Array<{ stem: string; eventId?: string; expectedT: number; onset: number }>;
   duck: Array<{ cue: string; t: number; hold: number }>;
   loudnorm?: Record<string, string>;
+  lowLevelLift?: Record<string, string>;
+  downwardCompress?: Record<string, string>;
   measuredTruePeak?: string;
   measuredTruePeakPreTrim?: string;
+  limiterInputMarginDb?: string;
   truePeakTrimDb?: string;
   truePeakFinalTrimDb?: string;
   out: string;
@@ -491,12 +496,29 @@ export async function mixdown(o: MixOptions): Promise<MixReport> {
     let master: Float32Array = pre;
     const m = manifest.master ?? {};
     const hasSignal = pre.some((v) => v !== 0);
+    if (m.lowLevelLift && hasSignal) {
+      const lift = m.lowLevelLift;
+      master = applyLowLevelLift(master, lift.thresholdDb ?? -30, lift.ratio ?? 2, lift.maxLiftDb ?? 12, sr);
+      report.lowLevelLift = {
+        thresholdDb: (lift.thresholdDb ?? -30).toFixed(2),
+        ratio: (lift.ratio ?? 2).toFixed(2),
+        maxLiftDb: (lift.maxLiftDb ?? 12).toFixed(2),
+      };
+    }
+    if (m.downwardCompress && hasSignal) {
+      const comp = m.downwardCompress;
+      master = applyDownwardCompressor(master, comp.thresholdDb ?? -30, comp.ratio ?? 2, sr);
+      report.downwardCompress = {
+        thresholdDb: (comp.thresholdDb ?? -30).toFixed(2),
+        ratio: (comp.ratio ?? 2).toFixed(2),
+      };
+    }
     if ((m as any).normalize !== false && hasSignal) {
       const I = m.lufs ?? -14;
       // Internal true-peak ceiling sits 0.5 dB under the requested one to absorb the 192k->48k resample.
       const tp = (m.truePeak ?? -1) - 0.5;
       const preWav = path.join(tmp, 'pre.wav');
-      writeWav(preWav, pre, sr, 32);
+      writeWav(preWav, master, sr, 32);
       const p1 = await run(['ffmpeg', '-hide_banner', '-nostats', '-i', preWav, '-af', `loudnorm=I=${I}:TP=${tp}:LRA=11:print_format=json`, '-f', 'null', '-']);
       const ms = parseLoudnormJson(p1.err);
       // loudnorm's linear mode refuses high-dynamic-range cinema mixes (hard silence
@@ -507,8 +529,7 @@ export async function mixdown(o: MixOptions): Promise<MixReport> {
       const inputI = Number.parseFloat(ms.input_i);
       const gainDb = Number.isFinite(inputI) ? I - inputI : 0;
       const gain = Math.pow(10, gainDb / 20);
-      master = new Float32Array(frames * CH);
-      for (let i = 0; i < master.length; i++) master[i] = pre[i]! * gain;
+      for (let i = 0; i < master.length; i++) master[i] = master[i]! * gain;
       report.loudnorm = {
         ...ms,
         applied_gain_db: gainDb.toFixed(2),
@@ -517,21 +538,28 @@ export async function mixdown(o: MixOptions): Promise<MixReport> {
     } else if (!hasSignal) {
       log('[mixdown] mix is silent: skipping loudnorm');
     }
-    // Master Lookahead Limiter to strictly guarantee true-peak compliance
+    // Master lookahead limiter. Sample-peak limiting alone can still overshoot after
+    // ffmpeg's 192 kHz true-peak reconstruction, so iterate the deterministic limiter
+    // input ceiling downward until the reconstructed waveform complies. This preserves
+    // more loudness than a global post-limiter trim while keeping the ceiling strict.
     if (m.limiter !== false && hasSignal) {
       const tpCeiling = m.truePeak ?? -1.0;
       const lookaheadMs = m.limiterLookaheadMs ?? 1.5;
-      master = applyLookaheadLimiter(master, tpCeiling, lookaheadMs, sr);
-
-      // Verify the reconstructed waveform, not just sample values. ffmpeg loudnorm measures
-      // true peak at 192kHz; if the lookahead limiter's interpolation estimate still misses,
-      // trim once by the measured excess. This keeps the ceiling strict without extra compression.
+      const preLimit = new Float32Array(master);
       const limitedWav = path.join(tmp, 'limited.wav');
-      writeWav(limitedWav, master, sr, 32);
-      const tpMeasure = await run(['ffmpeg', '-hide_banner', '-nostats', '-i', limitedWav, '-af', 'loudnorm=I=-14:TP=-1:LRA=11:print_format=json', '-f', 'null', '-']);
-      const tpMs = parseLoudnormJson(tpMeasure.err);
-      const measuredTp = Number.parseFloat(tpMs.input_tp);
-      report.measuredTruePeakPreTrim = tpMs.input_tp;
+      let marginDb = 0;
+      let measuredTp = Infinity;
+      for (let attempt = 0; attempt < 4; attempt++) {
+        master = applyLookaheadLimiter(preLimit, tpCeiling - marginDb, lookaheadMs, sr);
+        writeWav(limitedWav, master, sr, 32);
+        const tpMeasure = await run(['ffmpeg', '-hide_banner', '-nostats', '-i', limitedWav, '-af', 'loudnorm=I=-14:TP=-1:LRA=11:print_format=json', '-f', 'null', '-']);
+        const tpMs = parseLoudnormJson(tpMeasure.err);
+        measuredTp = Number.parseFloat(tpMs.input_tp);
+        report.measuredTruePeakPreTrim = tpMs.input_tp;
+        if (!Number.isFinite(measuredTp) || measuredTp <= tpCeiling) break;
+        marginDb += measuredTp - tpCeiling + 0.22;
+      }
+      report.limiterInputMarginDb = marginDb.toFixed(2);
       if (Number.isFinite(measuredTp) && measuredTp > tpCeiling) {
         const trimDb = tpCeiling - measuredTp - 0.05;
         const trim = Math.pow(10, trimDb / 20);

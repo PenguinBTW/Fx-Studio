@@ -113,7 +113,13 @@ export interface BusConfig {
 export interface MasterConfig {
   lufs?: number;
   truePeak?: number;
+  normalize?: boolean;
+  limiter?: boolean;
   limiterLookaheadMs?: number;
+  fadeOut?: { at: number; dur: number };
+  /** Optional upward compression that raises room-tone/negative-space floor before loudness normalization. */
+  lowLevelLift?: { thresholdDb?: number; ratio?: number; maxLiftDb?: number };
+  downwardCompress?: { thresholdDb?: number; ratio?: number };
 }
 
 export interface MixStemConfig {

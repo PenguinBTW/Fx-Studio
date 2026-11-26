@@ -52,7 +52,7 @@ export default defineMix({
   duck: {
     bus: 'ambient',
     cues: ['z2_freeze_duck_key'],
-    amountDb: 9,
+    amountDb: 6,
     attack: 0.012,
     release: 0.28,
     hold: 0.5,
@@ -63,5 +63,11 @@ export default defineMix({
     // T4 page-slam true-black pause: normalized 0.20-0.333 of the 0.6s window.
     { id: 't4_page_slam_silence', from: 104.82, to: 104.90 },
   ],
-  master: { lufs: -16, truePeak: -1.2, limiterLookaheadMs: 5 },
+  master: {
+    lufs: -14,
+    truePeak: -1.2,
+    limiterLookaheadMs: 5,
+    lowLevelLift: { thresholdDb: -24, ratio: 1.7, maxLiftDb: 16 },
+    downwardCompress: { thresholdDb: -34, ratio: 2.0 },
+  },
 });

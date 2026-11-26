@@ -40,7 +40,7 @@ const BODY: Record<ThresholdTransitionMode, string> = {
     vec3 c = mix(daylight, cb, revealB);
     float crack = (1.0 - smoothstep(0.018, 0.048, abs(q.x))) * (1.0 - smoothstep(0.55, 0.86, abs(q.y)));
     float doorStile = (1.0 - smoothstep(0.012, 0.04, abs(abs(q.x) - width * 0.72))) * (1.0 - smoothstep(0.46, 0.82, abs(q.y)));
-    float darkEdge = clamp(crack + doorStile * 0.45, 0.0, 1.0) * (1.0 - eyeAdapt) * smoothstep(0.04, 0.18, u);
+    float darkEdge = clamp(crack + doorStile * 0.45, 0.0, 1.0) * (1.0 - eyeAdapt) * smoothstep(0.04, 0.18, u) * (1.0 - smoothstep(0.30, 0.46, u));
     c = mix(c, vec3(0.006, 0.004, 0.003), darkEdge * 0.92);
     c += vec3(1.0, 0.78, 0.42) * edge * 0.18;
     c = mix(ca, c, smoothstep(0.0, 0.10, u));
@@ -50,11 +50,30 @@ const BODY: Record<ThresholdTransitionMode, string> = {
     float r = length(q);
     vec3 ca = texture(texA, vUv).rgb;
     vec3 cb = texture(texB, vUv).rgb;
-    float ribs = 0.5 + 0.5 * sin((r * 34.0 - u * 18.0) * TAU);
-    float portal = smoothstep(u * 0.72 - 0.08, u * 0.72 + 0.08, r);
-    vec3 grout = vec3(0.04, 0.16, 0.20) * (0.45 + 0.55 * ribs);
-    vec3 c = mix(cb, ca, portal);
-    c = mix(c, grout, (1.0 - smoothstep(0.0, 1.0, abs(u - 0.5) * 2.0)) * 0.35);
+    // Material morph rather than a ghosted dissolve: the outgoing playroom surface
+    // ceramicizes into pool tile in a ragged expanding shell, then the incoming pool
+    // is revealed behind the shell's hard leading edge.
+    float openRadius = mix(-0.18, 1.28, smoothstep(0.02, 0.98, u));
+    float rag = (fbm(vUv * vec2(7.0, 5.0) + vec2(u * 0.27, -u * 0.18), 4) - 0.5) * 0.115;
+    float rn = r + rag;
+    float inside = 1.0 - smoothstep(openRadius, openRadius + 0.014, rn);
+    float morphK = smoothstep(openRadius - 0.26, openRadius, rn);
+    vec2 tileUv = q * vec2(8.0, 10.0) + vec2(0.0, u * 0.32);
+    vec2 cell = floor(tileUv);
+    vec2 cellUv = fract(tileUv);
+    float edgeDist = min(min(cellUv.x, 1.0 - cellUv.x), min(cellUv.y, 1.0 - cellUv.y));
+    float groutLine = 1.0 - smoothstep(0.026, 0.055, edgeDist);
+    float lum = dot(ca, vec3(0.2126, 0.7152, 0.0722));
+    float shade = hash12(cell) * 0.24 + lum * 0.58;
+    vec3 tileCol = mix(vec3(0.010, 0.040, 0.052), vec3(0.032, 0.205, 0.245), shade);
+    vec3 groutCol = vec3(0.006, 0.015, 0.018);
+    vec3 tile = mix(tileCol, groutCol, groutLine);
+    float caustic = pow(0.5 + 0.5 * sin((q.x * 5.2 + q.y * 8.4 + u * 2.8) * TAU), 3.0) * 0.11;
+    tile += vec3(0.015, 0.11, 0.13) * caustic;
+    vec3 morphedA = mix(tile, ca, morphK);
+    vec3 c = mix(morphedA, cb, inside);
+    float lip = (1.0 - smoothstep(0.0, 0.026, abs(rn - openRadius))) * smoothstep(0.02, 0.12, u) * (1.0 - smoothstep(0.88, 1.0, u));
+    c = mix(c, groutCol * 1.8, lip * 0.62);
     fragColor = vec4(c, 1.0);`,
   ink: `
     vec3 ca = texture(texA, vUv).rgb;

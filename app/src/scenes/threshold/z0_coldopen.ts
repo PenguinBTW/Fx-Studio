@@ -37,25 +37,31 @@ export const COLD_OPEN_REPLAY = { z7Start: 171.3, z7BeamDead: 173.4, z7End: 174.
 export function coldOpenArmReference(t: number, pose: FPPose) {
   const local = clamp(t, 0, 4);
   const reach = sm(2.4, 3.25, local);
-  const dist = lerp(5.8, 3.6, reach);
-  const right = 0.55;
-  const towardLen = Math.hypot(-pose.forward[0] + pose.right[0] * 0.85, -pose.forward[2] + pose.right[2] * 0.85) || 1;
+  const dist = lerp(5.8, 4.42, reach);
+  const side = lerp(0.72, 0.38, reach);
+  const position: [number, number, number] = [
+    pose.pos[0] + pose.forward[0] * dist + pose.right[0] * side,
+    pose.pos[1] + 0.02 + 0.62 * (1 - reach) + 0.34 * reach,
+    pose.pos[2] + pose.forward[2] * dist + pose.right[2] * side,
+  ];
+  // The five-coil hand converges on a point 30 cm in front of the lens. Aiming the
+  // actual root-to-target vector (rather than a horizontal approximation) keeps the
+  // finger fan inside the beam instead of letting it fall out of the low fallen-camera frame.
+  const target: [number, number, number] = [
+    pose.pos[0] + pose.forward[0] * 0.3 + pose.right[0] * 0.035,
+    pose.pos[1] + 0.055,
+    pose.pos[2] + pose.forward[2] * 0.3 + pose.right[2] * 0.035,
+  ];
+  const toward: [number, number, number] = [target[0] - position[0], target[1] - position[1], target[2] - position[2]];
+  const towardLen = Math.hypot(toward[0], toward[1], toward[2]) || 1;
   return {
     reach,
     visible: local > 1.15 && local < 3.32,
-    position: [
-      pose.pos[0] + pose.forward[0] * dist + pose.right[0] * right,
-      pose.pos[1] + 0.02 + 0.62 * (1 - reach) + 0.34 * reach,
-      pose.pos[2] + pose.forward[2] * dist + pose.right[2] * right,
-    ] as [number, number, number],
-    towardCamera: [
-      (-pose.forward[0] + pose.right[0] * 0.85) / towardLen,
-      0,
-      (-pose.forward[2] + pose.right[2] * 0.85) / towardLen,
-    ] as [number, number, number],
-    rotateX: 0.1 * reach,
-    rotateY: -0.28 * reach,
-    rotateZ: 0.16 * reach,
+    position,
+    towardCamera: [toward[0] / towardLen, toward[1] / towardLen, toward[2] / towardLen] as [number, number, number],
+    rotateX: 0.018 * reach,
+    rotateY: -0.035 * reach,
+    rotateZ: 0.055 * reach,
     scale: lerp(1.05, 1.85, reach),
   };
 }
@@ -87,7 +93,7 @@ export default class Z0ColdOpen extends Scene {
   override async init() {
     this.scene3d.background = new THREE.Color(0.0004, 0.0005, 0.0008);
     this.scene3d.fog = new THREE.FogExp2(0x020308, 0.035);
-    const floorMat = new THREE.MeshStandardMaterial({ color: 0x111923, roughness: 0.68, metalness: 0.18, emissive: 0x01070b, emissiveIntensity: 0.35 });
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0x182b3e, roughness: 0.2, metalness: 0.5, emissive: 0x061622, emissiveIntensity: 0.72 });
     const floor = new THREE.Mesh(new THREE.BoxGeometry(9, 0.12, 190), floorMat);
     floor.position.set(0, -0.06, -70);
     floor.receiveShadow = true;
@@ -204,6 +210,32 @@ export default class Z0ColdOpen extends Scene {
       this.scene3d.add(strip);
     }
 
+    // Polished-black-floor reflection catches: broken cyan/amber streaks under the
+    // vending rows and ceiling tubes. They are geometric floor-plane glints, not a screen overlay.
+    const reflGeom = new THREE.PlaneGeometry(0.28, 2.65);
+    for (const side of [-1, 1]) for (let row = 0; row < 18; row++) {
+      const warm = row % 5 === 0;
+      const reflMat = new THREE.MeshBasicMaterial({
+        color: warm ? 0xffa864 : 0x58c7ff,
+        transparent: true,
+        opacity: warm ? 0.12 : 0.16,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
+      const refl = new THREE.Mesh(reflGeom, reflMat);
+      refl.rotation.x = -Math.PI / 2;
+      refl.position.set(side * (1.54 + 0.05 * hash(row * 3.1)), 0.012, 3.15 - row * 3.2);
+      refl.scale.x = 0.55 + hash(row * 7.4) * 0.75;
+      this.scene3d.add(refl);
+    }
+    const centerReflMat = new THREE.MeshBasicMaterial({ color: 0x4b9dcc, transparent: true, opacity: 0.13, blending: THREE.AdditiveBlending, depthWrite: false });
+    for (let k = 0; k < 16; k++) {
+      const refl = new THREE.Mesh(new THREE.PlaneGeometry(0.18, 3.8), centerReflMat);
+      refl.rotation.x = -Math.PI / 2;
+      refl.position.set((hash(k * 8.3) - 0.5) * 0.55, 0.014, 1.5 - k * 8);
+      this.scene3d.add(refl);
+    }
+
     // Sparse room-scale dust gives the cathedral air parallax without continuous beam sheets.
     this.ambientDust = createDriftParticles({
       kind: 'dust',
@@ -219,13 +251,13 @@ export default class Z0ColdOpen extends Scene {
     this.tenantInst = await GLTFManager.instantiate(resolveAsset('tenant_arm', this.ctx.project ?? 'threshold').url, {});
     this.arm = new THREE.Group();
     this.arm.add(this.tenantInst.root);
-    const machineGlint = new THREE.PointLight(0x7fc9ff, 1.8, 3.0, 1.6);
+    const machineGlint = new THREE.PointLight(0x7fc9ff, 3.2, 4.2, 1.45);
     machineGlint.position.set(-0.18, 0.18, -0.95);
     this.arm.add(machineGlint);
-    const fingerGlint = new THREE.PointLight(0xffc28a, 3.4, 3.4, 1.8);
+    const fingerGlint = new THREE.PointLight(0xffc28a, 6.2, 4.6, 1.55);
     fingerGlint.position.set(0.06, 0.08, -1.92);
     this.arm.add(fingerGlint);
-    const rimGlint = new THREE.PointLight(0x9fdcff, 2.2, 3.0, 1.9);
+    const rimGlint = new THREE.PointLight(0x9fdcff, 4.0, 4.0, 1.65);
     rimGlint.position.set(-0.36, 0.32, -1.25);
     this.arm.add(rimGlint);
     this.tenantInst.root.traverse((obj) => {
@@ -234,14 +266,18 @@ export default class Z0ColdOpen extends Scene {
       const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
       for (const m of mats) {
         if (!(m instanceof THREE.MeshStandardMaterial)) continue;
-        if (m.name === 'TenantChrome') { m.emissive.setHex(0x182230); m.emissiveIntensity = 0.28; m.roughness = 0.2; }
-        if (m.name === 'TenantPoolTile') { m.emissive.setHex(0x07191e); m.emissiveIntensity = 0.12; }
+        if (m.name === 'TenantChrome') { m.emissive.setHex(0x243548); m.emissiveIntensity = 0.55; m.roughness = 0.16; }
+        if (m.name === 'TenantPoolTile') { m.emissive.setHex(0x0b2830); m.emissiveIntensity = 0.38; }
+        if (m.name === 'TenantPaper') { m.emissive.setHex(0x2a1607); m.emissiveIntensity = 0.28; }
+        if (m.name === 'TenantFelt') { m.emissive.setHex(0x2a0503); m.emissiveIntensity = 0.32; }
       }
     });
+
+    // Coil geometry now lives in the shared tenant_arm GLB so Z0 and the exact Z7 replay use the same fingers.
     this.arm.visible = false;
     this.scene3d.add(this.arm);
     this.scene3d.add(this.flash.group);
-    const ambient = new THREE.HemisphereLight(0x355a78, 0x050404, 0.72);
+    const ambient = new THREE.HemisphereLight(0x456f91, 0x080606, 1.05);
     this.scene3d.add(ambient);
   }
 

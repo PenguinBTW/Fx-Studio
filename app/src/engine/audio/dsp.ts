@@ -219,7 +219,101 @@ export function applySplitBandDuck(
 }
 
 /**
- * 3. Lookahead True Peak Limiter:
+ * 3. Upward Low-Level Lift:
+ * Stereo-linked upward compressor for cinematic negative-space mixes. Quiet beds and room
+ * tone are raised toward the loudness floor while transient-heavy passages pass at unity gain.
+ * The finite gain never creates signal in digital-zero hard mutes.
+ *
+ * @param pcm Input Float32Array PCM buffer (mono or interleaved stereo).
+ * @param thresholdDb Envelope level below which upward compression engages.
+ * @param ratio Upward compression ratio; 2 means half the deficit is restored.
+ * @param maxLiftDb Maximum low-level gain in dB.
+ * @param sampleRate Audio processing sample rate (Hz).
+ */
+export function applyLowLevelLift(
+  pcm: Float32Array,
+  thresholdDb: number = -30,
+  ratio: number = 2,
+  maxLiftDb: number = 12,
+  sampleRate: number = 48000,
+): Float32Array {
+  const totalSamples = pcm.length;
+  if (totalSamples === 0) return new Float32Array(0);
+  const isStereo = totalSamples % 2 === 0;
+  const frames = isStereo ? totalSamples / 2 : totalSamples;
+  const output = new Float32Array(totalSamples);
+  const attackAlpha = 1 - Math.exp(-1 / (sampleRate * 0.008));
+  const releaseAlpha = 1 - Math.exp(-1 / (sampleRate * 0.240));
+  const gainAlpha = 1 - Math.exp(-1 / (sampleRate * 0.025));
+  const maxLift = Math.pow(10, maxLiftDb / 20);
+  const restore = 1 - 1 / Math.max(1, ratio);
+  let envelope = 1e-12;
+  let gain = 1;
+  for (let f = 0; f < frames; f++) {
+    const l = pcm[isStereo ? f * 2 : f] ?? 0;
+    const r = isStereo ? (pcm[f * 2 + 1] ?? 0) : l;
+    const power = (l * l + r * r) * 0.5;
+    envelope += (power > envelope ? attackAlpha : releaseAlpha) * (power - envelope);
+    const levelDb = 10 * Math.log10(envelope + 1e-12);
+    const deficit = thresholdDb - levelDb;
+    const liftDb = deficit > 0 ? Math.min(maxLiftDb, deficit * restore) : 0;
+    const targetGain = Math.min(maxLift, Math.pow(10, liftDb / 20));
+    gain += gainAlpha * (targetGain - gain);
+    if (isStereo) {
+      output[f * 2] = l * gain;
+      output[f * 2 + 1] = r * gain;
+    } else {
+      output[f] = l * gain;
+    }
+  }
+  return output;
+}
+
+/**
+ * 4. Stereo-linked Downward Compressor:
+ * Gentle mastering compression for transient-rich cinema mixes. Gain is linked across
+ * channels and follows a smoothed RMS envelope, preserving stereo image and avoiding
+ * the hard clipping/flattening of a peak-only limiter.
+ */
+export function applyDownwardCompressor(
+  pcm: Float32Array,
+  thresholdDb: number = -30,
+  ratio: number = 2,
+  sampleRate: number = 48000,
+): Float32Array {
+  const totalSamples = pcm.length;
+  if (totalSamples === 0) return new Float32Array(0);
+  const isStereo = totalSamples % 2 === 0;
+  const frames = isStereo ? totalSamples / 2 : totalSamples;
+  const output = new Float32Array(totalSamples);
+  const attackAlpha = 1 - Math.exp(-1 / (sampleRate * 0.006));
+  const releaseAlpha = 1 - Math.exp(-1 / (sampleRate * 0.180));
+  const gainAttack = 1 - Math.exp(-1 / (sampleRate * 0.004));
+  const gainRelease = 1 - Math.exp(-1 / (sampleRate * 0.140));
+  let envelope = 1e-12;
+  let gain = 1;
+  for (let f = 0; f < frames; f++) {
+    const l = pcm[isStereo ? f * 2 : f] ?? 0;
+    const r = isStereo ? (pcm[f * 2 + 1] ?? 0) : l;
+    const power = (l * l + r * r) * 0.5;
+    envelope += (power > envelope ? attackAlpha : releaseAlpha) * (power - envelope);
+    const levelDb = 10 * Math.log10(envelope + 1e-12);
+    const excess = Math.max(0, levelDb - thresholdDb);
+    const reductionDb = excess * (1 - 1 / Math.max(1, ratio));
+    const targetGain = Math.pow(10, -reductionDb / 20);
+    gain += (targetGain < gain ? gainAttack : gainRelease) * (targetGain - gain);
+    if (isStereo) {
+      output[f * 2] = l * gain;
+      output[f * 2 + 1] = r * gain;
+    } else {
+      output[f] = l * gain;
+    }
+  }
+  return output;
+}
+
+/**
+ * 5. Lookahead True Peak Limiter:
  * Professional mastering lookahead peak limiter with fast attack, smooth exponential release,
  * and strict True Peak ceiling enforcement to prevent inter-sample overs and DAC clipping.
  *
