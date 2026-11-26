@@ -106,6 +106,7 @@ export interface MixReport {
   duck: Array<{ cue: string; t: number; hold: number }>;
   loudnorm?: Record<string, string>;
   measuredTruePeak?: string;
+  measuredTruePeakPreTrim?: string;
   truePeakTrimDb?: string;
   out: string;
   foleyOut?: string;
@@ -525,13 +526,17 @@ export async function mixdown(o: MixOptions): Promise<MixReport> {
       const tpMeasure = await run(['ffmpeg', '-hide_banner', '-nostats', '-i', limitedWav, '-af', 'loudnorm=I=-14:TP=-1:LRA=11:print_format=json', '-f', 'null', '-']);
       const tpMs = parseLoudnormJson(tpMeasure.err);
       const measuredTp = Number.parseFloat(tpMs.input_tp);
+      report.measuredTruePeakPreTrim = tpMs.input_tp;
       if (Number.isFinite(measuredTp) && measuredTp > tpCeiling) {
         const trimDb = tpCeiling - measuredTp - 0.05;
         const trim = Math.pow(10, trimDb / 20);
         for (let i = 0; i < master.length; i++) master[i] *= trim;
         report.truePeakTrimDb = trimDb.toFixed(2);
       }
-      report.measuredTruePeak = tpMs.input_tp;
+      const finalWav = path.join(tmp, 'limited_final.wav');
+      writeWav(finalWav, master, sr, 32);
+      const finalMeasure = await run(['ffmpeg', '-hide_banner', '-nostats', '-i', finalWav, '-af', 'loudnorm=I=-14:TP=-1:LRA=11:print_format=json', '-f', 'null', '-']);
+      report.measuredTruePeak = parseLoudnormJson(finalMeasure.err).input_tp;
     }
     applyGate(master, regions);
     if (m.fadeOut && m.fadeOut.dur > 0) {
