@@ -63,7 +63,7 @@ export default class ThresholdEndscreen extends Scene {
 
     const fluorescent = new THREE.PointLight(0xc9ffd2, 0.55, 9, 1.8);
     fluorescent.position.set(-0.8, 2.35, -5.5);
-    this.s.add(fluorescent, new THREE.AmbientLight(0x1e241d, 0.5));
+    this.s.add(fluorescent, new THREE.AmbientLight(0x1e241d, 0.8));
   }
 
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
@@ -79,7 +79,7 @@ export default class ThresholdEndscreen extends Scene {
     const ring = ringPhase < 1.1 ? Math.max(0, Math.sin(ringPhase * Math.PI * 8)) : 0;
     this.receiver.position.y = 1.0 + ring * 0.012;
     this.receiver.rotation.z = 0.05 + ring * 0.04;
-    this.tubeMats.forEach((m, i) => { m.emissiveIntensity = 0.32 + 0.12 * hash(Math.floor(t * 4) + i * 7); });
+    this.tubeMats.forEach((m, i) => { m.emissiveIntensity = 0.55 + 0.16 * hash(Math.floor(t * 4) + i * 7); });
 
     const rr = this.ctx.renderer;
     rr.setRenderTarget(out);
@@ -87,7 +87,7 @@ export default class ThresholdEndscreen extends Scene {
     rr.clear(true, true, true);
     rr.render(this.s, this.cam);
     rr.resetState();
-    return { exposure: 0.42, bloom: 0.1, bloomThreshold: 1.1, vignette: 0.4, grain: 0.04, ca: 0.08 };
+    return { exposure: 0.66, bloom: 0.1, bloomThreshold: 1.1, vignette: 0.4, grain: 0.04, ca: 0.08 };
   }
 
   override dispose() {
