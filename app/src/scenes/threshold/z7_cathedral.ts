@@ -167,6 +167,8 @@ export default class ThresholdZ7Cathedral extends Scene {
   private machineBodies!: THREE.InstancedMesh;
   private machineFronts!: THREE.InstancedMesh;
   private machineFrames!: THREE.InstancedMesh;
+  private machineCarcasses?: THREE.InstancedMesh;
+  private machineShelves?: THREE.InstancedMesh;
   private machineProducts?: THREE.InstancedMesh;
   private machineData: { x: number; y: number; z: number; side: number; row: number; lev: number; seed: number }[] = [];
   private heroMachinesL?: GLTFInstance;
@@ -377,26 +379,24 @@ export default class ThresholdZ7Cathedral extends Scene {
     const rows = 62;
     const levels = 18;
     const count = rows * levels * 2;
-    const bodyGeo = new THREE.BoxGeometry(0.86, 2.2, 2.55);
-    const frontGeo = new THREE.BoxGeometry(0.08, 1.65, 1.9);
-    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x161b22, roughness: 0.38, metalness: 0.6 });
+    const bodyGeo = new THREE.BoxGeometry(0.14, 2.02, 2.34);
+    const frontGeo = new THREE.BoxGeometry(0.035, 1.65, 1.9);
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x111820, roughness: 0.46, metalness: 0.62, emissive: 0x02070c, emissiveIntensity: 0.14 });
     const frontCanvas = document.createElement('canvas');
     frontCanvas.width = 64; frontCanvas.height = 128;
     const fg = frontCanvas.getContext('2d')!;
-    fg.fillStyle = '#d8eef7'; fg.fillRect(0, 0, 64, 128);
-    for (let shelf = 0; shelf < 5; shelf++) {
-      const y = 16 + shelf * 23;
-      fg.fillStyle = 'rgba(10,24,36,0.86)'; fg.fillRect(2, y + 10, 60, 6);
-      for (let col = 0; col < 5; col++) {
-        const h = hash(shelf * 17 + col * 5);
-        fg.fillStyle = h > 0.72 ? 'rgba(178,73,38,0.72)' : h > 0.42 ? 'rgba(44,126,128,0.7)' : 'rgba(224,210,154,0.68)';
-        fg.fillRect(5 + col * 11, y + 1 + Math.floor(h * 3), 8, 10);
-      }
+    fg.fillStyle = '#9fd2e8'; fg.fillRect(0, 0, 64, 128);
+    for (let scratch = 0; scratch < 18; scratch++) {
+      const sx = Math.floor(hash(scratch * 3.1) * 58);
+      const sy = Math.floor(hash(scratch * 5.7) * 112);
+      fg.fillStyle = scratch % 3 ? 'rgba(255,255,255,0.13)' : 'rgba(15,34,45,0.18)';
+      fg.fillRect(sx, sy, 1 + Math.floor(hash(scratch) * 3), 7 + Math.floor(hash(scratch * 7) * 28));
     }
-    fg.fillStyle = 'rgba(255,255,255,0.25)'; fg.fillRect(5, 0, 7, 128);
+    fg.fillStyle = 'rgba(255,255,255,0.22)'; fg.fillRect(4, 0, 5, 128);
+    fg.fillStyle = 'rgba(8,22,31,0.24)'; fg.fillRect(54, 0, 4, 128);
     const frontTex = new THREE.CanvasTexture(frontCanvas);
     frontTex.colorSpace = THREE.SRGBColorSpace;
-    const frontMat = new THREE.MeshBasicMaterial({ color: 0xffffff, map: frontTex, transparent: true, opacity: 0.58, depthWrite: false });
+    const frontMat = new THREE.MeshPhysicalMaterial({ color: 0xbfe8ff, map: frontTex, roughness: 0.13, metalness: 0.03, transparent: true, opacity: 0.28, depthWrite: false, emissive: 0x12384e, emissiveIntensity: 0.34, side: THREE.DoubleSide });
     this.disposables.push(frontTex);
     this.disposables.push(bodyGeo, frontGeo, bodyMat, frontMat);
     this.machineBodies = new THREE.InstancedMesh(bodyGeo, bodyMat, count);
@@ -407,8 +407,12 @@ export default class ThresholdZ7Cathedral extends Scene {
     const frameMat = new THREE.MeshStandardMaterial({ color: 0x080d13, roughness: 0.42, metalness: 0.68 });
     this.disposables.push(frameGeo, frameMat);
     this.machineFrames = new THREE.InstancedMesh(frameGeo, frameMat, count * 7);
+    const carcassMat = new THREE.MeshStandardMaterial({ color: 0x18222b, roughness: 0.42, metalness: 0.66, emissive: 0x03080d, emissiveIntensity: 0.1 });
+    this.disposables.push(carcassMat);
+    this.machineCarcasses = new THREE.InstancedMesh(frameGeo, carcassMat, count * 5);
     let k = 0;
     let frameIndex = 0;
+    let carcassIndex = 0;
     const wallX = (side: number, r: number, lev: number) => {
       const depthBand = r % 14 < 2 ? 0.9 : r % 14 < 6 ? 0.3 : r % 14 < 10 ? -0.15 : 0.45;
       return side * (14.05 + 0.28 * hash(lev * 13 + r) + 0.22 * Math.sin(r * 0.73 + lev * 0.19) - depthBand);
@@ -421,24 +425,47 @@ export default class ThresholdZ7Cathedral extends Scene {
       this.tmpM.compose(this.tmpP, this.tmpQ, this.tmpS);
       this.machineFrames.setMatrixAt(frameIndex++, this.tmpM);
     };
+    const setCarcassPiece = (x: number, y: number, z: number, sx: number, sy: number, sz: number, hidden: boolean) => {
+      this.tmpP.set(x, y, z);
+      this.tmpS.set(hidden ? 0.0001 : sx, hidden ? 0.0001 : sy, hidden ? 0.0001 : sz);
+      this.tmpM.compose(this.tmpP, this.tmpQ, this.tmpS);
+      this.machineCarcasses!.setMatrixAt(carcassIndex++, this.tmpM);
+    };
     for (const side of [-1, 1]) {
       for (let r = 0; r < rows; r++) {
         for (let lev = 0; lev < levels; lev++) {
           const z = wallZ(r, lev);
           const y = 1.1 + lev * 2.45;
           const x = wallX(side, r, lev);
-          this.tmpP.set(x, y, z);
-          this.tmpQ.identity();
           const heroCovered = side === -1 && r <= 2 && lev === 0;
           const missing = hash(k * 23.1 + 4.7) > 0.948;
           const damaged = hash(k * 17.9 + 1.3) > 0.86;
           const ajar = !heroCovered && !missing && lev < 4 && hash(k * 31.7 + 2.4) > 0.86;
           const hidden = heroCovered || missing || structuralVoid(r, lev);
-          this.tmpS.set(hidden ? 0.0001 : (1.22 + 0.04 * hash(k)) * (damaged ? 0.95 : 1), hidden ? 0.0001 : damaged ? 0.9 : 1, hidden ? 0.0001 : 1.18 + 0.05 * hash(k * 2));
+          const depthScale = (1.22 + 0.04 * hash(k)) * (damaged ? 0.95 : 1);
+          const heightScale = damaged ? 0.9 : 1;
+          const widthScale = 1.18 + 0.05 * hash(k * 2);
+          const depth = 0.9 * depthScale;
+          const height = 2.08 * heightScale;
+          const width = 2.42 * widthScale;
+          const frontX = x - side * 0.48 * depthScale;
+          const backX = x + side * 0.43 * depthScale;
+          const midX = (frontX + backX) * 0.5;
+          this.tmpQ.identity();
+          this.tmpP.set(backX, y, z);
+          this.tmpS.set(hidden ? 0.0001 : depthScale, hidden ? 0.0001 : heightScale, hidden ? 0.0001 : widthScale);
           this.tmpM.compose(this.tmpP, this.tmpQ, this.tmpS);
           this.machineBodies.setMatrixAt(k, this.tmpM);
+          // Hollow manufactured shell: side walls, top/bottom caps and rear backing are
+          // separate shaded volumes, so oblique wall reads as carcass depth not a card.
+          setCarcassPiece(midX, y, z - width * 0.5, depth, height, 0.085, hidden);
+          setCarcassPiece(midX, y, z + width * 0.5, depth, height, 0.085, hidden);
+          setCarcassPiece(midX, y + height * 0.5, z, depth, 0.095, width, hidden);
+          setCarcassPiece(midX, y - height * 0.5, z, depth, 0.095, width, hidden);
+          setCarcassPiece(backX, y, z, 0.09, height, width, hidden);
           this.tmpP.set(x - side * (ajar ? 0.62 : 0.48), y + 0.05, z + (ajar ? side * 0.06 : 0));
           this.tmpQ.setFromEuler(new THREE.Euler(0, ajar ? side * 0.68 : 0, 0));
+          this.tmpS.set(hidden ? 0.0001 : depthScale, hidden ? 0.0001 : heightScale, hidden ? 0.0001 : widthScale);
           this.tmpM.compose(this.tmpP, this.tmpQ, this.tmpS);
           this.machineFronts.setMatrixAt(k, this.tmpM);
           this.tmpQ.identity();
@@ -459,17 +486,23 @@ export default class ThresholdZ7Cathedral extends Scene {
     this.machineBodies.instanceMatrix.needsUpdate = true;
     this.machineFronts.instanceMatrix.needsUpdate = true;
     this.machineFrames.instanceMatrix.needsUpdate = true;
-    this.s.add(this.machineBodies, this.machineFronts, this.machineFrames);
+    this.machineCarcasses.instanceMatrix.needsUpdate = true;
+    this.s.add(this.machineBodies, this.machineFronts, this.machineFrames, this.machineCarcasses);
 
     // Visible product rows inside the lower machine glass: small labelled cartons/cans
     // break the blue-grid repetition while remaining cheap instanced geometry.
-    const productGeo = new THREE.BoxGeometry(0.055, 0.095, 0.15);
-    const productMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.44, metalness: 0.05, emissive: 0x15100a, emissiveIntensity: 0.22 });
+    const productGeo = new THREE.BoxGeometry(0.095, 0.105, 0.15);
+    const productMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.44, metalness: 0.05, emissive: 0x24150a, emissiveIntensity: 0.34 });
     this.disposables.push(productGeo, productMat);
     const productRows = 3;
     const productCount = rows * 2 * productRows * 15;
     this.machineProducts = new THREE.InstancedMesh(productGeo, productMat, productCount);
     this.machineProducts.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(productCount * 3), 3);
+    const shelfGeo = new THREE.BoxGeometry(1, 1, 1);
+    const shelfMat = new THREE.MeshStandardMaterial({ color: 0x53616a, roughness: 0.28, metalness: 0.72, emissive: 0x081117, emissiveIntensity: 0.16 });
+    this.disposables.push(shelfGeo, shelfMat);
+    this.machineShelves = new THREE.InstancedMesh(shelfGeo, shelfMat, rows * 2 * productRows * 3);
+    let shelfIndex = 0;
     let pi = 0;
     const productColor = new THREE.Color();
     for (const [sideIndex, side] of [-1, 1].entries()) {
@@ -482,9 +515,17 @@ export default class ThresholdZ7Cathedral extends Scene {
           const z0 = wallZ(r, lev);
           const x0 = wallX(side, r, lev) - side * 0.455;
           const y0 = 1.1 + lev * 2.45;
+          for (let shelf = 0; shelf < 3; shelf++) {
+            this.tmpP.set(x0 + side * 0.19, y0 - 0.56 + shelf * 0.43, z0);
+            this.tmpQ.identity();
+            const shelfHidden = heroCovered || missing || structuralVoid(r, lev);
+            this.tmpS.set(shelfHidden ? 0.0001 : 0.38, shelfHidden ? 0.0001 : 0.028, shelfHidden ? 0.0001 : 1.58);
+            this.tmpM.compose(this.tmpP, this.tmpQ, this.tmpS);
+            this.machineShelves!.setMatrixAt(shelfIndex++, this.tmpM);
+          }
           for (let shelf = 0; shelf < 3; shelf++) for (let col = 0; col < 5; col++) {
             const empty = heroCovered || missing || damaged || structuralVoid(r, lev) || hash(machineIndex * 7.3 + shelf * 5 + col) > 0.9;
-            this.tmpP.set(x0, y0 - 0.48 + shelf * 0.43, z0 - 0.62 + col * 0.31 + (hash(machineIndex + col) - 0.5) * 0.035);
+            this.tmpP.set(x0 + side * (0.15 + hash(machineIndex + shelf * 13 + col) * 0.16), y0 - 0.48 + shelf * 0.43, z0 - 0.62 + col * 0.31 + (hash(machineIndex + col) - 0.5) * 0.035);
             this.tmpQ.setFromEuler(new THREE.Euler(0, (hash(machineIndex + shelf + col * 3) - 0.5) * 0.18, 0));
             this.tmpS.setScalar(empty ? 0.0001 : 0.75 + hash(machineIndex + col * 11) * 0.55);
             this.tmpM.compose(this.tmpP, this.tmpQ, this.tmpS);
@@ -497,9 +538,10 @@ export default class ThresholdZ7Cathedral extends Scene {
         }
       }
     }
+    this.machineShelves.instanceMatrix.needsUpdate = true;
     this.machineProducts.instanceMatrix.needsUpdate = true;
     if (this.machineProducts.instanceColor) this.machineProducts.instanceColor.needsUpdate = true;
-    this.s.add(this.machineProducts);
+    this.s.add(this.machineShelves, this.machineProducts);
 
     // Spilled cans/packets and dark sticky floor marks beneath a few opened or broken machines.
     const spillMats = [productRed, productTeal, paper, chrome];
@@ -1129,6 +1171,12 @@ export default class ThresholdZ7Cathedral extends Scene {
 
     this.baseAmbient = new THREE.AmbientLight(0x152033, 0.18);
     this.s.add(this.baseAmbient);
+    const wallKey = new THREE.DirectionalLight(0x9fdcff, 0.85);
+    wallKey.position.set(-5, 9, 8);
+    const wallFill = new THREE.DirectionalLight(0xffb06a, 0.28);
+    wallFill.position.set(6, 4, -18);
+    this.s.add(wallKey, wallFill);
+    this.z7DetailObjects.push(wallKey, wallFill);
   }
 
   private updateMachineWave(t: number, camZ: number) {
@@ -1222,6 +1270,8 @@ export default class ThresholdZ7Cathedral extends Scene {
     this.machineBodies.visible = !exactReplay;
     this.machineFronts.visible = !exactReplay;
     this.machineFrames.visible = !exactReplay;
+    if (this.machineCarcasses) this.machineCarcasses.visible = !exactReplay;
+    if (this.machineShelves) this.machineShelves.visible = !exactReplay;
     if (this.machineProducts) this.machineProducts.visible = !exactReplay;
     if (this.heroMachinesL) this.heroMachinesL.root.visible = !exactReplay;
     if (this.heroMachinesR) this.heroMachinesR.root.visible = !exactReplay;
