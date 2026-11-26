@@ -11,7 +11,7 @@ export default defineMix({
     { id: 'z0_machine_room_tone', file: 'generated/z0_machine_room_tone.wav', bus: 'ambient', at: 0.0, gainDb: -7.0 },
     { id: 'z1_fluorescent_bed', file: 'generated/z1_fluorescent_bed.wav', bus: 'ambient', at: 4.0, gainDb: -5.5 },
     { id: 'z2_playroom_room_tone', file: 'generated/z2_playroom_room_tone.wav', bus: 'ambient', at: 29.6, gainDb: -6.5 },
-    { id: 'z3_pool_room_tone', file: 'generated/z3_pool_room_tone.wav', bus: 'ambient', at: 54.6, gainDb: -6.0, automation: [{ t: 62.4, gainDb: 0 }, { t: 62.7, gainDb: -60 }, { t: 65.7, gainDb: -60 }, { t: 66.0, gainDb: 0 }, ], },
+    { id: 'z3_pool_room_tone', file: 'generated/z3_pool_room_tone.wav', bus: 'ambient', at: 54.6, gainDb: -6.0, automation: [{ t: 63.1, gainDb: 0 }, { t: 63.4, gainDb: -60 }, { t: 67.0, gainDb: -60 }, { t: 67.3, gainDb: 0 }, ], },
     { id: 'z4_library_room_tone', file: 'generated/z4_library_room_tone.wav', bus: 'ambient', at: 79.4, gainDb: -6.5 },
     { id: 'z5_motel_room_tone', file: 'generated/z5_motel_room_tone.wav', bus: 'ambient', at: 104.7, gainDb: -6.0, automation: [{ t: 116.7, gainDb: 0 }, { t: 117.0, gainDb: -60 }, { t: 119.9, gainDb: -60 }, { t: 120.2, gainDb: 0 }, ], },
     { id: 'z6_theatre_room_tone', file: 'generated/z6_theatre_room_tone.wav', bus: 'ambient', at: 129.4, gainDb: -6.5 },

@@ -402,7 +402,7 @@ wav('z3_pool_events.wav', stem(25.8, (t) => {
     const phase = z3HumPhase(at);
     const hum = Math.sin(phase * Math.PI * 2) * 0.018 + Math.sin(phase * Math.PI * 2 * 1.99) * 0.007;
     const air = z3AirLp * 0.028;
-    const breath = 0.005 + 0.995 * ((1 - smoothstep(62.7, 63.0, at)) + smoothstep(65.7, 66.0, at));
+    const breath = 0.005 + 0.995 * ((1 - smoothstep(63.4, 63.7, at)) + smoothstep(67.0, 67.3, at));
     add((hum + air) * breath, 0);
   }
   for (const drip of z3Drips) {
@@ -650,7 +650,7 @@ wav('z5_motel_events.wav', stem(25.7,(t)=>{
  for(const hit of[107.2,113.8,121.4,126.9]){const u=at-hit;if(u>0&&u<.05)add((noise()*.028+Math.sin(u*Math.PI*2*900)*.01)*Math.exp(-u*70),-.32)}
  // wet shoes compressing dense carpet, gait windows broad and deterministic
  const steps=[105.3,106.0,106.75,107.5,108.25,109,109.75,110.5,111.25,112,112.75,113.5,114.25,115.0,115.65,116.3,116.95,117.6,118.25,118.9,119.55,120.2,120.9,121.55,122.2,122.85,123.5,124.15,124.8,125.45,126.1,126.75,127.4];
- for(let i=0;i<steps.length;i++){const u=at-steps[i]!;if(at<122.4&&u>0&&u<.13)add((z5lp*.07+Math.sin(u*Math.PI*2*78)*.026+noise()*.008)*Math.exp(-u*24),i%2?.1:-.1)}
+ for(let i=0;i<steps.length;i++){const hit=steps[i]!;const u=at-hit;if(at<122.4&&u>0&&u<.13){const stationary=hit>=115.5&&hit<=121.7?.18:1;add((z5lp*.07+Math.sin(u*Math.PI*2*78)*.026+noise()*.008)*stationary*Math.exp(-u*24),i%2?.1:-.1)}}
  // muffled nonverbal TV murmurs alternating doors
  for(const [st,pan] of[[105.6,.36],[107.4,-.34],[109.4,.34],[111.1,-.36],[113.2,.3]] as const){const u=at-st;if(at<114.5&&u>0&&u<1.1){const syll=Math.max(0,Math.sin(u*Math.PI*2*3.2));add((Math.sin(u*Math.PI*2*(160+60*Math.sin(u*8)))*.009+z5lp*.012)*syll*Math.exp(-u*.8),pan)}}
  // passing CRT static and cheap delayed CCTV feeds; all cut dead at 114.5
@@ -866,7 +866,7 @@ wav('z8_home_events.wav', stem(30.8,(t)=>{
  // kettle slowly rises then cuts dead at 214
  if(at>=195&&at<214){const k=smoothstep(200,210,at);add((noise()*.006+z8lp*.018)*(.15+.85*k)*z8BedBreath,.34)}
  // slow wood/rug footsteps, switching material by position and then carpet at office threshold
- for(let i=0;i<45;i++){const hit=195.2+i*.58;if(hit>222)break;const u=at-hit;if(u>0&&u<.12){const rug=(i%5===2||i%5===3)?1:0;add((z8lp*(rug?.075:.045)+noise()*.010+Math.sin(u*Math.PI*2*(rug?76:105))*(rug?.022:.032))*Math.exp(-u*24),i%2?.08:-.08)}}
+ for(let i=0;i<45;i++){const hit=195.2+i*.58;if(hit>222)break;const u=at-hit;if(u>0&&u<.12){const rug=(i%5===2||i%5===3)?1:0;const stationary=hit>=213.5?.22:1;add((z8lp*(rug?.075:.045)+noise()*.010+Math.sin(u*Math.PI*2*(rug?76:105))*(rug?.022:.032))*stationary*Math.exp(-u*24),i%2?.08:-.08)}}
  // nearly subliminal photo-frame glass ticks
  for(const st of[199.3,201.1,202.6]){const u=at-st;if(u>0&&u<.07)add((Math.sin(u*Math.PI*2*1800)*.003+noise()*.004)*Math.exp(-u*70),-.32)}
  // wrong-window fluorescent leak and shadowless lamp filament hiss
