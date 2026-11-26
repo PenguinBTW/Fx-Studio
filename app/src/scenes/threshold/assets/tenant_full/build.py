@@ -1,0 +1,241 @@
+# THRESHOLD Tenant full/upper-body LOD. A 4.2 m patchwork collage creature built from zone materials.
+import bpy, os, sys, math, random
+import mathutils
+sys.dont_write_bytecode = True
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.dirname(HERE))
+from _bl import *
+
+reset()
+R = random.Random(4177)
+
+TILE = mat('TenantPoolTile', (0.58, 0.82, 0.80), 0.22, metal=0.04)
+GROUT = mat('TenantTileGrout', (0.025, 0.045, 0.045), 0.72)
+PAPER = mat('TenantPaper', (0.64, 0.54, 0.36), 0.84)
+PAPER_DARK = mat('TenantPaperEdge', (0.31, 0.22, 0.13), 0.9)
+FELT = mat('TenantFelt', (0.20, 0.055, 0.035), 0.96)
+CHROME = mat('TenantChrome', (0.42, 0.47, 0.51), 0.18, metal=0.88)
+DARK_METAL = mat('TenantVendingMetal', (0.025, 0.04, 0.05), 0.38, metal=0.72)
+GLASS = mat('TenantRibcageGlass', (0.035, 0.12, 0.15), 0.16, metal=0.08)
+try:
+    GLASS.diffuse_color = (0.035, 0.12, 0.15, 0.48)
+    GLASS.node_tree.nodes['Principled BSDF'].inputs['Alpha'].default_value = 0.48
+    GLASS.surface_render_method = 'DITHERED'
+except Exception:
+    pass
+BALL_RED = mat('TenantBallRed', (0.65, 0.025, 0.018), 0.28)
+BALL_YELLOW = mat('TenantBallYellow', (0.86, 0.55, 0.025), 0.3)
+BALL_BLUE = mat('TenantBallBlue', (0.018, 0.18, 0.62), 0.26)
+BLACK = mat('TenantFaceSlot', (0.002, 0.003, 0.003), 0.92)
+RUBBER = mat('TenantDarkRubber', (0.012, 0.01, 0.009), 0.8)
+
+seen_parts = set()
+root = empty('tenant_full_root')
+root['fx_part'] = 'root'
+upper = empty('upper_body')
+upper['fx_part'] = 'upper_body'
+parent(upper, root)
+lower = empty('lower_body')
+lower['fx_part'] = 'lower_body'
+parent(lower, root)
+
+def group(name, par, part=None):
+    ob = empty(name)
+    parent(ob, par)
+    if part and part not in seen_parts:
+        ob['fx_part'] = part
+        seen_parts.add(part)
+    return ob
+
+def add(o, par, part=None):
+    parent(o, par)
+    if part and part not in seen_parts:
+        o['fx_part'] = part
+        seen_parts.add(part)
+    return o
+
+# Head control: small smooth pool-tile ovoid, too small for the body, face reduced to one black slot.
+head_g = group('head_control', upper, 'head')
+add(sphere('head_tile_ovoid', 0.16, (0, 0.16, 3.86), TILE, scale=(0.78, 0.68, 1.12), segments=48, rings=24), head_g)
+# Grout lines are raised dark curves crossing the ovoid rather than texture noise.
+for i, z in enumerate((3.76, 3.86, 3.96)):
+    pts = []
+    for j in range(25):
+        a = j / 24 * math.tau
+        pts.append((math.cos(a) * 0.118, 0.16 + math.sin(a) * 0.102, z))
+    add(curve(f'head_grout_ring_{i}', pts, 0.004, GROUT, cyclic=True), head_g, 'head_grout')
+for i, x in enumerate((-0.055, 0.0, 0.055)):
+    pts = []
+    for j in range(19):
+        u = j / 18
+        z = 3.73 + u * 0.27
+        y = 0.16 + math.sin(u * math.pi) * 0.104
+        pts.append((x, y, z))
+    add(curve(f'head_grout_vertical_{i}', pts, 0.0035, GROUT), head_g, 'head_grout')
+add(box('head_black_face_slot', (0.038, 0.012, 0.13), (0, 0.274, 3.87), BLACK, bev=0.004, rot=(math.radians(4), 0, 0)), head_g, 'face_slot')
+
+# Felt neck segments, deliberately visible as stacked wrong material.
+neck_g = group('neck_control', upper, 'neck')
+for i in range(4):
+    z = 3.58 - i * 0.14
+    add(cyl(f'neck_{i+1}', 0.058 + i * 0.004, 0.15, (0, 0.08 - i * 0.012, z), FELT, verts=32, bev=0.006), neck_g, 'neck_segments')
+    add(torus(f'neck_thread_{i+1}', 0.061 + i * 0.004, 0.004, (0, 0.08 - i * 0.012, z + 0.055), PAPER_DARK, major_segments=32, minor_segments=6), neck_g, 'neck_segments')
+
+# Ribcage: bent vending-machine glass front with visible coils, shelves, frames, and rattling coins.
+rib_g = group('ribcage_control', upper, 'ribcage')
+add(box('ribcage_backplate', (0.68, 0.16, 1.08), (0, -0.02, 2.78), DARK_METAL, bev=0.035, rot=(math.radians(-4), 0, 0)), rib_g)
+add(box('ribcage_glass_front', (0.58, 0.025, 0.92), (0, 0.105, 2.79), GLASS, bev=0.018, rot=(math.radians(-4), 0, 0)), rib_g, 'glass_front')
+for x in (-0.33, 0.33):
+    add(box(f'ribcage_side_frame_{x}', (0.055, 0.09, 1.08), (x, 0.075, 2.78), CHROME, bev=0.012), rib_g, 'door_frame')
+for z in (2.27, 3.29):
+    add(box(f'ribcage_horizontal_frame_{z}', (0.68, 0.09, 0.055), (0, 0.075, z), CHROME, bev=0.012), rib_g, 'door_frame')
+for shelf in range(5):
+    z = 2.43 + shelf * 0.17
+    add(box(f'ribcage_shelf_{shelf}', (0.55, 0.18, 0.025), (0, 0.02, z), CHROME, bev=0.006), rib_g, 'shelves')
+# Internal vending spirals, three vertical columns.
+for col, x in enumerate((-0.18, 0, 0.18)):
+    pts = []
+    turns = 8.5
+    for j in range(150):
+        u = j / 149
+        z = 2.39 + u * 0.78
+        pts.append((x + math.sin(u * turns * math.tau) * 0.035, 0.06 + math.cos(u * turns * math.tau) * 0.035, z))
+    add(curve(f'ribcage_spiral_coil_{col}', pts, 0.009, CHROME), rib_g, 'spiral_coils')
+# Bent/cracked lower corner and missing panel shards.
+for i in range(7):
+    add(box(f'ribcage_cracked_shard_{i}', (R.uniform(0.035, 0.09), 0.012, R.uniform(0.05, 0.14)),
+            (R.uniform(-0.28, 0.28), 0.124, R.uniform(2.32, 3.18)), GLASS,
+            bev=0.003, rot=(R.uniform(-0.25, 0.25), R.uniform(-0.25, 0.25), R.uniform(-0.7, 0.7))), rib_g, 'broken_glass')
+for i in range(18):
+    add(cyl(f'coin_rattle_{i}', 0.019, 0.004, (R.uniform(-0.22, 0.22), R.uniform(-0.02, 0.07), R.uniform(2.35, 2.63)), CHROME,
+            rot=(R.random() * math.pi, R.random() * math.pi, R.random() * math.pi), verts=20), rib_g, 'coins')
+
+# Spine is a exposed sequence of vending coils climbing the back.
+spine_g = group('spine_control', upper, 'spine')
+for seg in range(8):
+    z0 = 2.16 + seg * 0.15
+    pts = []
+    for j in range(40):
+        u = j / 39
+        pts.append((math.sin(u * math.tau * 2.2) * 0.045, -0.18 + math.cos(u * math.tau * 2.2) * 0.035, z0 + u * 0.17))
+    add(curve(f'spine_{seg+1}', pts, 0.012, CHROME), spine_g, 'spine_coils')
+
+# Pelvis: folded card wedges and torn paper seams.
+pelvis_g = group('pelvis_control', lower, 'pelvis')
+add(box('pelvis_folded_card', (0.5, 0.28, 0.34), (0, -0.02, 2.03), PAPER, bev=0.018, rot=(math.radians(-8), 0, math.radians(4))), pelvis_g)
+for i in range(9):
+    add(box(f'pelvis_torn_seam_{i}', (0.025, 0.012, R.uniform(0.12, 0.28)),
+            (R.uniform(-0.24, 0.24), 0.14, R.uniform(1.9, 2.15)), PAPER_DARK,
+            rot=(R.uniform(-0.3, 0.3), R.uniform(-0.3, 0.3), R.uniform(-0.8, 0.8))), pelvis_g, 'torn_seams')
+
+# Arms are longer than legs: fused toy balls over chrome coil cores. Controls let the scene burst/twitch them.
+def build_ball_arm(side):
+    sx = -1 if side == 'l' else 1
+    arm_g = group(f'arm_{side}_control', upper, f'arm_{side}')
+    upper_g = group(f'arm_{side}_upper_control', arm_g, f'arm_{side}_upper')
+    lower_g = group(f'arm_{side}_lower_control', arm_g, f'arm_{side}_lower')
+    centers = []
+    for i in range(22):
+        u = i / 21
+        x = sx * (0.38 + 0.24 * math.sin(u * math.pi * 0.72) + 0.05 * u)
+        y = 0.02 + 0.18 * u
+        z = 3.23 - 1.55 * u
+        centers.append((x, y, z))
+    # Chrome core follows the whole arm.
+    add(curve(f'arm_{side}_coil_core', centers, 0.024, CHROME), upper_g, 'coil_core')
+    mats = [BALL_RED, BALL_YELLOW, BALL_BLUE]
+    for i, c in enumerate(centers):
+        u = i / (len(centers) - 1)
+        radius = 0.105 - 0.038 * u + R.uniform(-0.006, 0.006)
+        ob = sphere(f'arm_{side}_fused_ball_{i}', radius, c, mats[(i + (0 if side == 'l' else 1)) % 3],
+                    scale=(1.0, 0.92, 1.0), segments=32, rings=16)
+        add(ob, upper_g if i < 11 else lower_g, 'ball_pit_shell')
+        # melted plastic seam between selected balls
+        if i % 3 == 1:
+            add(torus(f'arm_{side}_melted_seam_{i}', radius * 0.92, 0.006, c, RUBBER,
+                      rot=(math.radians(90), 0, 0), major_segments=24, minor_segments=5), upper_g if i < 11 else lower_g, 'melted_seams')
+    return arm_g, centers[-1]
+
+arm_l_g, wrist_l = build_ball_arm('l')
+arm_r_g, wrist_r = build_ball_arm('r')
+
+# Left hand: one vending spiral coil splitting into curling metal fingers.
+hand_l_g = group('hand_l_control', arm_l_g, 'hand_l')
+add(sphere('hand_l_palm_cuff', 0.095, wrist_l, CHROME, scale=(1.1, 0.75, 0.9), segments=32, rings=16), hand_l_g, 'palm')
+for finger in range(5):
+    spread = (finger - 2) / 2
+    pts = []
+    length = 0.54 - abs(spread) * 0.055 + (0.08 if finger == 2 else 0)
+    for j in range(82):
+        u = j / 81
+        pts.append((wrist_l[0] + spread * 0.085 * u + math.sin(u * math.tau * 5.4) * 0.018,
+                    wrist_l[1] + 0.06 * u + math.cos(u * math.tau * 5.4) * 0.018,
+                    wrist_l[2] - length * u))
+    add(curve(f'hand_l_coil_finger_{finger}', pts, 0.011, CHROME), hand_l_g, 'coil_fingers')
+    add(sphere(f'hand_l_finger_tip_{finger}', 0.018, pts[-1], CHROME, scale=(0.75, 0.75, 1.35), segments=20, rings=10), hand_l_g, 'coil_fingers')
+
+# Right hand: folded paper strips, each finger curled and torn at the tip.
+hand_r_g = group('hand_r_control', arm_r_g, 'hand_r')
+add(box('hand_r_paper_palm', (0.18, 0.08, 0.16), wrist_r, PAPER, bev=0.012, rot=(0.1, 0.0, -0.08)), hand_r_g, 'paper_palm')
+for finger in range(5):
+    spread = (finger - 2) / 2
+    for seg in range(4):
+        z = wrist_r[2] - 0.11 * (seg + 0.5)
+        x = wrist_r[0] + spread * (0.045 + seg * 0.018)
+        y = wrist_r[1] + 0.02 * seg
+        ob = box(f'hand_r_paper_finger_{finger}_{seg}', (0.025, 0.025, 0.14), (x, y, z), PAPER if seg < 3 else PAPER_DARK,
+                 bev=0.003, rot=(0.15 * seg, 0.05 * spread, -0.1 * spread))
+        add(ob, hand_r_g, 'paper_fingers')
+
+# Legs: stacked pool tiles and folded card, thin enough that the arms dominate the silhouette.
+def build_leg(side):
+    sx = -1 if side == 'l' else 1
+    leg_g = group(f'leg_{side}_control', lower, f'leg_{side}')
+    upper_g = group(f'leg_{side}_upper_control', leg_g, f'leg_{side}_upper')
+    lower_g = group(f'leg_{side}_lower_control', leg_g, f'leg_{side}_lower')
+    for i in range(6):
+        z = 1.84 - i * 0.16
+        x = sx * (0.18 + 0.018 * i)
+        ob = box(f'leg_{side}_upper_tile_{i}', (0.19, 0.17, 0.18), (x, -0.02 + 0.012 * i, z), TILE if i % 2 == 0 else PAPER,
+                 bev=0.012, rot=(0.02 * i, 0.03 * sx, 0.025 * sx * i))
+        add(ob, upper_g, 'stacked_tiles')
+    for i in range(6):
+        z = 0.94 - i * 0.14
+        x = sx * (0.28 + 0.01 * i)
+        ob = box(f'leg_{side}_lower_tile_{i}', (0.16, 0.15, 0.17), (x, 0.04 + 0.012 * i, z), TILE if i % 2 else PAPER,
+                 bev=0.01, rot=(-0.025 * i, -0.02 * sx, -0.018 * sx * i))
+        add(ob, lower_g, 'stacked_tiles')
+        if i % 2 == 0:
+            add(box(f'leg_{side}_grout_slip_{i}', (0.17, 0.012, 0.018), (x, 0.125 + 0.012 * i, z), GROUT,
+                    rot=(0, 0, 0.05 * sx)), lower_g, 'cracked_grout')
+    foot = box(f'foot_{side}', (0.22, 0.38, 0.12), (sx * 0.31, 0.17, 0.08), PAPER_DARK, bev=0.018, rot=(0, 0.05 * sx, 0))
+    add(foot, lower_g, f'foot_{side}')
+    return leg_g
+
+build_leg('l')
+build_leg('r')
+
+# Collage patches over shoulders, ribs and hips: torn paper, cracked tiles and melted plastic transitions.
+patch_mats = [TILE, PAPER, FELT, CHROME]
+for i in range(56):
+    zone = R.choice(['shoulder_l', 'shoulder_r', 'rib', 'hip'])
+    if zone == 'shoulder_l':
+        loc = (-0.34 + R.uniform(-0.08, 0.08), R.uniform(-0.05, 0.14), 3.22 + R.uniform(-0.12, 0.12))
+        par = upper
+    elif zone == 'shoulder_r':
+        loc = (0.34 + R.uniform(-0.08, 0.08), R.uniform(-0.05, 0.14), 3.22 + R.uniform(-0.12, 0.12))
+        par = upper
+    elif zone == 'rib':
+        loc = (R.uniform(-0.3, 0.3), R.uniform(0.1, 0.16), R.uniform(2.35, 3.2))
+        par = rib_g
+    else:
+        loc = (R.uniform(-0.26, 0.26), R.uniform(-0.1, 0.14), R.uniform(1.9, 2.12))
+        par = pelvis_g
+    if i % 6 == 0:
+        ob = sphere(f'patch_ball_{i}', R.uniform(0.025, 0.045), loc, [BALL_RED, BALL_YELLOW, BALL_BLUE][i % 3], scale=(1, 0.75, 1), segments=18, rings=9)
+    else:
+        ob = box(f'patch_plate_{i}', (R.uniform(0.035, 0.09), R.uniform(0.008, 0.022), R.uniform(0.04, 0.12)), loc,
+                 patch_mats[i % len(patch_mats)], bev=0.003, rot=(R.uniform(-0.4, 0.4), R.uniform(-0.4, 0.4), R.uniform(-0.8, 0.8)))
+    add(ob, par, 'patchwork')
+
+export(HERE)
