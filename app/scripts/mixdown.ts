@@ -553,8 +553,17 @@ export async function mixdown(o: MixOptions): Promise<MixReport> {
       const gainDb = Number.isFinite(inputI) ? I - inputI : 0;
       const gain = Math.pow(10, gainDb / 20);
       for (let i = 0; i < master.length; i++) master[i] = master[i]! * gain;
+      const {
+        output_i: _simOutputI,
+        output_tp: _simOutputTp,
+        output_lra: _simOutputLra,
+        output_thresh: _simOutputThresh,
+        normalization_type: _simNormalizationType,
+        target_offset: _simTargetOffset,
+        ...inputMeasurements
+      } = ms;
       report.loudnorm = {
-        ...ms,
+        ...inputMeasurements,
         applied_gain_db: gainDb.toFixed(2),
         normalization_mode: 'ebu_gain_plus_lookahead_limiter',
       };
@@ -616,12 +625,6 @@ export async function mixdown(o: MixOptions): Promise<MixReport> {
         finalTp = await measureOut();
       }
       report.measuredTruePeak = Number.isFinite(finalTp) ? finalTp.toFixed(2) : undefined;
-      if (report.loudnorm && Number.isFinite(finalTp)) {
-        // loudnorm's output_* fields are a simulation of the reference ffmpeg chain;
-        // this master uses explicit EBU gain plus the lookahead limiter, so report the
-        // artifact's measured reconstruction peak instead of the unused simulated value.
-        report.loudnorm.output_tp = finalTp.toFixed(2);
-      }
     }
     log(`[mixdown] wrote ${o.out} (${frames} samples @ ${sr} Hz, ${dur.toFixed(3)} s)`);
 
