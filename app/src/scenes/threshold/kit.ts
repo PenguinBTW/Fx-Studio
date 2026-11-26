@@ -65,14 +65,20 @@ export const TRANSITIONS: TransitionWindow[] = [
 /** Storyboard battery steps. The relight is temporary and deliberately warm. */
 export function batteryAt(t: number): number {
   if (t >= 173.4 && t < 174.0) return 0;
-  if (t >= 174.0 && t < 192.0) return 0.4;
-  if (t >= 192.0) return 0.25;
-  if (t >= 150.0) return 0.25;
-  if (t >= 102.5) return 0.5;
-  if (t >= 66.0) return 0.7;
-  if (t >= 27.5) return 0.85;
-  if (t < 4.0) return 0.25;
-  return 1;
+  const steps: Array<[number, number]> = [[4.0, 1], [27.5, 0.85], [66.0, 0.7], [102.5, 0.5], [150.0, 0.25], [174.0, 0.4], [192.0, 0.25]];
+  let level = 0.25;
+  for (let i = 0; i < steps.length; i++) {
+    const [edge, next] = steps[i]!;
+    if (t < edge) return level;
+    const u = (t - edge) / 0.5;
+    if (u < 1) {
+      const base = lerp(level, next, sm(0, 1, u));
+      const stutter = 1 - 0.16 * hash(Math.floor(t * 18) + edge * 13.1) * Math.sin(Math.PI * u);
+      return clamp(base * stutter, 0, 1);
+    }
+    level = next;
+  }
+  return level;
 }
 
 export function beamDeadAt(t: number): boolean {

@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import type { FPPose, V3 } from './fp_cam';
 import { laggedVec3 } from './fp_cam';
-import { batteryAt, beamDeadAt, beamTintAt, clamp, flickerAt, lerp } from './kit';
+import { batteryAt, beamDeadAt, beamTintAt, clamp, flickerAt, lerp, sm } from './kit';
 
 const DEG = Math.PI / 180;
 
@@ -42,6 +42,30 @@ export function kelvinRGB(kelvin: number): [number, number, number] {
   return [clamp(r / 255), clamp(g / 255), clamp(b / 255)];
 }
 
+let cookieTex: THREE.CanvasTexture | null = null;
+function flashlightCookieTexture(): THREE.CanvasTexture {
+  if (cookieTex) return cookieTex;
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d')!;
+  const img = g.createImageData(128, 128);
+  for (let y = 0; y < 128; y++) for (let x = 0; x < 128; x++) {
+    const dx = (x - 64) / 64, dy = (y - 64) / 64;
+    const r = Math.hypot(dx, dy);
+    const rings = 0.9 + 0.1 * Math.sin(r * 54);
+    const darkCentre = lerp(0.62, 1, sm(0.04, 0.18, r));
+    const edge = 1 - sm(0.86, 1, r);
+    const v = Math.round(255 * clamp(rings * darkCentre * edge));
+    const o = (y * 128 + x) * 4;
+    img.data[o] = img.data[o + 1] = img.data[o + 2] = v;
+    img.data[o + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  cookieTex = new THREE.CanvasTexture(c);
+  cookieTex.colorSpace = THREE.SRGBColorSpace;
+  return cookieTex;
+}
+
 export interface BeamState {
   battery: number;
   threat: number;
@@ -67,9 +91,9 @@ export function beamStateAt(t: number, threat = 0): BeamState {
 
 export class FlashlightRig {
   readonly group = new THREE.Group();
-  readonly core = new THREE.SpotLight(0xffffff, 0, 38, 3.5 * DEG, 0.25, 1.55);
-  readonly cone = new THREE.SpotLight(0xffffff, 0, 30, 11 * DEG, 0.58, 1.35);
-  readonly spill = new THREE.SpotLight(0xffffff, 0, 12, 15 * DEG, 0.92, 1.8);
+  readonly core = new THREE.SpotLight(0xffffff, 0, 38, 7 * DEG, 0.25, 1.55);
+  readonly cone = new THREE.SpotLight(0xffffff, 0, 30, 22 * DEG, 0.58, 1.35);
+  readonly spill = new THREE.SpotLight(0xffffff, 0, 12, 30 * DEG, 0.92, 1.8);
   readonly haze: THREE.Mesh;
   private readonly hazeMat: THREE.MeshBasicMaterial;
   private readonly target = new THREE.Object3D();
@@ -81,6 +105,9 @@ export class FlashlightRig {
       this.group.add(l);
     }
     this.group.add(this.target);
+    const cookie = flashlightCookieTexture();
+    this.core.map = cookie;
+    this.cone.map = cookie;
     const len = 7;
     const geom = new THREE.ConeGeometry(Math.tan(11 * DEG) * len, len, 32, 1, true);
     geom.translate(0, -len / 2, 0);
@@ -111,9 +138,9 @@ export class FlashlightRig {
       return norm(d);
     };
     const lagged = norm(laggedVec3(direct, t, 0.08));
-    const warmKelvin = lerp(4300, state.tint[1] < 0.75 ? 2700 : 3200, clamp((150 - 4) / 190));
-    const c = kelvinRGB(warmKelvin);
-    const tint = new THREE.Color(c[0] * state.tint[0], c[1] * state.tint[1], c[2] * state.tint[2]);
+    const kelvin = t >= 174 && t < 192 ? 2700 : lerp(3200, 4300, state.battery);
+    const c = kelvinRGB(kelvin);
+    const tint = new THREE.Color(c[0], c[1], c[2]);
     const target = add(basePos, mul(lagged, 9));
     for (const l of [this.core, this.cone, this.spill]) {
       l.position.set(basePos[0], basePos[1], basePos[2]);
@@ -121,6 +148,9 @@ export class FlashlightRig {
     }
     this.target.position.set(target[0], target[1], target[2]);
     const I = state.intensity;
+    this.core.angle = lerp(4.5, 7, state.battery) * DEG;
+    this.cone.angle = lerp(14, 22, state.battery) * DEG;
+    this.spill.angle = 30 * DEG;
     this.core.intensity = 520 * I;
     this.cone.intensity = 210 * I;
     this.spill.intensity = 38 * I;

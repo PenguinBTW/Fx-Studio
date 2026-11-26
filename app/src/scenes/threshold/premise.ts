@@ -3,6 +3,8 @@
 import { clamp, sm } from './kit';
 
 export const PREMISE_TEXT = 'every room down here is a different world';
+export const PREMISE_CHARS_PER_SECOND = 18;
+export const PREMISE_SIZE_1080 = 48;
 
 export interface TypeState {
   visibleChars: number;
@@ -10,7 +12,13 @@ export interface TypeState {
   alpha: number;
 }
 
-export function premiseTypeAt(t: number, start: number, charsPerSecond = 24, holdSeconds = 2, fadeSeconds = 0.6): TypeState {
+export function premiseTypeAt(
+  t: number,
+  start: number,
+  charsPerSecond = PREMISE_CHARS_PER_SECOND,
+  holdSeconds = 2,
+  fadeSeconds = 0.6,
+): TypeState {
   const local = t - start;
   if (local < 0) return { visibleChars: 0, cursor: false, alpha: 0 };
   const typeDur = PREMISE_TEXT.length / charsPerSecond;
@@ -24,31 +32,38 @@ export function premiseTypeAt(t: number, start: number, charsPerSecond = 24, hol
   };
 }
 
-/** Draw in logical Canvas2D pixels. The caller owns clearing/uploading its Layer2D. */
+/**
+ * Canonical premise typography. Placement, size, colour, speed and shadow are fixed by
+ * looks.md §1.6 so the long-form opening and the Short cannot diverge.
+ */
 export function drawPremiseLine(
   g: CanvasRenderingContext2D,
   t: number,
   start: number,
-  x: number,
-  y: number,
-  maxWidth = 760,
+  x?: number,
+  y?: number,
+  maxWidth?: number,
 ): void {
+  void maxWidth; // accepted for migration compatibility; canonical type size is never rescaled
   const s = premiseTypeAt(t, start);
   if (s.alpha <= 0) return;
+  const width = g.canvas.width;
+  const height = g.canvas.height;
+  const scale = height / 1080;
+  const fontPx = Math.round(PREMISE_SIZE_1080 * scale);
+  x ??= Math.round(width * 0.065);
+  y ??= Math.round(height * 0.79);
   const text = PREMISE_TEXT.slice(0, s.visibleChars) + (s.cursor ? '▌' : '');
   g.save();
-  g.globalAlpha = s.alpha;
-  g.font = '500 31px "IBM Plex Mono", "Courier New", monospace';
+  g.globalAlpha = s.alpha * 0.9;
+  g.font = `400 ${fontPx}px "IBM Plex Mono", "Courier Prime", "Courier New", monospace`;
   g.textAlign = 'left';
   g.textBaseline = 'middle';
-  g.shadowColor = 'rgba(0,0,0,0.72)';
-  g.shadowBlur = 10;
-  g.shadowOffsetY = 2;
-  g.fillStyle = 'rgba(229,226,214,0.94)';
-  const metrics = g.measureText(text);
-  const scale = Math.min(1, maxWidth / Math.max(1, metrics.width));
-  g.translate(x, y);
-  g.scale(scale, scale);
-  g.fillText(text, 0, 0);
+  g.shadowColor = 'rgba(0,0,0,0.65)';
+  g.shadowBlur = Math.max(1, 2 * scale);
+  g.shadowOffsetX = 0;
+  g.shadowOffsetY = Math.max(1, 2 * scale);
+  g.fillStyle = '#EDE8DC';
+  g.fillText(text, x, y);
   g.restore();
 }
