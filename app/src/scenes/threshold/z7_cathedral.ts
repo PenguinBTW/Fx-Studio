@@ -7,6 +7,8 @@ import { FlashlightRig, beamStateAt } from './flashlight';
 import { thresholdPost } from './sensor_post';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import vendingMachinesUrl from './assets/z7_vending_machines/model.glb?url';
+import { resolveAsset } from '../../engine/assets';
+import { coldOpenPose, coldOpenArmReference, COLD_OPEN_REPLAY } from './z0_coldopen';
 
 const clamp = (x: number, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -51,8 +53,23 @@ function poseAt(t: number, gait?: GaitName) {
 function z7Gait(t: number): GaitName {
   if ((t >= 168 && t < 172) || (t >= 176 && t < 186)) return 'run';
   if (t >= 158 && t < 163) return 'walk';
-  if (t >= 173.35 && t < 174.55) return 'holdBreath';
+  if (t >= COLD_OPEN_REPLAY.z7BeamDead && t < 174.55) return 'holdBreath';
   return 'still';
+}
+
+const REPLAY_Z_OFFSET = -28.5;
+const REPLAY_T_OFFSET = COLD_OPEN_REPLAY.z7Start - COLD_OPEN_REPLAY.z0Start;
+function replayPoseAt(t: number) {
+  const local = clamp(t - REPLAY_T_OFFSET, 0, 4);
+  const p = coldOpenPose(local);
+  return {
+    ...p,
+    pos: [p.pos[0], p.pos[1], p.pos[2] + REPLAY_Z_OFFSET] as [number, number, number],
+    target: [p.target[0], p.target[1], p.target[2] + REPLAY_Z_OFFSET] as [number, number, number],
+  };
+}
+function z7PoseAt(t: number) {
+  return t >= REPLAY_T_OFFSET && t <= COLD_OPEN_REPLAY.z7BeamDead ? replayPoseAt(t) : poseAt(t, z7Gait(t));
 }
 
 export default class ThresholdZ7Cathedral extends Scene {
@@ -65,6 +82,13 @@ export default class ThresholdZ7Cathedral extends Scene {
   private machineData: { x: number; y: number; z: number; seed: number }[] = [];
   private heroMachinesL?: GLTFInstance;
   private heroMachinesR?: GLTFInstance;
+  private tenantArmInst?: GLTFInstance;
+  private replayArm = new THREE.Group();
+  private replayHeroMachines = new THREE.Group();
+  private replayMachines?: THREE.InstancedMesh;
+  private replayPanels?: THREE.InstancedMesh;
+  private replayMachineMat?: THREE.MeshStandardMaterial;
+  private replayPanelMat?: THREE.MeshStandardMaterial;
   private tenant = new THREE.Group();
   private reachArm = new THREE.Group();
   private lint = new THREE.Group();
@@ -356,6 +380,116 @@ export default class ThresholdZ7Cathedral extends Scene {
     heroLightR.position.set(13.2, 1.7, -12.7);
     this.s.add(heroLightL, heroLightR);
 
+    // Canonical cold-open recurrence passage: close inner machine rows reproduce the
+    // exact Z0 aisle/machine scale inside the larger cathedral during 171.30-173.40.
+    this.replayMachineMat = new THREE.MeshStandardMaterial({ color: 0x101722, roughness: 0.42, metalness: 0.58, emissive: 0x102438, emissiveIntensity: 0.95 });
+    this.replayPanelMat = new THREE.MeshStandardMaterial({ color: 0x102334, roughness: 0.25, metalness: 0.2, emissive: 0x4bb7d7, emissiveIntensity: 1.8 });
+    this.disposables.push(this.replayMachineMat, this.replayPanelMat);
+    const replayBodyGeo = new THREE.BoxGeometry(0.85, 2.2, 0.62);
+    const replayPanelGeo = new THREE.BoxGeometry(0.026, 1.16, 0.4);
+    this.disposables.push(replayBodyGeo, replayPanelGeo);
+    const replayRows = 18;
+    this.replayMachines = new THREE.InstancedMesh(replayBodyGeo, this.replayMachineMat, replayRows * 2);
+    this.replayPanels = new THREE.InstancedMesh(replayPanelGeo, this.replayPanelMat, replayRows * 2);
+    let ri = 0;
+    for (const side of [-1, 1]) for (let row = 0; row < 18; row++) {
+      const z = -24.5 - row * 3.2;
+      const h = 2.2 + 0.25 * hash(row * 2.13 + side);
+      const x = side * (2.25 + 0.08 * hash(row * 4.7));
+      this.tmpQ.identity();
+      this.tmpP.set(x, h / 2, z);
+      this.tmpS.set(row < 10 ? 0.0001 : 1, row < 10 ? 0.0001 : h / 2.2, row < 10 ? 0.0001 : 1);
+      this.tmpM.compose(this.tmpP, this.tmpQ, this.tmpS);
+      this.replayMachines.setMatrixAt(ri, this.tmpM);
+      this.tmpP.set(x - side * 0.44, 1.18 * (h / 2.2), z - 0.02);
+      this.tmpM.compose(this.tmpP, this.tmpQ, this.tmpS);
+      this.replayPanels.setMatrixAt(ri, this.tmpM);
+      ri++;
+    }
+    this.replayMachines.instanceMatrix.needsUpdate = true;
+    this.replayPanels.instanceMatrix.needsUpdate = true;
+    this.s.add(this.replayMachines, this.replayPanels);
+
+    // Same Tenant arm GLB and placement reference as Z0; no reinterpreted proxy arm.
+    this.tenantArmInst = await GLTFManager.instantiate(resolveAsset('tenant_arm', this.ctx.project ?? 'threshold').url, { castShadow: true, receiveShadow: true });
+    this.replayArm.add(this.tenantArmInst.root);
+    const machineGlint = new THREE.PointLight(0x7fc9ff, 1.8, 3.0, 1.6);
+    machineGlint.position.set(-0.18, 0.18, -0.95);
+    this.replayArm.add(machineGlint);
+    const fingerGlint = new THREE.PointLight(0xffc28a, 3.4, 3.4, 1.8);
+    fingerGlint.position.set(0.06, 0.08, -1.92);
+    this.replayArm.add(fingerGlint);
+    const rimGlint = new THREE.PointLight(0x9fdcff, 2.2, 3.0, 1.9);
+    rimGlint.position.set(-0.36, 0.32, -1.25);
+    this.replayArm.add(rimGlint);
+    this.tenantArmInst.root.traverse((obj) => {
+      if (!(obj instanceof THREE.Mesh)) return;
+      if (obj.name === 'shoulder_collage') obj.scale.multiplyScalar(0.72);
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      for (const m of mats) {
+        if (!(m instanceof THREE.MeshStandardMaterial)) continue;
+        if (m.name === 'TenantChrome') { m.emissive.setHex(0x182230); m.emissiveIntensity = 0.28; m.roughness = 0.2; }
+        if (m.name === 'TenantPoolTile') { m.emissive.setHex(0x07191e); m.emissiveIntensity = 0.12; }
+      }
+    });
+    this.replayArm.visible = false;
+    this.s.add(this.replayArm);
+
+    // Near rows use the same detailed vending-machine clones as Z0, in the same relative positions.
+    const replayKinds = ['snacks_machine_root', 'drinks_machine_root', 'glass_front_machine_root', 'retro_machine_root'];
+    for (const side of [-1, 1]) for (let row = 0; row < 10; row++) {
+      const source = heroL.root.getObjectByName(replayKinds[(row + (side > 0 ? 1 : 0)) % replayKinds.length]!);
+      if (!source) continue;
+      const clone = source.clone(true);
+      clone.traverse((obj) => {
+        if (obj instanceof THREE.Mesh) obj.material = Array.isArray(obj.material) ? obj.material.map((m) => m.clone()) : obj.material.clone();
+      });
+      clone.position.set(0, 0, 0);
+      const wrap = new THREE.Group();
+      wrap.add(clone);
+      wrap.position.set(side * (2.25 + 0.08 * hash(row * 4.7)), 0, -24.5 - row * 3.2);
+      wrap.rotation.y = side < 0 ? Math.PI / 2 : -Math.PI / 2;
+      wrap.scale.setScalar(1.04);
+      this.replayHeroMachines.add(wrap);
+    }
+    this.s.add(this.replayHeroMachines);
+    for (const side of [-1, 1]) for (let row = 0; row < 5; row++) {
+      const lamp = new THREE.PointLight(row % 3 === 0 ? 0xffc58c : 0x7fc9ff, 0.72, 2.6, 1.7);
+      lamp.position.set(side * 1.48, 1.28, -24.53 - row * 3.2);
+      this.s.add(lamp);
+    }
+
+    // Cable trays and floor runs reproduce the cold-open mechanical scale cues.
+    const replayConduitMat = new THREE.MeshStandardMaterial({ color: 0x0b1118, roughness: 0.48, metalness: 0.72, emissive: 0x071018, emissiveIntensity: 0.18 });
+    this.disposables.push(replayConduitMat);
+    for (const x of [-1.72, 1.72, -0.72, 0.72]) {
+      const wide = x < -1 || x > 1;
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(wide ? 0.08 : 0.045, wide ? 0.08 : 0.035, 170), replayConduitMat);
+      rail.position.set(x, wide ? 3.55 : 0.035, -90.5);
+      this.s.add(rail);
+    }
+    for (let k = 0; k < 12; k++) {
+      for (const side of [-1, 1]) {
+        const drop = new THREE.Mesh(new THREE.BoxGeometry(0.055, 1.05, 0.055), replayConduitMat);
+        drop.position.set(side * 1.72, 3.05, -25.5 - k * 8);
+        this.s.add(drop);
+      }
+      if (k % 3 === 0) {
+        const floorCross = new THREE.Mesh(new THREE.BoxGeometry(1.55, 0.025, 0.06), replayConduitMat);
+        floorCross.position.set(0, 0.025, -27.3 - k * 8);
+        this.s.add(floorCross);
+      }
+    }
+
+    // High cold strips match the overhead rhythm of the cold-open aisle.
+    const replayStripMat = new THREE.MeshBasicMaterial({ color: 0x88d7ff, transparent: true, opacity: 0.55 });
+    this.disposables.push(replayStripMat);
+    for (let k = 0; k < 9; k++) {
+      const strip = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.035, 0.06), replayStripMat);
+      strip.position.set(0, 4.1, -26.5 - k * 8);
+      this.s.add(strip);
+    }
+
     // Lint with warm relight glow.
     const lintBody = this.mat(0x704222, 0.98);
     const lintWing = this.mat(0x9a6035, 0.98);
@@ -384,6 +518,7 @@ export default class ThresholdZ7Cathedral extends Scene {
         const chaseOff = 168 + clamp((-camZ + d.z) / 34) * 4;
         if (d.z > camZ - 2) on *= 1 - smooth((t - chaseOff) / 0.28);
       }
+      if (t >= 170.1 && t <= 173.4) on *= 0.06;
       const flick = 0.88 + 0.12 * hash(Math.floor(t * 8) + i);
       frontColor.setRGB(0.08 + on * 0.55 * flick, 0.12 + on * 0.75 * flick, 0.18 + on * 1.0 * flick);
       bodyColor.setRGB(0.05 + on * 0.08, 0.065 + on * 0.1, 0.085 + on * 0.14);
@@ -396,7 +531,7 @@ export default class ThresholdZ7Cathedral extends Scene {
 
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
     const t = f.t;
-    const pose = poseAt(t, z7Gait(t));
+    const pose = z7PoseAt(t);
     applyFirstPersonCamera(this.cam, pose, out.width / out.height);
     const dir = new THREE.Vector3(...pose.forward);
 
@@ -423,8 +558,15 @@ export default class ThresholdZ7Cathedral extends Scene {
       a.mesh.rotation.set(t * (1 + a.seed), t * 1.7, t * 0.8);
     }
 
+    const exactReplay = t >= COLD_OPEN_REPLAY.z7Start && t <= COLD_OPEN_REPLAY.z7BeamDead;
+    this.machineBodies.visible = !exactReplay;
+    this.machineFronts.visible = !exactReplay;
+    this.machineFrames.visible = !exactReplay;
+    if (this.heroMachinesL) this.heroMachinesL.root.visible = !exactReplay;
+    if (this.heroMachinesR) this.heroMachinesR.root.visible = !exactReplay;
+
     // Tenant stop-start motion and pursuit position.
-    const tenantVisible = t >= 167.2 && t < 186;
+    const tenantVisible = t >= 167.2 && t < 186 && !exactReplay;
     this.tenant.visible = tenantVisible;
     if (tenantVisible) {
       let z = -18;
@@ -437,15 +579,18 @@ export default class ThresholdZ7Cathedral extends Scene {
       this.tenant.scale.set(1 + reach * 0.12, 1, 1 + reach * 0.35);
     }
 
-    const reachOn = t >= 171.65 && t < 174.2;
-    this.reachArm.visible = reachOn;
-    if (reachOn) {
-      const z = this.cam.position.z + 4.8;
-      const ext = smooth((t - 171.65) / 0.9);
-      this.reachArm.position.set(0.08 * Math.sin(t * 2), -0.15, z + 0.15);
-      this.reachArm.rotation.x = -0.08 + 0.05 * Math.sin(t * 5);
-      this.reachArm.rotation.y = 0.04 * Math.sin(t * 3);
-      this.reachArm.scale.set(1.25, 1.25, 0.45 + ext * 0.75);
+    this.reachArm.visible = false;
+    if (this.tenantArmInst) {
+      const local = clamp(t - REPLAY_T_OFFSET, 0, 4);
+      const ref = coldOpenArmReference(local, pose);
+      const root = this.replayArm;
+      root.position.set(...ref.position);
+      root.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, -1), new THREE.Vector3(...ref.towardCamera));
+      root.rotateX(ref.rotateX);
+      root.rotateY(ref.rotateY);
+      root.rotateZ(ref.rotateZ);
+      root.scale.setScalar(ref.scale);
+      root.visible = ref.visible && t >= COLD_OPEN_REPLAY.z7Start && t <= COLD_OPEN_REPLAY.z7BeamDead;
     }
 
     // Lint lands on the dead flashlight and relights it warm.
@@ -476,12 +621,25 @@ export default class ThresholdZ7Cathedral extends Scene {
       m.opacity = 0.25 + 0.35 * hash(i + Math.floor((t + fall) * 5));
     });
 
+    const replayLocal = t - REPLAY_T_OFFSET;
+    const replayWave = replayLocal < 1.2 ? 0 : clamp((replayLocal - 1.2) / 0.7);
+    const replayOff = replayLocal >= 3.3 ? 0 : 1;
+    if (this.replayMachineMat) this.replayMachineMat.emissiveIntensity = lerp(0.95, 0.14, replayWave) * replayOff;
+    if (this.replayPanelMat) this.replayPanelMat.emissiveIntensity = lerp(1.8, 0.22, replayWave) * replayOff;
+
     // Shared beam adapter: global 25% battery, exact dead beat, then warm Lint relight.
-    const dead = t >= 173.35 && t < 174.55;
+    const dead = t >= COLD_OPEN_REPLAY.z7BeamDead && t < 174.55;
     const threat = t >= 167 ? 0.9 : 0.35;
-    const baseBeam = beamStateAt(t, threat);
+    const beamTime = exactReplay ? clamp(t - REPLAY_T_OFFSET, 0, 4) : t;
+    const baseBeam = beamStateAt(beamTime, exactReplay ? 1 : threat);
     const beam = { ...baseBeam, intensity: dead ? 0 : baseBeam.intensity, dead: dead || baseBeam.dead };
-    this.flash.update(pose, t, beam, (time) => poseAt(time, z7Gait(time)).forward);
+    this.flash.update(pose, beamTime, beam, (time) => {
+      if (!exactReplay) return z7PoseAt(time).forward;
+      const fwd = coldOpenPose(clamp(time, 0, 4)).forward;
+      const down = lerp(0.18, 0, smooth((time - 1.8) / 0.55));
+      const len = Math.hypot(fwd[0], fwd[1] - down, fwd[2]) || 1;
+      return [fwd[0] / len, (fwd[1] - down) / len, fwd[2] / len] as [number, number, number];
+    });
 
     const rr = this.ctx.renderer;
     rr.setRenderTarget(out);
@@ -497,6 +655,9 @@ export default class ThresholdZ7Cathedral extends Scene {
     this.flash.dispose();
     this.heroMachinesL?.dispose();
     this.heroMachinesR?.dispose();
+    this.tenantArmInst?.dispose();
+    this.replayMachines?.dispose();
+    this.replayPanels?.dispose();
     for (const d of this.disposables) d.dispose();
     this.machineBodies?.dispose();
     this.machineFronts?.dispose();
