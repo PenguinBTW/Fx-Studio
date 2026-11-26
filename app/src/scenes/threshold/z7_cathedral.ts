@@ -93,6 +93,12 @@ export default class ThresholdZ7Cathedral extends Scene {
   private replayPanels?: THREE.InstancedMesh;
   private replayMachineMat?: THREE.MeshStandardMaterial;
   private replayPanelMat?: THREE.MeshStandardMaterial;
+  private replayVents?: THREE.InstancedMesh;
+  private replayEnvironment = new THREE.Group();
+  private replayFloorMat?: THREE.MeshStandardMaterial;
+  private replayAmbient?: THREE.HemisphereLight;
+  private replayReflectionMats: THREE.MeshBasicMaterial[] = [];
+  private baseAmbient?: THREE.AmbientLight;
   private tenant = new THREE.Group();
   private reachArm = new THREE.Group();
   private lint = new THREE.Group();
@@ -225,8 +231,10 @@ export default class ThresholdZ7Cathedral extends Scene {
     chrome.emissive.setHex(0x182a34); chrome.emissiveIntensity = 0.28;
 
     // Polished black nave floor and central aisle slab.
-    this.box(this.s, [31, 0.12, 210], [0, -0.06, -98], floorMat);
-    this.box(this.s, [5.4, 0.025, 210], [0, 0.015, -98], this.mat(0x090c11, 0.12, 0.55));
+    const cathedralFloor = this.box(this.s, [31, 0.12, 210], [0, -0.06, -98], floorMat);
+    this.z7DetailObjects.push(cathedralFloor);
+    const aisleSlab = this.box(this.s, [5.4, 0.025, 210], [0, 0.015, -98], this.mat(0x090c11, 0.12, 0.55));
+    this.z7DetailObjects.push(aisleSlab);
 
     // Long fluorescent reflections in the polished black stone: raster lights cannot
     // self-reflect, so thin additive streaks mirror the machine-wall rhythm down the aisle.
@@ -393,7 +401,10 @@ export default class ThresholdZ7Cathedral extends Scene {
     }
     this.box(this.s, [1.3, 2.2, 0.8], [3.15, 0.55, -48], darkMetal, [0.25, 0.2, 1.25]);
     for (let i = 0; i < 12; i++) this.cyl(this.s, 0.015, 0.02, 5 + hash(i) * 4, [-9 + hash(i * 2) * 18, 28, -30 - i * 11], darkMetal, 6);
-    for (let i = 0; i < 10; i++) this.box(this.s, [0.08, 0.01, 0.55], [(hash(i * 5) - 0.5) * 4, 0.04, -15 - i * 6], paper, [0, hash(i) * 3, 0]);
+    for (let i = 0; i < 10; i++) {
+      const flatReceipt = this.box(this.s, [0.08, 0.01, 0.55], [(hash(i * 5) - 0.5) * 4, 0.04, -15 - i * 6], paper, [0, hash(i) * 3, 0]);
+      this.z7DetailObjects.push(flatReceipt);
+    }
     this.box(this.s, [1.7, 2.3, 1.0], [-1.25, 1.15, -64.9], chrome);
     this.box(this.s, [1.1, 0.18, 0.04], [-1.25, 1.65, -64.35], new THREE.MeshBasicMaterial({ color: 0x9fdcff }));
 
@@ -484,7 +495,7 @@ export default class ThresholdZ7Cathedral extends Scene {
     const replayBodyGeo = new THREE.BoxGeometry(0.85, 2.2, 0.62);
     const replayPanelGeo = new THREE.BoxGeometry(0.026, 1.16, 0.4);
     this.disposables.push(replayBodyGeo, replayPanelGeo);
-    const replayRows = 18;
+    const replayRows = 48;
     this.replayMachines = new THREE.InstancedMesh(replayBodyGeo, this.replayMachineMat, replayRows * 2);
     this.replayPanels = new THREE.InstancedMesh(replayPanelGeo, this.replayPanelMat, replayRows * 2);
     let ri = 0;
@@ -497,25 +508,86 @@ export default class ThresholdZ7Cathedral extends Scene {
       this.tmpS.set(row < 10 ? 0.0001 : 1, row < 10 ? 0.0001 : h / 2.2, row < 10 ? 0.0001 : 1);
       this.tmpM.compose(this.tmpP, this.tmpQ, this.tmpS);
       this.replayMachines.setMatrixAt(ri, this.tmpM);
+      this.replayMachines.setColorAt(ri, new THREE.Color().setHSL(0.52 + 0.18 * hash(row + side * 11), 0.42, 0.19));
       this.tmpP.set(x - side * 0.44, 1.18 * (h / 2.2), z - 0.02);
       this.tmpM.compose(this.tmpP, this.tmpQ, this.tmpS);
       this.replayPanels.setMatrixAt(ri, this.tmpM);
+      this.replayPanels.setColorAt(ri, new THREE.Color().setHSL(row % 5 === 0 ? 0.08 : 0.53, 0.9, row % 5 === 0 ? 0.55 : 0.46));
       ri++;
     }
     this.replayMachines.instanceMatrix.needsUpdate = true;
     this.replayPanels.instanceMatrix.needsUpdate = true;
+    if (this.replayMachines.instanceColor) this.replayMachines.instanceColor.needsUpdate = true;
+    if (this.replayPanels.instanceColor) this.replayPanels.instanceColor.needsUpdate = true;
     this.s.add(this.replayMachines, this.replayPanels);
+
+    // Same horizontal fascia vents as the current cold-open aisle.
+    const replayVentMat = new THREE.MeshStandardMaterial({ color: 0x030609, roughness: 0.7, metalness: 0.35, emissive: 0x071923, emissiveIntensity: 0.32 });
+    const replayVentGeom = new THREE.BoxGeometry(0.018, 0.035, 0.34);
+    this.disposables.push(replayVentMat, replayVentGeom);
+    this.replayVents = new THREE.InstancedMesh(replayVentGeom, replayVentMat, replayRows * 2 * 4);
+    let vi = 0;
+    for (const side of [-1, 1]) for (let row = 0; row < replayRows; row++) {
+      const z = -24.5 - row * 3.2;
+      const h = 2.2 + 0.25 * hash(row * 2.13 + side);
+      const x = side * (2.25 + 0.08 * hash(row * 4.7)) - side * 0.455;
+      for (let slot = 0; slot < 4; slot++) {
+        this.tmpP.set(x, (0.66 + slot * 0.18) * (h / 2.2), z - 0.02);
+        this.tmpS.set(row < 10 ? 0.0001 : 1, row < 10 ? 0.0001 : 1, row < 10 ? 0.0001 : 1);
+        this.tmpM.compose(this.tmpP, this.tmpQ, this.tmpS);
+        this.replayVents.setMatrixAt(vi++, this.tmpM);
+      }
+    }
+    this.replayVents.instanceMatrix.needsUpdate = true;
+    this.s.add(this.replayVents);
+
+    // Replay-only floor/ambient/reflection environment copied from Z0's current hook treatment.
+    // It is hidden outside 171.30-173.40 so the larger cathedral floor/detail pass is untouched.
+    this.replayFloorMat = new THREE.MeshStandardMaterial({ color: 0x182b3e, roughness: 0.2, metalness: 0.5, emissive: 0x061622, emissiveIntensity: 0.72 });
+    this.disposables.push(this.replayFloorMat);
+    const replayFloorGeo = new THREE.BoxGeometry(9, 0.12, 190);
+    this.disposables.push(replayFloorGeo);
+    const replayFloor = new THREE.Mesh(replayFloorGeo, this.replayFloorMat);
+    replayFloor.position.set(0, -0.06, -98.5);
+    replayFloor.receiveShadow = true;
+    this.replayEnvironment.add(replayFloor);
+    const reflGeom = new THREE.PlaneGeometry(0.28, 2.65);
+    this.disposables.push(reflGeom);
+    for (const side of [-1, 1]) for (let row = 0; row < 18; row++) {
+      const warm = row % 5 === 0;
+      const reflMat = new THREE.MeshBasicMaterial({ color: warm ? 0xffa864 : 0x58c7ff, transparent: true, opacity: warm ? 0.12 : 0.16, blending: THREE.AdditiveBlending, depthWrite: false });
+      this.replayReflectionMats.push(reflMat);
+      this.disposables.push(reflMat);
+      const refl = new THREE.Mesh(reflGeom, reflMat);
+      refl.rotation.x = -Math.PI / 2;
+      refl.position.set(side * (1.54 + 0.05 * hash(row * 3.1)), 0.012, 3.15 - row * 3.2 + REPLAY_Z_OFFSET);
+      refl.scale.x = 0.55 + hash(row * 7.4) * 0.75;
+      this.replayEnvironment.add(refl);
+    }
+    const centerReflMat = new THREE.MeshBasicMaterial({ color: 0x4b9dcc, transparent: true, opacity: 0.13, blending: THREE.AdditiveBlending, depthWrite: false });
+    this.replayReflectionMats.push(centerReflMat);
+    this.disposables.push(centerReflMat);
+    for (let k = 0; k < 16; k++) {
+      const refl = new THREE.Mesh(new THREE.PlaneGeometry(0.18, 3.8), centerReflMat);
+      refl.rotation.x = -Math.PI / 2;
+      refl.position.set((hash(k * 8.3) - 0.5) * 0.55, 0.014, 1.5 - k * 8 + REPLAY_Z_OFFSET);
+      this.replayEnvironment.add(refl);
+    }
+    this.replayAmbient = new THREE.HemisphereLight(0x456f91, 0x080606, 1.05);
+    this.replayEnvironment.add(this.replayAmbient);
+    this.replayEnvironment.visible = false;
+    this.s.add(this.replayEnvironment);
 
     // Same Tenant arm GLB and placement reference as Z0; no reinterpreted proxy arm.
     this.tenantArmInst = await GLTFManager.instantiate(resolveAsset('tenant_arm', 'threshold').url, { castShadow: true, receiveShadow: true });
     this.replayArm.add(this.tenantArmInst.root);
-    const machineGlint = new THREE.PointLight(0x7fc9ff, 1.8, 3.0, 1.6);
+    const machineGlint = new THREE.PointLight(0x7fc9ff, 3.2, 4.2, 1.45);
     machineGlint.position.set(-0.18, 0.18, -0.95);
     this.replayArm.add(machineGlint);
-    const fingerGlint = new THREE.PointLight(0xffc28a, 3.4, 3.4, 1.8);
+    const fingerGlint = new THREE.PointLight(0xffc28a, 6.2, 4.6, 1.55);
     fingerGlint.position.set(0.06, 0.08, -1.92);
     this.replayArm.add(fingerGlint);
-    const rimGlint = new THREE.PointLight(0x9fdcff, 2.2, 3.0, 1.9);
+    const rimGlint = new THREE.PointLight(0x9fdcff, 4.0, 4.0, 1.65);
     rimGlint.position.set(-0.36, 0.32, -1.25);
     this.replayArm.add(rimGlint);
     this.tenantArmInst.root.traverse((obj) => {
@@ -524,8 +596,10 @@ export default class ThresholdZ7Cathedral extends Scene {
       const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
       for (const m of mats) {
         if (!(m instanceof THREE.MeshStandardMaterial)) continue;
-        if (m.name === 'TenantChrome') { m.emissive.setHex(0x182230); m.emissiveIntensity = 0.28; m.roughness = 0.2; }
-        if (m.name === 'TenantPoolTile') { m.emissive.setHex(0x07191e); m.emissiveIntensity = 0.12; }
+        if (m.name === 'TenantChrome') { m.emissive.setHex(0x243548); m.emissiveIntensity = 0.55; m.roughness = 0.16; }
+        if (m.name === 'TenantPoolTile') { m.emissive.setHex(0x0b2830); m.emissiveIntensity = 0.38; }
+        if (m.name === 'TenantPaper') { m.emissive.setHex(0x2a1607); m.emissiveIntensity = 0.28; }
+        if (m.name === 'TenantFelt') { m.emissive.setHex(0x2a0503); m.emissiveIntensity = 0.32; }
       }
     });
     this.replayArm.visible = false;
@@ -564,7 +638,7 @@ export default class ThresholdZ7Cathedral extends Scene {
       rail.position.set(x, wide ? 3.55 : 0.035, -90.5);
       this.s.add(rail);
     }
-    for (let k = 0; k < 12; k++) {
+    for (let k = 0; k < 18; k++) {
       for (const side of [-1, 1]) {
         const drop = new THREE.Mesh(new THREE.BoxGeometry(0.055, 1.05, 0.055), replayConduitMat);
         drop.position.set(side * 1.72, 3.05, -25.5 - k * 8);
@@ -580,7 +654,7 @@ export default class ThresholdZ7Cathedral extends Scene {
     // High cold strips match the overhead rhythm of the cold-open aisle.
     const replayStripMat = new THREE.MeshBasicMaterial({ color: 0x88d7ff, transparent: true, opacity: 0.55 });
     this.disposables.push(replayStripMat);
-    for (let k = 0; k < 9; k++) {
+    for (let k = 0; k < 18; k++) {
       const strip = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.035, 0.06), replayStripMat);
       strip.position.set(0, 4.1, -26.5 - k * 8);
       this.s.add(strip);
@@ -594,7 +668,8 @@ export default class ThresholdZ7Cathedral extends Scene {
 
     this.s.add(this.flash.group);
 
-    this.s.add(new THREE.AmbientLight(0x152033, 0.18));
+    this.baseAmbient = new THREE.AmbientLight(0x152033, 0.18);
+    this.s.add(this.baseAmbient);
   }
 
   private updateMachineWave(t: number, camZ: number) {
@@ -626,7 +701,10 @@ export default class ThresholdZ7Cathedral extends Scene {
 
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
     const t = f.t;
+    const exactReplay = t >= COLD_OPEN_REPLAY.z7Start && t <= COLD_OPEN_REPLAY.z7BeamDead;
     const pose = z7PoseAt(t);
+    this.cam.near = exactReplay ? 0.04 : 0.08;
+    this.cam.far = exactReplay ? 240 : 280;
     applyFirstPersonCamera(this.cam, pose, out.width / out.height);
     const dir = new THREE.Vector3(...pose.forward);
 
@@ -656,7 +734,6 @@ export default class ThresholdZ7Cathedral extends Scene {
       a.mesh.rotation.set(t * (1 + a.seed), t * 1.7, t * 0.8);
     }
 
-    const exactReplay = t >= COLD_OPEN_REPLAY.z7Start && t <= COLD_OPEN_REPLAY.z7BeamDead;
     this.machineBodies.visible = !exactReplay;
     this.machineFronts.visible = !exactReplay;
     this.machineFrames.visible = !exactReplay;
@@ -728,6 +805,12 @@ export default class ThresholdZ7Cathedral extends Scene {
     });
 
     const replayLocal = t - REPLAY_T_OFFSET;
+    this.replayEnvironment.visible = exactReplay;
+    if (this.baseAmbient) this.baseAmbient.intensity = exactReplay ? 0 : 0.18;
+    const replayHookDim = 1 - smooth((replayLocal - 1.15) / 0.7);
+    if (this.replayFloorMat) this.replayFloorMat.emissiveIntensity = lerp(0.18, 0.72, replayHookDim);
+    if (this.replayAmbient) this.replayAmbient.intensity = lerp(0.62, 1.05, replayHookDim);
+    for (const m of this.replayReflectionMats) m.opacity = m === this.replayReflectionMats[this.replayReflectionMats.length - 1] ? 0.13 * replayHookDim : (m.color.getHex() === 0xffa864 ? 0.12 : 0.16) * replayHookDim;
     const replayWave = replayLocal < 1.2 ? 0 : clamp((replayLocal - 1.2) / 0.7);
     const replayOff = replayLocal >= 3.3 ? 0 : 1;
     if (this.replayMachineMat) this.replayMachineMat.emissiveIntensity = lerp(0.95, 0.14, replayWave) * replayOff;
@@ -743,9 +826,15 @@ export default class ThresholdZ7Cathedral extends Scene {
       if (!exactReplay) return z7PoseAt(time).forward;
       const fwd = coldOpenPose(clamp(time, 0, 4)).forward;
       const down = lerp(0.18, 0, smooth((time - 1.8) / 0.55));
-      const len = Math.hypot(fwd[0], fwd[1] - down, fwd[2]) || 1;
-      return [fwd[0] / len, (fwd[1] - down) / len, fwd[2] / len] as [number, number, number];
+      const side = 0.16 * smooth((time - 2.0) / 0.65);
+      const x = fwd[0] + pose.right[0] * side;
+      const z = fwd[2] + pose.right[2] * side;
+      const len = Math.hypot(x, fwd[1] - down, z) || 1;
+      return [x / len, (fwd[1] - down) / len, z / len] as [number, number, number];
     });
+
+    if (this.s.fog instanceof THREE.FogExp2) this.s.fog.density = exactReplay ? 0.035 : 0.012;
+    if (this.s.background instanceof THREE.Color) this.s.background.setHex(exactReplay ? 0x020308 : 0x020407);
 
     const rr = this.ctx.renderer;
     rr.setRenderTarget(out);
@@ -754,6 +843,10 @@ export default class ThresholdZ7Cathedral extends Scene {
     rr.render(this.s, this.cam);
     rr.resetState();
 
+    if (exactReplay) {
+      const replayFade = beamTime >= 3.3 ? smooth((beamTime - 3.3) / 0.12) : 0;
+      return thresholdPost(beamTime, { darkness: 0.82, stress: beamTime > 1.1 ? 0.8 : 0.35, fade: replayFade });
+    }
     return thresholdPost(t, { exposure: dead ? 0.2 : 0.92, darkness: 0.86, stress: threat * 0.65, fade: dead ? 0.55 : 0 });
   }
 
