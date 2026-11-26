@@ -397,7 +397,7 @@ export default class ThresholdZ5Motel extends Scene {
       this.rainLines.push(line);
     }
 
-    const corridorFill = new THREE.PointLight(0xff7d32, 1.05, 16, 1.9);
+    const corridorFill = new THREE.PointLight(0xff7d32, 2.2, 17, 1.75);
     corridorFill.position.set(0, 2.05, -8.5);
     this.s.add(corridorFill);
 
@@ -424,7 +424,7 @@ export default class ThresholdZ5Motel extends Scene {
     kitAt('raincoat_umbrella', [-1.43, 0, -19.3], Math.PI / 2, 0.95);
 
     // Wet footprint decals leading to where the viewer stands.
-    const fpMat = this.mat(0x0b0908, 0.16, 0.02, 0x010202, 0.035);
+    const fpMat = this.mat(0x080706, 0.07, 0.04, 0x020607, 0.12);
     this.footprintMats.push(fpMat);
     for (let i = 0; i < 14; i++) {
       const x = 0.28 + (i % 2 ? 0.11 : -0.11);
@@ -432,12 +432,12 @@ export default class ThresholdZ5Motel extends Scene {
       const yaw = 0.08 * (i % 2 ? 1 : -1);
       // Alternating wet foot shapes point back toward the viewer: long oval forefoot,
       // separate smaller oval heel, and three small toe ovals at the viewer-facing end.
-      const sole = this.sphere(this.s, 0.095, [x, 0.014, z + 0.03], fpMat, [0.58, 0.028, 1.42]);
+      const sole = this.sphere(this.s, 0.115, [x, 0.018, z + 0.03], fpMat, [0.62, 0.03, 1.55]);
       sole.rotation.y = yaw;
-      const heel = this.sphere(this.s, 0.069, [x, 0.0145, z - 0.145], fpMat, [0.7, 0.028, 0.78]);
+      const heel = this.sphere(this.s, 0.084, [x, 0.0185, z - 0.15], fpMat, [0.74, 0.03, 0.86]);
       heel.rotation.y = yaw;
       for (let toe = 0; toe < 3; toe++) {
-        const toeMesh = this.sphere(this.s, 0.022, [x + (toe - 1) * 0.039, 0.015, z + 0.18], fpMat, [0.9, 0.026, 1.18]);
+        const toeMesh = this.sphere(this.s, 0.028, [x + (toe - 1) * 0.043, 0.019, z + 0.195], fpMat, [0.95, 0.028, 1.25]);
         toeMesh.rotation.y = yaw;
         toeMesh.castShadow = false;
       }
@@ -469,6 +469,7 @@ export default class ThresholdZ5Motel extends Scene {
         }
         return c!;
       });
+      if (obj.name.includes('chest_fused_mass') || obj.name.includes('torso_continuous_hunched_mass')) obj.visible = false;
       obj.material = Array.isArray(obj.material) ? cloned : cloned[0]!;
     });
     this.tenantInst.root.traverse((obj) => {
@@ -482,19 +483,20 @@ export default class ThresholdZ5Motel extends Scene {
       }
     });
     this.tenant.add(this.tenantInst.root);
-    this.tenant.scale.setScalar(0.48);
+    this.tenant.scale.set(0.68, 0.54, 0.68);
     this.tenant.rotation.y = Math.PI - 0.55;
-    this.tenant.position.set(0.02, 0, -24.2);
+    this.tenant.rotation.x = -0.48;
+    this.tenant.position.set(0.02, -0.05, -23.35);
     const chestGlow = new THREE.PointLight(0x5bb9d7, 2.2, 4.2, 1.55);
     chestGlow.position.set(0, 2.5, 0.45);
     this.tenant.add(chestGlow);
     // Rim/fill lights live in scene space (not inside the translated Tenant group):
     // cool edge light separates the mirror/head and hanging arms, warm motel bounce
     // gives the foosball torso and ball-coil arms just enough shape at delivery exposure.
-    const tenantRim = new THREE.PointLight(0x9adbe4, 3.4, 5.2, 1.45);
+    const tenantRim = new THREE.PointLight(0x9adbe4, 7.5, 6.5, 1.35);
     tenantRim.position.set(-0.55, 2.05, -25.05);
     this.s.add(tenantRim);
-    const tenantFill = new THREE.PointLight(0xff9a4c, 1.5, 3.8, 1.5);
+    const tenantFill = new THREE.PointLight(0xff9a4c, 3.4, 4.8, 1.35);
     tenantFill.position.set(0.38, 1.15, -22.4);
     this.s.add(tenantFill);
     this.tenant.visible = false;
@@ -502,7 +504,7 @@ export default class ThresholdZ5Motel extends Scene {
 
     this.s.add(this.flash.group);
 
-    const ambient = new THREE.AmbientLight(0x273040, 0.82);
+    const ambient = new THREE.AmbientLight(0x344159, 1.55);
     this.s.add(ambient);
   }
 
@@ -560,7 +562,8 @@ export default class ThresholdZ5Motel extends Scene {
     rr.render(this.s, this.cam);
     rr.resetState();
 
-    return thresholdPost(t, { exposure: 1.2, darkness: 0.68, stress: threat * 0.55 });
+    const exposure = t < 114 ? 2.85 : t < 120 ? 2.15 : t < 122 ? 1.3 : 1.65;
+    return thresholdPost(t, { exposure, darkness: 0.5, stress: threat * 0.55 });
   }
 
   override dispose() {

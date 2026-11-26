@@ -208,6 +208,14 @@ export default class ThresholdZ6Theatre extends Scene {
     for (let i = 0; i < 8; i++) {
       this.box(this.curtainL, [0.08, 2.9, 0.035], [-0.95 + i * 0.26, 0, 0.12], feltDark);
       this.box(this.curtainR, [0.08, 2.9, 0.035], [0.95 - i * 0.26, 0, 0.12], feltDark);
+      const foldMat = i % 2 ? feltRed : this.mat(0x9a2028, 0.98, 0, 0x1d0305, 0.08);
+      const zoff = 0.13 + (i % 2) * 0.075 + hash(i * 4.3) * 0.025;
+      const lf = this.cyl(this.curtainL, 0.07 + hash(i) * 0.025, 0.09 + hash(i * 2) * 0.025, 2.92, [-0.98 + i * 0.26, 0, zoff], foldMat, 14);
+      lf.scale.z = 0.48;
+      lf.rotation.y = (hash(i * 7) - 0.5) * 0.12;
+      const rf = this.cyl(this.curtainR, 0.07 + hash(i + 9) * 0.025, 0.09 + hash(i * 2 + 9) * 0.025, 2.92, [0.98 - i * 0.26, 0, zoff], foldMat, 14);
+      rf.scale.z = 0.48;
+      rf.rotation.y = (hash(i * 7 + 3) - 0.5) * 0.12;
     }
 
     // Rolling painted backdrop panels.
@@ -370,10 +378,11 @@ export default class ThresholdZ6Theatre extends Scene {
         lg.fillRect(x, y, 1, 1);
       }
     }
-    for (let i = 0; i < 42; i++) {
+    lg.lineWidth = 1.8;
+    for (let i = 0; i < 120; i++) {
       const x = hash(i * 2.3) * 64;
       const y = hash(i * 5.1) * 64;
-      lg.strokeStyle = `rgba(30,14,8,${0.18 + hash(i) * 0.18})`;
+      lg.strokeStyle = `rgba(28,12,6,${0.34 + hash(i) * 0.3})`;
       lg.beginPath(); lg.moveTo(x, y); lg.lineTo(x + 4 + hash(i * 7) * 8, y + (hash(i * 11) - 0.5) * 3); lg.stroke();
     }
     const lintTex = new THREE.CanvasTexture(lintCanvas);
@@ -381,6 +390,21 @@ export default class ThresholdZ6Theatre extends Scene {
     lintTex.wrapS = lintTex.wrapT = THREE.RepeatWrapping;
     lintTex.repeat.set(2.5, 2.5);
     this.disposables.push(lintTex);
+    // Put the same fibre/bump response onto the GLB felt itself; the procedural shell
+    // alone was too small to carry the close-up material read.
+    this.lintInst.root.traverse((obj) => {
+      if (!(obj instanceof THREE.Mesh)) return;
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      for (const m of mats) {
+        if (!(m instanceof THREE.MeshStandardMaterial) || m.name.includes('ButtonEye')) continue;
+        m.map = lintTex;
+        m.bumpMap = lintTex;
+        m.bumpScale = 0.006;
+        m.roughness = 1;
+        m.metalness = 0;
+        m.needsUpdate = true;
+      }
+    });
     const lintWingMat = this.mat(0xa66a3d, 1.0, 0, 0x5a2a12, 0.48);
     lintWingMat.map = lintTex;
     lintWingMat.bumpMap = lintTex;
@@ -447,6 +471,20 @@ export default class ThresholdZ6Theatre extends Scene {
         this.lint.add(fm);
         this.disposables.push(fgeo);
       }
+      // Dense short body hairs break the remaining smooth-sphere highlight at close range.
+      for (let hair = 0; hair < 18; hair++) {
+        const hq = hair / 17;
+        const hx = side * (hash(hair * 3.1) * 0.015);
+        const hz = 0.026 - hq * 0.047;
+        const hy = 0.004 + hash(hair * 5.7) * 0.005;
+        const hgeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
+          new THREE.Vector3(hx, hy, hz),
+          new THREE.Vector3(hx + side * (0.004 + hash(hair) * 0.005), hy + 0.004 + hash(hair * 2) * 0.004, hz + (hash(hair * 4) - 0.5) * 0.006),
+        ]), 2, 0.00055, 4, false);
+        const hm = new THREE.Mesh(hgeo, lintWingEdge);
+        this.lint.add(hm);
+        this.disposables.push(hgeo);
+      }
       this.sphere(this.lint, 0.0038, [side * 0.0062, 0.006, 0.052], lintButton, [1, 0.72, 0.5]);
       this.sphere(this.lint, 0.00075, [side * 0.0052, 0.0072, 0.0545], this.mat(0x6b5848, 0.48, 0, 0x241812, 0.08), [1, 0.7, 0.5]);
       const pts = [
@@ -469,7 +507,7 @@ export default class ThresholdZ6Theatre extends Scene {
         const bm = new THREE.Mesh(bgeo, lintThread); this.lint.add(bm); this.disposables.push(bgeo);
       }
     }
-    const lintLight = new THREE.PointLight(0xff8c2a, 0.82, 2.2, 1.6);
+    const lintLight = new THREE.PointLight(0xff8c2a, 0.38, 2.2, 1.6);
     lintLight.position.set(0, 0, -0.05);
     this.lint.add(lintLight);
     this.lint.visible = false;

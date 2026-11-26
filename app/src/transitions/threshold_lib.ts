@@ -181,7 +181,18 @@ const BODY: Record<ThresholdTransitionMode, string> = {
     float fibreLong = fbm(vec2(vUv.x * 34.0, vUv.y * 7.0), 5) * 0.5 + 0.5;
     float fibreFine = fbm(vec2(vUv.x * 190.0, vUv.y * 20.0), 3) * 0.5 + 0.5;
     float strand = 0.5 + 0.5 * sin(vUv.x * 620.0 + fibreLong * 8.0);
-    vec3 felt = vec3(0.105, 0.027, 0.020) * (0.48 + fibreLong * 0.34 + fibreFine * 0.18 + strand * 0.11);
+    vec3 felt = vec3(0.105, 0.027, 0.020) * (0.46 + fibreLong * 0.16 + fibreFine * 0.05 + strand * 0.04);
+    // Heavy drapery rather than a flat red noise field: broad vertical folds catch a
+    // warm house light, with valleys falling into brown shadow and a top/bottom falloff.
+    float foldWide = 0.5 + 0.5 * sin(vUv.x * 43.0 + fibreLong * 1.35 + sin(vUv.x * 9.0) * 1.6);
+    float foldFine = 0.5 + 0.5 * sin(vUv.x * 137.0 + fibreFine * 9.0);
+    float valley = pow(1.0 - foldWide, 2.2);
+    float ridge = pow(foldWide, 5.0);
+    float verticalFalloff = smoothstep(0.0, 0.16, vUv.y) * (1.0 - smoothstep(0.82, 1.0, vUv.y) * 0.55);
+    float centerLight = 1.0 - abs(vUv.x - 0.5) * 0.72;
+    felt *= (0.20 + foldWide * 0.88 + foldFine * 0.05) * (0.55 + verticalFalloff * 0.55) * centerLight;
+    felt += vec3(0.24, 0.065, 0.025) * ridge * verticalFalloff * centerLight * 0.34;
+    felt -= vec3(0.055, 0.018, 0.01) * valley * 0.55;
     vec3 m = mix(a, felt, smoothstep(0.22, 0.52, u));
     // The curtain parts from the center outward, with an irregular fibrous leading edge.
     float open = smoothstep(0.56, 0.98, u);
@@ -233,14 +244,15 @@ const BODY: Record<ThresholdTransitionMode, string> = {
       float lane = -0.34 + fi * 0.23 + (hash12(vec2(fi, 3.7)) - 0.5) * 0.08;
       float travel = fract(vUv.y * 0.32 + u * (1.0 - 0.32 * u) * 0.42 + fi * 0.29);
       float x = vUv.x - 0.5 - lane - (vUv.y - 0.5) * mix(0.11, 0.28, warm);
-      float core = pow(max(0.0, 1.0 - abs(x) * mix(18.0, 8.0, warm)), 5.0);
+      float core = pow(max(0.0, 1.0 - abs(x) * mix(11.0, 5.0, warm)), 2.1) * 0.58;
+      core += pow(max(0.0, 1.0 - abs(x) * mix(5.5, 2.6, warm)), 1.15) * 0.26;
       float lengthMask = smoothstep(0.0, 0.12 * lenBoost, travel) * (1.0 - smoothstep(0.52 * lenBoost, 0.92 * lenBoost, travel));
       lengthMask *= smoothstep(0.0, 0.035, travel) * (1.0 - smoothstep(0.965, 1.0, travel));
       streakCol += mix(vec3(0.28, 0.56, 1.25), vec3(1.35, 0.73, 0.31), warm) * core * lengthMask;
     }
     float sustain = smoothstep(0.02, 0.18, u) * (1.0 - smoothstep(0.58, 0.88, u));
     vec3 c = mix(ca, cb, smoothstep(0.22, 0.90, u));
-    c += streakCol * max(0.0, sustain) * 0.72;
+    c += streakCol * max(0.0, sustain) * 0.43;
     fragColor = vec4(c, 1.0);`,
 };
 

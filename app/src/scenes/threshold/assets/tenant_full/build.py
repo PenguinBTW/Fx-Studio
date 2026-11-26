@@ -14,6 +14,7 @@ R = random.Random(91731)
 BODY = mat('TenantFusedBody', (0.032, 0.012, 0.009), 0.9, metal=0.01)
 BODY_ALT = mat('TenantFusedBodyWarm', (0.074, 0.025, 0.015), 0.88, metal=0.01)
 TILE = mat('TenantPoolTile', (0.045, 0.14, 0.14), 0.42, metal=0.02)
+SKULL = mat('TenantSkullTile', (0.30, 0.39, 0.35), 0.58, metal=0.01)
 GROUT = mat('TenantTileGrout', (0.018, 0.028, 0.028), 0.82)
 PAPER = mat('TenantPaper', (0.34, 0.255, 0.13), 0.88)
 PAPER_DARK = mat('TenantPaperEdge', (0.055, 0.028, 0.012), 0.96)
@@ -23,7 +24,7 @@ DARK_METAL = mat('TenantVendingMetal', (0.018, 0.028, 0.034), 0.42, metal=0.72)
 GLASS = mat('TenantRibcageGlass', (0.025, 0.085, 0.105), 0.14, metal=0.08)
 try:
     GLASS.diffuse_color = (0.025, 0.085, 0.105, 0.46)
-    GLASS.node_tree.nodes['Principled BSDF'].inputs['Alpha'].default_value = 0.46
+    GLASS.node_tree.nodes['Principled BSDF'].inputs['Alpha'].default_value = 0.22
     GLASS.surface_render_method = 'DITHERED'
 except Exception:
     pass
@@ -258,17 +259,23 @@ for seg in range(7):
 
 # Small forward head, clearly below the shoulder line. The neck reaches horizontally
 # out of the chest, so the head reads as a predator skull rather than a top knob.
-add(tapered_tube('neck_forward_fused_mass', [(0, 0.56, 2.92), (0, 0.82, 2.79), (0, 1.12, 2.60)], [0.17, 0.145, 0.112], FELT, sides=18, per_seg=8), neck_g, 'neck_segments')
+add(tapered_tube('neck_forward_fused_mass', [(0, 0.56, 2.92), (0, 0.82, 2.79), (0, 1.12, 2.60)], [0.27, 0.235, 0.19], BODY_ALT, sides=18, per_seg=8), neck_g, 'neck_segments')
 for i in range(3):
     u = i / 2
-    add(sphere(f'neck_{i+1}', 0.105 - i * 0.012, (0, 0.62 + u * 0.32, 2.87 - u * 0.19), FELT,
+    add(sphere(f'neck_{i+1}', 0.15 - i * 0.015, (0, 0.62 + u * 0.32, 2.87 - u * 0.19), BODY_ALT,
                scale=(1.05, 0.72, 0.8), segments=24, rings=12), neck_g, 'neck_segments')
-head_mass = sphere('head_tile_ovoid', 0.142, (0, 1.31, 2.48), TILE, scale=(0.78, 0.68, 1.05), segments=40, rings=20)
+head_mass = sphere('head_tile_ovoid', 0.19, (0, 1.38, 2.45), SKULL, scale=(0.82, 0.7, 1.08), segments=40, rings=20)
 roughen_blob(head_mass, 0.025, 9.2)
 add(head_mass, head_g)
 # A separate compressed chin/forehead mass keeps the skull from reading as one smooth egg.
-add(sphere('head_tile_chin_mass', 0.088, (0, 1.37, 2.405), TILE, scale=(0.82, 0.62, 0.68), segments=28, rings=14), head_g, 'head_damage')
-add(box('head_black_face_slot', (0.045, 0.012, 0.115), (0, 1.398, 2.485), BLACK, bev=0.002, rot=(math.radians(5), 0, 0)), head_g, 'face_slot')
+add(sphere('head_tile_chin_mass', 0.12, (0, 1.46, 2.36), SKULL, scale=(0.82, 0.62, 0.68), segments=28, rings=14), head_g, 'head_damage')
+add(box('head_black_face_slot', (0.066, 0.014, 0.155), (0, 1.48, 2.45), BLACK, bev=0.002, rot=(math.radians(5), 0, 0)), head_g, 'face_slot')
+for eye_x in (-0.055, 0.055):
+    add(sphere(f'head_eye_socket_{eye_x}', 0.032, (eye_x, 1.535, 2.50), BLACK, scale=(1.0, 0.28, 1.25), segments=20, rings=10), head_g, 'face_slot')
+add(box('head_nasal_slot', (0.026, 0.012, 0.07), (0, 1.545, 2.43), BLACK, bev=0.002, rot=(math.radians(5), 0, 0)), head_g, 'face_slot')
+for side in (-1, 1):
+    bridge_path = [(side * 0.31, 0.36, 2.92), (side * 0.25, 0.72, 2.76), (side * 0.16, 1.10, 2.58), (side * 0.08, 1.34, 2.48)]
+    add(tapered_tube(f'neck_trapezius_bridge_{side}', bridge_path, [0.19, 0.17, 0.14, 0.10], BODY_ALT, sides=18, per_seg=7, patch_material=BODY), neck_g, 'neck_segments')
 for i, z in enumerate((2.40, 2.46, 2.53)):
     pts = []
     for j in range(22):
@@ -279,26 +286,31 @@ for i, (loc, sc) in enumerate((((-0.045, 1.35, 2.51), (0.045, 0.012, 0.06)), ((0
     add(box(f'head_broken_tile_chip_{i}', sc, loc, GROUT if i == 1 else TILE, bev=0.003,
             rot=(R.uniform(-0.18, 0.18), R.uniform(-0.18, 0.18), R.uniform(-0.4, 0.4))), head_g, 'head_damage')
 
+# Smoky vending-glass casing and chrome rails explicitly frame the skull as a head.
+casing = sphere('head_glass_casing', 0.245, (0, 1.39, 2.45), GLASS, scale=(0.78, 0.64, 1.02), segments=32, rings=16)
+add(casing, head_g, 'glass_front')
+add(box('head_casing_broken_brow_rail', (0.19, 0.022, 0.016), (0, 1.47, 2.57), CHROME, bev=0.004, rot=(math.radians(8), 0, math.radians(-7))), head_g, 'door_frame')
+
 # Arms: continuous tapered bent tubes, 30-45 cm diameter before surface compression.
 def build_arm(side):
     sx = -1 if side == 'l' else 1
     if side == 'l':
         # Planted long forelimb: reaches forward and down like a running quadruped.
         path = [(sx * 0.42, 0.22, 3.03), (sx * 0.74, 0.58, 2.48), (sx * 0.82, 0.92, 1.86), (sx * 0.58, 1.34, 0.9), (sx * 0.39, 1.58, 0.25)]
-        radii = [0.175, 0.17, 0.15, 0.12, 0.082]
+        radii = [0.285, 0.27, 0.235, 0.19, 0.13]
     else:
         # Opposite forelimb is lifted and folded back mid-stride, breaking symmetry.
         path = [(sx * 0.42, 0.18, 3.03), (sx * 0.78, 0.16, 2.55), (sx * 0.96, 0.22, 1.98), (sx * 0.88, 0.48, 1.25), (sx * 0.68, 0.76, 0.72)]
-        radii = [0.175, 0.168, 0.148, 0.118, 0.082]
+        radii = [0.285, 0.265, 0.23, 0.185, 0.13]
     parent_control = arm_l_g if side == 'l' else arm_r_g
     add(tapered_tube(f'arm_{side}_continuous_fused_limb', path, radii, BODY_ALT if side == 'l' else BODY, sides=22, per_seg=8, patch_material=BODY if side == 'l' else BODY_ALT), parent_control, 'fused_limb_volume')
     elbow = path[2]
-    elbow_mass = sphere(f'arm_{side}_elbow_fused_joint', 0.16, elbow, BODY_ALT, scale=(1.05, 0.9, 1.1), segments=28, rings=14)
+    elbow_mass = sphere(f'arm_{side}_elbow_fused_joint', 0.225, elbow, BODY_ALT, scale=(1.05, 0.9, 1.1), segments=28, rings=14)
     roughen_blob(elbow_mass, 0.07, 11.0 if side == 'l' else 13.0)
     add(elbow_mass, parent_control, 'joints')
     for mass_i, u in enumerate((0.27, 0.58)):
         c = path_point(path, u)
-        bulk = sphere(f'arm_{side}_fused_bulk_{mass_i}', 0.13 if mass_i == 0 else 0.105, c, BODY_ALT if mass_i == 0 else BODY,
+        bulk = sphere(f'arm_{side}_fused_bulk_{mass_i}', 0.18 if mass_i == 0 else 0.15, c, BODY_ALT if mass_i == 0 else BODY,
                       scale=(1.25, 0.78, 1.05), segments=24, rings=12)
         roughen_blob(bulk, 0.085, 15.0 + mass_i * 2 + (0 if side == 'l' else 5))
         add(bulk, parent_control, 'fused_limb_volume')
@@ -315,9 +327,9 @@ def build_arm(side):
         u = 0.04 + 0.88 * R.random()
         c = path_point(path, u)
         angle = R.random() * math.tau
-        radial = 0.062 + 0.038 * R.random()
+        radial = path_radius(radii, u) * (0.58 + 0.22 * R.random())
         offset = mathutils.Vector((math.cos(angle) * radial, math.sin(angle) * radial * 0.9, (R.random() - 0.5) * 0.035))
-        radius = (0.052 + 0.04 * (1 - u)) * R.uniform(0.68, 1.28)
+        radius = (0.072 + 0.052 * (1 - u)) * R.uniform(0.72, 1.34)
         ball_mat = BALLS[4] if i % 5 in (0, 3) else BALLS[int(R.random() * 4)]
         ob = sphere(f'arm_{side}_embedded_ball_{i}', radius, c + offset, ball_mat,
                     scale=(1.36, 0.38 + 0.1 * (i % 3), 0.86), segments=20, rings=10)
@@ -369,14 +381,14 @@ def build_leg(side):
         path = [(sx * 0.27, -0.16, 1.98), (sx * 0.52, -0.28, 1.45), (sx * 0.58, -0.32, 1.02), (sx * 0.34, -0.05, 0.48), (sx * 0.28, 0.04, 0.16)]
     else:
         path = [(sx * 0.27, -0.16, 1.98), (sx * 0.43, -0.05, 1.48), (sx * 0.46, 0.0, 1.04), (sx * 0.52, 0.16, 0.5), (sx * 0.43, 0.28, 0.16)]
-    radii = [0.155, 0.148, 0.13, 0.105, 0.078]
+    radii = [0.255, 0.24, 0.205, 0.165, 0.12]
     parent_control = leg_l_g if side == 'l' else leg_r_g
     add(tapered_tube(f'leg_{side}_continuous_fused_limb', path, radii, BODY, sides=20, per_seg=8, patch_material=BODY_ALT), parent_control, 'fused_limb_volume')
     add(surface_seam(f'leg_{side}_cracked_grout_seam', path, radii, 0.08, 0.9, 1.25 if side == 'l' else -1.05, 0.18, GROUT, 0.006), parent_control, 'melted_seams')
     knee = path[2]
     ankle = path[-1]
-    add(sphere(f'leg_{side}_knee_joint', 0.17, knee, RUBBER, scale=(1.12, 0.84, 0.95), segments=24, rings=12), parent_control, 'joints')
-    add(sphere(f'leg_{side}_ankle_joint', 0.12, ankle, RUBBER, scale=(1.15, 0.72, 0.75), segments=20, rings=10), parent_control, 'joints')
+    add(sphere(f'leg_{side}_knee_joint', 0.235, knee, RUBBER, scale=(1.12, 0.84, 0.95), segments=24, rings=12), parent_control, 'joints')
+    add(sphere(f'leg_{side}_ankle_joint', 0.17, ankle, RUBBER, scale=(1.15, 0.72, 0.75), segments=20, rings=10), parent_control, 'joints')
     # Pool-tile/card evidence is strapped into the fused skin as broken surface plating.
     for i in range(16):
         u = 0.06 + 0.86 * (i % 8) / 7

@@ -26,9 +26,9 @@ export default class ThresholdEndscreen extends Scene {
     // Exact Z1 beat-1.1 pose/framing: eye height, opening camera, hero desk six metres ahead.
     // Not frozen: a few millimetres of deterministic breathing drift keep the final
     // loop alive without disturbing the approved end-slot composition.
-    const breath = Math.sin((t - 225) * Math.PI * 2 * 0.19) * 0.009 + Math.sin((t - 225) * Math.PI * 2 * 0.071) * 0.006;
-    const driftX = Math.sin((t - 225) * Math.PI * 2 * 0.047) * 0.014;
-    const driftZ = Math.sin((t - 225) * Math.PI * 2 * 0.031 + 0.8) * 0.012;
+    const breath = Math.sin((t - 225) * Math.PI * 2 * 0.19) * 0.028 + Math.sin((t - 225) * Math.PI * 2 * 0.071) * 0.018;
+    const driftX = Math.sin((t - 225) * Math.PI * 2 * 0.047) * 0.052;
+    const driftZ = Math.sin((t - 225) * Math.PI * 2 * 0.031 + 0.8) * 0.046;
     this.cam.position.set(driftX, 1.65 + breath, driftZ);
     this.cam.fov = 74;
     this.cam.aspect = out.width / out.height;
@@ -62,7 +62,7 @@ export default class ThresholdEndscreen extends Scene {
     // Same frame, intentionally darkened about 60%; modest radial/depth softness reads as endscreen blur
     // while grain/CA preserve the film's sensor language. No text or UI: slots are added by the user.
     return {
-      exposure: (0.22 - fade * 0.04) * (1 - powerSag * 0.42),
+      exposure: (0.25 - fade * 0.04) * (1 - powerSag * 0.58) * (1 + 0.045 * Math.sin((t - 225) * 1.7)),
       bloom: 0.09,
       bloomThreshold: 1.05,
       vignette: 0.42,
