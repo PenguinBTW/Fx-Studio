@@ -193,6 +193,16 @@ export default class ThresholdZ1Office extends Scene {
 
     // true dark rectangular opening behind the creature details; the ordinary slab otherwise reads as solid ceiling
     box(this.s, 'z1_ceiling_gap_black', [1.35, 0.035, 0.92], [0, 2.655, -6.02], basic(0x010101));
+    // Broken tile/grid edges make the opening read as torn ceiling rather than a clean black rectangle.
+    const brokenEdge = mat(0xb9b09b, 0.9);
+    for (let i = 0; i < 12; i++) {
+      const side = i % 4;
+      const u = (i % 3 - 1) * 0.36 + (hash(i) - 0.5) * 0.12;
+      const x = side < 2 ? u : (side === 2 ? -0.69 : 0.69);
+      const z = -6.02 + (side < 2 ? (side === 0 ? -0.47 : 0.47) : u * 0.65);
+      box(this.s, `z1_gap_broken_edge_${i}`, [side < 2 ? 0.28 + hash(i) * 0.16 : 0.045, 0.035, side < 2 ? 0.045 : 0.22 + hash(i) * 0.18], [x, 2.635 - hash(i + 2) * 0.025, z], brokenEdge, [0.04 * (hash(i) - 0.5), 0, 0.08 * (hash(i + 4) - 0.5)]);
+    }
+    for (let i = 0; i < 5; i++) box(this.s, `z1_gap_bent_grid_${i}`, [0.018, 0.022, 0.55 + hash(i) * 0.28], [-0.55 + i * 0.27, 2.625, -6.0 + (hash(i) - 0.5) * 0.18], gridMat, [0.08 + hash(i) * 0.12, 0, (hash(i + 5) - 0.5) * 0.18]);
     // creature read in the ceiling gap: eyes, lids, fingers, breathing fused tiles
     const eyeMat = mat(0xd9d07b, 0.22, 0, 0x718c35, 0.32);
     const pupilMat = basic(0x050505);
