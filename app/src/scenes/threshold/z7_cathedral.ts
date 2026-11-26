@@ -31,7 +31,7 @@ const KEYS: PoseKey[] = [
   { t: 173.4, p: [0, 0.35, -34.6], yaw: 184, pitch: -5, roll: 70, fov: 90 },
   { t: 175.0, p: [0, 0.48, -34.6], yaw: 174, pitch: 2, roll: 58, fov: 86 },
   { t: 176.0, p: [0, 1.6, -35.8], yaw: 0, pitch: 0, roll: 0, fov: 86 },
-  { t: 181.0, p: [0, 1.6, -63.0], yaw: 0, pitch: 0, roll: -2, fov: 88 },
+  { t: 181.0, p: [0, 1.6, -63.0], yaw: -7, pitch: -16, roll: -2, fov: 88 },
   { t: 186.0, p: [0, 1.35, -89.0], yaw: 0, pitch: -8, roll: 0, fov: 92 },
   { t: 189.0, p: [0, -11.5, -96.0], yaw: 0, pitch: 38, roll: 180, fov: 95 },
   { t: 192.0, p: [0, -27.5, -101.0], yaw: 0, pitch: -65, roll: 360, fov: 95 },
@@ -361,16 +361,16 @@ export default class ThresholdZ7Cathedral extends Scene {
     for (let i = 0; i < 9; i++) {
       this.cyl(this.s, 0.28 + 0.1 * hash(i), 0.34 + 0.1 * hash(i), 0.05 + 0.08 * hash(i * 2), [(hash(i * 3) - 0.5) * 6, 0.04, -12 - i * 9], chrome, 16);
     }
-    this.box(this.s, [1.3, 2.2, 0.8], [5.4, 0.55, -48], darkMetal, [0.25, 0.2, 1.25]);
+    this.box(this.s, [1.3, 2.2, 0.8], [3.15, 0.55, -48], darkMetal, [0.25, 0.2, 1.25]);
     for (let i = 0; i < 12; i++) this.cyl(this.s, 0.015, 0.02, 5 + hash(i) * 4, [-9 + hash(i * 2) * 18, 28, -30 - i * 11], darkMetal, 6);
     for (let i = 0; i < 10; i++) this.box(this.s, [0.08, 0.01, 0.55], [(hash(i * 5) - 0.5) * 4, 0.04, -15 - i * 6], paper, [0, hash(i) * 3, 0]);
-    this.box(this.s, [1.7, 2.3, 1.0], [0, 1.15, -170], chrome);
-    this.box(this.s, [1.1, 0.18, 0.04], [0, 1.65, -169.45], new THREE.MeshBasicMaterial({ color: 0x9fdcff }));
+    this.box(this.s, [1.7, 2.3, 1.0], [-1.25, 1.15, -64.9], chrome);
+    this.box(this.s, [1.1, 0.18, 0.04], [-1.25, 1.65, -64.35], new THREE.MeshBasicMaterial({ color: 0x9fdcff }));
 
     // Floor-level cathedral detail: individual coins, curled receipts, a readable change altar,
     // and the toppled machine's spilled contents. Low enough not to alter the exact replay aisle.
     const coinGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.008, 12);
-    const coinMat = new THREE.MeshStandardMaterial({ color: 0xb8a56a, roughness: 0.28, metalness: 0.86, emissive: 0x241706, emissiveIntensity: 0.18 });
+    const coinMat = new THREE.MeshStandardMaterial({ color: 0xb8a56a, roughness: 0.28, metalness: 0.86, emissive: 0x3a2508, emissiveIntensity: 1.1 });
     this.disposables.push(coinGeo, coinMat);
     const coinCount = 260;
     const coins = new THREE.InstancedMesh(coinGeo, coinMat, coinCount);
@@ -379,7 +379,7 @@ export default class ThresholdZ7Cathedral extends Scene {
     for (let i = 0; i < coinCount; i++) {
       const pile = i % 9;
       const spill = i >= 190;
-      const cx = spill ? 4.7 + hash(i * 2) * 2.1 : (hash(pile * 3) - 0.5) * 6;
+      const cx = spill ? 2.1 + hash(i * 2) * 2.1 : (hash(pile * 3) - 0.5) * 6;
       const cz = spill ? -45.5 - hash(i * 3) * 5.5 : -12 - pile * 9;
       const r = spill ? hash(i * 5) * 1.4 : hash(i * 5) * (0.24 + 0.1 * hash(pile));
       const a = hash(i * 7) * Math.PI * 2;
@@ -407,18 +407,19 @@ export default class ThresholdZ7Cathedral extends Scene {
       }
     }
     // Change-machine altar face: coin cup, slot, buttons, invoice light and offering bowl.
-    this.box(this.s, [1.28, 0.08, 0.06], [0, 1.88, -169.43], this.mat(0x17242e, 0.32, 0.55, 0x2f8fc8, 0.55));
-    for (let i = 0; i < 4; i++) this.cyl(this.s, 0.04, 0.04, 0.025, [-0.36 + i * 0.24, 1.42, -169.42], chrome, 16).rotation.x = Math.PI / 2;
-    this.box(this.s, [0.52, 0.18, 0.12], [0, 0.88, -169.39], darkMetal);
-    this.cyl(this.s, 0.34, 0.26, 0.12, [0, 0.13, -168.9], chrome, 24);
+    this.box(this.s, [1.28, 0.08, 0.06], [-1.25, 1.88, -64.33], this.mat(0x17242e, 0.32, 0.55, 0x2f8fc8, 0.55));
+    for (let i = 0; i < 4; i++) this.cyl(this.s, 0.04, 0.04, 0.025, [-1.61 + i * 0.24, 1.42, -64.32], chrome, 16).rotation.x = Math.PI / 2;
+    this.box(this.s, [0.52, 0.18, 0.12], [-1.25, 0.88, -64.29], darkMetal);
+    this.cyl(this.s, 0.34, 0.26, 0.12, [-1.25, 0.13, -63.8], chrome, 24);
     // Toppled machine face, cracked glass, flap and spill trail.
-    this.box(this.s, [1.05, 1.35, 0.05], [4.86, 0.86, -47.65], this.mat(0x27455b, 0.18, 0.05, 0x315f83, 0.55), [0.25, 0.2, 1.25]);
-    for (let i = 0; i < 5; i++) this.box(this.s, [0.03, 0.7 - i * 0.07, 0.025], [4.72 + i * 0.08, 0.9, -47.55 - i * 0.04], chrome, [0.25, 0.2, 1.25 + i * 0.1]);
-    for (let i = 0; i < 8; i++) this.box(this.s, [0.12, 0.08, 0.08], [4.3 + hash(i) * 1.7, 0.08, -45.8 - hash(i * 2) * 4.2], i % 2 ? productRed : productTeal, [hash(i) * 2, hash(i * 3) * 2, 0]);
+    this.box(this.s, [1.05, 1.35, 0.05], [2.62, 0.86, -47.65], this.mat(0x27455b, 0.18, 0.05, 0x315f83, 0.55), [0.25, 0.2, 1.25]);
+    for (let i = 0; i < 5; i++) this.box(this.s, [0.03, 0.7 - i * 0.07, 0.025], [2.48 + i * 0.08, 0.9, -47.55 - i * 0.04], chrome, [0.25, 0.2, 1.25 + i * 0.1]);
+    for (let i = 0; i < 8; i++) this.box(this.s, [0.12, 0.08, 0.08], [2.15 + hash(i) * 1.7, 0.08, -45.8 - hash(i * 2) * 4.2], i % 2 ? productRed : productTeal, [hash(i) * 2, hash(i * 3) * 2, 0]);
     const spillGlint = new THREE.PointLight(0x75c9ff, 0.85, 5.2, 1.7);
-    spillGlint.position.set(4.7, 1.25, -47.2);
-    const altarGlint = new THREE.PointLight(0x8fdcff, 0.9, 7.5, 1.8);
-    altarGlint.position.set(0, 1.7, -168.7);
+    spillGlint.position.set(2.55, 1.25, -47.2);
+    spillGlint.intensity = 4.0;
+    const altarGlint = new THREE.PointLight(0x8fdcff, 3.2, 9.0, 1.5);
+    altarGlint.position.set(-1.25, 1.7, -63.6);
     this.s.add(spillGlint, altarGlint);
 
     // Full-detail hero vending-machine family near the first wall walk. The instanced
