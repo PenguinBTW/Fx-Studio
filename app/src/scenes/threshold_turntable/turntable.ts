@@ -10,8 +10,8 @@ import { thresholdPost } from '../threshold/sensor_post';
 const IDS = ['beige_phone', 'lint', 'tenant_arm'] as const;
 const META = [
   { dist: 0.72, height: 0.72, target: 0.08, scale: 1 },
-  { dist: 0.28, height: 0.22, target: 0.02, scale: 1 },
-  { dist: 3.1, height: 1.45, target: 0.9, scale: 1 },
+  { dist: 0.24, height: 0.15, target: 0.055, scale: 1 },
+  { dist: 3.8, height: 1.05, target: 0.05, scale: 1 },
 ];
 
 export default class ThresholdTurntable extends Scene {
@@ -44,8 +44,8 @@ export default class ThresholdTurntable extends Scene {
     const meta = META[segment]!;
     for (const [i, inst] of this.insts.entries()) {
       inst.root.visible = i === segment;
-      inst.root.rotation.set(0, (view / 6) * Math.PI * 2, 0);
-      inst.root.position.set(0, 0, 0);
+      inst.root.rotation.set(0, (i === 2 ? Math.PI / 2 : 0) + (view / 6) * Math.PI * 2, 0);
+      inst.root.position.set(0, i === 1 ? 0.065 : 0, 0);
       inst.root.scale.setScalar(meta.scale);
     }
     const keys: FPKey[] = [{ t: 0, pos: [0, meta.height, meta.dist], yaw: 0, pitch: -Math.atan2(meta.height - meta.target, meta.dist), fov: 48, gait: 'still' }];

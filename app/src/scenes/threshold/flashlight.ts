@@ -88,7 +88,7 @@ export class FlashlightRig {
   readonly cone = new THREE.SpotLight(0xffffff, 0, 30, 22 * DEG, 0.58, 1.65);
   readonly spill = new THREE.SpotLight(0xffffff, 0, 12, 30 * DEG, 0.92, 2.0);
   readonly haze: THREE.Group;
-  private readonly hazeMats: THREE.SpriteMaterial[] = [];
+  private readonly hazeMats: THREE.MeshBasicMaterial[] = [];
   private readonly target = new THREE.Object3D();
 
   constructor() {
@@ -102,7 +102,7 @@ export class FlashlightRig {
     // shell or cross-section sheets, because those read as polygons/rings in first person.
     this.haze = new THREE.Group();
     const hazeAlpha = hazeAlphaTexture();
-    const mat = new THREE.SpriteMaterial({
+    const mat = new THREE.MeshBasicMaterial({
       color: 0xffd8a8,
       transparent: true,
       opacity: 0,
@@ -111,16 +111,18 @@ export class FlashlightRig {
       blending: THREE.AdditiveBlending,
     });
     this.hazeMats.push(mat);
+    const moteGeom = new THREE.CircleGeometry(1, 10);
     for (let i = 0; i < 34; i++) {
-      const sprite = new THREE.Sprite(mat);
+      const mote = new THREE.Mesh(moteGeom, mat);
       const z = 0.75 + hash(i * 3.1) * 5.7;
       const radius = Math.tan(22 * DEG) * z * Math.sqrt(hash(i * 5.7)) * 0.82;
       const a = hash(i * 9.3) * Math.PI * 2;
-      sprite.position.set(Math.cos(a) * radius, Math.sin(a) * radius, z);
-      sprite.scale.setScalar(0.018 + hash(i * 13.9) * 0.045);
-      sprite.userData.base = sprite.position.clone();
-      sprite.userData.seed = i * 17.31;
-      this.haze.add(sprite);
+      mote.position.set(Math.cos(a) * radius, Math.sin(a) * radius, z);
+      mote.scale.setScalar(0.018 + hash(i * 13.9) * 0.045);
+      mote.rotateZ(hash(i * 4.4) * Math.PI);
+      mote.userData.base = mote.position.clone();
+      mote.userData.seed = i * 17.31;
+      this.haze.add(mote);
     }
     this.group.add(this.haze);
   }
@@ -152,9 +154,9 @@ export class FlashlightRig {
     this.core.angle = lerp(4.5, 7, state.battery) * DEG;
     this.cone.angle = lerp(14, 22, state.battery) * DEG;
     this.spill.angle = 30 * DEG;
-    this.core.intensity = 260 * I;
-    this.cone.intensity = 86 * I;
-    this.spill.intensity = 16 * I;
+    this.core.intensity = 68 * I;
+    this.cone.intensity = 28 * I;
+    this.spill.intensity = 5 * I;
     this.haze.position.copy(this.core.position);
     this.haze.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), new THREE.Vector3(lagged[0], lagged[1], lagged[2]).normalize());
     for (const mat of this.hazeMats) {
