@@ -11,32 +11,50 @@ R = random.Random(91731)
 
 # Source-true but dust-muted materials. The continuous body carries the silhouette;
 # ball-pit plastic, glazed pool tile, paper, felt, chrome and glass are surface evidence.
-BODY = mat('TenantFusedBody', (0.032, 0.012, 0.009), 0.9, metal=0.01)
-BODY_ALT = mat('TenantFusedBodyWarm', (0.047, 0.018, 0.012), 0.94, metal=0.01)
-TILE = mat('TenantPoolTile', (0.045, 0.14, 0.14), 0.42, metal=0.02)
-SKULL = mat('TenantSkullTile', (0.30, 0.39, 0.35), 0.58, metal=0.01)
+BODY = mat('TenantFusedBody', (0.012, 0.0048, 0.0032), 0.99, metal=0.0)
+BODY_ALT = mat('TenantFusedBodyWarm', (0.018, 0.0065, 0.0044), 1.0, metal=0.0)
+TILE = mat('TenantPoolTile', (0.018, 0.066, 0.062), 0.68, metal=0.01)
+SKULL = mat('TenantSkullTile', (0.024, 0.031, 0.027), 0.97, metal=0.0)
 GROUT = mat('TenantTileGrout', (0.018, 0.028, 0.028), 0.82)
-PAPER = mat('TenantPaper', (0.34, 0.255, 0.13), 0.88)
+PAPER = mat('TenantPaper', (0.105, 0.070, 0.026), 0.97)
 PAPER_DARK = mat('TenantPaperEdge', (0.055, 0.028, 0.012), 0.96)
 FELT = mat('TenantFelt', (0.035, 0.004, 0.003), 0.99)
 CHROME = mat('TenantChrome', (0.34, 0.39, 0.43), 0.2, metal=0.88)
 DARK_METAL = mat('TenantVendingMetal', (0.018, 0.028, 0.034), 0.42, metal=0.72)
-GLASS = mat('TenantRibcageGlass', (0.025, 0.085, 0.105), 0.14, metal=0.08)
+GLASS = mat('TenantRibcageGlass', (0.012, 0.040, 0.050), 0.54, metal=0.02)
 try:
     GLASS.diffuse_color = (0.025, 0.085, 0.105, 0.46)
-    GLASS.node_tree.nodes['Principled BSDF'].inputs['Alpha'].default_value = 0.22
+    GLASS.node_tree.nodes['Principled BSDF'].inputs['Alpha'].default_value = 0.12
     GLASS.surface_render_method = 'DITHERED'
 except Exception:
     pass
 BLACK = mat('TenantFaceSlot', (0.0015, 0.002, 0.002), 0.94)
 RUBBER = mat('TenantDarkRubber', (0.012, 0.009, 0.008), 0.86)
 BALLS = [
-    mat('TenantBallRed', (0.045, 0.006, 0.005), 0.96),
-    mat('TenantBallBlue', (0.004, 0.012, 0.026), 0.96),
-    mat('TenantBallYellow', (0.052, 0.025, 0.003), 0.97),
-    mat('TenantBallGreen', (0.005, 0.025, 0.014), 0.97),
-    mat('TenantBallDark', (0.045, 0.025, 0.022), 0.62),
+    mat('TenantBallRed', (0.018, 0.0025, 0.002), 0.99),
+    mat('TenantBallBlue', (0.0015, 0.004, 0.010), 0.99),
+    mat('TenantBallYellow', (0.022, 0.009, 0.001), 0.99),
+    mat('TenantBallGreen', (0.0015, 0.010, 0.005), 0.99),
+    mat('TenantBallDark', (0.018, 0.009, 0.008), 0.91),
 ]
+
+def grime_colors(ob, seed, lo=0.28, hi=0.98):
+    # Byte/float vertex colors export through glTF and multiply the base albedo,
+    # giving wet dirt/ash variation without relying on procedural shader nodes.
+    try:
+        mesh = ob.data
+        attr = mesh.color_attributes.get('Grime') or mesh.color_attributes.new(name='Grime', type='FLOAT_COLOR', domain='CORNER')
+        for lp in mesh.loops:
+            co = mesh.vertices[lp.vertex_index].co
+            n1 = math.sin(co.x * 23.7 + co.y * 17.1 + co.z * 31.3 + seed)
+            n2 = math.sin(co.x * 61.3 - co.y * 41.7 + co.z * 53.9 + seed * 1.71)
+            n3 = math.sin((co.x + co.z) * 97.0 + seed * 2.3)
+            n = 0.5 + 0.28 * n1 + 0.16 * n2 + 0.06 * n3
+            n = max(0.0, min(1.0, n))
+            v = lo + (hi - lo) * n
+            attr.data[lp.index].color = (v, v * (0.82 + 0.12 * n), v * (0.68 + 0.16 * n), 1.0)
+    except Exception as exc:
+        print('grime color skipped', ob.name, exc)
 
 seen_parts = set()
 root = empty('tenant_full_root')
@@ -109,7 +127,7 @@ def tapered_tube(name, points, radii, material, sides=20, per_seg=9, patch_mater
             a = math.tau * k / sides
             # Fused matter is not an inflated tube: low-frequency asymmetrical lumps
             # break the silhouette while the underlying volume remains continuous.
-            lump = 1.0 + 0.17 * math.sin(i * 0.83 + k * 1.91) + 0.095 * math.sin(i * 0.31 - k * 3.07)
+            lump = 1.0 + 0.15 * math.sin(i * 0.83 + k * 1.91) + 0.075 * math.sin(i * 0.31 - k * 3.07) + 0.050 * math.sin(i * 2.17 + k * 4.31) + 0.029 * math.sin(i * 3.71 - k * 5.13)
             rr = radius * lump * (1.0 + 0.035 * math.sin(i * 0.47))
             v = p + (side * math.cos(a) + normal * math.sin(a)) * rr
             ring.append(len(verts))
@@ -126,16 +144,6 @@ def tapered_tube(name, points, radii, material, sides=20, per_seg=9, patch_mater
     ob = bpy.data.objects.new(name, mesh)
     bpy.context.collection.objects.link(ob)
     assign(ob, material)
-    if patch_material is not None:
-        ob.data.materials.append(patch_material)
-        # Deterministic patchwork within the same continuous mesh: irregular bands of
-        # warmer fused plastic interrupt the base material without splitting the volume.
-        for pi, poly in enumerate(mesh.polygons[:-2]):
-            ring_i = pi // sides
-            k = pi % sides
-            patch_wave = math.sin(ring_i * 0.71 + k * 1.19) + 0.55 * math.sin(ring_i * 0.29 - k * 2.13)
-            if patch_wave > 0.42:
-                poly.material_index = 1
     for poly in mesh.polygons:
         poly.use_smooth = True
     return ob
@@ -216,16 +224,20 @@ leg_r_lower_g = group('leg_r_lower_control', leg_r_g, 'leg_r_lower', (0.44, -0.0
 
 # Hunched torso: one continuous sloping mass. Chest high, pelvis back, neck/head forward.
 torso_path = [(0, -0.22, 1.92), (0.02, 0.02, 2.35), (-0.02, 0.35, 2.78), (0, 0.67, 3.08)]
-add(tapered_tube('torso_continuous_hunched_mass', torso_path, [0.43, 0.5, 0.54, 0.34], BODY, sides=24, per_seg=10, patch_material=BODY_ALT), rib_g)
+torso_mass_ob = add(tapered_tube('torso_continuous_hunched_mass', torso_path, [0.43, 0.5, 0.54, 0.34], BODY, sides=24, per_seg=10, patch_material=BODY_ALT), rib_g)
+grime_colors(torso_mass_ob, 2.1, 0.08, 1.0)
 pelvis_mass = sphere('pelvis_fused_mass', 0.42, (0, -0.2, 1.96), BODY_ALT, scale=(1.28, 0.9, 0.66), segments=36, rings=18)
-roughen_blob(pelvis_mass, 0.075, 1.3)
+roughen_blob(pelvis_mass, 0.105, 1.3)
+grime_colors(pelvis_mass, 3.2, 0.07, 0.92)
 add(pelvis_mass, pelvis_g)
 chest_mass = sphere('chest_fused_mass', 0.5, (0, 0.3, 2.68), BODY, scale=(1.34, 0.86, 0.86), segments=40, rings=20)
-roughen_blob(chest_mass, 0.085, 4.1)
+roughen_blob(chest_mass, 0.12, 4.1)
+grime_colors(chest_mass, 4.2, 0.07, 0.94)
 add(chest_mass, rib_g)
 for side in (-1, 1):
     shoulder = sphere(f'shoulder_hump_{side}', 0.27, (side * 0.38, 0.18, 2.95), BODY_ALT, scale=(1.08, 0.82, 0.78), segments=28, rings=14)
-    roughen_blob(shoulder, 0.08, 7.0 + side)
+    roughen_blob(shoulder, 0.11, 7.0 + side)
+    grime_colors(shoulder, 7.0 + side, 0.07, 0.92)
     add(shoulder, upper, 'shoulder_mass')
 
 # Ribcage remains a broken vending-machine front, now embedded in the front of the torso mass.
@@ -259,20 +271,25 @@ for seg in range(7):
 
 # Small forward head, clearly below the shoulder line. The neck reaches horizontally
 # out of the chest, so the head reads as a predator skull rather than a top knob.
-add(tapered_tube('neck_forward_fused_mass', [(0, 0.56, 2.92), (0, 0.82, 2.79), (0, 1.12, 2.60)], [0.27, 0.235, 0.19], BODY_ALT, sides=18, per_seg=8), neck_g, 'neck_segments')
+neck_mass_ob = add(tapered_tube('neck_forward_fused_mass', [(0, 0.56, 2.92), (0, 0.82, 2.79), (0, 1.12, 2.60)], [0.27, 0.235, 0.19], BODY_ALT, sides=18, per_seg=8), neck_g, 'neck_segments')
+grime_colors(neck_mass_ob, 5.4, 0.07, 0.88)
 for i in range(3):
     u = i / 2
     add(sphere(f'neck_{i+1}', 0.15 - i * 0.015, (0, 0.62 + u * 0.32, 2.87 - u * 0.19), BODY_ALT,
                scale=(1.05, 0.72, 0.8), segments=24, rings=12), neck_g, 'neck_segments')
 head_mass = sphere('head_tile_ovoid', 0.19, (0, 1.38, 2.45), SKULL, scale=(0.82, 0.7, 1.08), segments=40, rings=20)
-roughen_blob(head_mass, 0.025, 9.2)
+roughen_blob(head_mass, 0.055, 9.2)
+grime_colors(head_mass, 9.2, 0.08, 0.82)
 add(head_mass, head_g)
 # A separate compressed chin/forehead mass keeps the skull from reading as one smooth egg.
 add(sphere('head_tile_chin_mass', 0.12, (0, 1.46, 2.36), SKULL, scale=(0.82, 0.62, 0.68), segments=28, rings=14), head_g, 'head_damage')
 add(box('head_black_face_slot', (0.066, 0.014, 0.155), (0, 1.48, 2.45), BLACK, bev=0.002, rot=(math.radians(5), 0, 0)), head_g, 'face_slot')
 for eye_x in (-0.055, 0.055):
-    add(sphere(f'head_eye_socket_{eye_x}', 0.032, (eye_x, 1.535, 2.50), BLACK, scale=(1.0, 0.28, 1.25), segments=20, rings=10), head_g, 'face_slot')
-add(box('head_nasal_slot', (0.026, 0.012, 0.07), (0, 1.545, 2.43), BLACK, bev=0.002, rot=(math.radians(5), 0, 0)), head_g, 'face_slot')
+    add(sphere(f'head_eye_socket_{eye_x}', 0.038, (eye_x * 1.18, 1.535, 2.505), BLACK, scale=(1.42, 0.20, 0.82), segments=20, rings=10), head_g, 'face_slot')
+add(box('head_nasal_slot_l', (0.018, 0.012, 0.062), (-0.012, 1.548, 2.43), BLACK, bev=0.001, rot=(math.radians(5), 0, math.radians(18))), head_g, 'face_slot')
+add(box('head_nasal_slot_r', (0.018, 0.012, 0.052), (0.013, 1.548, 2.43), BLACK, bev=0.001, rot=(math.radians(5), 0, math.radians(-14))), head_g, 'face_slot')
+for tooth in range(5):
+    add(box(f'head_broken_tooth_shadow_{tooth}', (0.010, 0.010, 0.035 + 0.008 * (tooth % 2)), (-0.042 + tooth * 0.021, 1.482, 2.392), BLACK, bev=0.001, rot=(math.radians(6), 0, math.radians((tooth - 2) * 4))), head_g, 'face_slot')
 for side in (-1, 1):
     bridge_path = [(side * 0.31, 0.36, 2.92), (side * 0.25, 0.72, 2.76), (side * 0.16, 1.10, 2.58), (side * 0.08, 1.34, 2.48)]
     add(tapered_tube(f'neck_trapezius_bridge_{side}', bridge_path, [0.19, 0.17, 0.14, 0.10], BODY_ALT, sides=18, per_seg=7, patch_material=BODY), neck_g, 'neck_segments')
@@ -285,11 +302,54 @@ for i, z in enumerate((2.40, 2.46, 2.53)):
 for i, (loc, sc) in enumerate((((-0.045, 1.35, 2.51), (0.045, 0.012, 0.06)), ((0.052, 1.34, 2.43), (0.055, 0.014, 0.045)), ((0.0, 1.37, 2.55), (0.07, 0.012, 0.032)))):
     add(box(f'head_broken_tile_chip_{i}', sc, loc, GROUT if i == 1 else TILE, bev=0.003,
             rot=(R.uniform(-0.18, 0.18), R.uniform(-0.18, 0.18), R.uniform(-0.4, 0.4))), head_g, 'head_damage')
+# Skull weathering: hairline cracks are raised geometry catching edge light, with
+# grime-filled chipped bites breaking the smooth ceramic silhouette.
+for crack_i, crack in enumerate((
+    ((-0.065, 1.49, 2.55), (-0.035, 1.505, 2.52), (-0.012, 1.49, 2.48)),
+    ((0.052, 1.50, 2.55), (0.032, 1.51, 2.50), (0.018, 1.485, 2.45)),
+    ((-0.02, 1.48, 2.40), (-0.045, 1.47, 2.37), (-0.07, 1.44, 2.38)),
+)):
+    add(curve(f'head_hairline_crack_{crack_i}', list(crack), 0.0075, GROUT), head_g, 'head_damage')
+for chip_i, (loc, sc) in enumerate((((-0.10, 1.43, 2.47), (0.035, 0.018, 0.052)), ((0.09, 1.44, 2.39), (0.032, 0.02, 0.045)), ((0.0, 1.405, 2.53), (0.052, 0.018, 0.025)))):
+    add(box(f'head_grime_bite_{chip_i}', sc, loc, GROUT, bev=0.002,
+            rot=(R.uniform(-0.25, 0.25), R.uniform(-0.25, 0.25), R.uniform(-0.65, 0.65))), head_g, 'head_damage')
+for grime_i, (x, z, sx, sz) in enumerate(((-0.065, 2.535, 0.055, 0.032), (0.065, 2.50, 0.048, 0.042), (-0.025, 2.405, 0.062, 0.026), (0.025, 2.56, 0.045, 0.022), (-0.095, 2.43, 0.035, 0.045))):
+    add(sphere(f'head_face_grime_mass_{grime_i}', 0.035, (x, 1.535, z), GROUT if grime_i % 2 else FELT,
+               scale=(sx / 0.035, 0.16, sz / 0.035), segments=16, rings=8), head_g, 'head_damage')
+for edge_i, x in enumerate((-0.105, 0.105)):
+    add(box(f'head_chipped_edge_shadow_{edge_i}', (0.030, 0.018, 0.095), (x, 1.49, 2.47), BLACK, bev=0.002,
+            rot=(math.radians(4), math.radians(x * 90), math.radians(18 if x < 0 else -18))), head_g, 'head_damage')
+# Oblique and rear angles must not become a clean white globe: broad dirt shell
+# patches wrap both sides and the back of the ceramic skull.
+for side_i, sx in enumerate((-1, 1)):
+    for patch_i, (y, z, sy, sz) in enumerate(((1.39, 2.54, 0.060, 0.045), (1.34, 2.45, 0.052, 0.065), (1.43, 2.38, 0.044, 0.040))):
+        add(sphere(f'head_side_grime_{side_i}_{patch_i}', 0.036, (sx * (0.160 + patch_i * 0.005), y, z), BLACK if patch_i != 1 else FELT,
+                   scale=(0.18, sy / 0.036, sz / 0.036), segments=16, rings=8), head_g, 'head_damage')
+    pts = ((sx * 0.13, 1.46, 2.57), (sx * 0.15, 1.39, 2.49), (sx * 0.12, 1.34, 2.39))
+    add(curve(f'head_side_split_crack_{side_i}', list(pts), 0.0105, GROUT), head_g, 'head_damage')
+for rear_i, (x, z) in enumerate(((-0.065, 2.51), (0.04, 2.47), (0.0, 2.57))):
+    add(sphere(f'head_rear_grime_{rear_i}', 0.04, (x, 1.232, z), FELT if rear_i == 1 else BLACK,
+               scale=(1.25, 0.16, 0.82), segments=16, rings=8), head_g, 'head_damage')
 
 # Smoky vending-glass casing and chrome rails explicitly frame the skull as a head.
 casing = sphere('head_glass_casing', 0.245, (0, 1.39, 2.45), GLASS, scale=(0.78, 0.64, 1.02), segments=32, rings=16)
 add(casing, head_g, 'glass_front')
 add(box('head_casing_broken_brow_rail', (0.19, 0.022, 0.016), (0, 1.47, 2.57), CHROME, bev=0.004, rot=(math.radians(8), 0, math.radians(-7))), head_g, 'door_frame')
+for glass_crack, pts in enumerate((
+    ((-0.10, 1.50, 2.57), (-0.055, 1.46, 2.54), (-0.02, 1.41, 2.56)),
+    ((0.11, 1.48, 2.54), (0.065, 1.43, 2.58), (0.04, 1.39, 2.53)),
+)):
+    add(curve(f'head_glass_casing_crack_{glass_crack}', list(pts), 0.009, GROUT), head_g, 'head_damage')
+for scratch in range(7):
+    a = -0.9 + scratch * 0.31
+    cx = math.sin(a) * 0.13
+    pts = ((cx, 1.50 - scratch * 0.012, 2.56), (cx * 0.82, 1.43 - scratch * 0.008, 2.59), (cx * 0.68, 1.37 - scratch * 0.006, 2.55))
+    add(curve(f'head_casing_scratch_{scratch}', list(pts), 0.0032, GROUT), head_g, 'head_damage')
+for grime in range(5):
+    add(box(f'head_casing_grime_seam_{grime}', (0.035 + 0.012 * (grime % 2), 0.009, 0.012),
+            (-0.11 + grime * 0.055, 1.365 + 0.018 * (grime % 2), 2.55), GROUT, bev=0.001,
+            rot=(math.radians(8), 0, math.radians(-18 + grime * 8))), head_g, 'head_damage')
+
 
 # Arms: continuous tapered bent tubes, 30-45 cm diameter before surface compression.
 def build_arm(side):
@@ -303,7 +363,8 @@ def build_arm(side):
         path = [(sx * 0.42, 0.18, 3.03), (sx * 0.78, 0.16, 2.55), (sx * 0.96, 0.22, 1.98), (sx * 0.88, 0.48, 1.25), (sx * 0.68, 0.76, 0.72)]
         radii = [0.285, 0.265, 0.23, 0.185, 0.13]
     parent_control = arm_l_g if side == 'l' else arm_r_g
-    add(tapered_tube(f'arm_{side}_continuous_fused_limb', path, radii, BODY_ALT if side == 'l' else BODY, sides=22, per_seg=8, patch_material=BODY if side == 'l' else BODY_ALT), parent_control, 'fused_limb_volume')
+    arm_mass_ob = add(tapered_tube(f'arm_{side}_continuous_fused_limb', path, radii, BODY_ALT if side == 'l' else BODY, sides=22, per_seg=8, patch_material=BODY if side == 'l' else BODY_ALT), parent_control, 'fused_limb_volume')
+    grime_colors(arm_mass_ob, 11.0 if side == 'l' else 13.0, 0.07, 0.92)
     elbow = path[2]
     elbow_mass = sphere(f'arm_{side}_elbow_fused_joint', 0.225, elbow, BODY_ALT, scale=(1.05, 0.9, 1.1), segments=28, rings=14)
     roughen_blob(elbow_mass, 0.07, 11.0 if side == 'l' else 13.0)
@@ -327,34 +388,37 @@ def build_arm(side):
         u = 0.04 + 0.88 * R.random()
         c = path_point(path, u)
         angle = R.random() * math.tau
-        radial = path_radius(radii, u) * (0.58 + 0.22 * R.random())
+        radial = path_radius(radii, u) * (0.44 + 0.18 * R.random())
         offset = mathutils.Vector((math.cos(angle) * radial, math.sin(angle) * radial * 0.9, (R.random() - 0.5) * 0.035))
         radius = (0.072 + 0.052 * (1 - u)) * R.uniform(0.72, 1.34)
         ball_mat = BALLS[4] if i % 5 in (0, 2, 3) else BALLS[int(R.random() * 4)]
         ob = sphere(f'arm_{side}_embedded_ball_{i}', radius, c + offset, ball_mat,
-                    scale=(1.36, 0.38 + 0.1 * (i % 3), 0.86), segments=20, rings=10)
+                    scale=(1.10, 0.58 + 0.08 * (i % 2), 0.90), segments=16, rings=8)
         add(ob, parent_control, 'ball_pit_shell')
-        # A flattened fused-plastic cap overlaps the exposed center of most balls,
-        # leaving only a muted rim visible: embedded/crusted mass rather than candy
-        # glued onto the limb surface.
-        if i % 5 != 1:
-            cap = sphere(f'arm_{side}_crust_cap_{i}', radius * 1.06, c + offset + mathutils.Vector((0, 0.010 + 0.002 * (i % 3), 0)), BODY if side == 'r' else BODY_ALT,
-                         scale=(1.43, 0.18, 0.91), segments=20, rings=8)
-            add(cap, parent_control, 'crusted_mass')
         if i % 6 == 2:
             add(torus(f'arm_{side}_melted_seam_{i}', radius * 0.86, 0.004, c + offset * 0.65, RUBBER,
                       rot=(math.radians(90), 0, 0), major_segments=18, minor_segments=5), parent_control, 'melted_seams')
     # Torn paper and cracked tile plates sit partly inside the limb skin. Their irregular
     # exposed edges break the otherwise clay-smooth albedo without becoming separate armor.
     plate_mats = (PAPER_DARK, TILE, FELT, PAPER)
-    for i in range(22):
+    for i in range(80):
         u = 0.07 + 0.82 * ((i * 0.381 + (0.11 if side == 'r' else 0.0)) % 1.0)
         c, sidev, normalv, tangentv = surface_frame(path, u)
         angle = (i * 2.399 + (0.7 if side == 'r' else 0.0)) % math.tau
         loc = c + (sidev * math.cos(angle) + normalv * math.sin(angle)) * (path_radius(radii, u) * 0.9)
-        add(box(f'arm_{side}_embedded_source_plate_{i}', (0.045 + 0.012 * (i % 3), 0.012, 0.065 + 0.014 * ((i + 1) % 3)),
+        add(box(f'arm_{side}_embedded_source_plate_{i}', (0.060 + 0.018 * (i % 3), 0.012, 0.085 + 0.020 * ((i + 1) % 3)),
                 loc, plate_mats[i % len(plate_mats)], bev=0.004,
                 rot=(R.uniform(-0.45, 0.45), R.uniform(-0.45, 0.45), R.uniform(-0.9, 0.9))), parent_control, 'patchwork')
+    # Broad grease/ash skin stains sit over the fragment crust. They are thin matte
+    # geometry rather than a shader print, breaking any remaining clean clay value.
+    for stain in range(42):
+        u = 0.08 + 0.80 * ((stain * 0.47 + (0.19 if side == 'r' else 0.0)) % 1.0)
+        c, sidev, normalv, tangentv = surface_frame(path, u)
+        angle = (stain * 1.73 + (0.4 if side == 'r' else 0.0)) % math.tau
+        loc = c + (sidev * math.cos(angle) + normalv * math.sin(angle)) * (path_radius(radii, u) * 0.82)
+        ob = sphere(f'arm_{side}_grease_stain_{stain}', 0.038 + 0.012 * (stain % 3), loc, FELT if stain % 3 else PAPER_DARK,
+                    scale=(1.35, 0.44, 0.95), segments=10, rings=5)
+        add(ob, parent_control, 'grime_stains')
     return path
 
 arm_l_path = build_arm('l')
@@ -390,7 +454,8 @@ def build_leg(side):
         path = [(sx * 0.27, -0.16, 1.98), (sx * 0.43, -0.05, 1.48), (sx * 0.46, 0.0, 1.04), (sx * 0.52, 0.16, 0.5), (sx * 0.43, 0.28, 0.16)]
     radii = [0.255, 0.24, 0.205, 0.165, 0.12]
     parent_control = leg_l_g if side == 'l' else leg_r_g
-    add(tapered_tube(f'leg_{side}_continuous_fused_limb', path, radii, BODY, sides=20, per_seg=8, patch_material=BODY_ALT), parent_control, 'fused_limb_volume')
+    leg_mass_ob = add(tapered_tube(f'leg_{side}_continuous_fused_limb', path, radii, BODY, sides=20, per_seg=8, patch_material=BODY_ALT), parent_control, 'fused_limb_volume')
+    grime_colors(leg_mass_ob, 15.0 if side == 'l' else 17.0, 0.07, 0.90)
     add(surface_seam(f'leg_{side}_cracked_grout_seam', path, radii, 0.08, 0.9, 1.25 if side == 'l' else -1.05, 0.18, GROUT, 0.006), parent_control, 'melted_seams')
     knee = path[2]
     ankle = path[-1]
@@ -429,8 +494,8 @@ for i in range(8):
     add(box(f'pelvis_torn_seam_{i}', (0.022, 0.012, R.uniform(0.1, 0.22)),
             (R.uniform(-0.24, 0.24), 0.15, R.uniform(1.86, 2.1)), PAPER_DARK,
             rot=(R.uniform(-0.3, 0.3), R.uniform(-0.3, 0.3), R.uniform(-0.8, 0.8))), pelvis_g, 'torn_seams')
-patch_mats = [TILE, PAPER, FELT, CHROME]
-for i in range(34):
+patch_mats = [PAPER_DARK, TILE, FELT, PAPER_DARK, PAPER, FELT, CHROME]
+for i in range(170):
     zone = R.choice(['shoulder_l', 'shoulder_r', 'rib', 'hip'])
     if zone == 'shoulder_l':
         loc = (-0.34 + R.uniform(-0.08, 0.08), R.uniform(0.18, 0.42), 3.0 + R.uniform(-0.12, 0.1))
@@ -447,9 +512,34 @@ for i in range(34):
     if i % 7 == 0:
         ob = sphere(f'patch_ball_{i}', R.uniform(0.025, 0.045), loc, BALLS[i % len(BALLS)], scale=(1, 0.65, 1), segments=16, rings=8)
     else:
-        ob = box(f'patch_plate_{i}', (R.uniform(0.055, 0.11), R.uniform(0.01, 0.022), R.uniform(0.06, 0.14)), loc,
+        ob = box(f'patch_plate_{i}', (R.uniform(0.045, 0.105), R.uniform(0.012, 0.030), R.uniform(0.05, 0.13)), loc,
                  patch_mats[i % len(patch_mats)], bev=0.002, rot=(R.uniform(-0.4, 0.4), R.uniform(-0.4, 0.4), R.uniform(-0.8, 0.8)))
     add(ob, par, 'patchwork')
+
+# Dense small scabs and ash clods are the crust itself: overlapping matte dark
+# micro-volumes catch light independently, preventing any broad clean clay plane.
+for scab in range(170):
+    zone = scab % 5
+    if zone in (0, 1):
+        sx = -0.34 if zone == 0 else 0.34
+        loc = (sx + R.uniform(-0.14, 0.14), R.uniform(0.10, 0.46), 2.94 + R.uniform(-0.20, 0.17))
+        par = upper
+    elif zone in (2, 3):
+        loc = (R.uniform(-0.42, 0.42), R.uniform(0.28, 0.70), R.uniform(2.18, 3.04))
+        par = rib_g
+    else:
+        loc = (R.uniform(-0.34, 0.34), R.uniform(-0.16, 0.18), R.uniform(1.78, 2.14))
+        par = pelvis_g
+    mat_scab = (FELT, PAPER_DARK, RUBBER, BALLS[4])[scab % 4]
+    ob = sphere(f'body_crust_scab_{scab}', R.uniform(0.016, 0.043), loc, mat_scab,
+                scale=(R.uniform(0.8, 1.65), R.uniform(0.45, 0.9), R.uniform(0.75, 1.45)), segments=8, rings=4)
+    add(ob, par, 'crust_relief')
+for clod in range(90):
+    sx = -0.34 if clod % 2 == 0 else 0.34
+    loc = (sx + R.uniform(-0.18, 0.18), R.uniform(0.05, 0.48), 2.88 + R.uniform(-0.25, 0.22))
+    ob = sphere(f'shoulder_dense_clod_{clod}', R.uniform(0.020, 0.055), loc, (FELT, PAPER_DARK, RUBBER)[clod % 3],
+                scale=(R.uniform(0.75, 1.55), R.uniform(0.55, 1.1), R.uniform(0.75, 1.45)), segments=8, rings=4)
+    add(ob, upper, 'crust_relief')
 
 bpy.context.view_layer.update()
 export(HERE)

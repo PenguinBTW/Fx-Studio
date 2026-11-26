@@ -82,6 +82,7 @@ export default class ThresholdZ5Motel extends Scene {
   private neonMats: THREE.MeshStandardMaterial[] = [];
   private rainLines: THREE.Mesh[] = [];
   private footprintMats: THREE.MeshStandardMaterial[] = [];
+  private lampSpill?: THREE.PointLight;
   private disposables: { dispose(): void }[] = [];
 
   private mat(color: number, roughness = 0.7, metalness = 0, emissive = 0, emissiveIntensity = 0) {
@@ -442,6 +443,7 @@ export default class ThresholdZ5Motel extends Scene {
     shade.scale.z = 0.78;
     const lampSpill = new THREE.PointLight(0xffa04c, 3.8, 5.8, 1.45);
     lampSpill.position.set(4.35, 1.05, -19.1);
+    this.lampSpill = lampSpill;
     this.s.add(lampSpill);
 
     // Window and rain-streaked neon vacancy sign at the corridor end.
@@ -607,6 +609,13 @@ export default class ThresholdZ5Motel extends Scene {
       if (wl) wl.rotation.z = 0.35 + flap;
       if (wr) wr.rotation.z = -0.35 - flap;
       this.lint.position.y = 1.9 + 0.05 * Math.sin(t * 31);
+    }
+
+    // During the hiding beat the lamp is only an adjacent-room residue under the door;
+    // the CRT owns the room while bed/lamp geometry barely survives at perception edge.
+    if (this.lampSpill) {
+      const lampHide = t >= 124 && t < 128 ? 1 : t >= 128 && t < 129 ? 1 - smooth((t - 128) / 1) : 0;
+      this.lampSpill.intensity = 3.8 * (1 - lampHide) + 0.24 * lampHide;
     }
 
     // TVs and neon are alive; TV glow remains as the only hiding light after beam-off.

@@ -308,13 +308,15 @@ export default class ThresholdZ7Cathedral extends Scene {
         if (m.name === 'TenantPoolTile') { m.emissive.setHex(0x09262c); m.emissiveIntensity = 0.18; }
         if (m.name === 'TenantChrome') { m.emissive.setHex(0x263746); m.emissiveIntensity = 0.52; }
         if (m.name === 'TenantRibcageGlass') { m.emissive.setHex(0x164b59); m.emissiveIntensity = 0.16; }
+        if (m.name === 'TenantFusedBody') m.color.setRGB(0.018, 0.007, 0.0048);
+        if (m.name === 'TenantFusedBodyWarm') m.color.setRGB(0.026, 0.0095, 0.0065);
       }
     });
-    const chestGlow = new THREE.PointLight(0x5bb9d7, 3.2, 6.5, 1.55);
+    const chestGlow = new THREE.PointLight(0x5bb9d7, 2.0, 6.5, 1.55);
     chestGlow.position.set(0, 2.8, 0.65);
-    const rim = new THREE.PointLight(0x83cfff, 4.0, 7.5, 1.5);
+    const rim = new THREE.PointLight(0x83cfff, 1.55, 7.5, 1.5);
     rim.position.set(-0.8, 3.7, -1.0);
-    const skullGlow = new THREE.PointLight(0xffd7a0, 3.0, 3.2, 1.35);
+    const skullGlow = new THREE.PointLight(0xffb36d, 0.65, 3.2, 1.35);
     skullGlow.position.set(0, 2.5, -1.25);
     this.tenant.add(chestGlow, rim, skullGlow);
     this.tenant.visible = false;
@@ -366,8 +368,8 @@ export default class ThresholdZ7Cathedral extends Scene {
 
     // Long fluorescent reflections in the polished black stone: raster lights cannot
     // self-reflect, so thin additive streaks mirror the machine-wall rhythm down the aisle.
-    const reflMat = new THREE.MeshBasicMaterial({ color: 0x2d7fc5, transparent: true, opacity: 0.13, blending: THREE.AdditiveBlending, depthWrite: false });
-    const reflWarmMat = new THREE.MeshBasicMaterial({ color: 0xb67535, transparent: true, opacity: 0.08, blending: THREE.AdditiveBlending, depthWrite: false });
+    const reflMat = new THREE.MeshBasicMaterial({ color: 0x2d7fc5, transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending, depthWrite: false });
+    const reflWarmMat = new THREE.MeshBasicMaterial({ color: 0xb67535, transparent: true, opacity: 0.12, blending: THREE.AdditiveBlending, depthWrite: false });
     this.disposables.push(reflMat, reflWarmMat);
     for (let i = 0; i < 54; i++) {
       const z = -4 - i * 3.25;
@@ -406,7 +408,7 @@ export default class ThresholdZ7Cathedral extends Scene {
     sheenTex.colorSpace = THREE.SRGBColorSpace;
     sheenTex.wrapS = THREE.ClampToEdgeWrapping;
     sheenTex.wrapT = THREE.RepeatWrapping;
-    const sheenMat = new THREE.MeshBasicMaterial({ map: sheenTex, transparent: true, opacity: 0.17, blending: THREE.AdditiveBlending, depthWrite: false });
+    const sheenMat = new THREE.MeshBasicMaterial({ map: sheenTex, transparent: true, opacity: 0.24, blending: THREE.AdditiveBlending, depthWrite: false });
     const sheenGeo = new THREE.PlaneGeometry(5.1, 150);
     const sheen = new THREE.Mesh(sheenGeo, sheenMat);
     sheen.rotation.x = -Math.PI / 2;
