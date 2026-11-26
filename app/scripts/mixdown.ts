@@ -22,6 +22,7 @@ import {
   applySplitBandDuck,
   applyLookaheadLimiter,
   applyLowLevelLift,
+  applyReconstructionLowpass,
   applyDownwardCompressor,
   applyPreDropVacuum,
 } from '../src/engine/audio';
@@ -79,7 +80,7 @@ export interface MixManifest {
   vocalSanctuary?: { centerHz?: number; q?: number; cutDb?: number };
   mutes?: MixMute[];
   /** fadeOut: linear master fade over [at, at + dur] in project time (s), applied after loudnorm. */
-  master?: { lufs?: number; truePeak?: number; normalize?: boolean; limiterLookaheadMs?: number; limiter?: boolean; fadeOut?: { at: number; dur: number }; lowLevelLift?: { thresholdDb?: number; ratio?: number; maxLiftDb?: number }; downwardCompress?: { thresholdDb?: number; ratio?: number } };
+  master?: { lufs?: number; truePeak?: number; normalize?: boolean; limiterLookaheadMs?: number; limiter?: boolean; reconstructionLowpassHz?: number; fadeOut?: { at: number; dur: number }; lowLevelLift?: { thresholdDb?: number; ratio?: number; maxLiftDb?: number }; downwardCompress?: { thresholdDb?: number; ratio?: number } };
   /** Optional second output: foley_guide bus only. */
   foleyGuide?: { out?: string };
 }
@@ -108,6 +109,7 @@ export interface MixReport {
   duck: Array<{ cue: string; t: number; hold: number }>;
   loudnorm?: Record<string, string>;
   lowLevelLift?: Record<string, string>;
+  reconstructionLowpassHz?: string;
   downwardCompress?: Record<string, string>;
   measuredTruePeak?: string;
   measuredTruePeakPreTrim?: string;
@@ -529,6 +531,10 @@ export async function mixdown(o: MixOptions): Promise<MixReport> {
         thresholdDb: (comp.thresholdDb ?? -30).toFixed(2),
         ratio: (comp.ratio ?? 2).toFixed(2),
       };
+    }
+    if (m.reconstructionLowpassHz && hasSignal) {
+      master = applyReconstructionLowpass(master, m.reconstructionLowpassHz, sr);
+      report.reconstructionLowpassHz = m.reconstructionLowpassHz.toFixed(0);
     }
     if ((m as any).normalize !== false && hasSignal) {
       const I = m.lufs ?? -14;

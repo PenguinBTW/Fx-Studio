@@ -116,6 +116,8 @@ export interface MasterConfig {
   normalize?: boolean;
   limiter?: boolean;
   limiterLookaheadMs?: number;
+  /** Optional pre-limiter reconstruction-control low-pass frequency in Hz. */
+  reconstructionLowpassHz?: number;
   fadeOut?: { at: number; dur: number };
   /** Optional upward compression that raises room-tone/negative-space floor before loudness normalization. */
   lowLevelLift?: { thresholdDb?: number; ratio?: number; maxLiftDb?: number };

@@ -270,6 +270,48 @@ export function applyLowLevelLift(
 }
 
 /**
+ * Reconstruction-control low-pass filter:
+ * RBJ biquad low-pass used before true-peak limiting. Noise-heavy procedural mixes can
+ * have large inter-sample reconstruction overs even when every 48 kHz sample is below
+ * ceiling; removing only the extreme top edge makes the rendered waveform physically
+ * reconstructable without flattening the audible transient spectrum.
+ */
+export function applyReconstructionLowpass(
+  pcm: Float32Array,
+  cutoffHz: number = 16000,
+  sampleRate: number = 48000,
+): Float32Array {
+  const totalSamples = pcm.length;
+  if (totalSamples === 0) return new Float32Array(0);
+  const isStereo = totalSamples % 2 === 0;
+  const frames = isStereo ? totalSamples / 2 : totalSamples;
+  const output = new Float32Array(totalSamples);
+  const fc = Math.max(1000, Math.min(sampleRate * 0.45, cutoffHz));
+  const omega = 2 * Math.PI * fc / sampleRate;
+  const sin = Math.sin(omega);
+  const cos = Math.cos(omega);
+  const q = Math.SQRT1_2;
+  const alpha = sin / (2 * q);
+  const a0 = 1 + alpha;
+  const b0 = ((1 - cos) / 2) / a0;
+  const b1 = (1 - cos) / a0;
+  const b2 = b0;
+  const a1 = (-2 * cos) / a0;
+  const a2 = (1 - alpha) / a0;
+  for (const ch of isStereo ? [0, 1] : [0]) {
+    let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+    for (let f = 0; f < frames; f++) {
+      const i = isStereo ? f * 2 + ch : f;
+      const x = pcm[i] ?? 0;
+      const y = b0 * x + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
+      output[i] = y;
+      x2 = x1; x1 = x; y2 = y1; y1 = y;
+    }
+  }
+  return output;
+}
+
+/**
  * 4. Stereo-linked Downward Compressor:
  * Gentle mastering compression for transient-rich cinema mixes. Gain is linked across
  * channels and follows a smoothed RMS envelope, preserving stereo image and avoiding

@@ -817,19 +817,32 @@ wav('z7_cathedral_events.wav', stem(45.8,(t)=>{
    const u=at-186;const narrow=smoothstep(1.2,5,u);
    const rollAngle=u*Math.PI*2/6;
    const rotatingPan=Math.sin(rollAngle)*.72;
-   const wind=noise()*(.13-narrow*.075)+z7lp*(.04+narrow*.035);
+   const wind=noise()*(.018-narrow*.010)+z7lp*(.052+narrow*.038);
    add(wind,rotatingPan);
    // Decorrelated air edges rotate once with the 360° camera roll, widening the fall
    // without adding new event density or breaking the mono-compatible wind core.
    const sampleIndex=Math.floor(at*SR);
-   const airA=(hash01(sampleIndex,22.1)*2-1)*(.027+narrow*.018);
-   const airB=(hash01(sampleIndex,22.9)*2-1)*(.027+narrow*.018);
+   const airA=(hash01(sampleIndex,22.1)*2-1)*(.014+narrow*.009);
+   const airB=(hash01(sampleIndex,22.9)*2-1)*(.014+narrow*.009);
    const curl=Math.cos(rollAngle);
    l+=airA*(.62+.38*curl)+airB*(.18-.18*Math.sin(rollAngle));
    r+=airB*(.62-.38*curl)+airA*(.18+.18*Math.sin(rollAngle));
  }
- // upward-passing machine/glass streaks during fall
- for(const st of[186.4,187.2,188.1,189.0,190.1,191.2]){const u=at-st;if(u>0&&u<.32){const chasePan=Math.sin((at-186)*Math.PI*2/6)*.48+(hash01(Math.floor(st*10),21)-.5)*.42;add((noise()*.040+Math.sin((900*u+250*u*u)*Math.PI*2)*.012)*Math.exp(-u*8),Math.max(-.92,Math.min(.92,chasePan)))}}
+ // physical debris cascade: metal mass, glass spray and stone clatter passing upward
+for(const st of[186.18,186.55,186.92,187.35,187.72,188.18,188.62,189.05,189.48,189.92,190.35,190.82,191.25,191.62]){
+  const u=at-st;
+  if(u>0&&u<.48){
+    const seed=Math.floor(st*100);
+    const metalHz=210+hash01(seed,31)*260;
+    const glassHz=1250+hash01(seed,32)*900;
+    const pan=(hash01(seed,33)-.5)*1.2+Math.sin((at-186)*Math.PI*2/6)*.28;
+    const mass=(Math.sin(u*Math.PI*2*metalHz)*.070+Math.sin(u*Math.PI*2*(metalHz*.49))*.048+z7lp*.070)*Math.exp(-u*11);
+    const clatter=(noise()*.052+Math.sin(u*Math.PI*2*glassHz)*.018)*Math.exp(-u*19);
+    add((mass+clatter)*Math.min(1,u/.025),Math.max(-.9,Math.min(.9,pan)));
+  }
+}
+// upward-passing machine/glass streaks during fall
+ for(const st of[186.4,187.2,188.1,189.0,190.1,191.2]){const u=at-st;if(u>0&&u<.32){const chasePan=Math.sin((at-186)*Math.PI*2/6)*.48+(hash01(Math.floor(st*10),21)-.5)*.42;add((noise()*.024+Math.sin((900*u+250*u*u)*Math.PI*2)*.018)*Math.exp(-u*8),Math.max(-.92,Math.min(.92,chasePan)))}}
  // calm descending tonal pressure: temperature shift, not score
  if(at>=188&&at<194.4){const u=at-188;add((Math.sin((160*u-6.5*u*u)*Math.PI*2)*.006+Math.sin((80*u-3.25*u*u)*Math.PI*2)*.004)*smoothstep(0,2,u),0)}
  // warm carpet landing and first domestic precues
@@ -878,7 +891,10 @@ wav('end_office_events.wav', stem(10.0,(t)=>{
  const at=t+225;let l=0,r=0;const add=(v:number,pan=0)=>{const a=(pan+1)*Math.PI/4;l+=v*Math.cos(a);r+=v*Math.sin(a)};
  // beige phone repeats, each 2 dB quieter, while office air loses high-frequency content
  const idx=Math.floor((at-225)/2.8);for(const base of[225,227.8,230.6,233.4])for(const off of[.02,1.18]){if(base+off+.88>235)continue;const u=at-base-off;if(u>=0&&u<.88){const trem=.45+.55*(Math.sin(u*Math.PI*40)>0?1:0);const gain=Math.pow(.794,idx);add((Math.sin(u*Math.PI*2*1280)*.0025+Math.sin(u*Math.PI*2*1735)*.0008+Math.sin(u*Math.PI*2*960)*.005+Math.sin(u*Math.PI*2*640)*.013+Math.sin(u*Math.PI*2*320)*.007+noise()*.010)*Math.exp(-u*3.1)*trem*gain,.14)}}
- const airloss=1-smoothstep(225,235,at);add((Math.sin(at*Math.PI*2*60)*.0025+Math.sin(at*Math.PI*2*120)*.0008+noise()*.0032*airloss),.05);
+ const airloss=1-smoothstep(225,235,at);add((Math.sin(at*Math.PI*2*60)*.0025+Math.sin(at*Math.PI*2*120)*.0008+noise()*.0022*airloss),.05);
+ const si=Math.floor(at*SR+.5);
+ l+=(hash01(si,41.1)*2-1)*.0048*airloss;
+ r+=(hash01(si,42.7)*2-1)*.0048*airloss;
  const endFade=1-smoothstep(234.15,235,at);
  return[l*endFade,r*endFade]
 }));
@@ -1097,10 +1113,13 @@ bed('z8_home_room_tone.wav', 30.6, 0.8, 1.8, (t, lp) => {
 
 bed('end_office_afterimage_tone.wav', 10.0, 0.4, 2.4, (t, lp) => {
   const hum = Math.sin(t * Math.PI * 2 * 60) * 0.0065 + Math.sin(t * Math.PI * 2 * 120) * 0.0006 + Math.sin(t * Math.PI * 2 * 180) * 0.0004;
-  const hiss = noise() * 0.008 + lp() * 0.016;
+  const sharedHiss = noise() * 0.004 + lp() * 0.010;
+  const si = Math.floor(t * SR + 0.5);
+  const airL = (hash01(si, 51.3) * 2 - 1) * 0.006;
+  const airR = (hash01(si, 52.9) * 2 - 1) * 0.006;
   const endFade = 1 - smoothstep(9.15, 10.0, t);
-  const v = (hum + hiss) * endFade;
-  return [v, v * 0.96];
+  const v = (hum + sharedHiss) * endFade;
+  return [(v + airL * endFade) * 0.98, (v + airR * endFade) * 0.94];
 });
 
 console.log(`wrote procedural THRESHOLD stems to ${OUT}`);
