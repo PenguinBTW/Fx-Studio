@@ -33,6 +33,8 @@ export default defineMix({
   mutes: [
     // Z0 dead-beam pre-drop vacuum; hard silence survives the limiter by design.
     { id: 'z0_pre_drop_vacuum', from: 3.30, to: 3.55 },
+    // T4 page-slam true-black pause: normalized 0.20-0.333 of the 0.6s window.
+    { id: 't4_page_slam_silence', from: 104.82, to: 104.90 },
   ],
   master: { lufs: -16, truePeak: -1.2, limiterLookaheadMs: 5 },
 });
