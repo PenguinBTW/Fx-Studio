@@ -42,11 +42,11 @@ function proceduralSurface(kind: SurfaceKind, repeat: number) {
     const n2 = surfaceNoise(Math.floor(x / 4), Math.floor(y / 4), kind.length * 31);
     let v = 220;
     if (kind === 'carpet') {
-      const loop = Math.sin(x * 0.72) * 9 + Math.sin((x + y) * 0.31) * 7;
-      const damp = Math.max(0, Math.sin(x * 0.035 + 1.7) + Math.sin(y * 0.028 - 0.5) - 1.1) * 34;
-      v = 190 + loop + n * 24 + n2 * 12 - damp;
+      const fibre = (n - 0.5) * 42 + (n2 - 0.5) * 18 + Math.sin(x * 1.7 + n * 5) * 2.5 + Math.sin(y * 2.1 + n2 * 4) * 2.5;
+      const damp = Math.max(0, Math.sin(x * 0.043 + Math.sin(y * 0.031)) + Math.sin(y * 0.037 + Math.sin(x * 0.021)) - 1.22) * 34;
+      v = 202 + fibre - damp;
     } else if (kind === 'fabric') {
-      v = 205 + Math.sin(x * 0.82) * 10 + Math.sin(y * 1.7) * 4 + n * 18;
+      v = 208 + (n - 0.5) * 34 + (n2 - 0.5) * 15 + Math.sin(x * 0.11 + n2 * 3) * Math.sin(y * 0.13 + n * 2) * 9 + Math.sin(x * 1.9) * 2.5 + Math.sin(y * 2.3) * 2.5;
     } else if (kind === 'ceiling') {
       const fissure = Math.abs(Math.sin(x * 0.08 + Math.sin(y * 0.06) * 2.4)) < 0.045 ? -34 : 0;
       const pit = n > 0.955 ? -55 : 0;
@@ -99,6 +99,7 @@ export default class ThresholdZ1Office extends Scene {
   private layer!: Layer2D;
   private flash!: ReturnType<typeof addFlashlight>;
   private receiver!: THREE.Mesh;
+  private receiverParts: THREE.Mesh[] = [];
   private tileShift!: THREE.Mesh;
   private eyes: THREE.Mesh[] = [];
   private lids: THREE.Mesh[] = [];
@@ -113,20 +114,29 @@ export default class ThresholdZ1Office extends Scene {
   private doorGlow!: THREE.MeshStandardMaterial;
 
   private breather!: GLTFInstance;
+  private phoneAsset!: GLTFInstance;
+  private glbReceiver?: THREE.Object3D;
 
   override async init() {
     const resolved = resolveAsset('threshold/z1_ceiling_breather');
     this.breather = await GLTFManager.instantiate(resolved.url, { ...resolved.manifest.load, castShadow: true, receiveShadow: true });
     this.breather.root.position.set(0,2.72,-6.02); this.breather.root.visible = false; this.s.add(this.breather.root);
+    const phoneResolved = resolveAsset('threshold/beige_phone');
+    this.phoneAsset = await GLTFManager.instantiate(phoneResolved.url, { ...phoneResolved.manifest.load, castShadow: true, receiveShadow: true });
+    this.phoneAsset.root.position.set(0.28, 0.785, -6.05);
+    this.phoneAsset.root.rotation.y = -0.12;
+    this.phoneAsset.root.scale.setScalar(1.45);
+    this.s.add(this.phoneAsset.root);
+    this.glbReceiver = this.phoneAsset.part('receiver') ?? undefined;
     this.layer = new Layer2D(this.ctx.W, this.ctx.H);
     this.s.background = new THREE.Color(0x050505);
     this.s.fog = new THREE.FogExp2(0x111008, 0.026);
     this.flash = addFlashlight(this.s);
     this.s.add(new THREE.AmbientLight(0x9a9278, 0.43));
 
-    const carpet = surfaceMat('carpet', 0x756947, 0.94, 5.5);
-    const wall = surfaceMat('fabric', 0xa89354, 0.86, 3.5);
-    const wallDark = surfaceMat('fabric', 0x796a3f, 0.9, 3.5);
+    const carpet = surfaceMat('carpet', 0x756947, 0.94, 18);
+    const wall = surfaceMat('fabric', 0xa89354, 0.86, 8);
+    const wallDark = surfaceMat('fabric', 0x796a3f, 0.9, 8);
     const ceiling = surfaceMat('ceiling', 0xcfc8b1, 0.82, 2.8);
     const metal = surfaceMat('metal', 0x595c5b, 0.5, 2.2, 0.35);
     const plastic = surfaceMat('plastic', 0xcdbd91, 0.56, 2.4);
@@ -156,16 +166,22 @@ export default class ThresholdZ1Office extends Scene {
       [-6.1, 7.4, 0.12, 1.45, 5.6], [1.6, 11.4, 5.0, 1.45, 0.12], [-6.8, 12.2, 4.5, 1.45, 0.12], [8.8, 3.3, 0.12, 1.45, 8],
     ];
     partitions.forEach(([x, z, sx, sy, sz], i) => {
-      box(this.s, `z1_partition_${i}`, [sx, sy, sz], [x, sy / 2, z], i % 2 ? wall : wallDark);
-      // Metal/fabric edge caps make the half-height cubicle construction legible instead of infinitely thin grey planes.
-      box(this.s, `z1_partition_topcap_${i}`, [Math.max(sx, 0.14), 0.045, Math.max(sz, 0.14)], [x, sy + 0.022, z], metal);
+      const syv = sy + (hash(i * 3.1) - 0.5) * 0.07;
+      box(this.s, `z1_partition_${i}`, [sx, syv, sz], [x, syv / 2, z], i % 2 ? wall : wallDark);
+      // Metal/fabric edge caps, seams, pinboard patches and scuffed bases make the systems furniture legible.
+      box(this.s, `z1_partition_topcap_${i}`, [Math.max(sx, 0.14), 0.045, Math.max(sz, 0.14)], [x, syv + 0.022, z], metal);
       box(this.s, `z1_partition_bottomrail_${i}`, [Math.max(sx, 0.13), 0.055, Math.max(sz, 0.13)], [x, 0.055, z], metal);
+      box(this.s, `z1_partition_scuff_${i}`, [Math.max(sx, 0.14), 0.028, Math.max(sz, 0.14)], [x, 0.105, z], mat(0x2f2a22, 0.94));
       if (sx > sz) {
-        box(this.s, `z1_partition_endcap_l_${i}`, [0.055, sy, 0.065], [x - sx / 2, sy / 2, z], metal);
-        box(this.s, `z1_partition_endcap_r_${i}`, [0.055, sy, 0.065], [x + sx / 2, sy / 2, z], metal);
+        box(this.s, `z1_partition_endcap_l_${i}`, [0.055, syv, 0.065], [x - sx / 2, syv / 2, z], metal);
+        box(this.s, `z1_partition_endcap_r_${i}`, [0.055, syv, 0.065], [x + sx / 2, syv / 2, z], metal);
+        box(this.s, `z1_partition_fabricseam_${i}`, [Math.max(0.2, sx - 0.18), 0.012, 0.15], [x, syv * 0.58, z], mat(0x554b35, 0.92));
+        if (i % 2 === 0) box(this.s, `z1_partition_pinboard_${i}`, [0.68, 0.42, 0.16], [x + sx * 0.12, 0.94, z], mat(0x6f4c2b, 0.9));
       } else {
-        box(this.s, `z1_partition_endcap_l_${i}`, [0.065, sy, 0.055], [x, sy / 2, z - sz / 2], metal);
-        box(this.s, `z1_partition_endcap_r_${i}`, [0.065, sy, 0.055], [x, sy / 2, z + sz / 2], metal);
+        box(this.s, `z1_partition_endcap_l_${i}`, [0.065, syv, 0.055], [x, syv / 2, z - sz / 2], metal);
+        box(this.s, `z1_partition_endcap_r_${i}`, [0.065, syv, 0.055], [x, syv / 2, z + sz / 2], metal);
+        box(this.s, `z1_partition_fabricseam_${i}`, [0.15, 0.012, Math.max(0.2, sz - 0.18)], [x, syv * 0.58, z], mat(0x554b35, 0.92));
+        if (i % 2 === 0) box(this.s, `z1_partition_pinboard_${i}`, [0.16, 0.42, 0.68], [x, 0.94, z + sz * 0.08], mat(0x6f4c2b, 0.9));
       }
     });
     // Deep repeated maze beyond the first desk: foreground/midground/background cubicle rows make the office read as endless.
@@ -187,10 +203,10 @@ export default class ThresholdZ1Office extends Scene {
     }
 
     // Dense workstation pods: repeated desks/chairs/monitors/props ground the maze as a working office rather than empty partitions.
-    const cubicleFabric = [surfaceMat('fabric', 0xb09b6d, 0.94, 4.2), surfaceMat('fabric', 0x998b64, 0.95, 4.0), surfaceMat('fabric', 0x8b8270, 0.92, 3.8)];
+    const cubicleFabric = [surfaceMat('fabric', 0xb09b6d, 0.94, 8.5), surfaceMat('fabric', 0x998b64, 0.95, 8.2), surfaceMat('fabric', 0x8b8270, 0.92, 7.8)];
     const deskTop = surfaceMat('laminate', 0x807866, 0.66, 2.4);
     const keyboardMat = mat(0x242422, 0.7);
-    const podChairMat = mat(0x343b42, 0.72);
+    const podChairMat = mat(0x46525c, 0.72);
     let pod = 0;
     for (let zi = 0; zi < 11; zi++) {
       const z = -10.4 + zi * 2.35;
@@ -233,10 +249,30 @@ export default class ThresholdZ1Office extends Scene {
       box(this.s, `z1_frontpod_monitor_${i}`, [0.36, 0.29, 0.23], [px - side * 0.12, 0.95, z - 0.1], dark, [0, side * 0.28, 0]);
       plane(this.s, `z1_frontpod_screen_${i}`, 0.27, 0.18, [px - side * 0.12, 0.96, z + 0.03], screen, [0, side * 0.28, 0]);
       box(this.s, `z1_frontpod_keyboard_${i}`, [0.36, 0.024, 0.13], [px + side * 0.12, 0.765, z + 0.12], keyboardMat, [0, -side * 0.08, 0]);
-      box(this.s, `z1_frontpod_chair_${i}`, [0.42, 0.48, 0.42], [px + side * 0.42, 0.4, z + 0.48], podChairMat, [0, side * 0.8, i === 1 ? 0.35 : 0]);
+      box(this.s, `z1_frontpod_chair_seat_${i}`, [0.42, 0.1, 0.42], [px + side * 0.42, 0.43, z + 0.48], podChairMat, [0, side * 0.8, 0]);
+      box(this.s, `z1_frontpod_chair_back_${i}`, [0.43, 0.48, 0.085], [px + side * 0.48, 0.76, z + 0.69], podChairMat, [0.08, side * 0.8, 0]);
+      cyl(this.s, `z1_frontpod_chair_post_${i}`, 0.026, 0.34, [px + side * 0.42, 0.2, z + 0.48], metal, [0, 0, 0], 10);
+      for (let leg = 0; leg < 4; leg++) box(this.s, `z1_frontpod_chair_leg_${i}_${leg}`, [0.25, 0.025, 0.035], [px + side * 0.42, 0.055, z + 0.48], metal, [0, leg * Math.PI / 2 + side * 0.3, 0]);
       box(this.s, `z1_frontpod_papers_${i}`, [0.28, 0.035, 0.32], [px + side * 0.35, 0.77, z - 0.12], paper, [0, hash(i) * 0.8, 0]);
       plane(this.s, `z1_frontpod_contact_${i}`, 1.5, 1.05, [px, 0.008 + i * 0.00003, z + 0.1], basic(0x050403, 0.22), [-Math.PI / 2, 0, side * 0.2]);
     }
+
+    // Opening side-aisle clutter: papers, boxes, cables, a tucked chair and dead plant frame the walk lane without blocking the phone sightline.
+    for (let i = 0; i < 14; i++) {
+      const side = i % 2 ? 1 : -1;
+      const x = side * (0.92 + hash(i * 2.1) * 1.35);
+      const z = -0.55 - i * 0.24 - hash(i * 3.3) * 0.18;
+      plane(this.s, `z1_opening_printout_${i}`, 0.18 + hash(i) * 0.11, 0.25 + hash(i + 4) * 0.1, [x, 0.014 + i * 0.00003, z], paper, [-Math.PI / 2, 0, hash(i * 5.1) * Math.PI]);
+    }
+    box(this.s, 'z1_opening_cardboard_l', [0.52, 0.38, 0.46], [-2.75, 0.19, -0.85], mat(0x7d6040, 0.88), [0, 0.22, 0]);
+    box(this.s, 'z1_opening_cardboard_r', [0.44, 0.28, 0.4], [2.85, 0.14, -3.15], mat(0x6e5337, 0.9), [0, -0.34, 0]);
+    box(this.s, 'z1_opening_powerstrip', [0.34, 0.045, 0.09], [1.34, 0.035, -1.55], mat(0xd0c9b4, 0.62), [0, 0.32, 0]);
+    cyl(this.s, 'z1_opening_powercable', 0.009, 0.9, [1.0, 0.022, -1.3], dark, [Math.PI / 2, 0.7, 0], 8);
+    box(this.s, 'z1_opening_tucked_chair_seat', [0.42, 0.1, 0.42], [-1.35, 0.43, -3.25], podChairMat, [0, -0.7, 0]);
+    box(this.s, 'z1_opening_tucked_chair_back', [0.43, 0.46, 0.085], [-1.48, 0.74, -3.43], podChairMat, [0.08, -0.7, 0]);
+    cyl(this.s, 'z1_opening_tucked_chair_post', 0.026, 0.34, [-1.35, 0.2, -3.25], metal, [0, 0, 0], 10);
+    cyl(this.s, 'z1_opening_deadplant_pot', 0.13, 0.24, [2.55, 0.12, -0.72], mat(0x6d4631, 0.86), [0, 0, 0], 16);
+    for (let i = 0; i < 5; i++) cyl(this.s, `z1_opening_deadplant_stem_${i}`, 0.009, 0.48 + hash(i) * 0.2, [2.55 + (hash(i * 2) - 0.5) * 0.12, 0.42, -0.72 + (hash(i * 3) - 0.5) * 0.12], mat(0x4b3b21, 0.9), [(hash(i) - 0.5) * 0.5, 0, (hash(i + 2) - 0.5) * 0.5], 7);
 
     // Run-lane island workstations are deliberately close to the camera path so chase frames remain spatially dressed.
     const runPods: [number, number][] = [[-2.3, 1.7], [0.4, 3.6], [1.0, 5.8], [0.7, 8.0], [2.2, 10.4], [0.8, 12.4]];
@@ -294,7 +330,7 @@ export default class ThresholdZ1Office extends Scene {
     box(this.s, 'z1_desk_leg_l', [0.08, 0.72, 0.8], [-0.86, 0.36, -6], metal);
     box(this.s, 'z1_desk_leg_r', [0.08, 0.72, 0.8], [0.86, 0.36, -6], metal);
     box(this.s, 'z1_phone_base', [0.42, 0.13, 0.28], [0.28, 0.84, -6.05], plastic, [0, -0.12, 0]);
-    this.receiver = box(this.s, 'z1_phone_receiver', [0.46, 0.09, 0.11], [0.28, 0.96, -6.05], plastic, [0, -0.12, 0]);
+    this.receiver = box(this.s, 'z1_phone_receiver', [0.26, 0.055, 0.075], [0.28, 0.96, -6.05], plastic, [0, -0.12, 0]);
     for (let i = 0; i < 12; i++) box(this.s, `z1_phone_button_${i}`, [0.045, 0.012, 0.035], [0.16 + (i % 3) * 0.055, 0.912, -5.94 + Math.floor(i / 3) * 0.045], dark);
     box(this.s, 'z1_crt_monitor', [0.56, 0.42, 0.46], [-0.52, 1.02, -6.18], dark, [0, 0.22, 0]);
     plane(this.s, 'z1_monitor_screen', 0.42, 0.28, [-0.52, 1.04, -5.94], screen, [0, 0.22, 0]);
@@ -306,19 +342,30 @@ export default class ThresholdZ1Office extends Scene {
     box(this.s, 'z1_phone_shell_seam_front', [0.39, 0.012, 0.012], [0.28, 0.888, -5.895], mat(0x7a684d, 0.7));
     box(this.s, 'z1_phone_shell_seam_side', [0.012, 0.012, 0.24], [0.075, 0.888, -6.05], mat(0x7a684d, 0.7));
     for (const side of [-1, 1]) {
-      cyl(this.s, `z1_receiver_endcap_${side}`, 0.058, 0.105, [0.28 + side * 0.19, 0.965, -6.05], plastic, [0, 0, Math.PI / 2], 20);
-      for (let h = 0; h < 5; h++) cyl(this.s, `z1_receiver_hole_${side}_${h}`, 0.005, 0.006, [0.28 + side * (0.16 + (h % 2) * 0.025), 1.018, -6.085 + Math.floor(h / 2) * 0.028], dark, [Math.PI / 2, 0, 0], 8);
+      const cap = cyl(this.s, `z1_receiver_endcap_${side}`, 0.058, 0.105, [0.28 + side * 0.19, 0.965, -6.05], plastic, [0, 0, Math.PI / 2], 20);
+      cap.userData.baseY = cap.position.y; this.receiverParts.push(cap);
+      for (let h = 0; h < 5; h++) {
+        const hole = cyl(this.s, `z1_receiver_hole_${side}_${h}`, 0.005, 0.006, [0.28 + side * (0.16 + (h % 2) * 0.025), 1.018, -6.085 + Math.floor(h / 2) * 0.028], dark, [Math.PI / 2, 0, 0], 8);
+        hole.userData.baseY = hole.position.y; this.receiverParts.push(hole);
+      }
     }
     for (let i = 0; i < 12; i++) {
       const bx = 0.16 + (i % 3) * 0.055, bz = -5.94 + Math.floor(i / 3) * 0.045;
       box(this.s, `z1_phone_button_legend_${i}`, [0.018, 0.004, 0.004], [bx, 0.921, bz], mat(0xd8cfb7, 0.75));
     }
-    const cordPts = [
-      new THREE.Vector3(0.06, 0.91, -6.16), new THREE.Vector3(-0.02, 0.84, -6.22), new THREE.Vector3(-0.08, 0.78, -6.12),
-      new THREE.Vector3(-0.04, 0.76, -5.98), new THREE.Vector3(0.08, 0.82, -5.91), new THREE.Vector3(0.13, 0.88, -5.98),
-    ];
+    const cordPts: THREE.Vector3[] = [];
+    for (let i = 0; i <= 64; i++) {
+      const u = i / 64;
+      const ax = 0.06 + u * 0.07 - Math.sin(u * Math.PI) * 0.095;
+      const ay = 0.91 + u * 0.02 - Math.sin(u * Math.PI) * 0.13;
+      const az = -6.16 + u * 0.18 + Math.sin(u * Math.PI) * 0.035;
+      const phase = u * Math.PI * 28;
+      cordPts.push(new THREE.Vector3(ax + Math.cos(phase) * 0.011, ay + Math.sin(phase) * 0.011, az + Math.cos(phase + Math.PI / 2) * 0.011));
+    }
     const cord = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(cordPts), 42, 0.007, 8), dark);
     cord.name = cord.userData.fx_entity = 'z1_phone_coiled_cord'; cord.castShadow = cord.receiveShadow = true; this.s.add(cord);
+    // The authored Blender beige phone is the visible hero prop; the engine primitives remain only as hidden fallback geometry.
+    this.s.traverse((o) => { if (/^z1_phone_/.test(o.name)) o.visible = false; });
     for (let i = 0; i < 7; i++) box(this.s, `z1_desk_scratch_${i}`, [0.055 + hash(i) * 0.13, 0.002, 0.0035], [-0.55 + hash(i * 2) * 1.1, 0.792, -5.82 + hash(i * 3) * 0.38], mat(0x62594a, 0.9), [0, hash(i) * 0.8, 0]);
     box(this.s, 'z1_desk_front_edge_worn', [2.02, 0.035, 0.025], [0, 0.735, -5.54], mat(0x3f392f, 0.82));
     const mugHandle = new THREE.Mesh(new THREE.TorusGeometry(0.042, 0.008, 8, 18, Math.PI * 1.45), mat(0xaaa18a, 0.55));
@@ -326,7 +373,7 @@ export default class ThresholdZ1Office extends Scene {
     for (let i = 0; i < 5; i++) box(this.s, `z1_monitor_control_${i}`, [0.025, 0.009, 0.008], [-0.66 + i * 0.045, 0.82, -5.93], mat(0x0c0c0c, 0.8));
 
     // chairs/cubicle desks/printer/paper clutter along run path
-    const chairMat = mat(0x343b42, 0.72);
+    const chairMat = mat(0x46525c, 0.72);
     for (let i = 0; i < 7; i++) {
       const x = [-3.5, 3.7, -5.3, 5.4, -2.4, 6.7, -6.2][i]!, z = [-1.5, -0.5, 2.7, 3.6, 6.2, 8.3, 10.5][i]!;
       box(this.s, `z1_cubicle_desk_${i}`, [1.35, 0.07, 0.7], [x, 0.72, z], mat(0x716b5e, 0.6));
@@ -426,6 +473,13 @@ export default class ThresholdZ1Office extends Scene {
     const lift = smooth(11, 11.7, t) * 0.04;
     this.receiver.position.y = 0.96 + lift + ring;
     this.receiver.rotation.z = ring * 4;
+    for (const rp of this.receiverParts) rp.position.y = (rp.userData.baseY as number) + lift + ring;
+    if (this.glbReceiver) {
+      if (!this.glbReceiver.userData.basePos) this.glbReceiver.userData.basePos = this.glbReceiver.position.clone();
+      const bp = this.glbReceiver.userData.basePos as THREE.Vector3;
+      this.glbReceiver.position.y = bp.y + (lift + ring) / 1.45;
+      this.glbReceiver.rotation.z = ring * 4;
+    }
 
     // ceiling tile, eyes, lids, fingers, breathing tile skin
     this.tileShift.position.y = 2.69 - smooth(13, 15.4, t) * 0.025;
@@ -440,9 +494,14 @@ export default class ThresholdZ1Office extends Scene {
         fp.visible = emerge > 0.03;
         const side = bi < 5 ? -1 : 1;
         const lash = smooth(18.35, 19.1, t);
-        fp.rotation.x = (Math.sin(t * 0.9 + bi) * 0.075 - 0.08 * emerge + lash * (0.34 + (bi % 3) * 0.09)) * eyesOn;
-        fp.rotation.z = side * (0.045 + (bi % 3) * 0.025 + Math.sin(t * 0.55 + bi * 1.7) * 0.018) * eyesOn;
-        fp.rotation.y = Math.sin(t * 0.42 + bi) * 0.025 * eyesOn;
+        if (!fp.userData.basePos) fp.userData.basePos = fp.position.clone();
+        const bp = fp.userData.basePos as THREE.Vector3;
+        const spread = (bi - 4.5) / 3.5;
+        fp.position.x = bp.x + spread * 0.12 * emerge + Math.sin(t * 0.31 + bi) * 0.008 * eyesOn;
+        fp.position.z = bp.z + ((bi % 2) - 0.5) * 0.11 * emerge;
+        fp.rotation.x = (Math.sin(t * 0.9 + bi) * 0.11 - 0.08 * emerge + lash * (0.34 + (bi % 3) * 0.09)) * eyesOn;
+        fp.rotation.z = side * (0.17 + (bi % 3) * 0.085 + Math.sin(t * 0.55 + bi * 1.7) * 0.028) * eyesOn + spread * 0.11 * emerge;
+        fp.rotation.y = Math.sin(t * 0.42 + bi) * 0.055 * eyesOn + spread * 0.04 * emerge;
       }
     }
     this.eyes.forEach((e) => { e.visible = eyesOn > 0.02 && !this.breather.root.visible; (e.material as THREE.MeshStandardMaterial).emissiveIntensity = 1.5 * eyesOn; });
