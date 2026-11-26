@@ -48,6 +48,7 @@ function stem(sec: number, fn: (t: number) => [number, number]): Float32Array {
 const env = (t: number, a: number, d: number) => t < 0 ? 0 : Math.min(1, t / Math.max(1e-4, a)) * Math.exp(-Math.max(0, t - a) / d);
 const hashLike = (t: number, salt: number) => { const x = Math.sin(Math.floor(t * 24) * 127.1 + salt * 311.7) * 43758.5453; return x - Math.floor(x); };
 const hash01 = (n: number, salt: number) => { const x = Math.sin(n * 127.1 + salt * 311.7) * 43758.5453; return x - Math.floor(x); };
+const smoothstep = (a: number, b: number, x: number) => { const u = Math.max(0, Math.min(1, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
 
 // Fluorescent office bed: 60 Hz hum, odd harmonics, HVAC hiss, two failing-tube ticks.
 wav('z1_fluorescent_bed.wav', stem(27, (t) => {
@@ -323,6 +324,135 @@ wav('z2_playroom_events.wav', stem(25.8, (t) => {
     const pressure = -Math.sin(Math.PI * u / 0.5) * 0.018;
     const scrape = u > 0.18 ? z2FrictionLp * 0.06 * Math.exp(-(u - 0.18) * 5) : 0;
     add(pressure + scrape, 0);
+  }
+
+  return [l, r];
+}));
+
+
+// Z3 tiled pool cue pass from z2_z4_audio_cue_spec.md. The stem starts at 54.6;
+// `at` is project time. Viewer water steps use broad gait windows from z3_pool.ts,
+// while Mirrorling landings follow its exact 0.9 s late-step cycle at 72.5/73.4/74.3.
+const z3ViewerSteps: number[] = [];
+{
+  for (let t = 55.05; t < 62.5; t += 0.72) z3ViewerSteps.push(t);
+  for (let t = 65.0; t < 68.2; t += 1.08) z3ViewerSteps.push(t);
+  let t = 74.55;
+  while (t < 78.2) {
+    z3ViewerSteps.push(t);
+    const k = Math.max(0, Math.min(1, (t - 74.55) / 3.65));
+    t += 0.56 - k * 0.18;
+  }
+}
+const z3MirrorlingSteps = [72.50, 73.40, 74.30];
+const z3Drips = [55.8, 57.4, 60.2, 63.6, 66.1, 69.4, 71.7, 75.2, 77.6];
+let z3NoiseLp = 0;
+let z3AirLp = 0;
+wav('z3_pool_events.wav', stem(25.8, (t) => {
+  const at = t + 54.6;
+  z3NoiseLp = z3NoiseLp * 0.86 + noise() * 0.14;
+  z3AirLp = z3AirLp * 0.94 + noise() * 0.06;
+  let l = 0, r = 0;
+  const add = (v: number, pan = 0) => {
+    const a = (pan + 1) * Math.PI / 4;
+    l += v * Math.cos(a);
+    r += v * Math.sin(a);
+  };
+
+  // Reverberant pool-hall pressure bed: low hum, tiled air, sparse distant drips.
+  if (at >= 55.0 && at < 79.4) {
+    const drop = smoothstep(62.7, 63.2, at);
+    const humHz = 51.5 * (1 - drop * (1 - Math.pow(2, -1 / 12)));
+    const hum = Math.sin(at * Math.PI * 2 * humHz) * 0.018 + Math.sin(at * Math.PI * 2 * humHz * 1.99) * 0.007;
+    const air = z3AirLp * 0.028;
+    add(hum + air, 0);
+  }
+  for (const drip of z3Drips) {
+    const u = at - drip;
+    if (u > 0 && u < 0.34) {
+      const hz = 980 - u * 1300;
+      const ping = Math.sin(u * Math.PI * 2 * Math.max(360, hz)) * 0.012 * Math.exp(-u * 12);
+      add(ping, hash01(Math.floor(drip * 10), 3.3) * 0.9 - 0.45);
+    }
+  }
+
+  // Knee-deep viewer steps: close splash transient plus tiled-hall repeats.
+  const waterStep = (hit: number, amp: number, pan: number, alien = false) => {
+    for (const [echo, mul, width] of [[0, 1, 0], [0.48, 0.42, 0.25], [1.08, 0.24, -0.35], [1.82, 0.13, 0.42], [2.72, 0.07, -0.2]] as const) {
+      const u = at - hit - echo;
+      if (u > 0 && u < 0.34) {
+        const splash = noise() * 0.070 * amp * Math.exp(-u * 24) + z3NoiseLp * 0.045 * amp * Math.exp(-u * 10);
+        const cavity = Math.sin(u * Math.PI * 2 * (alien ? 164 : 132)) * 0.030 * amp * Math.exp(-u * 16);
+        add((splash + cavity) * mul, pan + width);
+      }
+    }
+  };
+  for (let i = 0; i < z3ViewerSteps.length; i++) {
+    const hit = z3ViewerSteps[i]!;
+    const retreat = hit > 74.5 ? 1.18 : 0.82;
+    waterStep(hit, retreat, (i % 2 ? 0.13 : -0.13));
+  }
+
+  // Reflection mismatch: nearly subliminal air/lap delayed after the viewer movement.
+  if (at >= 58.5 && at < 61.0) {
+    const lagged = Math.max(0, Math.sin((at - 58.5 - 0.4) * Math.PI * 2 * 0.7));
+    add(z3NoiseLp * 0.012 * lagged + Math.sin(at * Math.PI * 2 * 210) * 0.004 * lagged, -0.18);
+  }
+
+  // One isolated step that is not ours, ahead/right.
+  waterStep(64.8, 1.05, 0.36, true);
+
+  // Very low submerged Tenant pressure swell.
+  if (at >= 68.0 && at < 68.5) {
+    const u = at - 68.0;
+    add((Math.sin(u * Math.PI * 2 * 37) * 0.055 + z3NoiseLp * 0.024) * Math.sin(Math.PI * u / 0.5), 0);
+  }
+
+  // Wet/muffled beige-phone ring, right side, recognizable but distorted through water and foam.
+  if (at >= 70.0 && at < 72.0) {
+    const u0 = at - 70.0;
+    const cycle = u0 % 0.68;
+    if (cycle < 0.34) {
+      const wet = 470 + Math.sin(cycle * Math.PI * 2 * 6.5) * 70;
+      const e = Math.sin(Math.PI * cycle / 0.34);
+      add((Math.sin(cycle * Math.PI * 2 * wet) * 0.044 + Math.sin(cycle * Math.PI * 2 * wet * 0.51) * 0.019 + noise() * 0.006) * e, 0.38);
+    }
+  }
+
+  // Mirrorling emergence: wet tile scrape and a sheet of water shedding off chrome.
+  if (at >= 72.0 && at < 72.5) {
+    const u = at - 72.0;
+    const scrape = z3NoiseLp * 0.16 * Math.min(1, u / 0.08) + Math.sin(u * Math.PI * 2 * (260 + u * 620)) * 0.034;
+    const sheet = noise() * 0.07 * Math.exp(-u * 5);
+    add((scrape + sheet) * Math.exp(-u * 1.8), -0.04);
+  }
+
+  // Discrete late wet-tile Mirrorling landings with a circular splash under each.
+  for (let i = 0; i < z3MirrorlingSteps.length; i++) {
+    const hit = z3MirrorlingSteps[i]!;
+    const u = at - hit;
+    if (u > 0 && u < 0.42) {
+      const ceramic = Math.sin(u * Math.PI * 2 * 420) * 0.052 * Math.exp(-u * 22);
+      const ringSplash = noise() * 0.055 * Math.exp(-u * 9) + z3NoiseLp * 0.045 * Math.exp(-u * 7);
+      add(ceramic + ringSplash, -0.08 + i * 0.08);
+    }
+  }
+
+  // Heel catches the submerged step; cloth and water rise before the full fall.
+  if (at >= 78.0 && at < 78.5) {
+    const u = at - 78.0;
+    const knock = u < 0.12 ? Math.sin(u * Math.PI * 2 * 640) * 0.070 * Math.exp(-u * 34) : 0;
+    const cloth = noise() * 0.035 * Math.sin(Math.PI * u / 0.5);
+    add(knock + cloth + z3NoiseLp * 0.035 * u, 0.08);
+  }
+
+  // Frame-filling splash, cut quickly into underwater low-pass pressure for T3 ink.
+  if (at >= 78.4 && at < 80.0) {
+    const u = at - 78.4;
+    const cut = smoothstep(0.06, 0.30, u);
+    const splash = noise() * 0.16 * Math.exp(-u * 3.0) * (1 - cut);
+    const submerged = z3NoiseLp * 0.18 * cut + Math.sin(u * Math.PI * 2 * 58) * 0.042 * cut;
+    add(splash + submerged, 0);
   }
 
   return [l, r];
