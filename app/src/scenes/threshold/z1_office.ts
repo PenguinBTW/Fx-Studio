@@ -662,7 +662,11 @@ export default class ThresholdZ1Office extends Scene {
     for (const x of [-2.49,-1.51]) box(this.s, `z1_frame_inner_stop_${x}`, [0.035, 2.02, 0.055], [x, 1.08, 15.825], mat(0x151812, 0.78));
     box(this.s, 'z1_frame_inner_stop_top', [1.02, 0.035, 0.055], [-2, 2.08, 15.825], mat(0x151812, 0.78));
     box(this.s, 'z1_fire_threshold', [1.14, 0.035, 0.18], [-2, 0.018, 15.82], mat(0x4b4c43, 0.38, 0.45));
-    const exitSpill = new THREE.PointLight(0xff8b68, 1.15, 4.5, 2); exitSpill.position.set(-2,2.25,15.45); this.s.add(exitSpill);
+    const exitSpill = new THREE.PointLight(0xff8b68, 2.05, 5.6, 1.75); exitSpill.position.set(-2,2.18,15.35); this.s.add(exitSpill);
+    // A single surviving cool troffer throws a hard corridor pool toward the red exit:
+    // the chase reads as a deliberate warm/cool hero composition rather than uniform murk.
+    const chasePoolLight = new THREE.PointLight(0xc9f3d6, 2.25, 6.2, 1.45); chasePoolLight.position.set(1.65,2.22,8.7); this.s.add(chasePoolLight);
+    plane(this.s, 'z1_chase_cool_floor_pool', 2.1, 4.8, [1.15, 0.018, 9.4], basic(0x8fbf9f, 0.16), [-Math.PI / 2, 0, -0.18]);
     box(this.s, 'z1_exit_sign_case', [0.66, 0.25, 0.105], [-2, 2.32, 15.82], mat(0x270b08, 0.42, 0.18));
     const exitFace = new THREE.MeshBasicMaterial({ map: exitSignTexture() });
     plane(this.s, 'z1_exit_sign_face', 0.58, 0.19, [-2, 2.32, 15.762], exitFace, [0, Math.PI, 0]);
