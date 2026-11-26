@@ -1,0 +1,1 @@
+{"id":"z3_pool_kit","version":1,"source":"build.py","budgets":{"tris":180000,"textureMB":0},"scale":1,"parts":{"wall":"tiled_wall_panel_root","pillar":"tiled_pillar_root","arch":"pool_arch_module_root","steps":"pool_steps_root","ladder":"pool_ladder_root","skylight":"pool_skylight_root"},"notes":"Z3 modular tiled pool hall kit"}
