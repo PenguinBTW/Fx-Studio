@@ -137,6 +137,16 @@ export interface MixConfig {
   soundtracks?: SoundtrackConfig[];
   spatialSources?: SpatialSourceConfig[];
   buses?: Partial<Record<MixBus, BusConfig>>;
+  duck?: {
+    bus?: MixBus;
+    cues: string[];
+    amountDb?: number;
+    attack?: number;
+    release?: number;
+    hold?: number;
+    splitBand?: boolean;
+    splitHz?: number;
+  };
   mutes?: any[];
   master?: MasterConfig;
 }

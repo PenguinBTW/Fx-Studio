@@ -168,6 +168,10 @@ wav('z1_door_jingle_hit.wav', stem(3.0, (t) => {
 
 
 
+// Silent sidechain key for the 40.5s freeze vacuum; carried on foley_guide so it is
+// never audible in the master.
+wav('z2_freeze_duck_key.wav', stem(0.5, () => [0, 0]));
+
 // Z2 playroom cue pass from z2_z4_audio_cue_spec.md. Local stem time starts at 29.6;
 // `at` is project time so every event matches the sheet exactly.
 const z2HeartTimes: number[] = [];

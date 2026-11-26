@@ -20,6 +20,7 @@ export default defineMix({
     { id: 'end_office_afterimage_tone', file: 'generated/end_office_afterimage_tone.wav', bus: 'ambient', at: 225.0, gainDb: -7.0 },
     // Material/event cues localized to each spatial seam. They sit on sfx so the ambient
     // crossfade remains continuous while the physical transition object is unmistakable.
+    { id: 'z2_freeze_duck_key', file: 'generated/z2_freeze_duck_key.wav', bus: 'foley_guide', at: 40.50, gainDb: 0.0 },
     { id: 'z2_playroom_events', file: 'generated/z2_playroom_events.wav', bus: 'sfx', at: 29.60, gainDb: -3.5 },
     { id: 't2_plastic_to_water', file: 'generated/t2_plastic_to_water.wav', bus: 'sfx', at: 54.60, gainDb: -1.0 },
     { id: 'z3_pool_events', file: 'generated/z3_pool_events.wav', bus: 'sfx', at: 54.60, gainDb: -2.5 },
@@ -47,6 +48,14 @@ export default defineMix({
     ambient: { gainDb: -1.0 },
     sfx: { gainDb: 0.5 },
     foley_guide: { gainDb: -2.0 },
+  },
+  duck: {
+    bus: 'ambient',
+    cues: ['z2_freeze_duck_key'],
+    amountDb: 9,
+    attack: 0.012,
+    release: 0.28,
+    hold: 0.5,
   },
   mutes: [
     // Z0 dead-beam pre-drop vacuum; hard silence survives the limiter by design.
