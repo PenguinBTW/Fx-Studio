@@ -52,6 +52,20 @@ for side in (-1, 1):
     for j, z in enumerate((0.018, 0.002, -0.014)):
         add(curve(f'leg_{side}_{j}', [(side * 0.009, 0, z), (side * 0.021, -0.006, z - 0.004), (side * 0.031, -0.012, z - 0.011)], 0.0009, THREAD), 'legs')
 
+# Macro felt scales: overlapping flattened pills across the wings and back. They are
+# deliberately geometric fibres/scales rather than texture noise so the close-up silhouette holds.
+for i in range(60):
+    side = -1 if i % 2 == 0 else 1
+    row = (i // 2) % 10
+    band = i // 20
+    x = side * (0.012 + row * 0.0046)
+    z = 0.018 - band * 0.016 - row * 0.0015
+    y = -0.004 + math.sin(i * 1.7) * 0.0015
+    sc = sphere(f'felt_scale_{i}', 0.0024, (x, y, z), FELT_EDGE if i % 3 else FELT, scale=(1.8, 0.32, 0.72), segments=10, rings=5)
+    sc.rotation_euler[1] = math.radians(side * (18 + row * 2))
+    sc.rotation_euler[2] = math.radians(side * -10)
+    add(sc, 'body')
+
 # Sparse felt fuzz: short stitches radiating from the body, deliberately geometric.
 for i in range(24):
     a = i * math.tau / 24

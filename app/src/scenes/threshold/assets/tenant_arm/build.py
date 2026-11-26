@@ -39,7 +39,7 @@ for i, (a, b, radius, material) in enumerate(segments):
     ax, ay, az = a; bx, by, bz = b
     dx, dy, dz = bx-ax, by-ay, bz-az
     length = math.sqrt(dx*dx + dy*dy + dz*dz)
-    ob = cyl(f'arm_segment_{i}', radius, length, ((ax+bx)/2, (ay+by)/2, (az+bz)/2), material, verts=32, bev=0.012)
+    ob = cyl(f'arm_segment_{i}', radius, length, ((ax+bx)/2, (ay+by)/2, (az+bz)/2), material, verts=48, bev=0.012)
     # Cylinder local Z -> segment direction.
     direction = mathutils.Vector((dx, dy, dz)).normalized()
     ob.rotation_mode = 'QUATERNION'
@@ -80,7 +80,7 @@ for finger in range(5):
     ob = curve(f'finger_coil_{finger}', pts, 0.0085, CHROME)
     add(ob, f'finger_{finger}')
     tip = pts[-1]
-    add(sphere(f'finger_tip_{finger}', 0.018, tip, CHROME, scale=(0.75, 0.75, 1.3), segments=20, rings=10), f'finger_{finger}')
+    add(sphere(f'finger_tip_{finger}', 0.018, tip, CHROME, scale=(0.75, 0.75, 1.3), segments=28, rings=14), f'finger_{finger}')
 
 # Loose coins trapped inside the arm collage.
 for i in range(9):
