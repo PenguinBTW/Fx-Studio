@@ -78,11 +78,12 @@ for side,sgn in [('l',-1),('r',1)]:
     armroot=empty(f'arm_{side}_root',(sgn*.28,0,2.03)); armroot.parent=root
     for j in range(12):
         # zig-zag in both depth and vertical angle; panels overlap like a party blower
-        x=sgn*(.43+j*.255); z=2.03+math.sin(j*.9)*.055-j*.012; y=(j%2-.5)*.075
-        panel=cube(f'arm_{side}_accordion_panel_{j+1:02d}',(x,y,z),(.29,.028,.105),paper if j%2 else paper2,rot=(0,sgn*(j%2-.5)*.34,sgn*(j%2-.5)*.22),bevel=.008)
+        x=sgn*(.43+j*.225); z=2.03+math.sin(j*.9)*.085-j*.014; y=(j%2-.5)*.095
+        panel=cube(f'arm_{side}_accordion_panel_{j+1:02d}',(x,y,z),(.30+random.uniform(-.025,.035),.026,.105+random.uniform(-.018,.026)),paper if j%2 else paper2,rot=(0,sgn*(j%2-.5)*.48,sgn*(j%2-.5)*.30),bevel=.006)
         panel.parent=armroot; panel.matrix_parent_inverse=armroot.matrix_world.inverted()
-        sphere(f'arm_{side}_hinge_{j+1:02d}',(x,y,z),(.055,.035,.06),paperhi,18,9).parent=armroot
+        hinge=cube(f'arm_{side}_hinge_{j+1:02d}',(x,y,z),(.085,.042,.07),paperhi,rot=(random.uniform(-.2,.2),sgn*(j%2-.5)*.35,random.uniform(-.3,.3)),bevel=.012); hinge.parent=armroot; hinge.matrix_parent_inverse=armroot.matrix_world.inverted()
         if j%2==0: cube(f'arm_{side}_panel_crease_{j+1:02d}',(x,y-.019,z),(.22,.005,.008),ink,rot=(0,0,sgn*.08),bevel=.001).parent=armroot
+        if j%3==1: cube(f'arm_{side}_panel_tear_{j+1:02d}',(x+sgn*.1,y-.02,z+.035),(.045,.005,.012),ink,rot=(0,0,sgn*.18),bevel=.001).parent=armroot
     # paper-strip hand fan and five long fingers
     handx=sgn*(.43+12*.255)
     cube(f'hand_{side}_paper_fan',(handx,0,1.86),(.28,.035,.22),paperhi,rot=(0,0,sgn*.08),bevel=.01).parent=armroot

@@ -8,6 +8,24 @@ import { resolveAsset } from '../../engine/assets';
 import { thresholdPost } from './sensor_post';
 import { addFlashlight, applyFpCamera, basic, box, clamp, cyl, disposeTree, hash, mat, plane, smooth, sph, updateFlashlight, type CamKey } from './z1_scene_util';
 
+function paperFiberTexture() {
+  const size = 256;
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const g = c.getContext('2d')!;
+  const img = g.createImageData(size, size);
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    const n = hash(x * 0.173 + y * 3.71) * 30 + Math.sin(y * 0.55 + hash(x) * 2) * 7 + Math.sin((x + y) * 0.07) * 6;
+    const stain = Math.max(0, Math.sin(x * 0.021 + y * 0.013) - 0.72) * 42;
+    const v = 214 + n - stain - (hash(x * 4.1 + y * 0.37) > 0.975 ? 34 : 0);
+    const id = (y * size + x) * 4;
+    img.data[id] = img.data[id + 1] = img.data[id + 2] = Math.max(105, Math.min(255, v)); img.data[id + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace; tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(2.5, 2.5);
+  return tex;
+}
+
 const KEYS: CamKey[] = [
   { t: 80, pos: [0, 1.1, -1.5], look: [0, 0.85, 2], fov: 78, gait: 'creep' },
   { t: 81.5, pos: [0, 1.05, 0], look: [0, 0.8, 3], fov: 78, gait: 'creep' },
@@ -58,6 +76,27 @@ export default class ThresholdZ4Library extends Scene {
     this.archivistAsset.root.position.set(1.15, 0.02, 2.35);
     this.archivistAsset.root.visible = false;
     this.s.add(this.archivistAsset.root);
+    const archivistPaperTex = paperFiberTexture();
+    const archivistMatCache = new Map<THREE.Material, THREE.Material>();
+    this.archivistAsset.root.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      const remapPaper = (m: THREE.Material) => {
+        const hit = archivistMatCache.get(m); if (hit) return hit;
+        const mm = m.clone() as THREE.MeshStandardMaterial;
+        if (/paper|ivory|torn/.test(mm.name)) {
+          mm.map = archivistPaperTex; mm.roughnessMap = archivistPaperTex; mm.bumpMap = archivistPaperTex; mm.bumpScale = 0.012;
+          mm.roughness = Math.max(mm.roughness, 0.86);
+          if (/greyed/.test(mm.name)) mm.color.multiplyScalar(0.82);
+          if (/fresh_torn/.test(mm.name)) mm.color.multiplyScalar(1.05);
+        }
+        if (/book_spine_leather/.test(mm.name)) { mm.color.setHex(0x2b160b); mm.roughness = 0.78; }
+        mm.needsUpdate = true; archivistMatCache.set(m, mm); return mm;
+      };
+      const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      const mapped = mats.map(remapPaper);
+      mesh.material = Array.isArray(mesh.material) ? mapped : mapped[0]!;
+    });
     this.s.background = new THREE.Color(0x090806);
     this.s.fog = new THREE.FogExp2(0x241e14, 0.038);
     this.flash = addFlashlight(this.s);
