@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
+import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { resolveAsset } from '../../engine/assets';
 import { thresholdPost } from './sensor_post';
 import { addFlashlight, applyFpCamera, basic, box, clamp, cyl, disposeTree, hash, mat, plane, smooth, sph, updateFlashlight, type CamKey } from './z1_scene_util';
@@ -40,10 +41,16 @@ export default class ThresholdZ3Pool extends Scene {
 
   private mirrorlingAsset!: GLTFInstance;
   private mirrorlingReflection!: GLTFInstance;
+  private poolKit!: GLTFInstance;
+  private propPack!: GLTFInstance;
 
   override async init() {
     const resolved = resolveAsset('threshold/z3_mirrorling');
     this.mirrorlingAsset = await GLTFManager.instantiate(resolved.url, { ...resolved.manifest.load, castShadow: true, receiveShadow: true });
+    const kitResolved = resolveAsset('threshold/z3_pool_kit');
+    const packResolved = resolveAsset('threshold/z3_prop_pack');
+    this.poolKit = await GLTFManager.instantiate(kitResolved.url, { ...kitResolved.manifest.load, castShadow: true, receiveShadow: true });
+    this.propPack = await GLTFManager.instantiate(packResolved.url, { ...packResolved.manifest.load, castShadow: true, receiveShadow: true });
     this.mirrorlingReflection = await GLTFManager.instantiate(resolved.url, { ...resolved.manifest.load, castShadow: false, receiveShadow: false });
     this.mirrorlingAsset.root.visible = false;
     this.mirrorlingReflection.root.visible = false;
@@ -177,6 +184,22 @@ export default class ThresholdZ3Pool extends Scene {
     for (let i = 0; i < 8; i++) sph(this.s, `z3_lane_float_${i}`, 0.08, [3.3, 0.5, -8 - i * 0.45], i % 2 ? mat(0xffffff, 0.4) : mat(0xff5738, 0.4), 10);
     for (let i = 0; i < 10; i++) box(this.s, `z3_rust_drip_${i}`, [0.025, 0.3 + hash(i) * 0.7, 0.012], [-3.99, 1.7 + hash(i) * 1.3, -18 + i * 1.7], mat(0x8d3e19, 0.9));
 
+    // Modular Blender pool architecture/props replace the simplest primitive dressing while preserving layout.
+    this.s.traverse((o) => { if (/^z3_(no_diving_sign|no_diving_red_bar|bench|lifeguard_|kickboard_|rubber_duck|ladder_|life_ring)/.test(o.name)) o.visible = false; });
+    for (const side of [-1, 1]) for (let i = 0; i < 8; i++) this.cloneProp(this.poolKit, 'tiled_wall_panel_root', [side * 3.98, 0.42, 4 - i * 3.4], side < 0 ? Math.PI / 2 : -Math.PI / 2, 1, `z3_wall_panel_asset_${side}_${i}`);
+    for (let z = 2; z >= -20; z -= 4) for (const side of [-1, 1]) this.cloneProp(this.poolKit, 'tiled_pillar_root', [side * 3.72, 0, z], 0, 1, `z3_pillar_asset_${side}_${z}`);
+    for (let z = 2; z >= -20; z -= 8) this.cloneProp(this.poolKit, 'pool_arch_module_root', [0, 1.05, z], 0, 1, `z3_arch_asset_${z}`);
+    this.cloneProp(this.poolKit, 'pool_ladder_root', [-2.55, 0.1, 5.25], 0, 1, 'z3_ladder_asset');
+    this.cloneProp(this.poolKit, 'pool_steps_root', [0, 0.05, 4.5], 0, 1, 'z3_steps_asset');
+    this.cloneProp(this.propPack, 'lifeguard_chair_root', [3.35, 0, 3.5], -0.4, 1, 'z3_lifeguard_asset');
+    this.cloneProp(this.propPack, 'pool_bench_root', [-3.55, 0, -1.5], Math.PI / 2, 1, 'z3_bench_asset');
+    this.cloneProp(this.propPack, 'no_diving_sign_root', [2.8, 1.22, 5.04], 0, 1, 'z3_no_diving_asset');
+    for (let i = 0; i < 4; i++) this.cloneProp(this.propPack, 'kickboard_root', [-3.0 + i * 0.55, 0.49, -4.5 - i * 1.1], hash(i) * 0.7, 1, `z3_kickboard_asset_${i}`);
+    this.cloneProp(this.propPack, 'rubber_duck_root', [-2.5, 0.47, -7.5], 0.25, 1, 'z3_duck_asset');
+    this.cloneProp(this.propPack, 'rescue_ring_root', [3.5, 0.5, -6.5], 0, 1, 'z3_rescue_ring_asset');
+    this.cloneProp(this.propPack, 'pool_noodle_root', [2.4, 0.48, -5.2], 0.5, 1, 'z3_noodle_asset');
+    this.cloneProp(this.propPack, 'pool_drain_root', [2.8, -0.1, -12], 0, 1, 'z3_drain_asset');
+
     // phone floating with eye sticker/antenna
     this.phone = new THREE.Group(); this.phone.position.set(3, 0.5, -2);
     box(this.phone, 'z3_phone_body', [0.22, 0.07, 0.38], [0, 0, 0], mat(0x2a2a32, 0.42));
@@ -205,6 +228,18 @@ export default class ThresholdZ3Pool extends Scene {
     // huge Tenant silhouette far underwater
     this.tenant = box(this.s, 'z3_tenant_underwater', [1.2, 4.8, 0.5], [0, -1.8, -10], basic(0x02080a, 0.65));
     this.tenant.visible = false;
+  }
+
+  private cloneProp(source: GLTFInstance, part: string, pos: [number, number, number], rotY = 0, scale = 1, name = part) {
+    const src = source.part(part);
+    if (!src) return null;
+    const c = skeletonClone(src);
+    c.name = c.userData.fx_entity = name;
+    c.position.set(...pos);
+    c.rotation.set(0, rotY, 0);
+    c.scale.setScalar(scale);
+    this.s.add(c);
+    return c;
   }
 
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
