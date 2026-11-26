@@ -78,6 +78,8 @@ const SPRINT_T0 = 168.0;
 const SPRINT_T1 = REPLAY_T_OFFSET;
 let SPRINT_SPEED = 8;
 const SPRINT_SAMPLES = 160;
+const SPRINT_RAMP = 0.2;
+const SPRINT_WEAVE = 1.58;
 const sprintTable: { u: number; x: number; z: number; d: number }[] = [];
 {
   let d = 0;
@@ -85,16 +87,24 @@ const sprintTable: { u: number; x: number; z: number; d: number }[] = [];
   let pz = -13;
   for (let i = 0; i <= SPRINT_SAMPLES; i++) {
     const u = i / SPRINT_SAMPLES;
-    const x = 1.75 * Math.sin(Math.PI * 4 * u) + JOIN_POSE.pos[0] * u;
+    const x = SPRINT_WEAVE * Math.sin(Math.PI * 4 * u) + JOIN_POSE.pos[0] * u;
     const z = lerp(-13, JOIN_Z, u);
     if (i) d += Math.hypot(x - px, z - pz);
     sprintTable.push({ u, x, z, d });
     px = x; pz = z;
   }
-  SPRINT_SPEED = sprintTable[SPRINT_SAMPLES]!.d / (SPRINT_T1 - SPRINT_T0);
+  SPRINT_SPEED = sprintTable[SPRINT_SAMPLES]!.d / (SPRINT_T1 - SPRINT_T0 - 0.5 * SPRINT_RAMP);
+}
+function sprintDistanceAt(t: number) {
+  const e = Math.max(0, t - SPRINT_T0);
+  if (e < SPRINT_RAMP) {
+    const u = e / SPRINT_RAMP;
+    return SPRINT_SPEED * SPRINT_RAMP * (u ** 3 - 0.5 * u ** 4);
+  }
+  return SPRINT_SPEED * (e - 0.5 * SPRINT_RAMP);
 }
 function sprintPoint(t: number) {
-  const targetD = clamp((t - SPRINT_T0) * SPRINT_SPEED, 0, sprintTable[SPRINT_SAMPLES]!.d);
+  const targetD = clamp(sprintDistanceAt(t), 0, sprintTable[SPRINT_SAMPLES]!.d);
   let hi = SPRINT_SAMPLES;
   while (hi > 0 && sprintTable[hi]!.d > targetD) hi--;
   const a = sprintTable[hi]!;
