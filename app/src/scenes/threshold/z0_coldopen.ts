@@ -8,6 +8,7 @@ import { evalFirstPerson, applyFirstPersonCamera, type FPKey, type FPPose } from
 import { FlashlightRig, beamStateAt } from './flashlight';
 import { thresholdPost } from './sensor_post';
 import { clamp, lerp, sm, hash } from './kit';
+import { createDriftParticles, updateDriftParticles, disposeDecalParticleTree } from './decals_particles';
 
 /** Z7's exact replay at 171.30-173.40 maps to cold-open local 1.20-3.30. */
 export function coldOpenLocalFromZ7Replay(t: number): number {
@@ -81,6 +82,7 @@ export default class Z0ColdOpen extends Scene {
   private panels!: THREE.InstancedMesh;
   private panelMat!: THREE.MeshStandardMaterial;
   private vents!: THREE.InstancedMesh;
+  private ambientDust!: THREE.InstancedMesh;
 
   override async init() {
     this.scene3d.background = new THREE.Color(0.0004, 0.0005, 0.0008);
@@ -202,6 +204,17 @@ export default class Z0ColdOpen extends Scene {
       this.scene3d.add(strip);
     }
 
+    // Sparse room-scale dust gives the cathedral air parallax without continuous beam sheets.
+    this.ambientDust = createDriftParticles({
+      kind: 'dust',
+      count: 72,
+      bounds: { min: [-1.85, 0.35, -44], max: [1.85, 3.6, 4.5] },
+      seed: 4107,
+      opacity: 0.16,
+      size: 0.009,
+    });
+    this.scene3d.add(this.ambientDust);
+
     // Hero arm-only Tenant LOD: real shared GLB rather than primitive scaffolding.
     this.tenantInst = await GLTFManager.instantiate(resolveAsset('tenant_arm', this.ctx.project ?? 'threshold').url, {});
     this.arm = new THREE.Group();
@@ -249,6 +262,7 @@ export default class Z0ColdOpen extends Scene {
     applyFirstPersonCamera(this.cam, pose, out.width / out.height);
     this.poseArm(t, pose);
     const threat = t > 1.15 ? 1 : 0.3;
+    updateDriftParticles(this.ambientDust, t);
     const state = beamStateAt(t, threat);
     this.flash.update(pose, t, state, (time) => {
       const fwd = coldOpenPose(clamp(time, 0, 4)).forward;
@@ -281,5 +295,6 @@ export default class Z0ColdOpen extends Scene {
     this.machines.dispose();
     this.panels.dispose();
     this.vents.dispose();
+    disposeDecalParticleTree(this.ambientDust);
   }
 }
