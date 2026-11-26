@@ -26,6 +26,9 @@ def cyl_between(name,a,b,r1,r2,mat,vertices=40):
     o=bpy.context.object; o.rotation_mode='QUATERNION'; o.rotation_quaternion=d.to_track_quat('Z','Y'); smooth(o); return finish(o,name,mat)
 def torus(name,loc,major,minor,mat,rot=(0,0,0)):
     bpy.ops.mesh.primitive_torus_add(major_radius=major,minor_radius=minor,major_segments=56,minor_segments=12,location=loc,rotation=rot); o=bpy.context.object; smooth(o); return finish(o,name,mat)
+def band_on_segment(name,a,b,u,radius,mat,thickness=.024):
+    a,b=Vector(a),Vector(b); d=(b-a).normalized(); c=a.lerp(b,u)
+    return cyl_between(name,c-d*(thickness*.5),c+d*(thickness*.5),radius,radius,mat,vertices=32)
 def cube(name,loc,dims,mat,rot=(0,0,0),bevel=.01):
     bpy.ops.mesh.primitive_cube_add(location=loc,rotation=rot); o=bpy.context.object; o.scale=(dims[0]/2,dims[1]/2,dims[2]/2); bpy.ops.object.transform_apply(location=False,rotation=False,scale=True)
     if bevel: mod=o.modifiers.new('soft_tile_edges','BEVEL'); mod.width=bevel; mod.segments=2
@@ -41,14 +44,13 @@ root=empty('mirrorling_root')
 # narrow leg columns taper to points in the water: no feet ever read
 for side,x in [('l',-.12),('r',.12)]:
     hip=(x,0,1.35); knee=(x+(.025 if side=='l' else -.02),0,.72); tip=(x+(.04 if side=='l' else -.035),0,.03)
-    cyl_between(f'leg_{side}_upper_tendril',(hip[0],hip[1]-.033,hip[2]),(knee[0],knee[1]-.033,knee[2]),.015,.012,grout,vertices=20).parent=root
-    cyl_between(f'leg_{side}_lower_tendril',(knee[0],knee[1]-.033,knee[2]),(tip[0],tip[1]-.033,tip[2]),.012,.006,grout,vertices=20).parent=root
-    a=cyl_between(f'leg_{side}_upper',hip,knee,.065,.045,chrome); a.parent=root
-    b=cyl_between(f'leg_{side}_lower',knee,tip,.045,.012,chrome); b.parent=root
-    sphere(f'knee_{side}',knee,(.07,.055,.075),chrome2,24,12).parent=root
-    sphere(f'hip_socket_{side}',hip,(.09,.065,.095),chrome2,28,14).parent=root
-    for band,z in enumerate((.38,.68,1.02)):
-        torus(f'leg_{side}_grout_{band}',(x,0,z),.052,.006,grout).parent=root
+    a=cyl_between(f'leg_{side}_upper',hip,knee,.088,.066,chrome); a.parent=root
+    b=cyl_between(f'leg_{side}_lower',knee,tip,.066,.026,chrome); b.parent=root
+    sphere(f'knee_{side}',knee,(.088,.07,.094),chrome2,24,12).parent=root
+    sphere(f'hip_socket_{side}',hip,(.105,.075,.11),chrome2,28,14).parent=root
+    for band,u in enumerate((.34,.68)):
+        band_on_segment(f'leg_{side}_upper_grout_{band}',hip,knee,u,.091,grout).parent=root
+        band_on_segment(f'leg_{side}_lower_grout_{band}',knee,tip,u,.067,grout).parent=root
 # impossibly narrow ribbed torso, slightly asymmetric
 sphere('torso_core',(0,0,1.58),(.19,.12,.48),chrome,36,18).parent=root
 for i,z in enumerate((1.18,1.34,1.5,1.66,1.82,1.96)):
@@ -66,23 +68,19 @@ sphere('blank_mirror_face',(0,-.125,2.28),(.125,.018,.22),chrome2,32,16).parent=
 # very long two-segment arms, bony joints, tile banding
 for side,sgn in [('l',-1),('r',1)]:
     shoulder=(sgn*.28,0,1.94); elbow=(sgn*.62,-.015,1.28); wrist=(sgn*.43,-.025,.64)
-    # exposed black-grout tendrils run just in front of the white tile bones, making the
-    # limb continuity deliberate even where the ceramic segments taper apart.
-    cyl_between(f'arm_{side}_upper_tendril',(shoulder[0],shoulder[1]-.035,shoulder[2]),(elbow[0],elbow[1]-.035,elbow[2]),.014,.011,grout,vertices=20).parent=root
-    cyl_between(f'arm_{side}_lower_tendril',(elbow[0],elbow[1]-.035,elbow[2]),(wrist[0],wrist[1]-.035,wrist[2]),.011,.007,grout,vertices=20).parent=root
-    upper=cyl_between(f'arm_{side}_upper',shoulder,elbow,.045,.032,chrome); upper.parent=root
-    lower=cyl_between(f'arm_{side}_lower',elbow,wrist,.032,.019,chrome); lower.parent=root
+    upper=cyl_between(f'arm_{side}_upper',shoulder,elbow,.072,.054,chrome); upper.parent=root
+    lower=cyl_between(f'arm_{side}_lower',elbow,wrist,.054,.032,chrome); lower.parent=root
     sphere(f'shoulder_socket_{side}',shoulder,(.082,.06,.082),chrome2,28,14).parent=root
-    sphere(f'elbow_{side}',elbow,(.055,.045,.06),chrome2,24,12).parent=root
-    sphere(f'wrist_{side}',wrist,(.04,.035,.045),chrome2,20,10).parent=root
+    sphere(f'elbow_{side}',elbow,(.074,.06,.078),chrome2,24,12).parent=root
+    sphere(f'wrist_{side}',wrist,(.052,.044,.056),chrome2,20,10).parent=root
     for j in range(4):
         # fingers hang and taper; asymmetric lengths
         base=Vector(wrist)+Vector((sgn*(j-1.5)*.018,-.005,-.025))
         end=base+Vector((sgn*.015*(j-1.5),-.01,-.18-random.uniform(0,.07)))
         cyl_between(f'finger_{side}_{j+1}',base,end,.009,.003,chrome2,vertices=24).parent=root
-    for k in range(3):
-        pos=Vector(shoulder).lerp(Vector(elbow),(k+1)/4)
-        torus(f'arm_{side}_grout_{k+1}',pos,.035,.0045,grout).parent=root
+    for k,u in enumerate((.34,.68)):
+        band_on_segment(f'arm_{side}_upper_grout_{k+1}',shoulder,elbow,u,.074,grout).parent=root
+        band_on_segment(f'arm_{side}_lower_grout_{k+1}',elbow,wrist,u,.055,grout).parent=root
 # ripple/contact rings at the waterline, exported as separate named controls
 for i,r in enumerate((.28,.43,.61)):
     ring=torus(f'water_ripple_ring_{i+1}',(0,0,.012+i*.004),r,.008,ripplemat); ring.parent=root

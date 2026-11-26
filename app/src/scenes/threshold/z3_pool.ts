@@ -87,6 +87,47 @@ export default class ThresholdZ3Pool extends Scene {
       const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
       mats.forEach((m) => { const mm = m as THREE.MeshStandardMaterial; if (/chrome|tile_highlight/.test(mm.name)) mm.envMapIntensity = 0.48; });
     });
+    // Ceramic limb volume overlay: the GLB supplies the teardrop head, torso, joints and fingers;
+    // these continuous tiled sleeves guarantee the limbs read as the same ceramic being at film distance.
+    const limbTile = new THREE.MeshStandardMaterial({ color: 0xd8eeee, roughness: 0.3, metalness: 0.08 });
+    const limbGrout = new THREE.MeshStandardMaterial({ color: 0x020708, roughness: 0.78, metalness: 0.02 });
+    const addLimbCylinder = (name: string, a: [number, number, number], b: [number, number, number], r1: number, r2: number, material: THREE.Material) => {
+      const va = new THREE.Vector3(...a), vb = new THREE.Vector3(...b);
+      const d = vb.clone().sub(va);
+      const len = d.length();
+      const mesh = new THREE.Mesh(new THREE.CylinderGeometry(r2, r1, len, 28, 1), material);
+      mesh.name = mesh.userData.fx_entity = name;
+      mesh.position.copy(va).add(vb).multiplyScalar(0.5);
+      mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
+      mesh.castShadow = true; mesh.receiveShadow = true;
+      this.mirrorlingAsset.root.add(mesh);
+      return mesh;
+    };
+    const addGroutBand = (name: string, a: [number, number, number], b: [number, number, number], u: number, r: number) => {
+      const va = new THREE.Vector3(...a), vb = new THREE.Vector3(...b);
+      const d = vb.clone().sub(va).normalize();
+      const c = va.clone().lerp(vb, u);
+      const half = d.clone().multiplyScalar(0.017);
+      addLimbCylinder(name, c.clone().sub(half).toArray() as [number, number, number], c.clone().add(half).toArray() as [number, number, number], r, r, limbGrout);
+    };
+    for (const side of [-1, 1] as const) {
+      const shoulder: [number, number, number] = [side * 0.28, 1.94, 0];
+      const elbow: [number, number, number] = [side * 0.62, 1.28, 0.015];
+      const wrist: [number, number, number] = [side * 0.43, 0.64, 0.025];
+      const hip: [number, number, number] = [side * 0.12, 1.35, 0];
+      const knee: [number, number, number] = [side * 0.12 - side * 0.022, 0.72, 0];
+      const tip: [number, number, number] = [side * 0.12 - side * 0.038, 0.03, 0];
+      addLimbCylinder(`z3_mirrorling_ceramic_upper_arm_${side}`, shoulder, elbow, 0.074, 0.056, limbTile);
+      addLimbCylinder(`z3_mirrorling_ceramic_lower_arm_${side}`, elbow, wrist, 0.056, 0.034, limbTile);
+      addLimbCylinder(`z3_mirrorling_ceramic_upper_leg_${side}`, hip, knee, 0.09, 0.068, limbTile);
+      addLimbCylinder(`z3_mirrorling_ceramic_lower_leg_${side}`, knee, tip, 0.068, 0.027, limbTile);
+      for (const u of [0.34, 0.68]) {
+        addGroutBand(`z3_mirrorling_upper_arm_grout_${side}_${u}`, shoulder, elbow, u, 0.077);
+        addGroutBand(`z3_mirrorling_lower_arm_grout_${side}_${u}`, elbow, wrist, u, 0.058);
+        addGroutBand(`z3_mirrorling_upper_leg_grout_${side}_${u}`, hip, knee, u, 0.093);
+        addGroutBand(`z3_mirrorling_lower_leg_grout_${side}_${u}`, knee, tip, u, 0.069);
+      }
+    }
     this.mirrorlingAsset.root.visible = false;
     this.mirrorlingReflection.root.visible = false;
     this.mirrorlingReflection.root.scale.y = -1;
