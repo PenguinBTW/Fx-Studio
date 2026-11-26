@@ -136,6 +136,11 @@ export default class Z0ColdOpen extends Scene {
       this.heroMachines.add(wrap);
     }
     this.scene3d.add(this.heroMachines);
+    for (const side of [-1, 1]) for (let row = 0; row < 5; row++) {
+      const lamp = new THREE.PointLight(row % 3 === 0 ? 0xffc58c : 0x7fc9ff, 0.72, 2.6, 1.7);
+      lamp.position.set(side * 1.48, 1.28, 4 - row * 3.2 - 0.03);
+      this.scene3d.add(lamp);
+    }
 
     // Cable trays, floor runs, and overhead conduits supply mechanical scale cues in the first frames.
     const conduitMat = new THREE.MeshStandardMaterial({ color: 0x0b1118, roughness: 0.48, metalness: 0.72, emissive: 0x071018, emissiveIntensity: 0.18 });
