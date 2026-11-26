@@ -1,0 +1,13 @@
+{
+  "model": "model.glb",
+  "parts": {
+    "root": "ceiling_breather_root",
+    "eye_l": "eye_l",
+    "eye_r": "eye_r",
+    "lid_l_upper": "lid_l_upper",
+    "lid_l_lower": "lid_l_lower",
+    "lid_r_upper": "lid_r_upper",
+    "lid_r_lower": "lid_r_lower"
+  },
+  "budgets": { "tris": 90000, "textureMB": 0 }
+}

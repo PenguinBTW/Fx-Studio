@@ -219,7 +219,144 @@ export function applySplitBandDuck(
 }
 
 /**
- * 3. Lookahead True Peak Limiter:
+ * 3. Upward Low-Level Lift:
+ * Stereo-linked upward compressor for cinematic negative-space mixes. Quiet beds and room
+ * tone are raised toward the loudness floor while transient-heavy passages pass at unity gain.
+ * The finite gain never creates signal in digital-zero hard mutes.
+ *
+ * @param pcm Input Float32Array PCM buffer (mono or interleaved stereo).
+ * @param thresholdDb Envelope level below which upward compression engages.
+ * @param ratio Upward compression ratio; 2 means half the deficit is restored.
+ * @param maxLiftDb Maximum low-level gain in dB.
+ * @param sampleRate Audio processing sample rate (Hz).
+ */
+export function applyLowLevelLift(
+  pcm: Float32Array,
+  thresholdDb: number = -30,
+  ratio: number = 2,
+  maxLiftDb: number = 12,
+  sampleRate: number = 48000,
+): Float32Array {
+  const totalSamples = pcm.length;
+  if (totalSamples === 0) return new Float32Array(0);
+  const isStereo = totalSamples % 2 === 0;
+  const frames = isStereo ? totalSamples / 2 : totalSamples;
+  const output = new Float32Array(totalSamples);
+  const attackAlpha = 1 - Math.exp(-1 / (sampleRate * 0.008));
+  const releaseAlpha = 1 - Math.exp(-1 / (sampleRate * 0.240));
+  const gainAlpha = 1 - Math.exp(-1 / (sampleRate * 0.025));
+  const maxLift = Math.pow(10, maxLiftDb / 20);
+  const restore = 1 - 1 / Math.max(1, ratio);
+  let envelope = 1e-12;
+  let gain = 1;
+  for (let f = 0; f < frames; f++) {
+    const l = pcm[isStereo ? f * 2 : f] ?? 0;
+    const r = isStereo ? (pcm[f * 2 + 1] ?? 0) : l;
+    const power = (l * l + r * r) * 0.5;
+    envelope += (power > envelope ? attackAlpha : releaseAlpha) * (power - envelope);
+    const levelDb = 10 * Math.log10(envelope + 1e-12);
+    const deficit = thresholdDb - levelDb;
+    const liftDb = deficit > 0 ? Math.min(maxLiftDb, deficit * restore) : 0;
+    const targetGain = Math.min(maxLift, Math.pow(10, liftDb / 20));
+    gain += gainAlpha * (targetGain - gain);
+    if (isStereo) {
+      output[f * 2] = l * gain;
+      output[f * 2 + 1] = r * gain;
+    } else {
+      output[f] = l * gain;
+    }
+  }
+  return output;
+}
+
+/**
+ * Reconstruction-control low-pass filter:
+ * RBJ biquad low-pass used before true-peak limiting. Noise-heavy procedural mixes can
+ * have large inter-sample reconstruction overs even when every 48 kHz sample is below
+ * ceiling; removing only the extreme top edge makes the rendered waveform physically
+ * reconstructable without flattening the audible transient spectrum.
+ */
+export function applyReconstructionLowpass(
+  pcm: Float32Array,
+  cutoffHz: number = 16000,
+  sampleRate: number = 48000,
+  channels: number = 1,
+): Float32Array {
+  const totalSamples = pcm.length;
+  if (totalSamples === 0) return new Float32Array(0);
+  const chCount = Math.max(1, Math.floor(channels));
+  const frames = Math.floor(totalSamples / chCount);
+  const output = new Float32Array(totalSamples);
+  const fc = Math.max(1000, Math.min(sampleRate * 0.45, cutoffHz));
+  const omega = 2 * Math.PI * fc / sampleRate;
+  const sin = Math.sin(omega);
+  const cos = Math.cos(omega);
+  const q = Math.SQRT1_2;
+  const alpha = sin / (2 * q);
+  const a0 = 1 + alpha;
+  const b0 = ((1 - cos) / 2) / a0;
+  const b1 = (1 - cos) / a0;
+  const b2 = b0;
+  const a1 = (-2 * cos) / a0;
+  const a2 = (1 - alpha) / a0;
+  for (let ch = 0; ch < chCount; ch++) {
+    let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+    for (let f = 0; f < frames; f++) {
+      const i = f * chCount + ch;
+      const x = pcm[i] ?? 0;
+      const y = b0 * x + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
+      output[i] = y;
+      x2 = x1; x1 = x; y2 = y1; y1 = y;
+    }
+  }
+  return output;
+}
+
+/**
+ * 4. Stereo-linked Downward Compressor:
+ * Gentle mastering compression for transient-rich cinema mixes. Gain is linked across
+ * channels and follows a smoothed RMS envelope, preserving stereo image and avoiding
+ * the hard clipping/flattening of a peak-only limiter.
+ */
+export function applyDownwardCompressor(
+  pcm: Float32Array,
+  thresholdDb: number = -30,
+  ratio: number = 2,
+  sampleRate: number = 48000,
+): Float32Array {
+  const totalSamples = pcm.length;
+  if (totalSamples === 0) return new Float32Array(0);
+  const isStereo = totalSamples % 2 === 0;
+  const frames = isStereo ? totalSamples / 2 : totalSamples;
+  const output = new Float32Array(totalSamples);
+  const attackAlpha = 1 - Math.exp(-1 / (sampleRate * 0.006));
+  const releaseAlpha = 1 - Math.exp(-1 / (sampleRate * 0.180));
+  const gainAttack = 1 - Math.exp(-1 / (sampleRate * 0.004));
+  const gainRelease = 1 - Math.exp(-1 / (sampleRate * 0.140));
+  let envelope = 1e-12;
+  let gain = 1;
+  for (let f = 0; f < frames; f++) {
+    const l = pcm[isStereo ? f * 2 : f] ?? 0;
+    const r = isStereo ? (pcm[f * 2 + 1] ?? 0) : l;
+    const power = (l * l + r * r) * 0.5;
+    envelope += (power > envelope ? attackAlpha : releaseAlpha) * (power - envelope);
+    const levelDb = 10 * Math.log10(envelope + 1e-12);
+    const excess = Math.max(0, levelDb - thresholdDb);
+    const reductionDb = excess * (1 - 1 / Math.max(1, ratio));
+    const targetGain = Math.pow(10, -reductionDb / 20);
+    gain += (targetGain < gain ? gainAttack : gainRelease) * (targetGain - gain);
+    if (isStereo) {
+      output[f * 2] = l * gain;
+      output[f * 2 + 1] = r * gain;
+    } else {
+      output[f] = l * gain;
+    }
+  }
+  return output;
+}
+
+/**
+ * 5. Lookahead True Peak Limiter:
  * Professional mastering lookahead peak limiter with fast attack, smooth exponential release,
  * and strict True Peak ceiling enforcement to prevent inter-sample overs and DAC clipping.
  *
@@ -242,19 +379,36 @@ export function applyLookaheadLimiter(
   const totalFrames = isStereo ? totalSamples / 2 : totalSamples;
   const output = new Float32Array(totalSamples);
 
-  const ceilingLin = Math.pow(10, ceilingDb / 20); // e.g. ~0.841395 at -1.5 dBTP
+  const ceilingLin = Math.pow(10, ceilingDb / 20) * 0.982; // small reconstruction margin below the requested dBTP ceiling
   const lookaheadFrames = Math.max(1, Math.round((lookaheadMs / 1000) * sampleRate));
 
-  // 1. Extract peak envelope per frame (including 4-point Hermite inter-sample peak estimation)
+  // 1. Extract peak envelope per frame, including Catmull-Rom inter-sample peaks.
+  // Sample-value limiting alone is not true-peak limiting: a reconstructed DAC waveform
+  // can peak between samples even when every sample is below ceiling.
+  const channelAt = (ch: number, frame: number): number => {
+    const ff = Math.max(0, Math.min(totalFrames - 1, frame));
+    return pcm[isStereo ? ff * 2 + ch : ff] ?? 0;
+  };
+  const cr = (p0: number, p1: number, p2: number, p3: number, x: number): number => {
+    const x2 = x * x;
+    const x3 = x2 * x;
+    return 0.5 * ((2 * p1) + (-p0 + p2) * x + (2 * p0 - 5 * p1 + 4 * p2 - p3) * x2 + (-p0 + 3 * p1 - 3 * p2 + p3) * x3);
+  };
   const framePeaks = new Float32Array(totalFrames);
   for (let f = 0; f < totalFrames; f++) {
-    if (isStereo) {
-      const absL = Math.abs(pcm[f * 2] ?? 0);
-      const absR = Math.abs(pcm[f * 2 + 1] ?? 0);
-      framePeaks[f] = Math.max(absL, absR);
-    } else {
-      framePeaks[f] = Math.abs(pcm[f] ?? 0);
+    let peak = 0;
+    const channels = isStereo ? 2 : 1;
+    for (let ch = 0; ch < channels; ch++) {
+      const p0 = channelAt(ch, f - 1);
+      const p1 = channelAt(ch, f);
+      const p2 = channelAt(ch, f + 1);
+      const p3 = channelAt(ch, f + 2);
+      peak = Math.max(peak, Math.abs(p1));
+      // Quarter-phase checks are sufficient for the 4x-oversampled true-peak detector
+      // used by ffmpeg while keeping the O(N) mastering pass bounded.
+      peak = Math.max(peak, Math.abs(cr(p0, p1, p2, p3, 0.25)), Math.abs(cr(p0, p1, p2, p3, 0.5)), Math.abs(cr(p0, p1, p2, p3, 0.75)));
     }
+    framePeaks[f] = peak;
   }
 
   // 2. Sliding window maximum over lookahead window [f, f + lookaheadFrames]
@@ -286,7 +440,6 @@ export function applyLookaheadLimiter(
   // 3. Compute target gains & apply fast attack / smooth exponential release (tau = 50ms)
   const releaseTau = 0.050; // 50ms exponential release
   const releaseAlpha = 1.0 - Math.exp(-1.0 / (sampleRate * releaseTau));
-
   let currentGain = 1.0;
 
   for (let f = 0; f < totalFrames; f++) {

@@ -113,7 +113,15 @@ export interface BusConfig {
 export interface MasterConfig {
   lufs?: number;
   truePeak?: number;
+  normalize?: boolean;
+  limiter?: boolean;
   limiterLookaheadMs?: number;
+  /** Optional pre-limiter reconstruction-control low-pass frequency in Hz. */
+  reconstructionLowpassHz?: number;
+  fadeOut?: { at: number; dur: number };
+  /** Optional upward compression that raises room-tone/negative-space floor before loudness normalization. */
+  lowLevelLift?: { thresholdDb?: number; ratio?: number; maxLiftDb?: number };
+  downwardCompress?: { thresholdDb?: number; ratio?: number };
 }
 
 export interface MixStemConfig {
@@ -130,11 +138,23 @@ export interface MixStemConfig {
 }
 
 export interface MixConfig {
+  /** Optional deterministic stem-generation script, resolved relative to this mix file and run before loading stems. */
+  build?: string;
   sampleRate?: number;
   stems?: MixStemConfig[];
   soundtracks?: SoundtrackConfig[];
   spatialSources?: SpatialSourceConfig[];
   buses?: Partial<Record<MixBus, BusConfig>>;
+  duck?: {
+    bus?: MixBus;
+    cues: string[];
+    amountDb?: number;
+    attack?: number;
+    release?: number;
+    hold?: number;
+    splitBand?: boolean;
+    splitHz?: number;
+  };
   mutes?: any[];
   master?: MasterConfig;
 }

@@ -1,0 +1,8 @@
+{
+  "project": "_tools",
+  "size": [1920, 1080],
+  "trimToTimeline": true,
+  "entries": [
+    { "scene": "_tools/threshold_turntable", "id": "turntable", "start": 0, "end": 40 }
+  ]
+}

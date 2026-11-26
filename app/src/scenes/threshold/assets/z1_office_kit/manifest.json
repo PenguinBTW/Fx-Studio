@@ -1,0 +1,16 @@
+{
+  "id": "z1_office_kit",
+  "version": 1,
+  "source": "build.py",
+  "budgets": {
+    "tris": 150000,
+    "textureMB": 0
+  },
+  "scale": 1,
+  "parts": {
+    "cubicle": "cubicle_panel_180_root",
+    "troffer": "troffer_root",
+    "door": "fire_door_root"
+  },
+  "notes": "Z1 modular cubicle/ceiling/architecture kit"
+}

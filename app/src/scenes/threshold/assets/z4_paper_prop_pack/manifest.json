@@ -1,0 +1,28 @@
+{
+  "id": "z4_paper_prop_pack",
+  "version": 1,
+  "source": "build.py",
+  "budgets": {
+    "tris": 120000,
+    "textureMB": 0
+  },
+  "scale": 1,
+  "parts": {
+    "ledger": "open_ledger_root",
+    "pen": "fountain_pen_root",
+    "lamp": "bankers_lamp_root",
+    "ink": "ink_bottle_root",
+    "moth": "paper_moth_root",
+    "letters": "letters_string_root",
+    "phone": "folded_paper_phone_root",
+    "drawers": "card_catalog_drawer_root",
+    "globe": "paper_globe_root",
+    "glasses": "reading_glasses_root",
+    "scissors": "scissors_root",
+    "clock": "paper_clock_root",
+    "scroll": "tied_scroll_root",
+    "chair": "library_chair_root",
+    "vine": "paper_vine_root"
+  },
+  "notes": "Z4 paper library prop pack"
+}

@@ -1,0 +1,18 @@
+{
+  "id": "lint",
+  "version": 1,
+  "source": "build.py",
+  "budgets": { "tris": 25000, "textureMB": 0 },
+  "scale": 1,
+  "parts": {
+    "root": "lint_root",
+    "body": "body",
+    "head": "head",
+    "abdomen": "abdomen_glow",
+    "wing_l": "wing_-1",
+    "wing_r": "wing_1",
+    "eye_l": "eye_-1",
+    "eye_r": "eye_1"
+  },
+  "notes": "THRESHOLD Lint felt moth. Real scale 1 unit = 1 m; body roughly 5 cm long. Abdomen material is emissive for the warm relight."
+}
