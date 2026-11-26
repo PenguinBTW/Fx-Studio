@@ -115,6 +115,8 @@ export default class ThresholdZ1Office extends Scene {
 
   private breather!: GLTFInstance;
   private phoneAsset!: GLTFInstance;
+  private officeKit!: GLTFInstance;
+  private propPack!: GLTFInstance;
   private glbReceiver?: THREE.Object3D;
 
   override async init() {
@@ -128,6 +130,8 @@ export default class ThresholdZ1Office extends Scene {
     this.phoneAsset.root.scale.setScalar(1.45);
     this.s.add(this.phoneAsset.root);
     this.glbReceiver = this.phoneAsset.part('receiver') ?? undefined;
+    this.officeKit = await GLTFManager.instantiate(resolveAsset('threshold/z1_office_kit').url, { castShadow: true, receiveShadow: true });
+    this.propPack = await GLTFManager.instantiate(resolveAsset('threshold/z1_prop_pack').url, { castShadow: true, receiveShadow: true });
     this.layer = new Layer2D(this.ctx.W, this.ctx.H);
     this.s.background = new THREE.Color(0x050505);
     this.s.fog = new THREE.FogExp2(0x111008, 0.026);
@@ -378,6 +382,32 @@ export default class ThresholdZ1Office extends Scene {
     cord.name = cord.userData.fx_entity = 'z1_phone_coiled_cord'; cord.castShadow = cord.receiveShadow = true; this.s.add(cord);
     // The authored Blender beige phone is the visible hero prop; the engine primitives remain only as hidden fallback geometry.
     this.s.traverse((o) => { if (/^z1_phone_/.test(o.name)) o.visible = false; });
+
+    // Blender-built kit/prop modules replace the most scrutinized primitive office objects.
+    this.s.traverse((o) => {
+      if (/^z1_(desk_top|desk_leg_|crt_monitor|monitor_screen|coffee_mug|frontpod_(desk|monitor|screen|keyboard|chair)|opening_tucked_chair|runisland_(desk|monitor|screen|keyboard|chair))/.test(o.name)) o.visible = false;
+      if (/^z1_partition_([01]|topcap_[01]|bottomrail_[01]|scuff_[01]|endcap_[lr]_[01]|fabricseam_[01]|pinboard_[01])$/.test(o.name)) o.visible = false;
+    });
+    this.cloneProp(this.propPack, 'desk_root', [0, 0, -6], 0, 1.08, 'z1_hero_desk_asset');
+    this.cloneProp(this.propPack, 'crt_root', [-0.52, 0.77, -6.17], 0.22, 1.0, 'z1_hero_crt_asset');
+    this.cloneProp(this.propPack, 'keyboard_root', [-0.2, 0.77, -5.78], -0.08, 1.0, 'z1_hero_keyboard_asset');
+    this.cloneProp(this.propPack, 'mug_root', [-0.18, 0.77, -5.78], 0, 1.0, 'z1_hero_mug_asset');
+    for (const [i, x] of [0, 1].entries()) {
+      const side = i === 0 ? -1 : 1, px = side * 1.85, z = -2.15 - i * 0.35;
+      this.cloneProp(this.propPack, 'desk_root', [px, 0, z], -side * 0.16, 0.78, `z1_frontdesk_asset_${i}`);
+      this.cloneProp(this.propPack, 'crt_root', [px - side * 0.12, 0.77, z - 0.1], side * 0.28, 0.78, `z1_frontcrt_asset_${i}`);
+      this.cloneProp(this.propPack, 'chair_upright_root', [px + side * 0.42, 0, z + 0.48], side * 0.8, 0.95, `z1_frontchair_asset_${i}`);
+    }
+    for (const side of [-1, 1]) for (let j = 0; j < 2; j++) {
+      this.cloneProp(this.officeKit, 'cubicle_panel_180_root', [side * 2.2, 0, -3.15 + j * 1.78], Math.PI / 2, 1, `z1_opening_panel_asset_${side}_${j}`);
+    }
+    this.cloneProp(this.propPack, 'chair_missing_wheel_root', [-1.35, 0, -3.25], -0.7, 0.95, 'z1_opening_tucked_chair_asset');
+    const assetRunPods: [number, number][] = [[-2.3, 1.7], [0.4, 3.6], [1.0, 5.8], [0.7, 8.0], [2.2, 10.4], [0.8, 12.4]];
+    assetRunPods.forEach(([x, z], i) => {
+      this.cloneProp(this.propPack, 'desk_root', [x, 0, z], (i % 2 ? -0.18 : 0.18), 0.82, `z1_rundesk_asset_${i}`);
+      this.cloneProp(this.propPack, 'crt_root', [x - 0.18, 0.77, z - 0.12], 0.35 + i * 0.15, 0.78, `z1_runcrt_asset_${i}`);
+      this.cloneProp(this.propPack, i === 2 ? 'chair_tipped_root' : 'chair_upright_root', [x + 0.48, 0, z + 0.48], hash(i) * 2.5, 0.9, `z1_runchair_asset_${i}`);
+    });
     for (let i = 0; i < 7; i++) box(this.s, `z1_desk_scratch_${i}`, [0.055 + hash(i) * 0.13, 0.002, 0.0035], [-0.55 + hash(i * 2) * 1.1, 0.792, -5.82 + hash(i * 3) * 0.38], mat(0x62594a, 0.9), [0, hash(i) * 0.8, 0]);
     box(this.s, 'z1_desk_front_edge_worn', [2.02, 0.035, 0.025], [0, 0.735, -5.54], mat(0x3f392f, 0.82));
     const mugHandle = new THREE.Mesh(new THREE.TorusGeometry(0.042, 0.008, 8, 18, Math.PI * 1.45), mat(0xaaa18a, 0.55));
@@ -460,6 +490,18 @@ export default class ThresholdZ1Office extends Scene {
       const m = box(this.s, `z1_chase_drop_tile_${i}`, [1.1, 0.03, 1.1], [i % 2 ? 2.8 : 0.2, 2.68, z], ceiling);
       this.fallingTiles.push({ m, z, t0: 20.1 + i * 1.05, y0: 2.68 });
     }
+  }
+
+  private cloneProp(source: GLTFInstance, part: string, pos: [number, number, number], rotY = 0, scale = 1, name = part) {
+    const src = source.part(part);
+    if (!src) return null;
+    const c = src.clone(true);
+    c.name = c.userData.fx_entity = name;
+    c.position.set(...pos);
+    c.rotation.set(0, rotY, 0);
+    c.scale.setScalar(scale);
+    this.s.add(c);
+    return c;
   }
 
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
