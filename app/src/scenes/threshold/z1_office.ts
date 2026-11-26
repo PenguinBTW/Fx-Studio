@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
+import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { resolveAsset } from '../../engine/assets';
 import { Layer2D } from '../../engine/gl';
 import { thresholdPost } from './sensor_post';
@@ -127,11 +128,13 @@ export default class ThresholdZ1Office extends Scene {
     this.phoneAsset = await GLTFManager.instantiate(phoneResolved.url, { ...phoneResolved.manifest.load, castShadow: true, receiveShadow: true });
     this.phoneAsset.root.position.set(0.28, 0.785, -6.05);
     this.phoneAsset.root.rotation.y = -0.12;
-    this.phoneAsset.root.scale.setScalar(1.45);
+    this.phoneAsset.root.scale.setScalar(1.15);
     this.s.add(this.phoneAsset.root);
     this.glbReceiver = this.phoneAsset.part('receiver') ?? undefined;
-    this.officeKit = await GLTFManager.instantiate(resolveAsset('threshold/z1_office_kit').url, { castShadow: true, receiveShadow: true });
-    this.propPack = await GLTFManager.instantiate(resolveAsset('threshold/z1_prop_pack').url, { castShadow: true, receiveShadow: true });
+    const kitResolved = resolveAsset('threshold/z1_office_kit');
+    const packResolved = resolveAsset('threshold/z1_prop_pack');
+    this.officeKit = await GLTFManager.instantiate(kitResolved.url, { ...kitResolved.manifest.load, castShadow: true, receiveShadow: true });
+    this.propPack = await GLTFManager.instantiate(packResolved.url, { ...packResolved.manifest.load, castShadow: true, receiveShadow: true });
     this.layer = new Layer2D(this.ctx.W, this.ctx.H);
     this.s.background = new THREE.Color(0x050505);
     this.s.fog = new THREE.FogExp2(0x111008, 0.026);
@@ -145,7 +148,7 @@ export default class ThresholdZ1Office extends Scene {
     const metal = surfaceMat('metal', 0x595c5b, 0.5, 2.2, 0.35);
     const plastic = surfaceMat('plastic', 0xcdbd91, 0.56, 2.4);
     const dark = mat(0x101010, 0.9);
-    const paper = surfaceMat('paper', 0xd8d0b9, 0.9, 2.6);
+    const paper = surfaceMat('paper', 0xbdb49c, 0.94, 2.6);
     const green = mat(0x204020, 0.5, 0, 0x25ff56, 0.8);
     const red = mat(0x5d1512, 0.45, 0, 0xff1f18, 1.8);
     const screenTex = officeScreenTexture();
@@ -266,7 +269,7 @@ export default class ThresholdZ1Office extends Scene {
       const side = i % 2 ? 1 : -1;
       const x = side * (0.92 + hash(i * 2.1) * 1.35);
       const z = -0.55 - i * 0.24 - hash(i * 3.3) * 0.18;
-      plane(this.s, `z1_opening_printout_${i}`, 0.18 + hash(i) * 0.11, 0.25 + hash(i + 4) * 0.1, [x, 0.014 + i * 0.00003, z], paper, [-Math.PI / 2, 0, hash(i * 5.1) * Math.PI]);
+      plane(this.s, `z1_opening_printout_${i}`, 0.15 + hash(i) * 0.07, 0.2 + hash(i + 4) * 0.07, [x, 0.014 + i * 0.00003, z], paper, [-Math.PI / 2, 0, hash(i * 5.1) * Math.PI]);
     }
     box(this.s, 'z1_opening_cardboard_l', [0.52, 0.38, 0.46], [-2.75, 0.19, -0.85], mat(0x7d6040, 0.88), [0, 0.22, 0]);
     box(this.s, 'z1_opening_cardboard_r', [0.44, 0.28, 0.4], [2.85, 0.14, -3.15], mat(0x6e5337, 0.9), [0, -0.34, 0]);
@@ -307,7 +310,7 @@ export default class ThresholdZ1Office extends Scene {
     for (let i = 0; i < 44; i++) {
       const z = -2 + hash(i * 2.7) * 17;
       const x = (hash(i * 4.1) - 0.5) * 8 + (i % 5 === 0 ? 3.5 : 0);
-      plane(this.s, `z1_floor_paper_${i}`, 0.18 + hash(i) * 0.12, 0.25 + hash(i + 1) * 0.12, [x, 0.012 + i * 0.00002, z], paper, [-Math.PI / 2, 0, hash(i + 2) * Math.PI]);
+      plane(this.s, `z1_floor_paper_${i}`, 0.15 + hash(i) * 0.07, 0.2 + hash(i + 1) * 0.07, [x, 0.012 + i * 0.00002, z], paper, [-Math.PI / 2, 0, hash(i + 2) * Math.PI]);
       if (i % 7 === 0) cyl(this.s, `z1_floor_cable_${i}`, 0.009, 0.75 + hash(i) * 0.8, [x + 0.25, 0.018, z - 0.1], dark, [Math.PI / 2, hash(i) * 2, 0], 8);
     }
 
@@ -495,7 +498,7 @@ export default class ThresholdZ1Office extends Scene {
   private cloneProp(source: GLTFInstance, part: string, pos: [number, number, number], rotY = 0, scale = 1, name = part) {
     const src = source.part(part);
     if (!src) return null;
-    const c = src.clone(true);
+    const c = skeletonClone(src);
     c.name = c.userData.fx_entity = name;
     c.position.set(...pos);
     c.rotation.set(0, rotY, 0);
@@ -524,14 +527,14 @@ export default class ThresholdZ1Office extends Scene {
 
     // phone rings then receiver levitates
     const ring = t > 8.3 && t < 11 ? Math.sin(t * Math.PI * 40) * 0.006 : 0;
-    const lift = smooth(11, 11.7, t) * 0.04;
+    const lift = smooth(11.65, 12.15, t) * 0.04;
     this.receiver.position.y = 0.96 + lift + ring;
     this.receiver.rotation.z = ring * 4;
     for (const rp of this.receiverParts) rp.position.y = (rp.userData.baseY as number) + lift + ring;
     if (this.glbReceiver) {
       if (!this.glbReceiver.userData.basePos) this.glbReceiver.userData.basePos = this.glbReceiver.position.clone();
       const bp = this.glbReceiver.userData.basePos as THREE.Vector3;
-      this.glbReceiver.position.y = bp.y + (lift + ring) / 1.45;
+      this.glbReceiver.position.y = bp.y + (lift + ring) / 1.15;
       this.glbReceiver.rotation.z = ring * 4;
     }
 
