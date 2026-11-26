@@ -212,8 +212,10 @@ export default class ThresholdZ8Home extends Scene {
     this.box(this.s, [0.17, 0.52, 0.32], [1.25, 1.38, -5.85], beige);
     for (let i = 0; i < 12; i++) this.box(this.s, [0.025, 0.035, 0.035], [1.17, 1.24 + Math.floor(i / 3) * 0.055, -5.94 + (i % 3) * 0.055], black);
     const receiverMat = this.mat(0xb29b73, 0.5, 0, 0x6b5638, 0.24);
-    this.receiver = this.box(this.s, [0.13, 0.11, 0.32], [1.13, 1.61, -5.85], receiverMat, [0, 0, 0.08]);
+    this.receiver = this.box(this.s, [0.09, 0.065, 0.13], [1.13, 1.61, -5.85], receiverMat, [0, 0, 0.08]);
     this.receiverHome.copy(this.receiver.position);
+    this.box(this.receiver, [0.12, 0.1, 0.065], [0, 0.003, -0.095], receiverMat);
+    this.box(this.receiver, [0.12, 0.1, 0.065], [0, 0.003, 0.095], receiverMat);
     for (let i = 0; i < 8; i++) this.cyl(this.s, 0.012, 0.012, 0.08, [1.16, 1.3 - i * 0.045, -5.68 + Math.sin(i * 1.7) * 0.035], black, 6);
 
     // Office loop beyond the door: mustard carpet, beige partitions, fluorescent ceiling, desk phone ahead.
@@ -250,9 +252,11 @@ export default class ThresholdZ8Home extends Scene {
     // Phone rings 206-214; receiver lifts by itself and swings on its cord.
     const ring = t >= 206 && t < 210 ? (Math.sin(t * Math.PI * 20) > 0 ? 1 : 0.72) : 1;
     const lift = smooth((t - 210) / 1.2);
-    this.receiver.position.copy(this.receiverHome).add(new THREE.Vector3(-0.01 - lift * 0.035, lift * 0.12, lift * 0.025));
-    this.receiver.rotation.z = 0.08 + lift * (0.5 + 0.08 * Math.sin((t - 210) * 5));
-    this.receiver.rotation.x = lift * 0.15 * Math.sin((t - 210) * 4);
+    const unhook = smooth((t - 210) / 0.7);
+    const drop = smooth((t - 211.0) / 1.4);
+    this.receiver.position.copy(this.receiverHome).add(new THREE.Vector3(-0.01 - lift * 0.065, unhook * 0.075 - drop * 0.14, lift * 0.025));
+    this.receiver.rotation.z = 0.08 + lift * (0.32 + 0.08 * Math.sin((t - 210) * 5));
+    this.receiver.rotation.x = lift * 0.12 * Math.sin((t - 210) * 4);
     this.receiver.scale.setScalar(ring);
 
     // Door handle turns, then the front door opens onto the office loop.
