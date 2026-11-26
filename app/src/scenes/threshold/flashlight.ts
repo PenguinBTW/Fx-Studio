@@ -162,8 +162,9 @@ export class FlashlightRig {
     const downAngle = downness * downness * (3 - 2 * downness);
     // Approximate the first lit work surface as desk height. This makes the response
     // distance-aware rather than merely pitch-aware while staying deterministic.
-    const drop = Math.max(0.05, pose.pos[1] - 0.75);
-    const deskDistance = drop / Math.max(0.16, -lagged[1]);
+    const surfaceY = pose.pos[1] > 0.9 ? 0.75 : 0;
+    const drop = Math.max(0.05, pose.pos[1] - surfaceY);
+    const deskDistance = drop / Math.max(0.001, -lagged[1]);
     const proximity = lagged[1] < 0 ? 1 - sm(0.9, 1.9, deskDistance) : 0;
     const closeSoft = Math.max(downAngle, proximity);
     this.core.penumbra = lerp(0.55, 0.9, closeSoft);
