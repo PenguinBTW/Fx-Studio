@@ -95,7 +95,7 @@ const BODY: Record<ThresholdTransitionMode, string> = {
     paper *= 1.0 - pageShade * 0.42;
     vec3 slammed = mix(ca, paper, page);
     float neonU = clamp((u - 0.333) / 0.667, 0.0, 1.0);
-    float pulse = pow(max(0.0, sin(neonU * 3.0 * 3.14159)), 2.0);
+    float pulse = pow(abs(sin(neonU * 3.0 * 3.14159)), 2.0);
     float starter = neonU <= 0.0 ? 0.0 : mix(0.22, 1.0, pulse) * smoothstep(0.0, 0.08, neonU);
     starter = max(starter, smoothstep(0.88, 1.0, neonU));
     vec3 neonScene = cb * (0.72 + 0.58 * starter) + vec3(0.55, 0.06, 0.025) * starter * 0.10;
