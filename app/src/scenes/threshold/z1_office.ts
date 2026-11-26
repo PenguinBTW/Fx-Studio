@@ -129,6 +129,8 @@ export default class ThresholdZ1Office extends Scene {
     // Corpse-pale organic material separation: the accepted silhouette remains unchanged, but skin,
     // veins, pads and nails must not collapse into uniform grey pipe plastic under the beam.
     const breatherMatCache = new Map<THREE.Material, THREE.Material>();
+    const breatherSkinTex = proceduralSurface('fabric', 7);
+    const breatherPadTex = proceduralSurface('plastic', 5);
     this.breather.root.traverse((o) => {
       const mesh = o as THREE.Mesh;
       if (!mesh.isMesh) return;
@@ -142,13 +144,13 @@ export default class ThresholdZ1Office extends Scene {
         } else if (/purple_vein/.test(mm.name)) {
           mm.color.setHex(0x551047); mm.emissive.setHex(0x250029); mm.emissiveIntensity = 0.18; mm.roughness = 0.42;
         } else if (/tile_skin_warm_grey/.test(mm.name)) {
-          mm.color.setHex(0x776a5f); mm.roughness = 0.68;
+          mm.color.setHex(0x6f5c50); mm.roughness = 0.72; mm.map = breatherSkinTex; mm.roughnessMap = breatherSkinTex; mm.bumpMap = breatherSkinTex; mm.bumpScale = 0.022;
         } else if (/tile_skin_pressure_edges/.test(mm.name)) {
-          mm.color.setHex(0x9a8a78); mm.roughness = 0.62;
+          mm.color.setHex(0x927866); mm.roughness = 0.66; mm.map = breatherSkinTex; mm.roughnessMap = breatherSkinTex; mm.bumpMap = breatherSkinTex; mm.bumpScale = 0.018;
         } else if (/cracked_nail_yellow/.test(mm.name)) {
-          mm.color.setHex(0xb98f32); mm.roughness = 0.42;
+          mm.color.setHex(0xb98f32); mm.roughness = 0.42; mm.map = breatherPadTex; mm.bumpMap = breatherPadTex; mm.bumpScale = 0.007;
         } else if (/suction_pad_pale/.test(mm.name)) {
-          mm.color.setHex(0xbfa891); mm.roughness = 0.34;
+          mm.color.setHex(0x8e7262); mm.roughness = 0.46; mm.map = breatherPadTex; mm.roughnessMap = breatherPadTex; mm.bumpMap = breatherPadTex; mm.bumpScale = 0.01;
         }
         mm.needsUpdate = true;
         breatherMatCache.set(m, mm);
@@ -639,9 +641,9 @@ export default class ThresholdZ1Office extends Scene {
         const spread = (bi - 4.5) / 3.5;
         fp.position.x = bp.x + spread * 0.12 * emerge + Math.sin(t * 0.31 + bi) * 0.008 * eyesOn;
         fp.position.z = bp.z + ((bi % 2) - 0.5) * 0.11 * emerge;
-        fp.rotation.x = (Math.sin(t * 0.9 + bi) * 0.11 - 0.08 * emerge + lash * (0.34 + (bi % 3) * 0.09)) * eyesOn;
-        fp.rotation.z = side * (0.17 + (bi % 3) * 0.085 + Math.sin(t * 0.55 + bi * 1.7) * 0.028) * eyesOn + spread * 0.11 * emerge;
-        fp.rotation.y = Math.sin(t * 0.42 + bi) * 0.055 * eyesOn + spread * 0.04 * emerge;
+        fp.rotation.x = (Math.sin(t * 0.9 + bi) * 0.12 - 0.06 * emerge + lash * (0.24 + (bi % 3) * 0.07) + (bi % 2 ? 0.09 : -0.04) * emerge) * eyesOn;
+        fp.rotation.z = side * (0.07 + (bi % 3) * 0.045 + Math.sin(t * 0.55 + bi * 1.7) * 0.035) * eyesOn + spread * 0.045 * emerge;
+        fp.rotation.y = Math.sin(t * 0.42 + bi) * 0.075 * eyesOn + spread * 0.025 * emerge + (bi % 2 ? -0.08 : 0.06) * emerge;
       }
     }
     this.eyes.forEach((e) => { e.visible = eyesOn > 0.02 && !this.breather.root.visible; (e.material as THREE.MeshStandardMaterial).emissiveIntensity = 1.5 * eyesOn; });
