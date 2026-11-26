@@ -71,52 +71,105 @@ const BODY: Record<ThresholdTransitionMode, string> = {
   pageSlam: `
     vec3 ca = texture(texA, vUv).rgb;
     vec3 cb = texture(texB, vUv).rgb;
-    float close = smoothstep(0.0, 0.48, u);
-    float edgeL = mix(-0.08, 0.52, close);
-    float edgeR = mix(1.08, 0.48, close);
-    float page = step(vUv.x, edgeL) + step(edgeR, vUv.x);
-    vec3 paper = vec3(0.28, 0.23, 0.16) * (0.75 + 0.25 * hash12(floor(vUv * 180.0)));
-    vec3 a = mix(ca, paper, sat(page));
-    float black = smoothstep(0.44, 0.5, u) * (1.0 - smoothstep(0.57, 0.64, u));
-    float flick = floor((u - 0.64) / 0.08);
-    float neonOn = u < 0.64 ? 0.0 : mod(max(flick, 0.0), 2.0) < 1.0 ? smoothstep(0.64, 0.74, u) : 0.18;
-    vec3 c = mix(a, cb, neonOn);
-    c *= 1.0 - black;
+    // Real-page timing compressed into the 0.6 s seam: slam in 0.12 s,
+    // hold true black for 0.08 s, then three neon ignition flickers over 0.4 s.
+    float close = smoothstep(0.0, 0.20, u);
+    float bow = (vUv.y - 0.5) * (vUv.y - 0.5) * 0.11;
+    float edgeL = mix(-0.16, 0.505, close) + bow;
+    float edgeR = mix(1.16, 0.495, close) - bow;
+    float pageL = 1.0 - smoothstep(edgeL - 0.006, edgeL + 0.006, vUv.x);
+    float pageR = smoothstep(edgeR - 0.006, edgeR + 0.006, vUv.x);
+    float page = sat(pageL + pageR);
+    float grain = hash12(floor(vUv * vec2(240.0, 180.0)));
+    float fibre = fbm(vUv * vec2(95.0, 18.0), 4) * 0.5 + 0.5;
+    vec3 paper = vec3(0.31, 0.255, 0.175) * (0.68 + grain * 0.16 + fibre * 0.18);
+    float deckle = max(
+      1.0 - smoothstep(0.0, 0.028, abs(vUv.x - edgeL)),
+      1.0 - smoothstep(0.0, 0.028, abs(vUv.x - edgeR))
+    ) * (1.0 - close * 0.35);
+    paper = mix(paper, vec3(0.10, 0.065, 0.035), deckle * 0.62);
+    float pageShade = max(
+      smoothstep(edgeL - 0.11, edgeL, vUv.x) * pageL,
+      (1.0 - smoothstep(edgeR, edgeR + 0.11, vUv.x)) * pageR
+    );
+    paper *= 1.0 - pageShade * 0.42;
+    vec3 slammed = mix(ca, paper, page);
+    float neonU = clamp((u - 0.333) / 0.667, 0.0, 1.0);
+    float pulse = pow(max(0.0, sin(neonU * 3.0 * 3.14159)), 2.0);
+    float starter = neonU <= 0.0 ? 0.0 : mix(0.22, 1.0, pulse) * smoothstep(0.0, 0.08, neonU);
+    starter = max(starter, smoothstep(0.88, 1.0, neonU));
+    vec3 neonScene = cb * (0.72 + 0.58 * starter) + vec3(0.55, 0.06, 0.025) * starter * 0.10;
+    vec3 c = mix(slammed, vec3(0.0), smoothstep(0.18, 0.20, u));
+    c = mix(c, neonScene, smoothstep(0.333, 0.39, u) * starter);
     fragColor = vec4(c, 1.0);`,
   staticFelt: `
     vec3 ca = texture(texA, vUv).rgb;
     vec3 cb = texture(texB, vUv).rgb;
-    float cell = mix(260.0, 18.0, u);
-    vec2 id = floor(vUv * cell);
-    float n = hash12(id + floor(u * 24.0));
-    float scan = 0.5 + 0.5 * sin(vUv.y * 900.0);
-    vec3 stat = vec3(n) * (0.18 + 0.25 * scan);
-    vec3 a = mix(ca, stat, smoothstep(0.0, 0.42, u));
-    float fibre = fbm(vUv * vec2(110.0, 22.0), 4) * 0.5 + 0.5;
-    vec3 felt = vec3(0.12, 0.035, 0.025) * (0.6 + fibre);
-    vec3 m = mix(a, felt, smoothstep(0.28, 0.68, u));
-    float part = smoothstep(0.62, 1.0, u) * smoothstep(0.32, 0.5, abs(vUv.x - 0.5) + (fbm(vUv * 8.0, 3) * 0.06));
+    // CRT grain first enlarges into directional felt fibres; scanline/curvature
+    // structure dies away rather than surviving as a screen overlay.
+    float grainCell = mix(300.0, 34.0, smoothstep(0.0, 0.42, u));
+    vec2 id = floor(vUv * grainCell);
+    float n = hash12(id + floor(u * 18.0));
+    float scan = (0.5 + 0.5 * sin(vUv.y * 900.0)) * (1.0 - smoothstep(0.12, 0.48, u));
+    vec3 stat = vec3(n) * (0.13 + 0.24 * scan + 0.08 * (1.0 - scan));
+    vec3 a = mix(ca, stat, smoothstep(0.0, 0.36, u));
+    float fibreLong = fbm(vec2(vUv.x * 34.0, vUv.y * 7.0), 5) * 0.5 + 0.5;
+    float fibreFine = fbm(vec2(vUv.x * 190.0, vUv.y * 20.0), 3) * 0.5 + 0.5;
+    float strand = 0.5 + 0.5 * sin(vUv.x * 620.0 + fibreLong * 8.0);
+    vec3 felt = vec3(0.105, 0.027, 0.020) * (0.48 + fibreLong * 0.34 + fibreFine * 0.18 + strand * 0.11);
+    vec3 m = mix(a, felt, smoothstep(0.22, 0.52, u));
+    // The curtain parts from the center outward, with an irregular fibrous leading edge.
+    float open = smoothstep(0.56, 0.98, u);
+    float ragged = (fbm(vUv * vec2(18.0, 5.0), 4) - 0.5) * 0.075;
+    float centerDist = abs(vUv.x - 0.5);
+    float part = 1.0 - smoothstep(open * 0.54 + ragged - 0.025, open * 0.54 + ragged + 0.025, centerDist);
+    part *= smoothstep(0.54, 0.62, u);
+    float edgeGlow = (1.0 - smoothstep(0.0, 0.045, abs(centerDist - open * 0.54))) * smoothstep(0.54, 0.68, u) * (1.0 - open);
     vec3 c = mix(m, cb, part);
+    c += vec3(0.24, 0.055, 0.025) * edgeGlow;
     fragColor = vec4(c, 1.0);`,
   doorPush: `
     vec3 ca = texture(texA, vUv).rgb;
-    vec3 cb = texture(texB, vUv).rgb;
-    float whip = smoothstep(0.0, 0.3, u);
-    float x = vUv.x + (1.0 - whip) * 0.8;
-    float edge = smoothstep(0.0, 0.035, x - u * 1.05);
-    float blur = 0.018 * (1.0 - u);
+    // Incoming cathedral is slightly magnified and lowered at first, then settles:
+    // a small scale/eye-height jump rather than a flat lateral wipe.
+    float settle = smoothstep(0.30, 0.92, u);
+    float zoom = mix(1.075, 1.0, settle);
+    vec2 buv = (vUv - vec2(0.5, 0.52)) / zoom + vec2(0.5, mix(0.535, 0.5, settle));
+    vec3 cb = texture(texB, clamp(buv, 0.0, 1.0)).rgb;
+    float whip = smoothstep(0.0, 0.30, u);
+    float edgePos = mix(1.18, -0.16, whip);
+    float open = 1.0 - smoothstep(edgePos - 0.018, edgePos + 0.018, vUv.x);
+    float blur = 0.018 * (1.0 - whip);
     vec3 aa = texture(texA, vUv + vec2(blur, 0.0)).rgb * 0.5 + texture(texA, vUv - vec2(blur, 0.0)).rgb * 0.5;
-    vec3 c = mix(cb, aa, edge);
-    c *= 0.82 + 0.18 * smoothstep(0.25, 1.0, u);
+    float fibre = fbm(vUv * vec2(150.0, 26.0), 4) * 0.5 + 0.5;
+    aa *= 0.74 + fibre * 0.18;
+    float edgeBand = (1.0 - smoothstep(0.0, 0.055, abs(vUv.x - edgePos))) * (1.0 - smoothstep(0.28, 0.38, u));
+    float shadow = smoothstep(edgePos, edgePos + 0.24, vUv.x) * (1.0 - smoothstep(0.2, 0.42, u));
+    vec3 edgeCol = vec3(0.09, 0.018, 0.012) * (0.65 + fibre * 0.5);
+    vec3 c = mix(cb, aa, open);
+    c = mix(c, edgeCol, edgeBand * 0.92);
+    c *= 1.0 - shadow * 0.38;
     fragColor = vec4(c, 1.0);`,
   lightFall: `
     vec3 ca = texture(texA, vUv).rgb;
     vec3 cb = texture(texB, vUv).rgb;
-    vec2 q = vUv - vec2(0.5, 0.15);
-    float streak = pow(max(0.0, 1.0 - abs(q.x * 8.0 + q.y * 1.5)), 5.0);
-    float warm = smoothstep(0.15, 0.9, u);
-    vec3 streakCol = mix(vec3(0.35, 0.65, 1.3), vec3(1.3, 0.72, 0.32), warm) * streak * (1.0 - abs(u - 0.5));
-    vec3 c = mix(ca, cb, smoothstep(0.18, 0.92, u)) + streakCol;
+    // Several machine-light streaks decelerate, lengthen, and warm into hallway god-rays.
+    float warm = smoothstep(0.12, 0.88, u);
+    float slow = mix(1.0, 0.25, smoothstep(0.0, 0.9, u));
+    float lenBoost = mix(0.45, 1.45, smoothstep(0.18, 0.9, u));
+    vec3 streakCol = vec3(0.0);
+    for (int i = 0; i < 4; i++) {
+      float fi = float(i);
+      float lane = -0.34 + fi * 0.23 + (hash12(vec2(fi, 3.7)) - 0.5) * 0.08;
+      float travel = fract(vUv.y * 0.32 + u * 0.42 * slow + fi * 0.29);
+      float x = vUv.x - 0.5 - lane - (vUv.y - 0.5) * mix(0.11, 0.28, warm);
+      float core = pow(max(0.0, 1.0 - abs(x) * mix(18.0, 8.0, warm)), 5.0);
+      float lengthMask = smoothstep(0.0, 0.12 * lenBoost, travel) * (1.0 - smoothstep(0.52 * lenBoost, 0.92 * lenBoost, travel));
+      streakCol += mix(vec3(0.28, 0.56, 1.25), vec3(1.35, 0.73, 0.31), warm) * core * lengthMask;
+    }
+    float sustain = smoothstep(0.02, 0.18, u) * (1.0 - smoothstep(0.58, 0.88, u));
+    vec3 c = mix(ca, cb, smoothstep(0.22, 0.90, u));
+    c += streakCol * max(0.0, sustain) * 0.72;
     fragColor = vec4(c, 1.0);`,
 };
 
