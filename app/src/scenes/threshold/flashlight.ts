@@ -66,6 +66,22 @@ function flashlightCookieTexture(): THREE.CanvasTexture {
   return cookieTex;
 }
 
+let hazeAlphaTex: THREE.CanvasTexture | null = null;
+function hazeAlphaTexture(): THREE.CanvasTexture {
+  if (hazeAlphaTex) return hazeAlphaTex;
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d')!;
+  const grad = g.createRadialGradient(64, 64, 4, 64, 64, 64);
+  grad.addColorStop(0, 'rgba(255,255,255,0.34)');
+  grad.addColorStop(0.45, 'rgba(255,255,255,0.16)');
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 128, 128);
+  hazeAlphaTex = new THREE.CanvasTexture(c);
+  return hazeAlphaTex;
+}
+
 export interface BeamState {
   battery: number;
   threat: number;
@@ -94,8 +110,8 @@ export class FlashlightRig {
   readonly core = new THREE.SpotLight(0xffffff, 0, 38, 7 * DEG, 0.25, 1.55);
   readonly cone = new THREE.SpotLight(0xffffff, 0, 30, 22 * DEG, 0.58, 1.35);
   readonly spill = new THREE.SpotLight(0xffffff, 0, 12, 30 * DEG, 0.92, 1.8);
-  readonly haze: THREE.Mesh;
-  private readonly hazeMat: THREE.MeshBasicMaterial;
+  readonly haze: THREE.Group;
+  private readonly hazeMats: THREE.MeshBasicMaterial[] = [];
   private readonly target = new THREE.Object3D();
 
   constructor() {
@@ -108,19 +124,29 @@ export class FlashlightRig {
     const cookie = flashlightCookieTexture();
     this.core.map = cookie;
     this.cone.map = cookie;
-    const len = 7;
-    const geom = new THREE.ConeGeometry(Math.tan(11 * DEG) * len, len, 32, 1, true);
-    geom.translate(0, -len / 2, 0);
-    this.hazeMat = new THREE.MeshBasicMaterial({
-      color: 0xffd8a8,
-      transparent: true,
-      opacity: 0,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-      side: THREE.DoubleSide,
-    });
-    this.haze = new THREE.Mesh(geom, this.hazeMat);
-    this.haze.renderOrder = 10;
+    // Atmospheric haze is layered soft cross-sections starting away from the eye.
+    // Never a solid cone shell containing the camera: that reads as a flat triangle in first person.
+    this.haze = new THREE.Group();
+    const hazeAlpha = hazeAlphaTexture();
+    const diskGeom = new THREE.CircleGeometry(1, 40);
+    for (let i = 0; i < 6; i++) {
+      const mat = new THREE.MeshBasicMaterial({
+        color: 0xffd8a8,
+        transparent: true,
+        opacity: 0,
+        alphaMap: hazeAlpha,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        side: THREE.DoubleSide,
+      });
+      const d = 0.9 + i * 0.92;
+      const disk = new THREE.Mesh(diskGeom, mat);
+      disk.position.z = d;
+      disk.scale.setScalar(Math.tan(22 * DEG) * d * (0.55 + i * 0.035));
+      disk.renderOrder = 10;
+      this.hazeMats.push(mat);
+      this.haze.add(disk);
+    }
     this.group.add(this.haze);
   }
 
@@ -155,14 +181,16 @@ export class FlashlightRig {
     this.cone.intensity = 210 * I;
     this.spill.intensity = 38 * I;
     this.haze.position.copy(this.core.position);
-    this.haze.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), new THREE.Vector3(lagged[0], lagged[1], lagged[2]).normalize());
-    this.hazeMat.color.copy(tint);
-    this.hazeMat.opacity = 0.028 * I;
+    this.haze.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), new THREE.Vector3(lagged[0], lagged[1], lagged[2]).normalize());
+    for (const [i, mat] of this.hazeMats.entries()) {
+      mat.color.copy(tint);
+      mat.opacity = (0.010 - i * 0.0009) * I;
+    }
     this.haze.visible = I > 0.003;
   }
 
   dispose(): void {
-    this.haze.geometry.dispose();
-    this.hazeMat.dispose();
+    this.haze.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) m.geometry.dispose(); });
+    for (const mat of this.hazeMats) mat.dispose();
   }
 }

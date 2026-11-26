@@ -2,6 +2,8 @@
 // This is W1's integration scene; W3's finished cathedral assets replace the blockout dressing later.
 import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
+import { GLTFManager } from '../../engine/gltf';
+import { resolveAsset } from '../../engine/assets';
 import { evalFirstPerson, applyFirstPersonCamera, type FPKey, type FPPose } from './fp_cam';
 import { FlashlightRig, beamStateAt } from './flashlight';
 import { thresholdPost } from './sensor_post';
@@ -40,14 +42,14 @@ export default class Z0ColdOpen extends Scene {
   private scene3d = new THREE.Scene();
   private cam = new THREE.PerspectiveCamera(82, 16 / 9, 0.04, 240);
   private flash = new FlashlightRig();
-  private arm = new THREE.Group();
+  private arm!: THREE.Group;
   private machines!: THREE.InstancedMesh;
   private machineData: { x: number; z: number; h: number; hue: number }[] = [];
   private machineMat!: THREE.MeshStandardMaterial;
   private panels!: THREE.InstancedMesh;
   private panelMat!: THREE.MeshStandardMaterial;
 
-  override init() {
+  override async init() {
     this.scene3d.background = new THREE.Color(0.0004, 0.0005, 0.0008);
     this.scene3d.fog = new THREE.FogExp2(0x020308, 0.035);
     const floorMat = new THREE.MeshStandardMaterial({ color: 0x071018, roughness: 0.2, metalness: 0.62, emissive: 0x01070b, emissiveIntensity: 0.35 });
@@ -102,29 +104,11 @@ export default class Z0ColdOpen extends Scene {
       this.scene3d.add(strip);
     }
 
-    // Arm blockout: patchwork rods and five coil-like fingers, all named for later replacement.
-    const chrome = new THREE.MeshStandardMaterial({ color: 0x8b98a6, roughness: 0.18, metalness: 0.82, emissive: 0x2a4c5f, emissiveIntensity: 0.82 });
-    const paper = new THREE.MeshStandardMaterial({ color: 0xc3ad7d, roughness: 0.76, metalness: 0.0, emissive: 0x4a2b0d, emissiveIntensity: 0.42 });
-    const tile = new THREE.MeshStandardMaterial({ color: 0x3f7385, roughness: 0.24, metalness: 0.16, emissive: 0x145066, emissiveIntensity: 0.75 });
-    const mats = [chrome, paper, tile];
-    let p = new THREE.Vector3(0, 0, 0);
-    for (let s = 0; s < 4; s++) {
-      const n = p.clone().add(new THREE.Vector3((hash(s * 4) - 0.5) * 0.18, -0.06, -0.62));
-      const seg = cylinderBetween(p, n, 0.13 - s * 0.014, mats[s % mats.length]!);
-      seg.name = `tenant_arm_seg_${s}`;
-      this.arm.add(seg);
-      p = n;
-    }
-    for (let f = 0; f < 5; f++) {
-      const a = (f - 2) * 0.22;
-      const tip = p.clone().add(new THREE.Vector3(Math.sin(a) * 0.38, -0.12 + Math.abs(f - 2) * 0.035, -0.55));
-      const finger = cylinderBetween(p, tip, 0.038, chrome);
-      finger.name = `tenant_finger_${f}`;
-      this.arm.add(finger);
-    }
-    const armGlint = new THREE.PointLight(0x8fd8ff, 1.8, 4.5, 1.7);
-    armGlint.position.set(0, 0.1, -0.9);
-    this.arm.add(armGlint);
+    // Hero arm-only Tenant LOD: real shared GLB rather than primitive scaffolding.
+    const tenant = await GLTFManager.instantiate(resolveAsset('tenant_arm', this.ctx.project ?? 'threshold').url, {});
+    this.arm = new THREE.Group();
+    this.arm.add(tenant.root);
+    this.arm.visible = false;
     this.scene3d.add(this.arm);
     this.scene3d.add(this.flash.group);
     const ambient = new THREE.HemisphereLight(0x2a4a66, 0x020204, 0.34);
@@ -133,16 +117,20 @@ export default class Z0ColdOpen extends Scene {
 
   private poseArm(t: number, pose: FPPose) {
     const reach = sm(2.4, 3.25, t);
-    const dist = lerp(5.8, 1.55, reach);
+    const dist = lerp(5.8, 2.15, reach);
     this.arm.position.set(
       pose.pos[0] + pose.forward[0] * dist,
       pose.pos[1] - 0.12 + 0.62 * (1 - reach),
       pose.pos[2] + pose.forward[2] * dist,
     );
-    const towardCamera = new THREE.Vector3(-pose.forward[0], 0, -pose.forward[2]).normalize();
+    const towardCamera = new THREE.Vector3(
+      -pose.forward[0] + pose.right[0] * 0.38,
+      0,
+      -pose.forward[2] + pose.right[2] * 0.38,
+    ).normalize();
     this.arm.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, -1), towardCamera);
     this.arm.rotateX(0.1 * reach);
-    this.arm.scale.setScalar(lerp(0.55, 1.25, reach));
+    this.arm.scale.setScalar(lerp(0.9, 1.12, reach));
     this.arm.visible = t > 1.15 && t < 3.32;
   }
 
