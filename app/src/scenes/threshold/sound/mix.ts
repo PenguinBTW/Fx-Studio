@@ -20,6 +20,7 @@ export default defineMix({
     { id: 'end_office_afterimage_tone', file: 'generated/end_office_afterimage_tone.wav', bus: 'ambient', at: 225.0, gainDb: -7.0 },
     // Material/event cues localized to each spatial seam. They sit on sfx so the ambient
     // crossfade remains continuous while the physical transition object is unmistakable.
+    { id: 'z2_playroom_events', file: 'generated/z2_playroom_events.wav', bus: 'sfx', at: 29.60, gainDb: -3.5 },
     { id: 't2_plastic_to_water', file: 'generated/t2_plastic_to_water.wav', bus: 'sfx', at: 54.60, gainDb: -1.0 },
     { id: 't3_ink_to_paper', file: 'generated/t3_ink_to_paper.wav', bus: 'sfx', at: 79.40, gainDb: -1.5 },
     { id: 't4_page_slam_neon', file: 'generated/t4_page_slam_neon.wav', bus: 'sfx', at: 104.70, gainDb: 0.5 },

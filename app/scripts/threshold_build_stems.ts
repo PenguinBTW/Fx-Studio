@@ -47,6 +47,7 @@ function stem(sec: number, fn: (t: number) => [number, number]): Float32Array {
 }
 const env = (t: number, a: number, d: number) => t < 0 ? 0 : Math.min(1, t / Math.max(1e-4, a)) * Math.exp(-Math.max(0, t - a) / d);
 const hashLike = (t: number, salt: number) => { const x = Math.sin(Math.floor(t * 24) * 127.1 + salt * 311.7) * 43758.5453; return x - Math.floor(x); };
+const hash01 = (n: number, salt: number) => { const x = Math.sin(n * 127.1 + salt * 311.7) * 43758.5453; return x - Math.floor(x); };
 
 // Fluorescent office bed: 60 Hz hum, odd harmonics, HVAC hiss, two failing-tube ticks.
 wav('z1_fluorescent_bed.wav', stem(27, (t) => {
@@ -164,6 +165,168 @@ wav('z1_door_jingle_hit.wav', stem(3.0, (t) => {
   return [v, v * 0.94];
 }));
 
+
+
+// Z2 playroom cue pass from z2_z4_audio_cue_spec.md. Local stem time starts at 29.6;
+// `at` is project time so every event matches the sheet exactly.
+const z2HeartTimes: number[] = [];
+{
+  let t = 40.8;
+  while (t < 47.5) {
+    z2HeartTimes.push(t);
+    const k = Math.max(0, Math.min(1, (t - 40.8) / 6.7));
+    const bpm = 72 + (95 - 72) * k;
+    t += 60 / bpm;
+  }
+}
+let z2NoiseLp = 0;
+let z2FrictionLp = 0;
+wav('z2_playroom_events.wav', stem(25.8, (t) => {
+  const at = t + 29.6;
+  z2NoiseLp = z2NoiseLp * 0.82 + noise() * 0.18;
+  z2FrictionLp = z2FrictionLp * 0.9 + noise() * 0.1;
+  let l = 0, r = 0;
+  const add = (v: number, pan = 0) => {
+    const a = (pan + 1) * Math.PI / 4;
+    l += v * Math.cos(a);
+    r += v * Math.sin(a);
+  };
+
+  // Music-box bed: bright, slightly too slow, note 6 drops out only after 36.0,
+  // then the whole jingle is removed into the freeze vacuum at 40.5.
+  if (at >= 30.0 && at < 40.46) {
+    const pos = at - 30.0;
+    const noteLen = 0.34;
+    const idx = Math.floor(pos / noteLen) % 8;
+    const u = pos % noteLen;
+    const scale = [880, 1046.5, 1318.5, 1568, 1318.5, 1174.7, 1046.5, 987.8];
+    const missing = at >= 36.0 && idx === 5;
+    if (!missing && u < 0.31) {
+      const hz = scale[idx]!;
+      const e = Math.min(1, u / 0.008) * Math.exp(-u * 5.8);
+      const tone = (Math.sin(u * Math.PI * 2 * hz) * 0.028 + Math.sin(u * Math.PI * 2 * hz * 2.72) * 0.009) * e;
+      add(tone, -0.08);
+    }
+  }
+
+  // Sparse distant child-like laugh pulses and skylight birds, deliberately faint.
+  for (const start of [30.8, 36.55]) {
+    for (let k = 0; k < 5; k++) {
+      const u = at - start - k * 0.105;
+      if (u > 0 && u < 0.065) {
+        const hz = 690 + k * 55 - u * 620;
+        add(Math.sin(u * Math.PI * 2 * hz) * 0.006 * Math.sin(Math.PI * u / 0.065), -0.25);
+      }
+    }
+  }
+  for (const [start, pan] of [[30.35, -0.5], [32.75, 0.35], [35.65, -0.2], [37.35, 0.5]] as const) {
+    const u = at - start;
+    if (u > 0 && u < 0.16) {
+      const hz = 2450 + Math.sin(u * 42) * 420 + u * 900;
+      add(Math.sin(u * Math.PI * 2 * hz) * 0.0038 * Math.sin(Math.PI * u / 0.16), pan);
+    }
+  }
+
+  // Stepped hard-plastic shelf-animal clicks.
+  for (const [hit, pan] of [[33.2, 0.18], [34.1, 0.08], [35.0, 0.28]] as const) {
+    const u = at - hit;
+    if (u > 0 && u < 0.075) {
+      add((noise() * 0.10 + Math.sin(u * Math.PI * 2 * 2140) * 0.032) * Math.exp(-u * 58), pan);
+    }
+  }
+
+  // Slow foam-mat footfalls during the first careful walk.
+  for (const step of [32.8, 33.45, 34.1, 34.75, 35.4]) {
+    const u = at - step;
+    if (u > 0 && u < 0.11) {
+      add((z2NoiseLp * 0.06 + Math.sin(u * Math.PI * 2 * 72) * 0.035) * Math.exp(-u * 24), step % 2 ? 0.12 : -0.12);
+    }
+  }
+
+  // Ball micro-rattle approach, swelling as the bulge closes.
+  if (at >= 38.0 && at < 40.5) {
+    const k = (at - 38.0) / 2.5;
+    // Granular plastic-ball micro-impacts: many short bright clicks, not generic noise.
+    const cell = (at - 38.0) * 30.0;
+    const idx = Math.floor(cell);
+    const u = (cell - idx) / 30.0;
+    const density = 0.42 + k * 0.38;
+    let grit = noise() * (0.004 + 0.009 * k);
+    if (hash01(idx, 8.2) < density && u < 0.018) {
+      const bright = noise() * (0.055 + k * 0.055) + Math.sin(u * Math.PI * 2 * (1700 + hash01(idx, 2.4) * 900)) * 0.018;
+      grit += bright * Math.exp(-u * 150);
+    }
+    add(grit, -0.15 + k * 0.25);
+  }
+
+  // Freeze heartbeat: accelerating low thump with a smaller second valve-like thud.
+  for (const hit of z2HeartTimes) {
+    for (const [off, mul] of [[0, 1], [0.16, 0.55]] as const) {
+      const u = at - hit - off;
+      if (u > 0 && u < 0.13) {
+        const swell = 0.65 + Math.max(0, Math.min(1, (at - 40.8) / 6.7)) * 0.8;
+        add((Math.sin(u * Math.PI * 2 * 54) * 0.088 + Math.sin(u * Math.PI * 2 * 108) * 0.024 + z2NoiseLp * 0.012) * Math.exp(-u * 24) * mul * swell, 0);
+      }
+    }
+  }
+
+  // Pit Swimmer surface cascade and hollow vinyl/tube breath.
+  if (at >= 44.5 && at < 45.2) {
+    const u = at - 44.5;
+    add((noise() * 0.038 + Math.sin(u * Math.PI * 2 * 1150) * 0.014) * Math.exp(-u * 6.5) * Math.min(1, u / 0.06), 0.18);
+  }
+  if (at >= 44.6 && at < 47.5) {
+    const period = 0.86;
+    const x = ((at - 44.6) % period) / period;
+    const gate = Math.sin(Math.PI * x) ** 1.5;
+    // Hollow resonance first, noise second: the breath should read as air inside a
+    // ribbed vinyl tube rather than undifferentiated low rumble.
+    const tubeHz = 164 + Math.sin(at * 1.7) * 18;
+    const resonance = (Math.sin(at * Math.PI * 2 * tubeHz) * 0.034 + Math.sin(at * Math.PI * 2 * tubeHz * 2.01) * 0.015) * gate;
+    const breath = z2NoiseLp * 0.045 * gate + resonance;
+    const vinyl = Math.sin(at * Math.PI * 2 * (118 + Math.sin(at * 3.1) * 12)) * 0.010 * gate;
+    add(breath + vinyl, 0.12);
+  }
+
+  // Toy-phone electronic warble, right side, then the Swimmer dives toward it.
+  if (at >= 47.5 && at < 49.5) {
+    const u0 = at - 47.5;
+    const cycle = u0 % 0.7;
+    if (cycle < 0.36) {
+      const warble = 980 + Math.sin(cycle * Math.PI * 2 * 9) * 210;
+      const e = Math.sin(Math.PI * cycle / 0.36);
+      add((Math.sin(cycle * Math.PI * 2 * warble) * 0.055 + Math.sin(cycle * Math.PI * 2 * warble * 1.51) * 0.018) * e, 0.42);
+    }
+  }
+  if (at >= 48.4 && at < 49.3) {
+    const u = at - 48.4;
+    const sweep = noise() * 0.044 * Math.sin(Math.PI * u / 0.9) + z2NoiseLp * 0.026;
+    const gulp = u > 0.68 ? Math.sin((u - 0.68) * Math.PI * 2 * 210) * 0.038 * Math.exp(-(u - 0.68) * 18) : 0;
+    add(sweep + gulp, 0.28 - u * 0.25);
+  }
+
+  // Crawl friction inside the ribbed plastic tunnel, then watery squeaks as the material turns.
+  if (at >= 49.5 && at < 55.0) {
+    const crawl = Math.max(0, Math.sin((at - 49.5) * Math.PI * 2 * 1.18)) ** 1.8;
+    const rib = 0.5 + 0.5 * Math.sin((at - 49.5) * Math.PI * 2 * 9.5);
+    const ribScratch = Math.sin((at - 49.5) * Math.PI * 2 * (620 + rib * 170)) * 0.014 * crawl;
+    add((z2FrictionLp * (0.022 + crawl * 0.034) + noise() * crawl * 0.010) * (0.6 + rib * 0.4) + ribScratch, -0.05);
+    if (at >= 53.4) {
+      const wet = Math.min(1, (at - 53.4) / 1.2);
+      add(Math.sin(at * Math.PI * 2 * (420 + Math.sin(at * 5) * 90)) * 0.014 * wet * crawl, 0.12);
+    }
+  }
+
+  // Tenant crossing the far light: brief pressure dip plus distant plastic scrape.
+  if (at >= 52.2 && at < 52.7) {
+    const u = at - 52.2;
+    const pressure = -Math.sin(Math.PI * u / 0.5) * 0.018;
+    const scrape = u > 0.18 ? z2FrictionLp * 0.06 * Math.exp(-(u - 0.18) * 5) : 0;
+    add(pressure + scrape, 0);
+  }
+
+  return [l, r];
+}));
 
 // Transition-specific sound continuity. These short cues bind the material handoffs together;
 // zone beds underneath already crossfade, so these stems carry only the physical seam events.
