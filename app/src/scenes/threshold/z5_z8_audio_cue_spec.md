@@ -58,7 +58,7 @@ Owned visual scenes are frozen; this file is the exact timing/character interfac
 | `z7_close_machine_hum` | 158.0-163.0 | individual vending-machine fan/compressor detail | left-wall close localization; subtle product-glass buzz, intensity 0.45 |
 | `z7_glass_phone_ring` | 160.0-163.0 | beige-phone ring muffled behind vending glass | left-wall row A localization; recognizably original ring but glassy/boxy |
 | `z7_product_drop_cascade` | 163.0-165.2 | phones, balls, tiles, pages, felt puppets, coils dropping/rolling across stone | wide left/right wall localization then converging center; dense cascade peak 164.2 |
-| `z7_tenant_assembly_snap` | 164.5-168.0 | composite objects snapping/stacking into a 4.2 m body | center-aisle localization; plastic cracks, tile knocks, paper creases, spring-coil extension, rising intensity |
+| `z7_tenant_assembly_snap` | 163.0-166.4 | composite objects snapping/stacking into a 4.2 m body | center-aisle localization; plastic cracks, tile knocks, paper creases, spring-coil extension, rising intensity |
 | `z7_tenant_full_breath` | 166.5-176.0 intermittent | huge hollow vending-coil inhalation through plastic/tile/paper body | centered then pursuing; no vocal cords, mostly pressure/material resonance |
 | `z7_chase_steps_stone` | 168.0-176.0 gait-following | hard running footsteps on polished black stone | close perspective, long nave slap echo; tempo follows run gait |
 | `z7_machine_thunk_off_wave` | 168.0-176.0 | machines switching off behind runner in heavy relays | rear localization moving toward camera; each thunk subtracts compressor organ bed |
