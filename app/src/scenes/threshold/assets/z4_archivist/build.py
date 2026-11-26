@@ -31,7 +31,7 @@ def empty(name,loc=(0,0,0)):
 reset()
 paper=material('aged_ivory_paper',(0.78,0.72,0.57),.88)
 paper2=material('greyed_paper_edge',(0.57,0.51,0.4),.92)
-paperhi=material('fresh_torn_paper',(0.92,0.87,0.7),.8)
+paperhi=material('fresh_torn_paper',(0.74,0.67,0.5),.86)
 ink=material('mouth_crease_ink',(0.025,0.018,0.012),.9)
 spine_mat=material('book_spine_leather',(0.18,0.085,0.035),.62)
 root=empty('archivist_root')

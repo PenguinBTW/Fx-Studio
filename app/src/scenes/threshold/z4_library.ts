@@ -2,6 +2,8 @@
 // Z4 paper library: deterministic grey-box beat blockout with real scale/camera path; local rig is W2 scaffolding pending W1's shared kit.
 import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
+import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
+import { resolveAsset } from '../../engine/assets';
 import { thresholdPost } from './sensor_post';
 import { addFlashlight, applyFpCamera, basic, box, clamp, cyl, disposeTree, hash, mat, plane, smooth, sph, updateFlashlight, type CamKey } from './z1_scene_util';
 
@@ -36,7 +38,14 @@ export default class ThresholdZ4Library extends Scene {
   private gapGlow!: THREE.MeshStandardMaterial;
   private lamps: THREE.PointLight[] = [];
 
-  override init() {
+  private archivistAsset!: GLTFInstance;
+
+  override async init() {
+    const resolved = resolveAsset('threshold/z4_archivist');
+    this.archivistAsset = await GLTFManager.instantiate(resolved.url, { ...resolved.manifest.load, castShadow: true, receiveShadow: true });
+    this.archivistAsset.root.position.set(1.15, 0.02, 1.35);
+    this.archivistAsset.root.visible = false;
+    this.s.add(this.archivistAsset.root);
     this.s.background = new THREE.Color(0x090806);
     this.s.fog = new THREE.FogExp2(0x211c13, 0.055);
     this.flash = addFlashlight(this.s);
@@ -152,7 +161,7 @@ export default class ThresholdZ4Library extends Scene {
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
     const t = f.t;
     applyFpCamera(this.cam, KEYS, t, out.width / out.height);
-    const archivistBeam = 1 - 0.34 * smooth(94.0, 94.8, t) * (1 - smooth(99.0, 100.0, t));
+    const archivistBeam = 1 - 0.84 * smooth(94.0, 94.8, t) * (1 - smooth(99.0, 100.0, t));
     updateFlashlight(this.flash.light, this.flash.target, this.cam, t, 0.45 * archivistBeam, t > 98 ? 0.22 : 0.04);
     // motes hang and drift deterministically
     this.motes.forEach((m, i) => { m.position.y += Math.sin(t * 0.35 + i) * 0.0008; m.position.x += Math.cos(t * 0.27 + i * 2) * 0.0005; });
@@ -171,10 +180,25 @@ export default class ThresholdZ4Library extends Scene {
     this.phone.position.y = 1.08 + Math.abs(ring);
     this.phone.rotation.z = ring * 1.8;
     // archivist reveal, page fan and arms extension
-    this.archivist.visible = t > 94.2;
+    this.archivist.visible = false;
     const reveal = smooth(94.2, 95.4, t);
-    this.archivist.scale.setScalar(0.65 + reveal * 0.5);
-    this.archivist.position.y = 1.45 + reveal * 0.65;
+    this.archivistAsset.root.visible = t > 94.2;
+    this.archivistAsset.root.scale.setScalar(0.58 + reveal * 0.42);
+    this.archivistAsset.root.position.y = 0.02 + (1 - reveal) * 0.45;
+    this.archivistAsset.root.rotation.y = -0.08 + reveal * 0.08;
+    const mouth = this.archivistAsset.part('mouth_crease_main');
+    if (mouth) mouth.scale.x = 0.25 + smooth(95.0, 96.0, t) * 1.4;
+    for (const [pid, sign] of [['arm_l_root', -1], ['arm_r_root', 1]] as const) {
+      const arm = this.archivistAsset.part(pid);
+      if (arm) {
+        arm.scale.x = 0.35 + reveal * 1.05;
+        arm.rotation.z = sign * (0.06 + Math.sin(t * 0.9) * 0.018) * reveal;
+      }
+    }
+    for (let pi = 1; pi <= 12; pi++) {
+      const pg = this.archivistAsset.part(`torso_pages_${String(pi).padStart(2, '0')}`) ?? this.archivistAsset.part(`torso_page_${String(pi).padStart(2, '0')}`);
+      if (pg) pg.rotation.y += Math.sin(t * 0.55 + pi) * 0.002 * reveal;
+    }
     this.faceMouth.scale.x = 0.2 + smooth(95.0, 96.0, t) * 1.2;
     this.archivistArms.forEach((a, i) => { const ext = 0.5 + reveal * (0.9 + (i % 5) * 0.08); if (a.name.includes('_reach_')) a.scale.z = ext; else a.scale.x = ext; });
     // canyon closes like a book after 99

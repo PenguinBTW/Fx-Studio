@@ -2,6 +2,8 @@
 // Z1 office: grey-box/final-geometry hybrid blockout for beats 1.1-1.9. Local rig is W2 scaffolding pending W1's shared kit.
 import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
+import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
+import { resolveAsset } from '../../engine/assets';
 import { Layer2D } from '../../engine/gl';
 import { thresholdPost } from './sensor_post';
 import { addFlashlight, applyFpCamera, basic, box, clamp, cyl, disposeTree, hash, mat, plane, smooth, sph, updateFlashlight, type CamKey } from './z1_scene_util';
@@ -44,7 +46,12 @@ export default class ThresholdZ1Office extends Scene {
   private chair!: THREE.Mesh;
   private doorGlow!: THREE.MeshStandardMaterial;
 
-  override init() {
+  private breather!: GLTFInstance;
+
+  override async init() {
+    const resolved = resolveAsset('threshold/z1_ceiling_breather');
+    this.breather = await GLTFManager.instantiate(resolved.url, { ...resolved.manifest.load, castShadow: true, receiveShadow: true });
+    this.breather.root.position.set(0,2.72,-6.02); this.breather.root.visible = false; this.s.add(this.breather.root);
     this.layer = new Layer2D(this.ctx.W, this.ctx.H);
     this.s.background = new THREE.Color(0x050505);
     this.s.fog = new THREE.FogExp2(0x111008, 0.035);
@@ -226,7 +233,10 @@ export default class ThresholdZ1Office extends Scene {
     this.tileShift.position.y = 2.69 - smooth(13, 15.4, t) * 0.025;
     this.tileShift.rotation.x = smooth(14.2, 15.5, t) * 0.04;
     const eyesOn = smooth(15.45, 15.8, t);
-    this.eyes.forEach((e) => { e.visible = eyesOn > 0.02; (e.material as THREE.MeshStandardMaterial).emissiveIntensity = 1.5 * eyesOn; });
+    this.breather.root.visible = eyesOn > 0.02;
+    this.breather.root.position.y = 2.72 + Math.sin(t * 1.1) * 0.012 * eyesOn;
+    for (let bi = 1; bi <= 8; bi++) { const fp = this.breather.part(`finger_${bi}_root`); if (fp) fp.rotation.x = Math.sin(t * 0.9 + bi) * 0.055 * eyesOn; }
+    this.eyes.forEach((e) => { e.visible = eyesOn > 0.02 && !this.breather.root.visible; (e.material as THREE.MeshStandardMaterial).emissiveIntensity = 1.5 * eyesOn; });
     const blink = t > 16.7 && t < 17.15 ? smooth(16.7, 16.9, t) * (1 - smooth(16.95, 17.15, t)) : 0;
     this.lids.forEach((l, i) => { l.visible = eyesOn > 0.02; l.position.y = 2.62 - blink * (i === 0 ? 0.045 : 0.032); });
     this.fingers.forEach((fi, i) => { fi.visible = t > 18.45; fi.rotation.x = 0.4 + smooth(18.5, 19.3, t) * (0.5 + i * 0.03); fi.position.y = 2.43 - smooth(18.5, 19.3, t) * 0.12; });

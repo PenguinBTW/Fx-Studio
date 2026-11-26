@@ -2,6 +2,8 @@
 // Z3 tiled pool halls: deterministic grey-box beat blockout with real scale/camera path; uses W1's stabilized first-person/flashlight/sensor kit through the owned look-target adapter.
 import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
+import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
+import { resolveAsset } from '../../engine/assets';
 import { thresholdPost } from './sensor_post';
 import { addFlashlight, applyFpCamera, basic, box, clamp, cyl, disposeTree, hash, mat, plane, smooth, sph, updateFlashlight, type CamKey } from './z1_scene_util';
 
@@ -36,7 +38,25 @@ export default class ThresholdZ3Pool extends Scene {
   private strips: THREE.Mesh[] = [];
   private stepGlow!: THREE.MeshStandardMaterial;
 
-  override init() {
+  private mirrorlingAsset!: GLTFInstance;
+  private mirrorlingReflection!: GLTFInstance;
+
+  override async init() {
+    const resolved = resolveAsset('threshold/z3_mirrorling');
+    this.mirrorlingAsset = await GLTFManager.instantiate(resolved.url, { ...resolved.manifest.load, castShadow: true, receiveShadow: true });
+    this.mirrorlingReflection = await GLTFManager.instantiate(resolved.url, { ...resolved.manifest.load, castShadow: false, receiveShadow: false });
+    this.mirrorlingAsset.root.visible = false;
+    this.mirrorlingReflection.root.visible = false;
+    this.mirrorlingReflection.root.scale.y = -1;
+    this.mirrorlingReflection.root.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (m.isMesh) {
+        const mm = (m.material as THREE.MeshStandardMaterial).clone();
+        mm.transparent = true; mm.opacity = 0.68; mm.emissive = new THREE.Color(0x1d7280); mm.emissiveIntensity = 0.32; mm.depthWrite = false;
+        m.material = mm;
+      }
+    });
+    this.s.add(this.mirrorlingAsset.root, this.mirrorlingReflection.root);
     this.s.background = new THREE.Color(0x08262d);
     this.s.fog = new THREE.FogExp2(0x0b4652, 0.055);
     this.flash = addFlashlight(this.s);
@@ -91,7 +111,7 @@ export default class ThresholdZ3Pool extends Scene {
     }
     // water plane and lane-rope/pipe details
     this.waterMat = mat(0x1a8c9d, 0.04, 0.18, 0x073f4a, 0.28) as THREE.MeshStandardMaterial;
-    this.waterMat.transparent = true; this.waterMat.opacity = 0.46;
+    this.waterMat.transparent = true; this.waterMat.opacity = 0.46; this.waterMat.depthWrite = false;
     const wc = document.createElement('canvas'); wc.width = wc.height = 256;
     const wg = wc.getContext('2d')!;
     wg.fillStyle = 'rgba(20,120,135,0.35)'; wg.fillRect(0, 0, 256, 256);
@@ -206,11 +226,20 @@ export default class ThresholdZ3Pool extends Scene {
     this.reflection.visible = reflVisible;
     const advance = smooth(72.0, 74.5, t) * 1.2;
     const mz = -3.4 + advance;
-    this.reflection.position.set(Math.sin(t * 0.7) * 0.03, 0.9, mz - 0.35);
-    this.mirrorling.visible = t > 72.0;
-    this.mirrorling.position.set(0, 0.45, mz);
-    // arms copy laggingly; chrome figure reads as human silhouette even in grey-box
-    this.arms.forEach((a, i) => { a.rotation.z += Math.sin(t * 1.4 + i) * 0.002; });
+    this.reflection.visible = false;
+    this.mirrorling.visible = false;
+    // GLB reflection appears first with a positional/turning mismatch; surface figure only after the look-away.
+    const mismatch = smooth(62.5, 70.5, t);
+    this.mirrorlingReflection.root.visible = reflVisible;
+    this.mirrorlingReflection.root.position.set(Math.sin(t * 0.7) * 0.05 + mismatch * 0.18, 0.45, mz - 0.35 - mismatch * 0.28);
+    this.mirrorlingReflection.root.rotation.y = Math.sin(t * 0.33) * 0.08 + mismatch * 0.28;
+    this.mirrorlingAsset.root.visible = t > 72.0;
+    this.mirrorlingAsset.root.position.set(0, 0.45, mz);
+    this.mirrorlingAsset.root.rotation.y = smooth(72.2, 74.8, t) * 0.16;
+    for (const side of [-1, 1] as const) {
+      const arm = this.mirrorlingAsset.part(side < 0 ? 'arm_l_upper' : 'arm_r_upper');
+      if (arm) arm.rotation.z = (side < 0 ? -1 : 1) * Math.sin(t * 1.15 + (side < 0 ? 0 : 0.7)) * 0.045;
+    }
     // phone eye opens, drifts, rotates to face viewer
     const eye = smooth(70.4, 71.0, t);
     this.phone.position.y = 0.5 + Math.sin(t * 1.7) * 0.018 + eye * 0.04;

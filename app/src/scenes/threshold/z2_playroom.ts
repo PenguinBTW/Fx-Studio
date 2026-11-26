@@ -2,6 +2,8 @@
 // Z2 ball-pit playroom: deterministic grey-box beat blockout with real scale/camera path; uses W1's stabilized first-person/flashlight/sensor kit through the owned look-target adapter.
 import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
+import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
+import { resolveAsset } from '../../engine/assets';
 import { thresholdPost } from './sensor_post';
 import { addFlashlight, applyFpCamera, basic, box, clamp, cyl, disposeTree, hash, mat, plane, smooth, sph, updateFlashlight, type CamKey } from './z1_scene_util';
 
@@ -39,7 +41,12 @@ export default class ThresholdZ2Playroom extends Scene {
   private tunnelRibs: THREE.Mesh[] = [];
   private dummy = new THREE.Object3D();
 
-  override init() {
+  private swimmerAsset!: GLTFInstance;
+
+  override async init() {
+    const resolved = resolveAsset('threshold/z2_pit_swimmer');
+    this.swimmerAsset = await GLTFManager.instantiate(resolved.url, { ...resolved.manifest.load, castShadow: true, receiveShadow: true });
+    this.swimmerAsset.root.position.set(0,0.58,2.35); this.swimmerAsset.root.visible = false; this.s.add(this.swimmerAsset.root);
     this.s.background = new THREE.Color(0xcfe8ff);
     this.s.fog = new THREE.Fog(0xcfe8ff, 18, 55);
     this.flash = addFlashlight(this.s);
@@ -207,8 +214,18 @@ export default class ThresholdZ2Playroom extends Scene {
     else {
       const u = smooth(47.6, 49.3, t); sx = u * 2.7; sz = 2.1 + u * 0.2;
     }
-    // surface head appears at 44.5 and vanishes in the dive
-    this.swimmer.visible = t > 44.4 && t < 49.2;
+    // final GLB head follows the same deterministic path; primitive proxy remains only as fallback reference.
+    const swimmerVisible = t > 44.4 && t < 49.2;
+    const sy = 0.58 + smooth(44.5, 45.4, t) * 0.42 - smooth(48.6, 49.2, t) * 0.7;
+    this.swimmerAsset.root.visible = swimmerVisible;
+    this.swimmerAsset.root.position.set(sx, sy, sz + 0.2);
+    this.swimmerAsset.root.rotation.y = smooth(47.6, 48.4, t) * 0.7;
+    const upperJaw = this.swimmerAsset.part('slide_mouth_upper_root');
+    const lowerJaw = this.swimmerAsset.part('slide_mouth_lower_root');
+    const mouthAsset = smooth(46.8, 47.2, t) * (1 - smooth(48.4, 49, t));
+    if (upperJaw) upperJaw.rotation.x = -0.65 * mouthAsset;
+    if (lowerJaw) lowerJaw.rotation.x = 0.82 * mouthAsset;
+    this.swimmer.visible = false;
     this.swimmer.position.set(sx, 0.62 + smooth(44.5, 45.4, t) * 0.42 - smooth(48.6, 49.2, t) * 0.7, sz + 0.2);
     this.swimmer.rotation.y = smooth(47.6, 48.4, t) * 0.7;
     const mouth = smooth(46.8, 47.2, t) * (1 - smooth(48.4, 49, t));

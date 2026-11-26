@@ -63,6 +63,7 @@ pupil=material('goat_pupil_black',(0.004,0.003,0.002),.12)
 nail=material('cracked_nail_yellow',(0.58,0.46,0.16),.5)
 padmat=material('suction_pad_pale',(0.68,0.62,0.55),.38)
 crackmat=material('nail_crack_dark',(0.08,0.045,0.015),.9)
+veinmat=material('purple_vein_low_flash',(0.16,0.035,0.19),.48)
 root=empty('ceiling_breather_root',part='root')
 
 # Twelve fused acoustic-tile skin plates. They are the creature's back, not ordinary loose tiles.
@@ -95,13 +96,13 @@ for side,x in [('l',-.35),('r',.35)]:
 
 # Eight long three-jointed fingers. Chains curl unevenly through the ceiling gap.
 for fi in range(8):
-    x=-.63+fi*.18; side=-1 if fi<4 else 1
+    x=-.72+fi*.205; side=-1 if fi<4 else 1
     rootE=empty(f'finger_{fi+1}_root',(x,.04,-.03),part=f'finger_{fi+1}_root'); rootE.parent=root
     pts=[]
     length=.9+(fi%4)*.12+random.uniform(-.04,.04)
     for j in range(4):
         z=-.03-length*j/3
-        xx=x+math.sin(fi*1.7+j*.9)*.035*j
+        xx=x+math.sin(fi*1.7+j*.9)*.035*j+side*.018*j
         yy=.04+math.cos(fi*1.1+j*.7)*.025*j
         pts.append((xx,yy,z))
     for j in range(3):
@@ -111,6 +112,11 @@ for fi in range(8):
         for wr in range(2):
             pp=Vector(pts[j]).lerp(Vector(pts[j+1]),.35+wr*.3)
             torus(f'finger_{fi+1}_wrinkle_{j+1}_{wr}',pp,.036-j*.005,.004,skin_hi,f'finger_{fi+1}').parent=rootE
+        # paired raised vein threads, slightly offset rather than painted on, catch grazing flashlight
+        for vi,off in enumerate(((-.012,-.018),(0.014,-.014))):
+            va=Vector(pts[j])+Vector((off[0],off[1],0)); vb=Vector(pts[j+1])+Vector((off[0]*.8,off[1],0))
+            vein=cyl_between(f'finger_{fi+1}_vein_{j+1}_{vi+1}',va,vb,.0055,veinmat,f'finger_{fi+1}',vertices=10)
+            vein.parent=rootE; vein.matrix_parent_inverse=rootE.matrix_world.inverted()
     tip=Vector(pts[-1])
     # cracked yellow nail and dark crack lines
     bpy.ops.mesh.primitive_cone_add(vertices=20,radius1=.018,radius2=.042,depth=.13,location=tip+Vector((0,0,-.055)))
