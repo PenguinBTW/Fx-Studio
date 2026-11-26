@@ -120,7 +120,7 @@ export default class ThresholdZ4Library extends Scene {
     // dust/lint motes hanging in flashlight shafts
     for (let i = 0; i < 80; i++) {
       const m = sph(this.s, `z4_mote_${i}`, 0.006 + hash(i) * 0.008, [(hash(i) - 0.5) * 4, 0.4 + hash(i + 1) * 4.5, hash(i + 2) * 22], basic(0xfff2c7, 0.45), 6);
-      this.motes.push(m);
+      m.userData.basePos = m.position.clone(); this.motes.push(m);
     }
 
     // Archivist: folded-paper silhouette high in canyon, fanned torso pages, accordion arms
@@ -164,7 +164,11 @@ export default class ThresholdZ4Library extends Scene {
     const archivistBeam = 1 - 0.68 * smooth(94.0, 94.8, t) * (1 - smooth(99.0, 100.0, t));
     updateFlashlight(this.flash.light, this.flash.target, this.cam, t, 0.45 * archivistBeam, t > 98 ? 0.22 : 0.04);
     // motes hang and drift deterministically
-    this.motes.forEach((m, i) => { m.position.y += Math.sin(t * 0.35 + i) * 0.0008; m.position.x += Math.cos(t * 0.27 + i * 2) * 0.0005; });
+    this.motes.forEach((m, i) => {
+      const bp = m.userData.basePos as THREE.Vector3;
+      m.position.y = bp.y + Math.sin(t * 0.35 + i) * 0.055;
+      m.position.x = bp.x + Math.cos(t * 0.27 + i * 2) * 0.04;
+    });
     // ledger writes itself: pages lift one by one, ink lines emerge as thin dark strips
     this.ledgerPages.forEach((p, i) => {
       const u = smooth(86 + i * 0.6, 86.8 + i * 0.6, t);
@@ -197,7 +201,10 @@ export default class ThresholdZ4Library extends Scene {
     }
     for (let pi = 1; pi <= 12; pi++) {
       const pg = this.archivistAsset.part(`torso_pages_${String(pi).padStart(2, '0')}`) ?? this.archivistAsset.part(`torso_page_${String(pi).padStart(2, '0')}`);
-      if (pg) pg.rotation.y += Math.sin(t * 0.55 + pi) * 0.002 * reveal;
+      if (pg) {
+        if (!pg.userData.baseRotY) pg.userData.baseRotY = pg.rotation.y;
+        pg.rotation.y = (pg.userData.baseRotY as number) + Math.sin(t * 0.55 + pi) * 0.035 * reveal;
+      }
     }
     this.faceMouth.scale.x = 0.2 + smooth(95.0, 96.0, t) * 1.2;
     this.archivistArms.forEach((a, i) => { const ext = 0.5 + reveal * (0.9 + (i % 5) * 0.08); if (a.name.includes('_reach_')) a.scale.z = ext; else a.scale.x = ext; });

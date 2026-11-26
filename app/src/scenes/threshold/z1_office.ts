@@ -248,7 +248,17 @@ export default class ThresholdZ1Office extends Scene {
     }
     this.eyes.forEach((e) => { e.visible = eyesOn > 0.02 && !this.breather.root.visible; (e.material as THREE.MeshStandardMaterial).emissiveIntensity = 1.5 * eyesOn; });
     const blink = t > 16.7 && t < 17.15 ? smooth(16.7, 16.9, t) * (1 - smooth(16.95, 17.15, t)) : 0;
-    this.lids.forEach((l, i) => { l.visible = eyesOn > 0.02; l.position.y = 2.62 - blink * (i === 0 ? 0.045 : 0.032); });
+    this.lids.forEach((l) => { l.visible = false; });
+    for (const side of ['l', 'r'] as const) {
+      for (const half of ['upper', 'lower'] as const) {
+        const lid = this.breather.part(`lid_${side}_${half}`);
+        if (lid) {
+          if (!lid.userData.basePos) lid.userData.basePos = lid.position.clone();
+          const bp = lid.userData.basePos as THREE.Vector3;
+          lid.position.y = bp.y + blink * (half === 'upper' ? -0.026 : 0.02);
+        }
+      }
+    }
     this.fingers.forEach((fi, i) => { fi.visible = false; fi.rotation.x = 0.4 + smooth(18.5, 19.3, t) * (0.5 + i * 0.03); fi.position.y = 2.43 - smooth(18.5, 19.3, t) * 0.12; });
     this.skinTiles.forEach((tile, i) => { tile.position.y = 2.68 + Math.sin(t * Math.PI * 0.5 + i * 0.65) * 0.012; });
 

@@ -230,6 +230,16 @@ export default class ThresholdZ2Playroom extends Scene {
     this.swimmerAsset.root.visible = swimmerVisible;
     this.swimmerAsset.root.position.set(sx, sy, sz + 0.2);
     this.swimmerAsset.root.rotation.y = smooth(47.6, 48.4, t) * 0.7;
+    for (const side of ['l', 'r'] as const) {
+      const pupil = this.swimmerAsset.part(`eye_pupil_${side}`);
+      if (pupil) {
+        if (!pupil.userData.basePos) pupil.userData.basePos = pupil.position.clone();
+        const bp = pupil.userData.basePos as THREE.Vector3;
+        const scan = smooth(44.8, 45.6, t) * (1 - smooth(48.7, 49.2, t));
+        pupil.position.x = bp.x + Math.sin(t * 0.82 + (side === 'l' ? 0 : 0.9)) * 0.014 * scan;
+        pupil.position.y = bp.y + Math.cos(t * 0.67 + (side === 'l' ? 0.4 : 1.1)) * 0.009 * scan;
+      }
+    }
     const upperJaw = this.swimmerAsset.part('slide_mouth_upper_root');
     const lowerJaw = this.swimmerAsset.part('slide_mouth_lower_root');
     const mouthAsset = smooth(46.8, 47.2, t) * (1 - smooth(48.4, 49, t));

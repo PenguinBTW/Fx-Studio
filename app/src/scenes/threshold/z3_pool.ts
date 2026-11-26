@@ -163,12 +163,12 @@ export default class ThresholdZ3Pool extends Scene {
     box(this.s, 'z3_life_ring_band', [0.16, 0.07, 0.08], [3.5, 0.55, -6.18], mat(0xe34b38, 0.45));
     for (let i = 0; i < 18; i++) {
       const l = plane(this.s, `z3_leaf_${i}`, 0.12, 0.05, [-3.3 + hash(i) * 6.6, 0.47, -18 + hash(i + 2) * 22], leaf, [-Math.PI / 2, 0, hash(i) * 6]);
-      this.surfaceLeaves.push(l);
+      l.userData.basePos = l.position.clone(); this.surfaceLeaves.push(l);
     }
     // underwater leaves/spores
     for (let i = 0; i < 28; i++) {
       const b = sph(this.s, `z3_under_bit_${i}`, 0.018 + hash(i) * 0.02, [-3.5 + hash(i) * 7, -0.1 - hash(i + 1) * 1.2, -14 + hash(i + 2) * 16], basic(0x9de6d5, 0.5), 8);
-      this.underwaterBits.push(b);
+      b.userData.basePos = b.position.clone(); this.underwaterBits.push(b);
     }
     // pump/filter/graffiti/lane rope/rust details
     box(this.s, 'z3_pump_unit', [0.65, 0.8, 0.45], [-3.4, 0.4, -19.8], metal);
@@ -215,8 +215,16 @@ export default class ThresholdZ3Pool extends Scene {
     this.water.position.y = 0.45 + Math.sin(t * 1.8) * 0.008;
     if (this.waterMat.map) { this.waterMat.map.offset.set((t * 0.012) % 1, (t * 0.018) % 1); }
     this.waterMat.emissiveIntensity = 0.35 + Math.sin(t * 2.4) * 0.08;
-    this.surfaceLeaves.forEach((l, i) => { l.position.x += Math.sin(t * 0.25 + i) * 0.0008; l.rotation.z = hash(i) * 6 + Math.sin(t * 0.35 + i) * 0.1; });
-    this.underwaterBits.forEach((b, i) => { b.position.y += Math.sin(t * 0.7 + i) * 0.0007; b.position.x += Math.cos(t * 0.4 + i) * 0.0005; });
+    this.surfaceLeaves.forEach((l, i) => {
+      const bp = l.userData.basePos as THREE.Vector3;
+      l.position.x = bp.x + Math.sin(t * 0.25 + i) * 0.11;
+      l.rotation.z = hash(i) * 6 + Math.sin(t * 0.35 + i) * 0.1;
+    });
+    this.underwaterBits.forEach((b, i) => {
+      const bp = b.userData.basePos as THREE.Vector3;
+      b.position.y = bp.y + Math.sin(t * 0.7 + i) * 0.045;
+      b.position.x = bp.x + Math.cos(t * 0.4 + i) * 0.035;
+    });
 
     // strip hum/flicker
     this.strips.forEach((s, i) => { const m = s.material as THREE.MeshStandardMaterial; m.emissiveIntensity = hash(Math.floor(t * 12) + i * 11) < (i === 2 ? 0.22 : 0.04) ? 0.2 : 2.0; });
