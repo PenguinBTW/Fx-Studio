@@ -488,7 +488,7 @@ export async function mixdown(o: MixOptions): Promise<MixReport> {
       report.loudnorm = ms;
       const ln = `loudnorm=I=${I}:TP=${tp}:LRA=11:measured_I=${ms.input_i}:measured_TP=${ms.input_tp}:measured_LRA=${ms.input_lra}:measured_thresh=${ms.input_thresh}:offset=${ms.target_offset}:linear=true`;
       const normWav = path.join(tmp, 'norm.wav');
-      await run(['ffmpeg', '-v', 'error', '-y', '-i', preWav, '-af', `${ln},aresample=${sr},apad=whole_len=${frames},atrim=end_sample=${frames}`, '-c:a', 'pcm_f32le', normWav]);
+      await run(['ffmpeg', '-v', 'error', '-y', '-i', preWav, '-af', `${ln},aformat=channel_layouts=stereo,aresample=${sr},apad=whole_len=${frames},atrim=end_sample=${frames}`, '-c:a', 'pcm_f32le', normWav]);
       const dec = await decodeStereoF32(normWav, sr);
       master = new Float32Array(frames * CH);
       master.set(dec.subarray(0, Math.min(dec.length, master.length)));

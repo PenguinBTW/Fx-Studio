@@ -2,6 +2,7 @@
   "project": "threshold",
   "size": [1920, 1080],
   "trimToTimeline": true,
+  "mix": "sound/mix.ts",
   "entries": [
     { "scene": "threshold/z0_coldopen", "id": "coldopen", "start": 0, "end": 4.2 },
     { "scene": "threshold/z1_office", "id": "office", "start": 3.8, "end": 30.401 },
