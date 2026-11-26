@@ -157,13 +157,13 @@ export default class ThresholdZ6Theatre extends Scene {
     const seatTemplate = cloneKitPart('seat_module');
     for (let row = 0; row < 6; row++) {
       const z = 1.2 + row * 0.72;
-      for (let col = 0; col < 8; col++) {
-        const x = -3.2 + col * 0.9;
-        if (Math.abs(x) < 0.9 || !seatTemplate) continue;
+      for (let col = 0; col < 10; col++) {
+        const x = -3.5 + col * 0.78;
+        if (Math.abs(x) < 0.66 || !seatTemplate) continue;
         const seat = seatTemplate.clone(true);
         seat.position.set(x, 0, z);
         seat.rotation.y = Math.PI;
-        seat.scale.setScalar(1.18);
+        seat.scale.setScalar(0.8);
         seat.rotation.z = (hash(row * 19 + col * 7) - 0.5) * 0.018;
         this.s.add(seat);
       }
@@ -342,15 +342,64 @@ export default class ThresholdZ6Theatre extends Scene {
 
     // Production Lint asset: real felt fibres, stitched wings, button eyes and emissive abdomen.
     this.lintInst = await GLTFManager.instantiate(lintUrl, { castShadow: true, receiveShadow: true });
+    this.lintInst.root.traverse((obj) => {
+      if (!(obj instanceof THREE.Mesh)) return;
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      for (const m of mats) {
+        if (!(m instanceof THREE.MeshStandardMaterial)) continue;
+        m.roughness = Math.max(m.roughness, 0.88);
+        m.metalness = 0;
+        if (m.name.includes('LintFeltBrown')) { m.color.setHex(0x4a2818); m.emissive.setHex(0x090302); m.emissiveIntensity = 0.08; }
+        if (m.name.includes('LintFeltEdge')) { m.color.setHex(0x7b4425); m.emissive.setHex(0x120603); m.emissiveIntensity = 0.1; }
+        if (m.name.includes('ButtonEye')) { m.color.setHex(0x120806); m.roughness = 0.58; }
+      }
+    });
     this.lintInst.root.rotation.x = Math.PI / 2;
     this.lint.add(this.lintInst.root);
     // Close-up readability augment: camera-facing button eyes, long antennae, and broad
     // scalloped wings in the outer group's horizontal plane. These make the body plan read
     // as a moth at delivery scale rather than relying on tiny GLB details alone.
-    const lintWingMat = this.mat(0x70401f, 0.94);
-    const lintWingEdge = this.mat(0xaa6632, 0.9);
+    const lintCanvas = document.createElement('canvas');
+    lintCanvas.width = 64; lintCanvas.height = 64;
+    const lg = lintCanvas.getContext('2d')!;
+    lg.fillStyle = '#7c4a2b'; lg.fillRect(0, 0, 64, 64);
+    for (let y = 0; y < 64; y++) {
+      for (let x = 0; x < 64; x++) {
+        const v = hash(x * 0.73 + y * 3.91);
+        lg.fillStyle = `rgba(${70 + v * 65},${34 + v * 32},${16 + v * 18},${0.18 + v * 0.18})`;
+        lg.fillRect(x, y, 1, 1);
+      }
+    }
+    for (let i = 0; i < 42; i++) {
+      const x = hash(i * 2.3) * 64;
+      const y = hash(i * 5.1) * 64;
+      lg.strokeStyle = `rgba(30,14,8,${0.18 + hash(i) * 0.18})`;
+      lg.beginPath(); lg.moveTo(x, y); lg.lineTo(x + 4 + hash(i * 7) * 8, y + (hash(i * 11) - 0.5) * 3); lg.stroke();
+    }
+    const lintTex = new THREE.CanvasTexture(lintCanvas);
+    lintTex.colorSpace = THREE.SRGBColorSpace;
+    lintTex.wrapS = lintTex.wrapT = THREE.RepeatWrapping;
+    lintTex.repeat.set(2.5, 2.5);
+    this.disposables.push(lintTex);
+    const lintWingMat = this.mat(0xa66a3d, 1.0, 0, 0x5a2a12, 0.48);
+    lintWingMat.map = lintTex;
+    lintWingMat.bumpMap = lintTex;
+    lintWingMat.bumpScale = 0.003;
+    const lintWingEdge = this.mat(0xc0834e, 0.98, 0, 0x653012, 0.42);
+    lintWingEdge.map = lintTex;
     const lintButton = this.mat(0x070403, 0.22, 0, 0x090302, 0.18);
     const lintThread = this.mat(0x090504, 0.86);
+    // A matte handmade shell overrides the asset's close-range plastic read while leaving
+    // the original stitching, fuzz, eyes, legs and abdomen glow visible around it.
+    const lintBodyMat = this.mat(0x7b4425, 1.0, 0, 0x2a1006, 0.22);
+    lintBodyMat.map = lintTex;
+    lintBodyMat.bumpMap = lintTex;
+    lintBodyMat.bumpScale = 0.004;
+    this.sphere(this.lint, 0.023, [0, 0.002, 0.006], lintBodyMat, [0.82, 0.58, 1.05]);
+    this.sphere(this.lint, 0.017, [0, 0.003, 0.034], lintBodyMat, [0.9, 0.72, 0.75]);
+    for (let segment = 0; segment < 3; segment++) {
+      this.sphere(this.lint, 0.012 - segment * 0.0015, [0, -0.001, -0.018 - segment * 0.012], lintBodyMat, [0.86, 0.58, 0.82]);
+    }
     for (const side of [-1, 1]) {
       const broadWing = this.sphere(this.lint, 0.028, [side * 0.034, -0.002, -0.006], lintWingMat, [1.28, 0.10, 1.42]);
       broadWing.userData.side = side;
@@ -373,8 +422,33 @@ export default class ThresholdZ6Theatre extends Scene {
       for (let scallop = 0; scallop < 4; scallop++) {
         this.sphere(this.lint, 0.009, [side * (0.018 + scallop * 0.014), -0.006, -0.029 - scallop * 0.002], lintWingEdge, [1.2, 0.16, 0.8]);
       }
-      this.sphere(this.lint, 0.0038, [side * 0.0062, 0.006, 0.038], lintButton, [1, 0.72, 0.5]);
-      this.sphere(this.lint, 0.00095, [side * 0.0052, 0.0072, 0.0405], this.mat(0xffffff, 0.08, 0, 0xffffff, 0.35), [1, 0.7, 0.5]);
+      const stitchMat = this.mat(0xd49a62, 0.96, 0, 0x321406, 0.12);
+      for (let stitch = 0; stitch < 6; stitch++) {
+        const q = stitch / 5;
+        const sx = side * (0.014 + q * 0.041);
+        const sz = -0.001 - q * 0.025;
+        const sgeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
+          new THREE.Vector3(sx - side * 0.004, 0.006, sz - 0.003),
+          new THREE.Vector3(sx + side * 0.004, 0.006, sz + 0.003),
+        ]), 2, 0.00045, 4, false);
+        const smesh = new THREE.Mesh(sgeo, stitchMat);
+        this.lint.add(smesh);
+        this.disposables.push(sgeo);
+      }
+      for (let fuzz = 0; fuzz < 8; fuzz++) {
+        const q = fuzz / 7;
+        const fx = side * (0.018 + q * 0.041);
+        const fz = -0.006 - q * 0.024;
+        const fgeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
+          new THREE.Vector3(fx, -0.001, fz),
+          new THREE.Vector3(fx + side * (0.004 + hash(fuzz * 3.7) * 0.004), -0.002, fz + (hash(fuzz * 5.1) - 0.5) * 0.005),
+        ]), 2, 0.00028, 4, false);
+        const fm = new THREE.Mesh(fgeo, lintWingEdge);
+        this.lint.add(fm);
+        this.disposables.push(fgeo);
+      }
+      this.sphere(this.lint, 0.0038, [side * 0.0062, 0.006, 0.052], lintButton, [1, 0.72, 0.5]);
+      this.sphere(this.lint, 0.00075, [side * 0.0052, 0.0072, 0.0545], this.mat(0x6b5848, 0.48, 0, 0x241812, 0.08), [1, 0.7, 0.5]);
       const pts = [
         new THREE.Vector3(side * 0.005, 0.006, 0.028),
         new THREE.Vector3(side * 0.016, 0.026, 0.044),
@@ -395,7 +469,7 @@ export default class ThresholdZ6Theatre extends Scene {
         const bm = new THREE.Mesh(bgeo, lintThread); this.lint.add(bm); this.disposables.push(bgeo);
       }
     }
-    const lintLight = new THREE.PointLight(0xff8c2a, 1.35, 2.2, 1.6);
+    const lintLight = new THREE.PointLight(0xff8c2a, 0.82, 2.2, 1.6);
     lintLight.position.set(0, 0, -0.05);
     this.lint.add(lintLight);
     this.lint.visible = false;

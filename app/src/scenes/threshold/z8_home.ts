@@ -259,6 +259,65 @@ export default class ThresholdZ8Home extends Scene {
 
     // Production family-photo modules: each frame contains a miniature empty-zone tableau.
     const photoParts = ['photo_office', 'photo_ballpit', 'photo_pool', 'photo_library', 'photo_motel', 'photo_theatre', 'photo_cathedral'];
+    const photoTexture = (kind: string) => {
+      const c = document.createElement('canvas');
+      c.width = 128; c.height = 160;
+      const g = c.getContext('2d')!;
+      const schemes: Record<string, [string, string, string]> = {
+        photo_office: ['#5c5b38', '#26351f', '#b8d8bd'],
+        photo_ballpit: ['#d8c58f', '#6a1f2a', '#2b6c78'],
+        photo_pool: ['#77aaa4', '#1f666b', '#d8e6d8'],
+        photo_library: ['#b99c65', '#4a2c18', '#e5d0a0'],
+        photo_motel: ['#4a1c22', '#111015', '#e04486'],
+        photo_theatre: ['#5a1018', '#18080a', '#d89a55'],
+        photo_cathedral: ['#07111e', '#123d68', '#89d7ff'],
+      };
+      const [bg, dark, accent] = schemes[kind] ?? schemes.photo_office!;
+      g.fillStyle = bg; g.fillRect(0, 0, 128, 160);
+      const grad = g.createLinearGradient(0, 0, 0, 160);
+      grad.addColorStop(0, 'rgba(255,240,200,0.12)'); grad.addColorStop(1, 'rgba(0,0,0,0.42)');
+      g.fillStyle = grad; g.fillRect(0, 0, 128, 160);
+      g.fillStyle = dark;
+      if (kind === 'photo_pool') {
+        g.fillRect(0, 92, 128, 68);
+        g.strokeStyle = accent; g.lineWidth = 2;
+        for (let x = 8; x < 128; x += 18) { g.beginPath(); g.moveTo(x, 18); g.lineTo(x - 12, 152); g.stroke(); }
+        g.strokeStyle = '#e8f2e8'; g.lineWidth = 5; g.beginPath(); g.moveTo(28, 108); g.quadraticCurveTo(64, 26, 100, 108); g.stroke();
+      } else if (kind === 'photo_motel') {
+        g.fillRect(45, 22, 38, 128);
+        for (let i = 0; i < 5; i++) { g.fillRect(14, 28 + i * 24, 20, 14); g.fillRect(94, 28 + i * 24, 20, 14); }
+        g.fillStyle = accent; g.fillRect(42, 18, 44, 5);
+      } else if (kind === 'photo_theatre') {
+        g.fillRect(0, 0, 30, 160); g.fillRect(98, 0, 30, 160);
+        g.fillStyle = accent; g.fillRect(30, 106, 68, 8);
+        g.fillStyle = '#f0c47a'; for (let i = 0; i < 5; i++) g.fillRect(38 + i * 11, 28, 4, 7);
+      } else if (kind === 'photo_cathedral') {
+        for (let x = 0; x < 6; x++) for (let y = 0; y < 8; y++) { g.fillStyle = (x + y) % 3 ? '#12385c' : accent; g.fillRect(12 + x * 18, 12 + y * 17, 10, 11); }
+        g.fillStyle = 'rgba(0,0,0,0.55)'; g.fillRect(0, 118, 128, 42);
+      } else if (kind === 'photo_ballpit') {
+        for (let i = 0; i < 32; i++) { g.fillStyle = ['#a72d35', '#d7a13c', '#2f7f88', '#344b9a'][i % 4]!; g.beginPath(); g.arc(12 + (i % 8) * 15, 104 + Math.floor(i / 8) * 13, 7, 0, Math.PI * 2); g.fill(); }
+        g.fillStyle = dark; g.fillRect(80, 28, 10, 78);
+      } else if (kind === 'photo_library') {
+        for (let i = 0; i < 7; i++) { g.fillStyle = i % 2 ? dark : accent; g.fillRect(15 + i * 14, 34 - i * 2, 9, 96); }
+        g.fillStyle = '#101010'; g.fillRect(53, 76, 22, 55);
+      } else {
+        g.fillStyle = dark; g.fillRect(0, 82, 128, 78);
+        g.fillStyle = accent; for (let i = 0; i < 4; i++) g.fillRect(14 + i * 27, 20, 18, 5);
+        g.fillStyle = '#111'; g.fillRect(18, 74, 92, 7);
+      }
+      // Tiny scale figure/animal silhouettes make the images read as photographs of places,
+      // not abstract colored symbols; they remain impressionistic at frame size.
+      g.fillStyle = 'rgba(12,8,6,0.78)';
+      g.beginPath(); g.arc(64, 92, 5, 0, Math.PI * 2); g.fill();
+      g.fillRect(60, 97, 8, 22);
+      g.fillRect(56, 101, 4, 15); g.fillRect(68, 101, 4, 15);
+      g.fillStyle = 'rgba(255,238,190,0.16)'; g.fillRect(0, 0, 128, 10);
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = 4;
+      this.disposables.push(tex);
+      return tex;
+    };
     photoParts.forEach((part, i) => {
       const frame = cloneHomePart(part);
       if (!frame) return;
@@ -267,6 +326,14 @@ export default class ThresholdZ8Home extends Scene {
       frame.rotation.y = Math.PI / 2;
       frame.rotation.x = (hash(i * 17) - 0.5) * 0.035;
       this.s.add(frame);
+      const printMat = new THREE.MeshStandardMaterial({ map: photoTexture(part), roughness: 0.78, metalness: 0, color: 0xffffff });
+      const printGeo = new THREE.PlaneGeometry(0.31, 0.42);
+      const print = new THREE.Mesh(printGeo, printMat);
+      print.position.set(-1.225, 1.55, z);
+      print.rotation.y = Math.PI / 2;
+      print.rotation.x = frame.rotation.x;
+      this.s.add(print);
+      this.disposables.push(printMat, printGeo);
     });
 
     // Production entryway clutter and hall table with keys/post.
