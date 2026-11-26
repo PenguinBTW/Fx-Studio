@@ -126,7 +126,7 @@ function z7PoseAt(t: number) {
     const sp = sprintPoint(t);
     const u = clamp((t - SPRINT_T0) / (SPRINT_T1 - SPRINT_T0));
     const pos: [number, number, number] = [sp.x, lerp(1.6, JOIN_POSE.pos[1], u), sp.z];
-    const lookback = smooth((t - 168.0) / 0.18) * (1 - smooth((t - 168.7) / 0.24));
+    const lookback = smooth((t - 168.0) / 0.18) * (1 - smooth((t - 168.95) / 0.28));
     const yaw = Math.PI * lookback;
     const targetYaw = Math.atan2(JOIN_POSE.forward[0], -JOIN_POSE.forward[2]);
     const yawForward = targetYaw * smooth((u - 0.86) / 0.14);
@@ -167,6 +167,7 @@ export default class ThresholdZ7Cathedral extends Scene {
   private tenant = new THREE.Group();
   private tenantRevealKey?: THREE.PointLight;
   private tenantRevealFill?: THREE.PointLight;
+  private tenantPursuitLight?: THREE.PointLight;
   private reachArm = new THREE.Group();
   private lint = new THREE.Group();
   private assembly: { mesh: THREE.Object3D; start: THREE.Vector3; end: THREE.Vector3; seed: number; chain: 'spine' | 'rib' | 'limb' | 'head' }[] = [];
@@ -559,8 +560,10 @@ export default class ThresholdZ7Cathedral extends Scene {
     await this.buildTenant();
     this.tenantRevealKey = new THREE.PointLight(0xa9e6ff, 0, 8.5, 1.32);
     this.tenantRevealFill = new THREE.PointLight(0xffb36b, 0, 5.5, 1.45);
+    this.tenantPursuitLight = new THREE.PointLight(0x9edcff, 0, 7.5, 1.45);
+    this.s.add(this.tenantPursuitLight);
     this.s.add(this.tenantRevealKey, this.tenantRevealFill);
-    this.z7DetailObjects.push(this.tenantRevealKey, this.tenantRevealFill);
+    this.z7DetailObjects.push(this.tenantPursuitLight, this.tenantRevealKey, this.tenantRevealFill);
     this.buildReachArm();
 
     // Central floor rift, initially hairline and invisible, then widening.
@@ -1038,6 +1041,10 @@ export default class ThresholdZ7Cathedral extends Scene {
       const gallopShape = lerp(beatNow, beatNext, smooth(beatFrac / 0.35));
       const gallop = t >= 168 ? gallopShape : 0;
       this.tenant.position.set(x, t >= 168 ? 0.035 * Math.abs(gallop) : 0, z);
+      if (this.tenantPursuitLight) {
+        this.tenantPursuitLight.position.set(x + 0.35, 2.3, z - 1.35);
+        this.tenantPursuitLight.intensity = 6.8 * smooth((t - 168.02) / 0.18) * (1 - smooth((t - 170.05) / 0.85));
+      }
       this.tenant.rotation.x = t >= 168 ? -0.08 + 0.025 * gallop : 0;
       this.tenant.rotation.z = 0.045 * heldPose + (t >= 168 ? 0.018 * gallop : 0);
       this.tenant.rotation.y = t >= 168 ? lerp(Math.PI - 0.55, 0, chaseK) : Math.PI - 0.55;
