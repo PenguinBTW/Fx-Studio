@@ -22,19 +22,6 @@ function roomize(input: Float32Array, wet = 0.12): Float32Array {
 }
 
 function wav(file: string, pcmIn: Float32Array): void {
-  if (file.includes('room_tone') || file.includes('fluorescent_bed')) {
-    // Room air is not a point source: two independent low-passed micro-noise fields
-    // decorrelate the pressure texture while shared hum/body energy remains centered.
-    let airL = 0, airR = 0;
-    const seed = file.length * 3.17;
-    for (let f = 0; f < pcmIn.length / 2; f++) {
-      airL = airL * 0.935 + (hash01(f, seed) - 0.5) * 0.065;
-      airR = airR * 0.935 + (hash01(f, seed + 19.7) - 0.5) * 0.065;
-      const widthAmount = file.includes('fluorescent_bed') ? 0.34 : 0.18;
-      pcmIn[f * 2] += airL * widthAmount;
-      pcmIn[f * 2 + 1] += airR * widthAmount;
-    }
-  }
   const pcm = roomize(pcmIn);
   const n = pcm.length, buf = Buffer.alloc(44 + n * 3);
   buf.write('RIFF', 0); buf.writeUInt32LE(36 + n * 3, 4); buf.write('WAVE', 8);
@@ -64,14 +51,18 @@ const hash01 = (n: number, salt: number) => { const x = Math.sin(n * 127.1 + sal
 const smoothstep = (a: number, b: number, x: number) => { const u = Math.max(0, Math.min(1, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
 
 // Fluorescent office bed: 60 Hz hum, odd harmonics, HVAC hiss, two failing-tube ticks.
+let z1AirL = 0, z1AirR = 0;
 wav('z1_fluorescent_bed.wav', stem(27, (t) => {
   const hum = Math.sin(t * Math.PI * 120) * 0.027 + Math.sin(t * Math.PI * 240) * 0.010 + Math.sin(t * Math.PI * 360) * 0.006;
   const hiss = noise() * 0.012 * (0.75 + 0.25 * Math.sin(t * 0.31));
   const tickA = t > 2.42 && t < 2.49 ? noise() * 0.09 : 0;
   const tickB = t > 8.72 && t < 8.78 ? noise() * 0.07 : 0;
-  const fade = Math.min(1, t / 1.15, (27 - t) / 1.4);
-  const center = (hum + hiss * 0.45 + tickA + tickB) * Math.max(0, fade);
-  return [center * 0.96, center];
+  const fade = Math.max(0, Math.min(1, t / 1.15, (27 - t) / 1.4));
+  const center = hum + hiss * 0.45 + tickA + tickB;
+  const si = Math.floor(t * SR + 0.5);
+  z1AirL = z1AirL * 0.935 + (hash01(si, 3.1) - 0.5) * 0.065;
+  z1AirR = z1AirR * 0.935 + (hash01(si, 4.7) - 0.5) * 0.065;
+  return [(center * 0.96 + z1AirL * 0.34) * fade, (center + z1AirR * 0.34) * fade];
 }));
 
 // Two old mechanical bell bursts.
@@ -1044,11 +1035,18 @@ function edgeFade(t: number, dur: number, fadeIn: number, fadeOut: number): numb
 }
 function bed(file: string, dur: number, fadeIn: number, fadeOut: number, fn: (t: number, lp: () => number) => [number, number]): void {
   let lpState = 0;
+  let airL = 0, airR = 0;
   const lp = () => (lpState = lpState * 0.86 + noise() * 0.14);
+  const seed = file.length * 3.17;
   const pcm = stem(dur, (t) => {
-    const [l, r] = fn(t, lp);
+    const [bl, br] = fn(t, lp);
+    // Independent low-passed air fields decorrelate the bed without moving its body off-center.
+    // They are added before edge fades so zone crossfades never hard-cut the stereo hiss.
+    const si = Math.floor(t * SR + 0.5);
+    airL = airL * 0.935 + (hash01(si, seed) - 0.5) * 0.065;
+    airR = airR * 0.935 + (hash01(si, seed + 19.7) - 0.5) * 0.065;
     const e = edgeFade(t, dur, fadeIn, fadeOut);
-    return [l * e, r * e];
+    return [(bl + airL * 0.18) * e, (br + airR * 0.18) * e];
   });
   wav(file, pcm);
 }
