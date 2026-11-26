@@ -17,8 +17,8 @@ BALL_BLUE = mat('TenantBallBlue', (0.02, 0.17, 0.48), 0.28)
 RUBBER = mat('TenantDarkRubber', (0.018, 0.015, 0.013), 0.78)
 
 root = empty('tenant_arm_root')
-# Blender -Z is vertical; rotate so the authored downward arm reaches along glTF/engine -Z after +Y-up export.
-root.rotation_euler[0] = math.radians(90)
+# Children are parented before the export-axis rotation so their inverse matrices do not cancel it.
+root.rotation_euler[0] = math.radians(0)
 root['fx_part'] = 'arm_only'
 seen_parts = set()
 def add(o, part=None):
@@ -86,4 +86,7 @@ for finger in range(5):
 for i in range(9):
     add(cyl(f'trapped_coin_{i}', 0.018, 0.003, (R.uniform(-0.08, 0.08), R.uniform(-0.08, 0.08), R.uniform(-1.25, -0.25)), CHROME, rot=(R.random()*math.pi, R.random()*math.pi, R.random()*math.pi), verts=24), 'coins')
 
+# Rotate only after parenting: authored Blender -Z becomes Blender +Y, which exports as engine/glTF -Z.
+root.rotation_euler[0] = math.radians(90)
+bpy.context.view_layer.update()
 export(HERE)
