@@ -34,18 +34,38 @@ for side in (-1, 1):
     add(box(f'cradle_{side}', (0.027, 0.046, 0.041), (side * 0.077, 0.034, 0.103), BEIGE, bev=0.009, seg=2), 'cradle')
     add(box(f'hook_{side}', (0.012, 0.028, 0.018), (side * 0.052, 0.022, 0.111), BEIGE_DARK, bev=0.005), 'hooks')
 
-# Receiver: central grip with two rounded ear/mouth pods.
+# Receiver: one continuous curved handset. The grip is a gently arched solid tube which
+# overlaps the ear/mouth pods, with pod transition bulbs hiding every seam.
 receiver_root = empty('receiver')
 parent(receiver_root, root)
 receiver_root['fx_part'] = 'receiver'
-grip = add(box('receiver_grip', (0.082, 0.022, 0.018), (0, 0.028, 0.136), BEIGE, bev=0.012, seg=6, rot=(0, 0, math.radians(1.5))))
-parent(grip, receiver_root)
+receiver_path = []
+for i in range(7):
+    u = i / 6
+    x = -0.079 + u * 0.158
+    z = 0.126 + math.sin(u * math.pi) * 0.011
+    receiver_path.append((x, 0.029, z))
+handle = add(curve('receiver_continuous_grip', receiver_path, 0.0128, BEIGE, resolution=2))
+parent(handle, receiver_root)
+# flattened central palm grip gives the tube a handset-like wider middle without breaking continuity
+palm = add(sphere('receiver_palm_grip', 0.028, (0, 0.029, 0.137), BEIGE, scale=(1.65, 0.43, 0.42), segments=18, rings=9))
+parent(palm, receiver_root)
 for side in (-1, 1):
-    pod = add(sphere(f'receiver_pod_{side}', 0.031, (side * 0.082, 0.03, 0.132), BEIGE, scale=(1.18, 0.72, 0.62), segments=22, rings=11))
+    neck = add(sphere(f'receiver_neck_{side}', 0.023, (side * 0.055, 0.029, 0.128), BEIGE, scale=(1.35, 0.72, 0.75), segments=18, rings=9))
+    parent(neck, receiver_root)
+    pod = add(sphere(f'receiver_pod_{side}', 0.034, (side * 0.081, 0.028, 0.124), BEIGE, scale=(1.12, 0.78, 0.72), segments=18, rings=9))
     parent(pod, receiver_root)
-    pod.rotation_euler[1] = math.radians(side * 4)
-    cap = add(cyl(f'receiver_cap_{side}', 0.019, 0.006, (side * 0.083, 0.012, 0.127), BEIGE_DARK, rot=(math.radians(90), 0, 0), verts=32))
+    pod.rotation_euler[1] = math.radians(side * 5)
+    rim = add(torus(f'receiver_cap_rim_{side}', 0.0155, 0.0032, (side * 0.081, 0.0065, 0.122), BEIGE, rot=(math.radians(90), 0, 0), major_segments=28, minor_segments=6))
+    parent(rim, receiver_root)
+    cap = add(cyl(f'receiver_cap_{side}', 0.0135, 0.0035, (side * 0.081, 0.0048, 0.122), BEIGE_DARK, rot=(math.radians(90), 0, 0), verts=20))
     parent(cap, receiver_root)
+    # shallow perforated speaker cluster, recessed into the dark cap rather than floating on the shell
+    for h in range(5):
+        ox = ((h % 2) - 0.5) * 0.006
+        oz = (math.floor(h / 2) - 1) * 0.0045
+        hole = add(cyl(f'receiver_hole_{side}_{h}', 0.00145, 0.0012, (side * 0.081 + ox, 0.0027, 0.122 + oz), GRIME, rot=(math.radians(90), 0, 0), verts=8))
+        parent(hole, receiver_root)
 
 # Twelve raised keys in a 3x4 grid, slightly forward on the sloped face.
 digits = ['1','2','3','4','5','6','7','8','9','*','0','#']
