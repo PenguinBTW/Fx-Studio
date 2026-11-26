@@ -97,7 +97,7 @@ const BODY: Record<ThresholdTransitionMode, string> = {
     c = mix(c, hotLip, lip * 0.78);
     c += vec3(0.55, 0.30, 0.055) * crown * (0.25 + lum * 0.55);
     float foamBreak = smoothstep(0.48, 0.78, fbm(vUv * vec2(34.0, 16.0) + vec2(u * 1.7, 0.0), 3));
-    c += vec3(0.08, 0.34, 0.36) * contactBand * (0.25 + foamBreak * 0.55);
+    c += vec3(0.08, 0.34, 0.36) * contactBand * behind * (0.25 + foamBreak * 0.55);
     fragColor = vec4(c, 1.0);`,
   ink: `
     vec3 ca = texture(texA, vUv).rgb;
