@@ -148,6 +148,22 @@ export default class ThresholdZ7Cathedral extends Scene {
   private async buildTenant() {
     // Full production Tenant: zone materials collage, stable pivots for stop-start head/arm motion.
     this.tenantInst = await GLTFManager.instantiate(tenantFullUrl, { castShadow: true, receiveShadow: true });
+    const materialClones = new Map<THREE.Material, THREE.Material>();
+    this.tenantInst.root.traverse((obj) => {
+      if (!(obj instanceof THREE.Mesh)) return;
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      const cloned = mats.map((m) => {
+        let c = materialClones.get(m);
+        if (!c) {
+          c = m.clone();
+          c!.name = m.name;
+          materialClones.set(m, c!);
+          this.tenantInst!.ownedMaterials.push(c!);
+        }
+        return c!;
+      });
+      obj.material = Array.isArray(obj.material) ? cloned : cloned[0]!;
+    });
     this.tenant.add(this.tenantInst.root);
     this.tenantInst.root.traverse((obj) => {
       if (!(obj instanceof THREE.Mesh)) return;
