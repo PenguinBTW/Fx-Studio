@@ -105,7 +105,11 @@ export class ThresholdShaderTransition implements Transition {
       uniform sampler2D texA;
       uniform sampler2D texB;
       uniform float u;
-      ${BODY[mode]}
+      void main() {
+        ${BODY[mode]}
+        vec3 endB = texture(texB, vUv).rgb;
+        fragColor = vec4(mix(fragColor.rgb, endB, smoothstep(0.965, 1.0, u)), 1.0);
+      }
     `, {
       texA: { value: null },
       texB: { value: null },
@@ -119,5 +123,8 @@ export class ThresholdShaderTransition implements Transition {
     this.pass.u.u!.value = Math.min(1, Math.max(0, api.u));
     this.pass.render(this.ctx.renderer, out, true);
     this.ctx.renderer.resetState();
+    // Scene post fades/flashes are global post parameters, not per-texture effects. Suppress them
+    // inside the seam; each THRESHOLD transition owns its black/white/fibre treatment here.
+    return { flash: 0, fade: 0 };
   }
 }
