@@ -30,12 +30,31 @@ function glazeBreakupTexture() {
     g.beginPath(); g.moveTo(q + Math.sin(q) * 1.5, 0); g.lineTo(q + Math.cos(q) * 1.5, size); g.stroke();
     g.beginPath(); g.moveTo(0, q + Math.cos(q) * 1.5); g.lineTo(size, q + Math.sin(q) * 1.5); g.stroke();
   }
-  for (let i = 0; i < 42; i++) {
-    let x = hash(i * 3.1) * size, y = hash(i * 5.7) * size;
-    g.strokeStyle = `rgba(10,26,28,${0.28 + hash(i) * 0.34})`; g.lineWidth = 0.8 + hash(i + 4) * 1.4;
+  // Dense large-cell crazing: radial cracks connect into polygons large enough to survive a 3m read.
+  for (let i = 0; i < 34; i++) {
+    const cx = hash(i * 3.1) * size, cy = hash(i * 5.7) * size;
+    const arms = 4 + Math.floor(hash(i * 8.3) * 4);
+    for (let a = 0; a < arms; a++) {
+      const ang = (a / arms) * Math.PI * 2 + hash(i * 13 + a) * 0.65;
+      let x = cx, y = cy;
+      g.strokeStyle = `rgba(5,18,20,${0.48 + hash(i + a) * 0.34})`; g.lineWidth = 1.4 + hash(i + a * 2.1) * 1.8;
+      g.beginPath(); g.moveTo(x, y);
+      const segs = 2 + Math.floor(hash(i + a * 4.7) * 3);
+      for (let k = 0; k < segs; k++) {
+        const step = 10 + hash(i * 19 + a * 7 + k) * 22;
+        x += Math.cos(ang + (hash(i + k) - 0.5) * 0.8) * step;
+        y += Math.sin(ang + (hash(i + k + 2) - 0.5) * 0.8) * step;
+        g.lineTo(x, y);
+      }
+      g.stroke();
+    }
+  }
+  for (let i = 0; i < 28; i++) {
+    let x = hash(i * 7.1) * size, y = hash(i * 9.7) * size;
+    g.strokeStyle = `rgba(8,22,24,${0.38 + hash(i) * 0.34})`; g.lineWidth = 1.0 + hash(i + 4) * 1.4;
     g.beginPath(); g.moveTo(x, y);
-    for (let k = 0; k < 5; k++) {
-      x += (hash(i * 11 + k) - 0.5) * 32; y += (hash(i * 17 + k) - 0.5) * 32;
+    for (let k = 0; k < 6; k++) {
+      x += (hash(i * 11 + k) - 0.5) * 44; y += (hash(i * 17 + k) - 0.5) * 44;
       g.lineTo(x, y);
     }
     g.stroke();
@@ -44,7 +63,7 @@ function glazeBreakupTexture() {
     g.fillStyle = `rgba(24,45,42,${0.08 + hash(i) * 0.12})`;
     g.beginPath(); g.ellipse(hash(i * 2.3) * size, hash(i * 4.9) * size, 6 + hash(i) * 20, 3 + hash(i + 3) * 12, hash(i + 8) * Math.PI, 0, Math.PI * 2); g.fill();
   }
-  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(1.8, 1.8);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(0.82, 0.82);
   return tex;
 }
 
@@ -151,10 +170,10 @@ export default class ThresholdZ3Pool extends Scene {
       this.mirrorlingAsset.root.add(mesh);
       return mesh;
     };
-    const addSurfaceGrout = (name: string, a: [number, number, number], b: [number, number, number], u: number, width: number, zoff = 0.066) => {
+    const addSurfaceGrout = (name: string, a: [number, number, number], b: [number, number, number], u: number, width: number, zoff = 0.066, angleOffset = 0) => {
       const va = new THREE.Vector3(...a), vb = new THREE.Vector3(...b);
       const c = va.clone().lerp(vb, u);
-      const angle = Math.atan2(vb.y - va.y, vb.x - va.x) + Math.PI / 2;
+      const angle = Math.atan2(vb.y - va.y, vb.x - va.x) + Math.PI / 2 + angleOffset;
       return box(this.mirrorlingAsset.root, name, [width, 0.004, 0.007], [c.x, c.y, c.z + zoff], limbGrout, [0, 0, angle]);
     };
     for (const side of [-1, 1] as const) {
@@ -176,6 +195,18 @@ export default class ThresholdZ3Pool extends Scene {
         addSurfaceGrout(`z3_mirrorling_upper_leg_surface_grout_${side}_${u}`, hip, knee, u, 0.125);
         addSurfaceGrout(`z3_mirrorling_lower_leg_surface_grout_${side}_${u}`, knee, tip, u, 0.082);
       }
+      // Diagonal glaze fractures on the limb sleeves themselves; these are deliberately oversized
+      // so the ceramic is cracked at the 3m delivery read, not only in native close crops.
+      const limbRuns: Array<[string, [number, number, number], [number, number, number], number]> = [
+        ['upper_arm', shoulder, elbow, 0.066], ['lower_arm', elbow, wrist, 0.054],
+        ['upper_leg', hip, knee, 0.072], ['lower_leg', knee, tip, 0.052],
+      ];
+      limbRuns.forEach(([label, a, b, zoff], ri) => {
+        for (const u of [0.22, 0.52, 0.82]) {
+          const seed = ri * 17 + u * 31 + side * 5;
+          addSurfaceGrout(`z3_mirrorling_${label}_glaze_crack_${side}_${u}`, a, b, u, 0.045 + hash(seed) * 0.055, zoff, (hash(seed + 2) - 0.5) * 1.1);
+        }
+      });
     }
     // Front-surface torso/head registration seams and a few chipped tile edges. These sit proud by only
     // millimetres, giving scale and ceramic construction without the crash-test-dummy hoop segmentation.
@@ -185,9 +216,9 @@ export default class ThresholdZ3Pool extends Scene {
     box(this.mirrorlingAsset.root, 'z3_mirrorling_spine_surface_grout', [0.0045, 0.66, 0.007], [0.012, 1.57, 0.128], limbGrout, [0, 0, -0.025]);
     box(this.mirrorlingAsset.root, 'z3_mirrorling_head_vertical_grout', [0.0035, 0.24, 0.006], [0.018, 2.3, 0.148], limbGrout, [0, 0, -0.04]);
     box(this.mirrorlingAsset.root, 'z3_mirrorling_head_hairline_crack', [0.003, 0.11, 0.006], [-0.045, 2.24, 0.149], limbGrout, [0, 0, 0.42]);
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 20; i++) {
       const side = i % 2 ? 1 : -1;
-      box(this.mirrorlingAsset.root, `z3_mirrorling_edge_chip_${i}`, [0.018 + hash(i) * 0.018, 0.009, 0.014], [side * (0.12 + hash(i + 2) * 0.16), 0.85 + hash(i + 3) * 1.25, 0.135], i % 3 ? limbTile : limbGrout, [0, 0, hash(i + 4) * 0.8]);
+      box(this.mirrorlingAsset.root, `z3_mirrorling_edge_chip_${i}`, [0.026 + hash(i) * 0.032, 0.012, 0.018], [side * (0.13 + hash(i + 2) * 0.18), 0.72 + hash(i + 3) * 1.62, 0.138], i % 3 ? limbTile : limbGrout, [0, 0, hash(i + 4) * 0.8]);
     }
     this.mirrorlingAsset.root.visible = false;
     this.mirrorlingReflection.root.visible = false;
@@ -269,21 +300,28 @@ export default class ThresholdZ3Pool extends Scene {
     }
     // water plane and lane-rope/pipe details
     this.waterMat = mat(0x55b6c0, 0.055, 0.18, 0x0a5964, 0.24) as THREE.MeshStandardMaterial;
-    this.waterMat.transparent = true; this.waterMat.opacity = 0.52; this.waterMat.depthWrite = false; this.waterMat.side = THREE.DoubleSide;
+    this.waterMat.transparent = true; this.waterMat.opacity = 0.60; this.waterMat.depthWrite = false; this.waterMat.side = THREE.DoubleSide;
     const wc = document.createElement('canvas'); wc.width = wc.height = 256;
     const wg = wc.getContext('2d')!;
-    wg.fillStyle = 'rgb(92,174,184)'; wg.fillRect(0, 0, 256, 256);
-  const deep = wg.createLinearGradient(0, 0, 256, 256); deep.addColorStop(0, 'rgba(8,70,88,0.32)'); deep.addColorStop(0.55, 'rgba(20,120,136,0.08)'); deep.addColorStop(1, 'rgba(4,48,68,0.42)'); wg.fillStyle = deep; wg.fillRect(0, 0, 256, 256);
-    wg.strokeStyle = 'rgba(224,255,248,0.42)'; wg.lineWidth = 1.4;
-    for (let y = 8; y < 256; y += 18) {
+    wg.fillStyle = 'rgb(104,188,196)'; wg.fillRect(0, 0, 256, 256);
+    // broad non-repeating depth falloff plus dense crossing wave structure; the surface must
+    // read as a shallow volume at grazing angles, not as glossy floor paint.
+    const deep = wg.createLinearGradient(0, 0, 0, 256); deep.addColorStop(0, 'rgba(5,54,72,0.48)'); deep.addColorStop(0.42, 'rgba(24,126,140,0.16)'); deep.addColorStop(1, 'rgba(3,38,55,0.55)'); wg.fillStyle = deep; wg.fillRect(0, 0, 256, 256);
+    for (let y = 3; y < 256; y += 5) {
+      const alpha = 0.20 + hash(y * 1.71) * 0.25;
+      wg.strokeStyle = `rgba(225,255,248,${alpha})`; wg.lineWidth = 0.65 + hash(y * 2.3) * 1.25;
       wg.beginPath();
-      for (let x = 0; x <= 256; x += 8) {
-        const yy = y + Math.sin(x * 0.08 + y * 0.31) * 1.4 + Math.sin(x * 0.19 + y) * 0.55;
+      for (let x = 0; x <= 256; x += 5) {
+        const yy = y + Math.sin(x * 0.065 + y * 0.31) * 2.3 + Math.sin(x * 0.19 + y) * 0.9;
         if (x === 0) wg.moveTo(x, yy); else wg.lineTo(x, yy);
       }
       wg.stroke();
     }
-    const waterTex = new THREE.CanvasTexture(wc); waterTex.wrapS = waterTex.wrapT = THREE.RepeatWrapping; waterTex.repeat.set(4, 14);
+    for (let x = 4; x < 256; x += 17) {
+      wg.strokeStyle = `rgba(8,65,78,${0.08 + hash(x) * 0.11})`; wg.lineWidth = 2.2;
+      wg.beginPath(); wg.moveTo(x + Math.sin(x) * 2, 0); wg.lineTo(x + Math.cos(x) * 3, 256); wg.stroke();
+    }
+    const waterTex = new THREE.CanvasTexture(wc); waterTex.wrapS = waterTex.wrapT = THREE.RepeatWrapping; waterTex.repeat.set(1, 1);
     this.waterMat.map = waterTex;
     // segmented closed-form water surface: genuine shallow wave displacement catches light at
     // grazing angles, rather than a single perfectly planar glossy sheet.
@@ -297,8 +335,30 @@ export default class ThresholdZ3Pool extends Scene {
     // are what separate a knee-deep water surface from a polished floor at first-person distance.
     const meniscus = mat(0x9be7df, 0.18, 0, 0x55d8d2, 0.35);
     for (const side of [-1, 1]) {
-      box(this.s, `z3_water_meniscus_wall_${side}`, [0.07, 0.026, 27], [side * 3.73, 0.462, -6], meniscus);
-      box(this.s, `z3_water_wall_contact_shadow_${side}`, [0.032, 0.075, 27], [side * 3.755, 0.425, -6], basic(0x03262d, 0.34));
+      // Segmented contact lines sit directly on the vertical tile, with small deterministic
+      // height variation: this is the visible interruption real water makes on a wall.
+      for (let seg = 0; seg < 46; seg++) {
+        const z = -20.2 + seg * 0.62, yy = 0.458 + (hash(seg * 3.1 + side) - 0.5) * 0.018;
+        box(this.s, `z3_wall_true_waterline_${side}_${seg}`, [0.026, 0.018, 0.56], [side * 3.968, yy, z], meniscus);
+        box(this.s, `z3_wall_wet_immersion_band_${side}_${seg}`, [0.018, 0.18, 0.56], [side * 3.972, yy - 0.105, z], basic(0x031f27, 0.28));
+      }
+      box(this.s, `z3_water_meniscus_wall_${side}`, [0.055, 0.018, 27], [side * 3.82, 0.462, -6], meniscus);
+      box(this.s, `z3_water_wall_contact_shadow_${side}`, [0.028, 0.055, 27], [side * 3.88, 0.425, -6], basic(0x03262d, 0.26));
+    }
+    // Square pillar waterline collars and damp interruption bands at every column.
+    for (let z = 2; z >= -20; z -= 4) for (const side of [-1, 1]) {
+      const cx = side * 3.72;
+      box(this.s, `z3_pillar_waterline_front_${side}_${z}`, [0.56, 0.022, 0.026], [cx, 0.46, z - 0.255], meniscus);
+      box(this.s, `z3_pillar_waterline_back_${side}_${z}`, [0.56, 0.022, 0.026], [cx, 0.46, z + 0.255], meniscus);
+      box(this.s, `z3_pillar_waterline_side_a_${side}_${z}`, [0.026, 0.022, 0.56], [cx - 0.255, 0.46, z], meniscus);
+      box(this.s, `z3_pillar_waterline_side_b_${side}_${z}`, [0.026, 0.022, 0.56], [cx + 0.255, 0.46, z], meniscus);
+      box(this.s, `z3_pillar_wet_band_front_${side}_${z}`, [0.54, 0.17, 0.018], [cx, 0.35, z - 0.252], basic(0x03242c, 0.30));
+      box(this.s, `z3_pillar_wet_band_side_${side}_${z}`, [0.018, 0.17, 0.54], [cx - side * 0.252, 0.35, z], basic(0x03242c, 0.30));
+    }
+    // Bench/contact-object water interruptions: bright meniscus ticks around legs and the chair legs.
+    for (const [bi, x, z] of [[0, -3.98, -1.92], [1, -3.98, -1.08], [2, -3.35, -1.92], [3, -3.35, -1.08], [4, 3.18, 3.48], [5, 3.72, 3.48]] as const) {
+      box(this.s, `z3_object_waterline_tick_${bi}`, [0.18, 0.018, 0.045], [x, 0.463, z], meniscus, [0, hash(bi) * 0.8, 0]);
+      box(this.s, `z3_object_wet_tick_${bi}`, [0.15, 0.095, 0.032], [x, 0.405, z], basic(0x021d24, 0.32), [0, hash(bi) * 0.8, 0]);
     }
     box(this.s, 'z3_water_step_contact_line', [7.6, 0.018, 0.035], [0, 0.463, 4.98], meniscus);
     box(this.s, 'z3_water_front_depth_edge', [7.6, 0.045, 0.025], [0, 0.43, 4.96], basic(0x063844, 0.32));
@@ -540,7 +600,7 @@ export default class ThresholdZ3Pool extends Scene {
     const arr = wp.array as Float32Array;
     for (let i = 0; i < arr.length; i += 3) {
       const x = this.waterBase[i]!, y = this.waterBase[i + 1]!;
-      arr[i + 2] = Math.sin(x * 2.35 + t * 1.12) * 0.0065 + Math.sin(y * 1.48 - t * 0.82) * 0.0075 + Math.sin((x * 1.7 + y * 2.9) + t * 1.85) * 0.0032;
+      arr[i + 2] = Math.sin(x * 2.35 + t * 1.12) * 0.009 + Math.sin(y * 1.48 - t * 0.82) * 0.011 + Math.sin((x * 1.7 + y * 2.9) + t * 1.85) * 0.005;
     }
     wp.needsUpdate = true; this.water.geometry.computeVertexNormals();
     if (this.waterMat.map) { this.waterMat.map.offset.set((t * 0.012) % 1, (t * 0.018) % 1); }
@@ -635,7 +695,7 @@ export default class ThresholdZ3Pool extends Scene {
 
     const underwater = smooth(79.15, 80, t);
     this.s.fog = new THREE.FogExp2(underwater > 0.4 ? 0x061c22 : 0x0b4652, 0.055 + underwater * 0.22);
-    this.waterMat.opacity = 0.52 - underwater * 0.18;
+    this.waterMat.opacity = 0.60 - underwater * 0.18;
 
     const gl = this.ctx.renderer;
     gl.setRenderTarget(out); gl.setClearColor(underwater > 0.4 ? 0x03151a : 0x08262d, 1); gl.clear(true, true, true); gl.render(this.s, this.cam); gl.resetState();

@@ -125,7 +125,7 @@ export default class ThresholdZ2Playroom extends Scene {
       cloud.scale.set(1.8, 0.55, 0.12);
     }
     // abandoned soft-play wear: water stains, hand grime and peeling sticker rectangles on the wall skins
-    const stainMat = basic(0x4a3522, 0.24);
+    const stainMat = basic(0x4a3522, 0.32);
     const stickerMats = [basic(0xf3e6a8, 0.78), basic(0xb7d7ef, 0.72), basic(0xe5b2c8, 0.68)];
     for (let i = 0; i < 34; i++) {
       const north = i % 2 === 0, z = north ? -10.405 : 10.405, x = -13.5 + hash(i * 3.1) * 27, y = 0.75 + hash(i * 7.3) * 4.7;
@@ -141,7 +141,7 @@ export default class ThresholdZ2Playroom extends Scene {
     // broad age damage crosses panel boundaries; several pads are missing or misaligned rather than merely dirty.
     for (let i = 0; i < 9; i++) {
       const north = i % 2 === 0, z = north ? -10.395 : 10.395;
-      plane(this.s, `z2_large_boundary_stain_${i}`, 1.0 + hash(i) * 1.5, 0.5 + hash(i + 1) * 1.1, [-11 + hash(i * 2.7) * 22, 1.1 + hash(i * 4.1) * 3.4, z], basic(0x2d2118, 0.18), [0, north ? 0 : Math.PI, (hash(i + 6) - 0.5) * 0.35]);
+      plane(this.s, `z2_large_boundary_stain_${i}`, 1.0 + hash(i) * 1.5, 0.5 + hash(i + 1) * 1.1, [-11 + hash(i * 2.7) * 22, 1.1 + hash(i * 4.1) * 3.4, z], basic(0x2d2118, 0.25), [0, north ? 0 : Math.PI, (hash(i + 6) - 0.5) * 0.35]);
       if (i < 5) box(this.s, `z2_missing_padding_backing_${i}`, [0.75, 0.48, 0.025], [-10 + i * 4.8, 2.0 + hash(i) * 2.2, z], mat(0x62594d, 0.88));
     }
 
@@ -189,7 +189,7 @@ export default class ThresholdZ2Playroom extends Scene {
     box(this.s, 'z2_pit_e', [0.35, 0.8, 8.4], [6.2, 0.4, 0], green);
     box(this.s, 'z2_ballpit_dark_substrate', [12.0, 0.035, 8.0], [0, 0.515, 0], mat(0x2d241e, 0.92));
     for (let fg = 0; fg < 18; fg++) {
-      plane(this.s, `z2_floor_ground_in_grime_${fg}`, 1.0 + hash(fg) * 2.4, 0.7 + hash(fg + 3) * 1.8, [-13 + hash(fg * 2.1) * 26, 0.006, -8.5 + hash(fg * 4.7) * 17], basic(0x241b14, 0.16 + hash(fg + 5) * 0.12), [-Math.PI / 2, 0, hash(fg + 7) * Math.PI]);
+      plane(this.s, `z2_floor_ground_in_grime_${fg}`, 1.0 + hash(fg) * 2.4, 0.7 + hash(fg + 3) * 1.8, [-13 + hash(fg * 2.1) * 26, 0.006, -8.5 + hash(fg * 4.7) * 17], basic(0x241b14, 0.22 + hash(fg + 5) * 0.15), [-Math.PI / 2, 0, hash(fg + 7) * Math.PI]);
     }
     const geom = new THREE.SphereGeometry(0.075, 8, 5);
     const inst = new THREE.InstancedMesh(geom, new THREE.MeshStandardMaterial({ roughness: 0.78, metalness: 0, map: grimeTex, roughnessMap: grimeTex }), 4900);
