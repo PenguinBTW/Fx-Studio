@@ -40,6 +40,23 @@ function playGrimeTexture() {
   return tex;
 }
 
+function lightPoolTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  const g = c.getContext('2d')!;
+  const grad = g.createRadialGradient(128, 128, 8, 128, 128, 126);
+  grad.addColorStop(0, 'rgba(255,255,255,.82)');
+  grad.addColorStop(0.42, 'rgba(255,255,255,.34)');
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grad; g.fillRect(0, 0, 256, 256);
+  g.globalCompositeOperation = 'destination-out';
+  for (let i = 0; i < 42; i++) {
+    g.fillStyle = `rgba(0,0,0,${0.035 + hash(i) * 0.09})`;
+    g.beginPath(); g.ellipse(hash(i * 3.1) * 256, hash(i * 5.7) * 256, 8 + hash(i) * 24, 3 + hash(i + 2) * 10, hash(i * 7) * Math.PI, 0, Math.PI * 2); g.fill();
+  }
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 export default class ThresholdZ2Playroom extends Scene {
   private s = new THREE.Scene();
   private cam = new THREE.PerspectiveCamera(76, 16 / 9, 0.04, 90);
@@ -89,10 +106,10 @@ export default class ThresholdZ2Playroom extends Scene {
       }
     });
     this.swimmerAsset.root.position.set(0,0.58,2.35); this.swimmerAsset.root.visible = false; this.s.add(this.swimmerAsset.root);
-    this.s.background = new THREE.Color(0x8fa2ad);
-    this.s.fog = new THREE.Fog(0x8fa2ad, 15, 48);
+    this.s.background = new THREE.Color(0x202a31);
+    this.s.fog = new THREE.Fog(0x202a31, 13, 42);
     this.flash = addFlashlight(this.s);
-    this.s.add(new THREE.HemisphereLight(0xffffff, 0x2d3b4e, 0.48));
+    this.s.add(new THREE.HemisphereLight(0xc7d6df, 0x151c24, 0.24));
     this.sun = new THREE.DirectionalLight(0xffffff, 0.68); this.sun.position.set(-4, 9, 2); this.s.add(this.sun);
     this.swimmerLight = new THREE.PointLight(0xffe0a8, 0, 4.2, 1.8); this.s.add(this.swimmerLight);
 
@@ -107,6 +124,7 @@ export default class ThresholdZ2Playroom extends Scene {
     const mouthMat = mat(0xd9b83c, 0.62);
     const submergedRidgeMat = mat(0x3f4b4e, 0.30, 0, 0x101a1c, 0.10);
     const grimeTex = playGrimeTexture();
+    const lightPoolTex = lightPoolTexture();
     for (const m of [foam, red, yellow, blue, green, plasticDark, ...mats]) {
       const sm = m as THREE.MeshStandardMaterial;
       sm.map = grimeTex; sm.roughnessMap = grimeTex; sm.bumpMap = grimeTex; sm.bumpScale = 0.008;
@@ -175,11 +193,73 @@ export default class ThresholdZ2Playroom extends Scene {
       box(this.s, `z2_overturned_play_block_${i}`, [0.34 + hash(i) * 0.24, 0.22 + hash(i + 1) * 0.18, 0.32 + hash(i + 2) * 0.22], [2.6 + hash(i * 2.1) * 4.6, 0.12, 1.3 + hash(i * 3.8) * 3.6], mats[i % mats.length]!, [(hash(i + 5) - 0.5) * 0.7, hash(i + 6) * Math.PI, (hash(i + 7) - 0.5) * 0.7]);
     }
 
-    // skylights
+    // Physical ceiling plane, beams and stained tile seams replace the former empty grey sky-plane read.
+    const ceilingMat = mat(0x4d504a, 0.92) as THREE.MeshStandardMaterial;
+    ceilingMat.map = grimeTex; ceilingMat.roughnessMap = grimeTex; ceilingMat.bumpMap = grimeTex; ceilingMat.bumpScale = 0.012;
+    box(this.s, 'z2_ceiling_slab', [31, 0.08, 21], [0, 6.03, 0], ceilingMat);
+    for (let x = -14; x <= 14; x += 2.8) box(this.s, `z2_ceiling_beam_x_${x.toFixed(1)}`, [0.09, 0.12, 20.7], [x, 5.91, 0], mat(0x242827, 0.82));
+    for (let z = -9; z <= 9; z += 3.0) box(this.s, `z2_ceiling_beam_z_${z.toFixed(1)}`, [30.7, 0.10, 0.08], [0, 5.90, z], mat(0x242827, 0.82));
+    for (let i = 0; i < 22; i++) {
+      const stain = basic(0x15120e, 0.20 + hash(i) * 0.16) as THREE.MeshBasicMaterial; stain.side = THREE.DoubleSide;
+      plane(this.s, `z2_ceiling_water_stain_${i}`, 0.7 + hash(i) * 1.8, 0.35 + hash(i + 2) * 1.1, [-14 + hash(i * 3.1) * 28, 5.985, -9 + hash(i * 5.7) * 18], stain, [Math.PI / 2, 0, hash(i * 7) * Math.PI]);
+    }
+    // skylights: dead diffusers set into the physical ceiling rather than floating grey rectangles.
     for (let i = 0; i < 3; i++) {
-      const m = mat(0xb9c8d2, 0.5, 0, 0xaebdca, 0.32) as THREE.MeshStandardMaterial;
+      const m = mat(0x77848a, 0.62, 0, 0x8b979e, 0.16) as THREE.MeshStandardMaterial;
       this.skylightMats.push(m);
       box(this.s, `z2_skylight_${i}`, [4.8, 0.05, 2.8], [-6 + i * 6, 5.95, -2], m);
+      const sx = -6 + i * 6;
+      box(this.s, `z2_skylight_frame_n_${i}`, [5.05, 0.09, 0.10], [sx, 5.94, -3.46], mat(0x252a2a, 0.7));
+      box(this.s, `z2_skylight_frame_s_${i}`, [5.05, 0.09, 0.10], [sx, 5.94, -0.54], mat(0x252a2a, 0.7));
+      box(this.s, `z2_skylight_frame_w_${i}`, [0.10, 0.09, 3.02], [sx - 2.47, 5.94, -2], mat(0x252a2a, 0.7));
+      box(this.s, `z2_skylight_frame_e_${i}`, [0.10, 0.09, 3.02], [sx + 2.47, 5.94, -2], mat(0x252a2a, 0.7));
+    }
+    for (let i = 0; i < 3; i++) {
+      const sl = new THREE.PointLight(0x9fc5d8, 1.8, 9.5, 1.55);
+      sl.position.set(-6 + i * 6, 5.25, -2); this.s.add(sl);
+    }
+    // Motivated abandoned-play-place practicals: colored spot pools, emergency strips and sagging string lights.
+    const practicals: Array<[string, number, number, number, number, number]> = [
+      ['amber_climber', -5.8, 4.65, -4.9, 0xff9b42, 4.2],
+      ['cyan_ballpit', 4.6, 4.55, 1.7, 0x79c9ff, 3.5],
+      ['magenta_shelf', 10.8, 3.6, -7.8, 0xff5d8d, 2.8],
+      ['green_exit_side', -11.6, 3.3, 7.4, 0x8aff8c, 2.3],
+    ];
+    practicals.forEach(([label, x, y, z, color, intensity], i) => {
+      box(this.s, `z2_practical_fixture_${label}`, [0.42, 0.11, 0.22], [x, y + 0.08, z], mat(0x1d2020, 0.62), [0, hash(i) * 0.8, 0]);
+      box(this.s, `z2_practical_lens_${label}`, [0.31, 0.025, 0.14], [x, y, z], mat(color, 0.24, 0, color, 1.8), [0, hash(i) * 0.8, 0]);
+      const pl = new THREE.PointLight(color, intensity, 10.5, 1.45); pl.position.set(x, y - 0.08, z); this.s.add(pl);
+    });
+    practicals.forEach(([label, x, y, z, color], i) => {
+      const floorPool = new THREE.MeshBasicMaterial({ map: lightPoolTex, color, transparent: true, opacity: 0.24, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+      const fp = plane(this.s, `z2_practical_floor_pool_${label}`, 4.0 + i * 0.35, 3.1 + (i % 2) * 0.8, [x, 0.012 + i * 0.0004, z], floorPool, [-Math.PI / 2, 0, hash(i) * Math.PI]);
+      fp.renderOrder = 2;
+      const ceilPool = new THREE.MeshBasicMaterial({ map: lightPoolTex, color, transparent: true, opacity: 0.18, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+      const cp = plane(this.s, `z2_practical_ceiling_pool_${label}`, 4.8, 3.7, [x, 5.972 - i * 0.0004, z], ceilPool, [Math.PI / 2, 0, hash(i + 2) * Math.PI]);
+      cp.renderOrder = 2;
+    });
+    // Ceiling services and low string-light pools give the upward frames readable scale and local variation.
+    box(this.s, 'z2_ceiling_duct_main', [24.0, 0.32, 0.48], [0, 5.64, 4.8], mat(0x565d5d, 0.48, 0.28));
+    box(this.s, 'z2_ceiling_duct_shadowside', [24.0, 0.055, 0.50], [0, 5.47, 4.82], mat(0x252929, 0.72));
+    for (let i = 0; i < 9; i++) cyl(this.s, `z2_ceiling_cable_conduit_${i}`, 0.018, 20.0, [-12 + i * 3.0, 5.73, -0.5], mat(0x1f2424, 0.58, 0.25), [Math.PI / 2, 0, 0], 8);
+    for (let i = 0; i < 8; i++) {
+      const warm = i % 2 === 0, z = warm ? -6.4 : 5.8;
+      const pl = new THREE.PointLight(warm ? 0xff9d55 : 0x78c9ff, 0.85, 4.2, 1.35);
+      pl.position.set(-10.5 + i * 3.0, 5.05, z); this.s.add(pl);
+    }
+    for (const [side, z] of [[-1, -10.34], [1, 10.34]] as const) {
+      for (let i = 0; i < 5; i++) {
+        const x = -10 + i * 5.0;
+        box(this.s, `z2_emergency_strip_${side}_${i}`, [1.2, 0.055, 0.025], [x, 2.35 + (i % 2) * 0.35, z], mat(0xff4a32, 0.28, 0, 0xff2b1d, 1.25));
+      }
+    }
+    for (let row = 0; row < 2; row++) {
+      const z = row ? 5.8 : -6.4;
+      for (let i = 0; i < 22; i++) {
+        const x = -12.6 + i * 1.2, sag = Math.sin((i / 21) * Math.PI) * (0.42 + row * 0.15);
+        const warm = i % 3 !== 0;
+        sph(this.s, `z2_string_bulb_${row}_${i}`, 0.035, [x, 5.12 - sag, z + Math.sin(i * 0.7) * 0.08], mat(warm ? 0xffc26b : 0x85d9ff, 0.25, 0, warm ? 0xff9d3f : 0x63caff, warm ? 1.25 : 1.05), 8);
+      }
     }
 
     // ball pit padded rim and dense instanced ball surface
@@ -424,8 +504,8 @@ export default class ThresholdZ2Playroom extends Scene {
     updateFlashlight(this.flash.light, this.flash.target, this.cam, t, closeBeam * 0.24, t > 40.5 && t < 49.5 ? 0.3 : 0.05);
     // clouded skylight dimming after 40s
     const dim = 1 - smooth(39.5, 41.5, t) * 0.5;
-    this.sun.intensity = 2.5 * dim;
-    this.skylightMats.forEach((m) => { m.emissiveIntensity = 0.38 * dim; });
+    this.sun.intensity = 1.15 * dim;
+    this.skylightMats.forEach((m) => { m.emissiveIntensity = 0.16 * dim; });
 
     // toys face the viewer, stepped at 6fps
     const qcamX = Math.round(this.cam.position.x * 8) / 8, qcamZ = Math.round(this.cam.position.z * 8) / 8;
@@ -520,7 +600,7 @@ export default class ThresholdZ2Playroom extends Scene {
     const gl = this.ctx.renderer;
     gl.setRenderTarget(out); gl.setClearColor(0xcfe8ff, 1); gl.clear(true, true, true); gl.render(this.s, this.cam); gl.resetState();
     return {
-      ...thresholdPost(t, { darkness: 0.12, exposure: 0.18 + (t >= 29.6 ? 0.75 * Math.exp(-Math.max(0, t - 29.7) / 0.25) : 0), stress: t > 40.5 && t < 49.5 ? 0.22 : 0.02 }),
+      ...thresholdPost(t, { darkness: 0.12, exposure: 0.26 + (t >= 29.6 ? 0.75 * Math.exp(-Math.max(0, t - 29.7) / 0.25) : 0), stress: t > 40.5 && t < 49.5 ? 0.22 : 0.02 }),
       // T1 now owns the eye-adaptation bridge. Do not re-impose a zone-local whiteout
       // after the seam or the exposure decay reverses when transition post is unsuppressed.
       flash: 0,
