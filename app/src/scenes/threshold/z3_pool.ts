@@ -226,36 +226,62 @@ export default class ThresholdZ3Pool extends Scene {
     const glintTex = new THREE.CanvasTexture(gc); glintTex.wrapS = glintTex.wrapT = THREE.RepeatWrapping; glintTex.repeat.set(2.2, 7.5);
     this.waterGlintMat = new THREE.MeshBasicMaterial({ map: glintTex, transparent: true, opacity: 0.34, depthWrite: false });
     plane(this.s, 'z3_water_specular_patches', 8, 27, [0, 0.456, -6], this.waterGlintMat, [-Math.PI / 2, 0, 0]);
-    // Player-proxy reflection for the look-down beat: a flattened dark body silhouette lies just under
-    // the transparent surface, with a separate warm beam patch computed from the camera pose 0.42s ago.
-    const pc = document.createElement('canvas'); pc.width = 256; pc.height = 256;
-    const pg = pc.getContext('2d')!; pg.clearRect(0, 0, 256, 256);
-    pg.fillStyle = 'rgba(0,5,7,0.92)';
-    pg.beginPath(); pg.ellipse(128, 38, 20, 25, 0, 0, Math.PI * 2); pg.fill();
-    pg.fillRect(121, 58, 14, 14);
-    pg.beginPath();
-    pg.moveTo(91, 78); pg.lineTo(165, 78); pg.lineTo(153, 190); pg.lineTo(103, 190); pg.closePath(); pg.fill();
-    pg.beginPath(); pg.ellipse(88, 132, 13, 66, -0.18, 0, Math.PI * 2); pg.fill();
-    pg.save(); pg.translate(164, 105); pg.rotate(-0.62);
-    pg.fillRect(0, -9, 58, 18);
-    pg.fillRect(48, -12, 22, 24);
-    pg.restore();
-    const beam = pg.createLinearGradient(205, 78, 252, 50);
-    beam.addColorStop(0, 'rgba(255,238,190,0.72)'); beam.addColorStop(1, 'rgba(255,238,190,0.02)');
-    pg.fillStyle = beam;
-    pg.beginPath(); pg.moveTo(203, 77); pg.lineTo(252, 38); pg.lineTo(252, 92); pg.closePath(); pg.fill();
+    // Player-proxy reflection for the look-down beat: a full-length body reflection, pre-distorted
+    // in horizontal water slices, with the flashlight and its warm scatter physically connected at the hand.
+    const baseRefl = document.createElement('canvas'); baseRefl.width = 256; baseRefl.height = 512;
+    const br = baseRefl.getContext('2d')!; br.clearRect(0, 0, 256, 512);
+    br.fillStyle = 'rgba(0,5,8,0.94)';
+    br.beginPath(); br.ellipse(128, 44, 23, 29, 0, 0, Math.PI * 2); br.fill();
+    br.fillRect(120, 68, 16, 17);
+    br.beginPath();
+    br.moveTo(94, 88); br.lineTo(162, 88); br.lineTo(153, 207); br.lineTo(103, 207); br.closePath(); br.fill();
+    // hanging left arm and right arm bent forward around the flashlight
+    br.beginPath(); br.ellipse(91, 145, 12, 65, -0.13, 0, Math.PI * 2); br.fill();
+    br.save(); br.translate(158, 121); br.rotate(-0.58); br.fillRect(0, -8, 63, 17); br.fillRect(53, -11, 25, 22); br.restore();
+    // separate legs and feet, visible below the torso rather than a single cut-out column
+    br.beginPath(); br.moveTo(108, 203); br.lineTo(126, 203); br.lineTo(121, 356); br.lineTo(99, 356); br.closePath(); br.fill();
+    br.beginPath(); br.moveTo(132, 203); br.lineTo(151, 203); br.lineTo(160, 356); br.lineTo(137, 356); br.closePath(); br.fill();
+    br.beginPath(); br.ellipse(109, 365, 17, 8, -0.08, 0, Math.PI * 2); br.fill();
+    br.beginPath(); br.ellipse(151, 365, 17, 8, 0.08, 0, Math.PI * 2); br.fill();
+    // black flashlight body in the reflected hand and a connected narrow warm emission streak
+    br.save(); br.translate(201, 92); br.rotate(-0.48);
+    br.fillStyle = 'rgba(0,3,5,0.96)'; br.fillRect(0, -7, 38, 14); br.fillRect(31, -9, 13, 18);
+    const handBeam = br.createLinearGradient(39, 0, 116, -34);
+    handBeam.addColorStop(0, 'rgba(255,236,184,0.62)'); handBeam.addColorStop(0.45, 'rgba(210,248,232,0.20)'); handBeam.addColorStop(1, 'rgba(210,248,232,0)');
+    br.fillStyle = handBeam; br.beginPath(); br.moveTo(39, -7); br.lineTo(122, -34); br.lineTo(122, 20); br.lineTo(39, 7); br.closePath(); br.fill();
+    br.restore();
+    const pc = document.createElement('canvas'); pc.width = 256; pc.height = 512;
+    const pg = pc.getContext('2d')!; pg.clearRect(0, 0, 256, 512);
+    for (let y = 0; y < 512; y += 3) {
+      const wobble = Math.sin(y * 0.055) * 4.5 + Math.sin(y * 0.151 + 1.2) * 2.2;
+      pg.drawImage(baseRefl, 0, y, 256, 3, wobble, y, 256, 3);
+    }
+    pg.strokeStyle = 'rgba(135,230,224,0.11)'; pg.lineWidth = 1;
+    for (let y = 14; y < 500; y += 19) {
+      pg.beginPath();
+      for (let x = 35; x <= 220; x += 8) {
+        const yy = y + Math.sin(x * 0.06 + y * 0.17) * 2.5;
+        if (x === 35) pg.moveTo(x, yy); else pg.lineTo(x, yy);
+      }
+      pg.stroke();
+    }
     const playerTex = new THREE.CanvasTexture(pc); playerTex.colorSpace = THREE.SRGBColorSpace;
     this.playerReflectionMat = new THREE.MeshBasicMaterial({ map: playerTex, transparent: true, opacity: 0, depthWrite: false });
-    this.playerReflection = plane(this.s, 'z3_player_proxy_reflection', 0.86, 1.78, [0, 0.448, 3.0], this.playerReflectionMat, [-Math.PI / 2, 0, 0]);
+    this.playerReflection = plane(this.s, 'z3_player_proxy_reflection', 1.34, 3.65, [0, 0.448, 1.5], this.playerReflectionMat, [-Math.PI / 2, 0, 0]);
     this.playerReflection.renderOrder = 4; this.playerReflection.visible = false;
     const bc = document.createElement('canvas'); bc.width = 256; bc.height = 256;
     const bg = bc.getContext('2d')!; bg.clearRect(0, 0, 256, 256);
-    const bgrad = bg.createRadialGradient(128, 128, 2, 128, 128, 118);
-    bgrad.addColorStop(0, 'rgba(255,238,190,0.48)'); bgrad.addColorStop(0.42, 'rgba(180,245,230,0.18)'); bgrad.addColorStop(1, 'rgba(180,245,230,0)');
-    bg.fillStyle = bgrad; bg.save(); bg.translate(128, 128); bg.scale(0.55, 1.0); bg.beginPath(); bg.arc(0, 0, 118, 0, Math.PI * 2); bg.fill(); bg.restore();
+    for (let i = 0; i < 18; i++) {
+      const x = 45 + hash(i * 2.7) * 165, y = 55 + hash(i * 4.1) * 145;
+      const rx = 12 + hash(i) * 30, ry = 3 + hash(i + 2) * 9;
+      const bgrad = bg.createRadialGradient(0, 0, 0, 0, 0, rx);
+      bgrad.addColorStop(0, `rgba(255,238,190,${0.18 + hash(i + 4) * 0.2})`);
+      bgrad.addColorStop(0.55, 'rgba(175,245,230,0.08)'); bgrad.addColorStop(1, 'rgba(175,245,230,0)');
+      bg.fillStyle = bgrad; bg.save(); bg.translate(x, y); bg.rotate((hash(i + 5) - 0.5) * 0.8); bg.scale(1, ry / rx); bg.beginPath(); bg.arc(0, 0, rx, 0, Math.PI * 2); bg.fill(); bg.restore();
+    }
     const beamTex = new THREE.CanvasTexture(bc); beamTex.colorSpace = THREE.SRGBColorSpace;
     this.beamReflectionMat = new THREE.MeshBasicMaterial({ map: beamTex, transparent: true, opacity: 0, depthWrite: false });
-    this.beamReflection = plane(this.s, 'z3_lagging_beam_reflection', 1.1, 2.35, [0, 0.452, 2.0], this.beamReflectionMat, [-Math.PI / 2, 0, 0]);
+    this.beamReflection = plane(this.s, 'z3_lagging_beam_reflection', 1.45, 2.1, [0, 0.452, 1.0], this.beamReflectionMat, [-Math.PI / 2, 0, 0]);
     this.beamReflection.renderOrder = 5; this.beamReflection.visible = false;
     // knee-deep pool cues: submerged entry steps, floor lane markings, depth tiles, caustic strips and floating equipment
     for (let st = 0; st < 3; st++) {
@@ -414,12 +440,12 @@ export default class ThresholdZ3Pool extends Scene {
     const reflPlayer = smooth(58.35, 58.75, t) * (1 - smooth(61.0, 61.55, t));
     this.playerReflection.visible = reflPlayer > 0.015;
     this.beamReflection.visible = reflPlayer > 0.015;
-    this.playerReflectionMat.opacity = 0.58 * reflPlayer;
-    this.beamReflectionMat.opacity = 0.46 * reflPlayer;
+    this.playerReflectionMat.opacity = 0.68 * reflPlayer;
+    this.beamReflectionMat.opacity = 0.50 * reflPlayer;
     if (reflPlayer > 0) {
-      const fwdX = this.cam.position.x, fwdZ = this.cam.position.z - 2.25;
+      const fwdX = this.cam.position.x, fwdZ = this.cam.position.z - 1.55;
       this.playerReflection.position.set(fwdX, 0.448, fwdZ);
-      this.playerReflection.rotation.z = Math.sin(t * 0.7) * 0.035;
+      this.playerReflection.rotation.z = Math.sin(t * 0.7) * 0.055 + Math.sin(t * 1.9) * 0.018;
       const lag = evalCam(KEYS, t - 0.42);
       const dx = lag.look[0] - lag.pos[0], dy = lag.look[1] - lag.pos[1], dz = lag.look[2] - lag.pos[2];
       const len = Math.hypot(dx, dy, dz) || 1;
@@ -427,8 +453,10 @@ export default class ThresholdZ3Pool extends Scene {
       const hit = Math.abs(ny) > 1e-4 ? (0.452 - lag.pos[1]) / ny : 2.0;
       const bx = lag.pos[0] + (dx / len) * hit;
       const bz = lag.pos[2] + (dz / len) * hit;
-      this.beamReflection.position.set(bx, 0.452, bz);
-      this.beamReflection.rotation.z = -Math.atan2(dx / len, dz / len);
+      const handLagX = fwdX + 0.28 + (lag.pos[0] - this.cam.position.x) * 0.35;
+      const handLagZ = fwdZ - 0.18 + (lag.pos[2] - this.cam.position.z) * 0.18;
+      this.beamReflection.position.set((bx * 0.25) + handLagX * 0.75, 0.452, (bz * 0.25) + handLagZ * 0.75);
+      this.beamReflection.rotation.z = -Math.atan2(dx / len, dz / len) + Math.sin(t * 1.3) * 0.04;
     }
 
     // Mirrorling rule approximation: reflection first, surface reveal only after look-away
