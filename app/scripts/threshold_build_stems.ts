@@ -285,6 +285,13 @@ wav('z2_playroom_events.wav', stem(25.8, (t) => {
   if (at >= 44.5 && at < 45.2) {
     const u = at - 44.5;
     add((noise() * 0.038 + Math.sin(u * Math.PI * 2 * 1150) * 0.014) * Math.exp(-u * 6.5) * Math.min(1, u / 0.06), 0.18);
+    const cell = Math.floor(u * 24);
+    const cu = (u * 24 - cell) / 24;
+    if (cu < 0.026 && hash01(cell, 16.2) < 0.52) {
+      const hz = 190 + hash01(cell, 16.4) * 360;
+      const knock = Math.sin(cu * Math.PI * 2 * hz) * 0.019 + noise() * 0.011;
+      add(knock * Math.exp(-cu * 72) * (1 - u / 0.9), 0.10 + (hash01(cell, 16.6) - 0.5) * 0.34);
+    }
   }
   if (at >= 44.6 && at < 47.5) {
     const period = 0.86;
@@ -293,7 +300,9 @@ wav('z2_playroom_events.wav', stem(25.8, (t) => {
     // Hollow resonance first, noise second: the breath should read as air inside a
     // ribbed vinyl tube rather than undifferentiated low rumble.
     const tubeHz = 164 + Math.sin(at * 1.7) * 18;
-    const resonance = (Math.sin(at * Math.PI * 2 * tubeHz) * 0.034 + Math.sin(at * Math.PI * 2 * tubeHz * 2.01) * 0.015) * gate;
+    const breathVar = 0.86 + hash01(Math.floor((at - 44.6) / period), 17.1) * 0.24;
+    const ribbed = 0.86 + 0.14 * Math.sin(at * Math.PI * 2 * 7.3);
+    const resonance = (Math.sin(at * Math.PI * 2 * tubeHz) * 0.034 + Math.sin(at * Math.PI * 2 * tubeHz * 2.01) * 0.015) * gate * breathVar * ribbed;
     const breath = z2NoiseLp * 0.045 * gate + resonance;
     const vinyl = Math.sin(at * Math.PI * 2 * (118 + Math.sin(at * 3.1) * 12)) * 0.010 * gate;
     add(breath + vinyl, 0.12);
@@ -314,6 +323,13 @@ wav('z2_playroom_events.wav', stem(25.8, (t) => {
     const sweep = noise() * 0.044 * Math.sin(Math.PI * u / 0.9) + z2NoiseLp * 0.026;
     const gulp = u > 0.68 ? Math.sin((u - 0.68) * Math.PI * 2 * 210) * 0.038 * Math.exp(-(u - 0.68) * 18) : 0;
     add(sweep + gulp, 0.28 - u * 0.25);
+    const cell = Math.floor(u * 18);
+    const cu = (u * 18 - cell) / 18;
+    if (u > 0.12 && cu < 0.032 && hash01(cell, 18.2) < 0.44) {
+      const hz = 150 + hash01(cell, 18.4) * 270;
+      const roll = Math.sin(cu * Math.PI * 2 * hz) * 0.016 + noise() * 0.010;
+      add(roll * Math.exp(-cu * 58) * Math.sin(Math.PI * u / 0.9), 0.20 - u * 0.18 + (hash01(cell, 18.6) - 0.5) * 0.22);
+    }
   }
 
   // Crawl friction inside the ribbed plastic tunnel, then watery squeaks as the material turns.
@@ -792,9 +808,23 @@ wav('z7_cathedral_events.wav', stem(45.8,(t)=>{
  // overwhelming machine/glass/stone roar as rift widens, with slower pressure motion rather than a flat noise shelf
  if(at>=180&&at<186){const u=at-180,k=u/6;add((noise()*(.040+k*.060)+z7lp*(.065+k*.045)+Math.sin((31*u+.75*u*u)*Math.PI*2)*(.012+k*.020))*(.58+.42*Math.sin(at*2.1)),0)}
  // abrupt fall wind narrowing into warmer descent
- if(at>=186&&at<192){const u=at-186;const narrow=smoothstep(1.2,5,u);add(noise()*(.13-narrow*.075)+z7lp*(.04+narrow*.035),0)}
+ if(at>=186&&at<192){
+   const u=at-186;const narrow=smoothstep(1.2,5,u);
+   const rollAngle=u*Math.PI*2/6;
+   const rotatingPan=Math.sin(rollAngle)*.72;
+   const wind=noise()*(.13-narrow*.075)+z7lp*(.04+narrow*.035);
+   add(wind,rotatingPan);
+   // Decorrelated air edges rotate once with the 360° camera roll, widening the fall
+   // without adding new event density or breaking the mono-compatible wind core.
+   const sampleIndex=Math.floor(at*SR);
+   const airA=(hash01(sampleIndex,22.1)*2-1)*(.027+narrow*.018);
+   const airB=(hash01(sampleIndex,22.9)*2-1)*(.027+narrow*.018);
+   const curl=Math.cos(rollAngle);
+   l+=airA*(.62+.38*curl)+airB*(.18-.18*Math.sin(rollAngle));
+   r+=airB*(.62-.38*curl)+airA*(.18+.18*Math.sin(rollAngle));
+ }
  // upward-passing machine/glass streaks during fall
- for(const st of[186.4,187.2,188.1,189.0,190.1,191.2]){const u=at-st;if(u>0&&u<.32)add((noise()*.040+Math.sin((900*u+250*u*u)*Math.PI*2)*.012)*Math.exp(-u*8),(hash01(Math.floor(st*10),21)-.5)*.9)}
+ for(const st of[186.4,187.2,188.1,189.0,190.1,191.2]){const u=at-st;if(u>0&&u<.32){const chasePan=Math.sin((at-186)*Math.PI*2/6)*.48+(hash01(Math.floor(st*10),21)-.5)*.42;add((noise()*.040+Math.sin((900*u+250*u*u)*Math.PI*2)*.012)*Math.exp(-u*8),Math.max(-.92,Math.min(.92,chasePan)))}}
  // calm descending tonal pressure: temperature shift, not score
  if(at>=188&&at<194.4){const u=at-188;add((Math.sin((160*u-6.5*u*u)*Math.PI*2)*.006+Math.sin((80*u-3.25*u*u)*Math.PI*2)*.004)*smoothstep(0,2,u),0)}
  // warm carpet landing and first domestic precues
@@ -844,7 +874,8 @@ wav('end_office_events.wav', stem(10.0,(t)=>{
  // beige phone repeats, each 2 dB quieter, while office air loses high-frequency content
  const idx=Math.floor((at-225)/2.8);for(const base of[225,227.8,230.6,233.4])for(const off of[.02,1.18]){if(base+off+.88>235)continue;const u=at-base-off;if(u>=0&&u<.88){const trem=.45+.55*(Math.sin(u*Math.PI*40)>0?1:0);const gain=Math.pow(.794,idx);add((Math.sin(u*Math.PI*2*1280)*.034+Math.sin(u*Math.PI*2*1735)*.021)*Math.exp(-u*3.1)*trem*gain,.14)}}
  const airloss=1-smoothstep(225,235,at);add((Math.sin(at*Math.PI*2*120)*.008+noise()*.002*airloss),.05);
- return[l,r]
+ const endFade=1-smoothstep(234.15,235,at);
+ return[l*endFade,r*endFade]
 }));
 
 // Transition-specific sound continuity. These short cues bind the material handoffs together;
@@ -1060,7 +1091,8 @@ bed('z8_home_room_tone.wav', 30.6, 0.8, 1.8, (t, lp) => {
 bed('end_office_afterimage_tone.wav', 10.0, 0.4, 2.4, (t, lp) => {
   const hum = Math.sin(t * Math.PI * 2 * 60) * 0.011 + Math.sin(t * Math.PI * 2 * 180) * 0.003;
   const hiss = noise() * 0.006 + lp() * 0.012;
-  const v = hum + hiss;
+  const endFade = 1 - smoothstep(9.15, 10.0, t);
+  const v = (hum + hiss) * endFade;
   return [v, v * 0.96];
 });
 

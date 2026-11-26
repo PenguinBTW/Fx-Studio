@@ -170,12 +170,26 @@ function evalAutomationDb(a: Array<{ t: number; gainDb: number }>, t: number): n
   return a[a.length - 1]!.gainDb;
 }
 
-export function applyGate(pcm: Float32Array, regions: Array<{ s0: number; s1: number }>): void {
+export function applyGate(pcm: Float32Array, regions: Array<{ s0: number; s1: number }>, edgeFadeSamples = 0): void {
   const frames = pcm.length / CH;
   for (const r of regions) {
     const s0 = Math.max(0, Math.min(frames, r.s0));
     const s1 = Math.max(0, Math.min(frames, r.s1));
-    if (s1 > s0) pcm.fill(0, s0 * CH, s1 * CH);
+    if (s1 <= s0) continue;
+    if (edgeFadeSamples > 0) {
+      const n = Math.max(1, Math.min(edgeFadeSamples, s0, frames - s1));
+      for (let k = 0; k < n; k++) {
+        const x = (k + 1) / (n + 1);
+        const g = x * x * (3 - 2 * x);
+        const pre = s0 - n + k;
+        const post = s1 + k;
+        for (let c = 0; c < CH; c++) {
+          pcm[pre * CH + c] = pcm[pre * CH + c]! * (1 - g);
+          pcm[post * CH + c] = pcm[post * CH + c]! * g;
+        }
+      }
+    }
+    pcm.fill(0, s0 * CH, s1 * CH);
   }
 }
 
@@ -567,7 +581,7 @@ export async function mixdown(o: MixOptions): Promise<MixReport> {
         report.truePeakTrimDb = trimDb.toFixed(2);
       }
     }
-    applyGate(master, regions);
+    applyGate(master, regions, Math.round(0.003 * sr));
     if (m.fadeOut && m.fadeOut.dur > 0) {
       const { at, dur: fd } = m.fadeOut;
       for (let i = 0; i < frames; i++) {
@@ -599,7 +613,7 @@ export async function mixdown(o: MixOptions): Promise<MixReport> {
     const foleyOut = o.foleyOut ?? (manifest.foleyGuide?.out ? path.resolve(baseDir, manifest.foleyGuide.out) : undefined);
     if (foleyOut) {
       const g = buses.foley_guide;
-      applyGate(g, regions);
+      applyGate(g, regions, Math.round(0.003 * sr));
       writeWav(foleyOut, g, sr, 24);
       report.foleyOut = foleyOut;
       log(`[mixdown] wrote ${foleyOut} (foley_guide only)`);
