@@ -350,7 +350,7 @@ export default class ThresholdZ2Playroom extends Scene {
     }
     for (let i = 0; i < 7; i++) box(this.s, `z2_step_block_${i}`, [0.7, 0.25, 0.7], [3.1 + (i % 2) * 0.8, 0.13 + i * 0.11, 3.8 - i * 0.55], mats[i % mats.length]!);
     // tube tunnel ribs along z
-    const shellMat = mat(0x255dcc, 0.32); shellMat.side = THREE.BackSide;
+    const shellMat = mat(0x244d68, 0.50); shellMat.side = THREE.BackSide;
     const shell = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.44, 6.4, 32, 1, true), shellMat);
     shell.position.set(-5, 0.82, 8.35); shell.rotation.x = Math.PI / 2; shell.name = 'z2_tunnel_shell'; shell.userData.fx_entity = shell.name; this.s.add(shell);
     // thick padded tunnel mouth, panel fasteners and grime; the opening is a manufactured tube, not a color portal
@@ -378,11 +378,66 @@ export default class ThresholdZ2Playroom extends Scene {
     // shelves with toys facing the viewer; simple grey-box toy archetypes but real placement
     for (let s = 0; s < 3; s++) box(this.s, `z2_shelf_${s}`, [0.35, 0.08, 6.5], [8.2, 0.9 + s * 0.65, -1], mat(0xffffff, 0.4));
     const toyCols = [red, yellow, blue, green];
+    const seamDark = mat(0x221915, 0.82);
+    const eyeBlack = basic(0x090606);
+    const ringGeom = (major: number, minor: number) => new THREE.TorusGeometry(major, minor, 8, 24);
     for (let i = 0; i < 20; i++) {
       const g = new THREE.Group(); g.position.set(8.0, 1.05 + (i % 3) * 0.62, -3.8 + Math.floor(i / 3) * 0.72);
-      const body = sph(g, `z2_toy_body_${i}`, 0.13, [0, 0, 0], toyCols[i % 4]!, 12); body.scale.set(1, 1.25, 0.75);
-      sph(g, `z2_toy_head_${i}`, 0.09, [0, 0.19, 0.02], toyCols[(i + 1) % 4]!, 12);
-      if (i % 5 === 0) cyl(g, `z2_toy_neck_${i}`, 0.025, 0.3, [0, 0.26, 0], toyCols[i % 4]!, [0, 0, 0.3], 8);
+      const kind = i % 4;
+      const main = toyCols[i % toyCols.length]!;
+      const alt = toyCols[(i + 2) % toyCols.length]!;
+      if (kind === 0) {
+        // tin robot: boxy manufactured torso/head, limbs, antenna, wind-up key and face plate
+        box(g, `z2_toy_robot_torso_${i}`, [0.18, 0.20, 0.11], [0, 0.02, 0], main);
+        box(g, `z2_toy_robot_head_${i}`, [0.15, 0.12, 0.12], [0, 0.205, 0.005], alt);
+        box(g, `z2_toy_robot_faceplate_${i}`, [0.105, 0.052, 0.008], [0, 0.205, -0.061], mat(0xd8d0b8, 0.5));
+        sph(g, `z2_toy_robot_eye_l_${i}`, 0.012, [-0.028, 0.213, -0.067], eyeBlack, 8);
+        sph(g, `z2_toy_robot_eye_r_${i}`, 0.012, [0.028, 0.213, -0.067], eyeBlack, 8);
+        for (const side of [-1, 1]) {
+          cyl(g, `z2_toy_robot_arm_${i}_${side}`, 0.018, 0.15, [side * 0.115, 0.045, 0], alt, [0, 0, side * 0.28], 8);
+          box(g, `z2_toy_robot_foot_${i}_${side}`, [0.065, 0.032, 0.09], [side * 0.052, -0.105, -0.005], seamDark);
+        }
+        cyl(g, `z2_toy_robot_antenna_${i}`, 0.006, 0.09, [0, 0.305, 0], seamDark, [0, 0, 0], 6);
+        sph(g, `z2_toy_robot_antenna_tip_${i}`, 0.014, [0, 0.352, 0], red, 8);
+        const key = new THREE.Mesh(ringGeom(0.032, 0.006), seamDark); key.position.set(0.105, 0.04, 0.0); key.rotation.y = Math.PI / 2; key.name = `z2_toy_robot_windup_key_${i}`; key.userData.fx_entity = key.name; g.add(key);
+      } else if (kind === 1) {
+        // rubber duck: single squeezed body mold, tilted head, beak, tail and seam line
+        const body = sph(g, `z2_toy_duck_body_${i}`, 0.12, [0, -0.005, 0], yellow, 16); body.scale.set(1.22, 0.78, 0.88);
+        const head = sph(g, `z2_toy_duck_head_${i}`, 0.072, [0.035, 0.115, -0.055], yellow, 14); head.scale.set(0.94, 1.06, 0.92);
+        box(g, `z2_toy_duck_beak_${i}`, [0.075, 0.026, 0.052], [0.035, 0.105, -0.125], mat(0xe87524, 0.46), [0.08, 0, 0]);
+        box(g, `z2_toy_duck_tail_${i}`, [0.052, 0.055, 0.035], [-0.105, 0.025, 0.045], yellow, [0, 0, -0.35]);
+        sph(g, `z2_toy_duck_eye_l_${i}`, 0.009, [0.006, 0.135, -0.116], eyeBlack, 8);
+        sph(g, `z2_toy_duck_eye_r_${i}`, 0.009, [0.061, 0.135, -0.112], eyeBlack, 8);
+        const seam = new THREE.Mesh(ringGeom(0.105, 0.004), seamDark); seam.position.set(0, -0.005, 0); seam.rotation.x = Math.PI / 2; seam.scale.y = 0.72; seam.name = `z2_toy_duck_mold_seam_${i}`; seam.userData.fx_entity = seam.name; g.add(seam);
+      } else if (kind === 2) {
+        // pull-along animal: molded torso, four legs, wheels, ears, muzzle and pull cord
+        const torso = sph(g, `z2_toy_pullanimal_torso_${i}`, 0.105, [0, 0.015, 0], main, 14); torso.scale.set(1.35, 0.72, 0.72);
+        box(g, `z2_toy_pullanimal_head_${i}`, [0.105, 0.09, 0.095], [0.13, 0.09, -0.005], alt, [0, 0, -0.08]);
+        box(g, `z2_toy_pullanimal_muzzle_${i}`, [0.065, 0.045, 0.065], [0.19, 0.072, -0.01], mat(0xd8c9a6, 0.62));
+        for (const side of [-1, 1]) {
+          box(g, `z2_toy_pullanimal_ear_${i}_${side}`, [0.025, 0.065, 0.018], [0.105, 0.155, side * 0.04], main, [side * 0.22, 0, 0.12]);
+          cyl(g, `z2_toy_pullanimal_leg_f_${i}_${side}`, 0.014, 0.105, [0.06, -0.08, side * 0.055], alt, [0, 0, 0], 8);
+          cyl(g, `z2_toy_pullanimal_leg_b_${i}_${side}`, 0.014, 0.105, [-0.075, -0.08, side * 0.055], alt, [0, 0, 0], 8);
+          const wheel = new THREE.Mesh(ringGeom(0.032, 0.009), seamDark); wheel.position.set(-0.01, -0.138, side * 0.067); wheel.rotation.x = Math.PI / 2; wheel.name = `z2_toy_pullanimal_wheel_${i}_${side}`; wheel.userData.fx_entity = wheel.name; g.add(wheel);
+        }
+        cyl(g, `z2_toy_pullanimal_cord_${i}`, 0.004, 0.22, [0.245, -0.015, 0], seamDark, [0, 0, Math.PI / 2.7], 6);
+      } else {
+        // ring stacker: intentional toy archetype with varied rings on a tapered post, not a figure
+        box(g, `z2_toy_stacker_base_${i}`, [0.18, 0.035, 0.18], [0, -0.105, 0], alt);
+        cyl(g, `z2_toy_stacker_post_${i}`, 0.018, 0.28, [0, 0.035, 0], seamDark, [0, 0, 0], 10);
+        for (let r = 0; r < 3; r++) {
+          const ring = new THREE.Mesh(ringGeom(0.065 - r * 0.012, 0.018), toyCols[(i + r) % toyCols.length]!);
+          ring.position.set((r - 1) * 0.006, -0.065 + r * 0.061, 0); ring.rotation.x = Math.PI / 2; ring.rotation.z = (hash(i + r) - 0.5) * 0.16;
+          ring.name = `z2_toy_stacker_ring_${i}_${r}`; ring.userData.fx_entity = ring.name; g.add(ring);
+        }
+        sph(g, `z2_toy_stacker_cap_${i}`, 0.036, [0, 0.19, 0], red, 12);
+      }
+      // molded-plastic parting lines and a few missing/scuffed patches read even when the toy silhouette is small.
+      box(g, `z2_toy_mold_parting_line_${i}`, [0.006, 0.12, 0.006], [-0.075, 0.015, -0.055], seamDark, [0, 0, 0.12]);
+      if (i % 3 === 0) box(g, `z2_toy_scuff_patch_${i}`, [0.045, 0.012, 0.006], [0.035, 0.02, -0.065], mat(0xddd2bd, 0.88), [0, 0, hash(i) * 0.5]);
+      const scale = 0.82 + hash(i * 3.1) * 0.22;
+      g.scale.setScalar(scale);
+      g.rotation.z = (hash(i * 5.2) - 0.5) * 0.10;
       g.userData.fx_entity = `z2_toy_${i}`; g.name = `z2_toy_${i}`; this.s.add(g); this.toys.push(g);
     }
     // additional named playroom props
@@ -434,12 +489,12 @@ export default class ThresholdZ2Playroom extends Scene {
     const distressPanel = (panel: THREE.Object3D | null | undefined, seed: number) => {
       if (!panel) return;
       // Sparse actual losses/misalignment break the toy-catalogue grid at delivery distance.
-      if (hash(seed * 1.913) < 0.10) { panel.visible = false; return; }
-      panel.position.x += (hash(seed + 1.1) - 0.5) * 0.105;
-      panel.position.y += (hash(seed + 2.3) - 0.5) * 0.085;
-      panel.position.z += (hash(seed + 3.7) - 0.5) * 0.055;
-      panel.rotation.z += (hash(seed + 4.9) - 0.5) * 0.085;
-      panel.scale.x *= 0.94 + hash(seed + 8.2) * 0.10; panel.scale.y *= 0.95 + hash(seed + 9.4) * 0.09;
+      if (hash(seed * 1.913) < 0.17) { panel.visible = false; return; }
+      panel.position.x += (hash(seed + 1.1) - 0.5) * 0.19;
+      panel.position.y += (hash(seed + 2.3) - 0.5) * 0.15;
+      panel.position.z += (hash(seed + 3.7) - 0.5) * 0.09;
+      panel.rotation.z += (hash(seed + 4.9) - 0.5) * 0.16;
+      panel.scale.x *= 0.90 + hash(seed + 8.2) * 0.16; panel.scale.y *= 0.91 + hash(seed + 9.4) * 0.15;
     };
     const distressPadMaterial = (mm: THREE.MeshStandardMaterial, seed: number) => {
       mm.map = grimeTex; mm.roughnessMap = grimeTex; mm.bumpMap = grimeTex; mm.bumpScale = 0.012;
@@ -493,7 +548,15 @@ export default class ThresholdZ2Playroom extends Scene {
     for (let i = 0; i < 5; i++) this.cloneProp(this.playroomKit, 'stepping_block_root', [3.1 + (i % 2) * 0.8, i * 0.11, 3.8 - i * 0.55], hash(i) * 0.4, 1, `z2_step_asset_${i}`);
     for (let i = 0; i < 16; i++) {
       const rib = this.cloneProp(this.playroomKit, 'tunnel_rib_root', [-5, 0.82, 5.6 + i * 0.38], 0, 1, `z2_tunnel_rib_asset_${i}`);
-      if (rib) rib.rotation.x = Math.PI / 2;
+      if (rib) {
+        rib.rotation.x = Math.PI / 2;
+        rib.traverse((o) => {
+          const mesh = o as THREE.Mesh;
+          if (!mesh.isMesh) return;
+          mesh.material = (mesh.material as THREE.Material).clone();
+          this.tunnelRibs.push(mesh);
+        });
+      }
     }
 
     // Named toy archetypes replace the simple primitive stand-ins while retaining their story placement.
@@ -631,7 +694,7 @@ export default class ThresholdZ2Playroom extends Scene {
     if (this.tenant.visible) this.tenant.position.x = -5 + (t - 52.15) * 1.8 - 0.5;
 
     const gl = this.ctx.renderer;
-    gl.setRenderTarget(out); gl.setClearColor(0xcfe8ff, 1); gl.clear(true, true, true); gl.render(this.s, this.cam); gl.resetState();
+    gl.setRenderTarget(out); gl.setClearColor(0x394448, 1); gl.clear(true, true, true); gl.render(this.s, this.cam); gl.resetState();
     return {
       ...thresholdPost(t, { darkness: 0.12, exposure: 0.95, stress: t > 40.5 && t < 49.5 ? 0.22 : 0.02 }),
       // T1 now owns the eye-adaptation bridge. Do not re-impose a zone-local whiteout

@@ -78,6 +78,20 @@ for i in range(54):
     x=math.sin(phi)*math.cos(theta)*rr*1.2
     y=math.sin(phi)*math.sin(theta)*rr*.72-.02
     z=math.cos(phi)*rr*.72+.08
+    # The skull is not a symmetrical inflatable egg: one side bulges outward and downward,
+    # the crown slumps, and the jaw-side mass pinches inward. This preserves the fused-ball
+    # construction while killing the bevelled-box/perfect-ellipsoid read at delivery distance.
+    if x > 0:
+        x *= 1.16 + .05*math.sin(i*1.7)
+        y -= .035*w
+    else:
+        x *= .91 + .04*math.cos(i*2.1)
+        z += .018*math.sin(i*.9)
+    if z > .08:
+        z += .045*math.sin(i*.73) - .025*max(0., x)
+    if y < -.16:
+        x *= .92
+        z -= .025
     skull_centers.append((x,y,z))
     r=.12+((i*37)%11)*.006
     b=sphere(f'fused_skull_ball_{i+1:02d}',(x,y,z),(r,r,r),palette[i%len(palette)],seg=32,rings=16); b.parent=root
@@ -97,12 +111,29 @@ lower=empty('slide_mouth_lower_root',(0,-.38,-.16)); lower.parent=root
 for side,rootobj,zsign in [('upper',upper,1),('lower',lower,-1)]:
     for j in range(6):
         yy=-.34-j*.074; zz=zsign*(.12+j*.035+(j/5)**2*.12)
-        panel=cube(f'slide_mouth_{side}_panel_{j+1}',(0,yy,zz),(.66-j*.018,.15,.112),yellow,bevel=.035,rot=(zsign*(.12+j*.08),0,0))
+        panel=cube(f'slide_mouth_{side}_panel_{j+1}',(((-1)**j)*(.008+j*.004)+(0.018 if side=='lower' else -0.010),yy,zz),(.50-j*.045,.15,.112),yellow,bevel=.035,rot=(zsign*(.12+j*.08),(-1 if side=='upper' else 1)*(.018+j*.009),(-1)**j*(.012+j*.006)))
         panel.parent=rootobj; panel.matrix_parent_inverse=rootobj.matrix_world.inverted()
     # side rails make the slide silhouette unmistakable
-    for x in (-.31,.31):
+    for x in (-.205,.235):
         rail=cyl_between(f'slide_mouth_{side}_rail_{x}',(x,-.31,zsign*.08),(x,-.88,zsign*.34),.034,yellow,vertices=16)
         rail.parent=rootobj; rail.matrix_parent_inverse=rootobj.matrix_world.inverted()
+
+# Abrasion, faded paint and chipped slide-plastic edges across the cranium/jaw. Small dark
+# strips interrupt the clean yellow silhouette and read as wear rather than decoration.
+for k in range(16):
+    j=k%6
+    side='upper' if k<10 else 'lower'
+    rootobj=upper if side=='upper' else lower
+    zsign=1 if side=='upper' else -1
+    yy=-.36-j*.068+random.uniform(-.012,.012)
+    zz=zsign*(.135+j*.035+(j/5)**2*.12)+zsign*.060
+    xx=(-.24+(k*.061)%.48)+random.uniform(-.015,.015)
+    patch=cube(f'jaw_abrasion_patch_{k+1:02d}',(xx,yy,zz),(.035+random.uniform(0,.075),.012,.006+random.uniform(0,.008)),seammat if k%3 else toothold,bevel=.001,rot=(zsign*(.12+j*.08),0,random.uniform(-.65,.65)))
+    patch.parent=rootobj; patch.matrix_parent_inverse=rootobj.matrix_world.inverted()
+for k in range(14):
+    cx,cy,cz=skull_centers[(k*11+3)%len(skull_centers)]
+    scar=cube(f'cranium_scuffed_paint_{k+1:02d}',(cx,cy-.12,cz+random.uniform(-.03,.03)),(.045+random.uniform(0,.07),.007,.008+random.uniform(0,.016)),seammat,bevel=.001,rot=(random.uniform(-.3,.3),random.uniform(-.2,.2),random.uniform(-1.1,1.1)))
+    scar.parent=root
 
 # Twenty stopper teeth, ten upper and ten lower. They are small rubber slide-stoppers:
 # irregular lengths, clustered spacing, leaned angles, worn yellowing, chips and base flanges
@@ -131,8 +162,8 @@ for i in range(10):
 # Asymmetric vinyl socket balls overlap the eye spheres; hand-painted irises sit flush on
 # the exposed front cap, with lids and pressure seams locking them into the head structure.
 eye_specs={
-    'l':dict(x=-.205,y=-.285,z=.385,sx=.124,sy=.082,sz=.132,base=red,lid=orange,irisr=.055,pupr=.026),
-    'r':dict(x=.225,y=-.265,z=.335,sx=.108,sy=.074,sz=.119,base=blue,lid=green,irisr=.049,pupr=.023),
+    'l':dict(x=-.275,y=-.285,z=.405,sx=.124,sy=.082,sz=.132,base=red,lid=orange,irisr=.055,pupr=.026),
+    'r':dict(x=.295,y=-.265,z=.355,sx=.108,sy=.074,sz=.119,base=blue,lid=green,irisr=.049,pupr=.023),
 }
 for side,d in eye_specs.items():
     x,y,z=d['x'],d['y'],d['z']

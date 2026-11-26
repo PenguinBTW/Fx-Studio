@@ -335,12 +335,12 @@ export default class ThresholdZ3Pool extends Scene {
     this.s.add(this.mirrorlingAsset.root, this.mirrorlingReflection.root);
     const glazeKey = new THREE.PointLight(0xdfffff, 0.38, 3.8, 2); glazeKey.position.set(0.55, 2.15, 0.85); this.mirrorlingAsset.root.add(glazeKey);
     const glazeRim = new THREE.PointLight(0x7fd7e8, 0.16, 3.2, 2); glazeRim.position.set(-0.65, 1.35, -0.65); this.mirrorlingAsset.root.add(glazeRim);
-    this.s.background = new THREE.Color(0x08262d);
-    this.s.fog = new THREE.FogExp2(0x0b4652, 0.055);
+    this.s.background = new THREE.Color(0x061a1f);
+    this.s.fog = new THREE.FogExp2(0x0a343b, 0.058);
     this.flash = addFlashlight(this.s);
-    this.s.add(new THREE.HemisphereLight(0x9ff7ff, 0x09272f, 0.75));
-    const tileA = mat(0xbfe7e7, 0.22);
-    const tileB = mat(0x78cbd2, 0.18);
+    this.s.add(new THREE.HemisphereLight(0x9ed8d4, 0x071d22, 0.58));
+    const tileA = mat(0xa9c9c5, 0.34);
+    const tileB = mat(0x62a8aa, 0.30);
     const grout = mat(0x5b8587, 0.78);
     const metal = mat(0x617678, 0.28, 0.55);
     const chrome = mat(0xd8f4f2, 0.22, 0.28, 0x102c30, 0.12);
@@ -379,11 +379,62 @@ export default class ThresholdZ3Pool extends Scene {
     for (const side of [-1, 1]) {
       const x = side * 3.972;
       box(this.s, `z3_mineral_tide_${side}`, [0.012, 0.055, 28.5], [x, 0.72, -7], mat(0x6f5c39, 0.9));
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < 24; i++) {
         const z = -20.5 + hash(i * 4.3 + side) * 26.5, y = 0.9 + hash(i * 7.1) * 2.9;
         if (i % 3 === 0) plane(this.s, `z3_wall_damp_drip_${side}_${i}`, 0.055 + hash(i) * 0.07, 0.35 + hash(i + 2) * 0.95, [x - side * 0.006, y, z], damp, [0, side < 0 ? Math.PI / 2 : -Math.PI / 2, 0]);
         else box(this.s, `z3_chipped_tile_${side}_${i}`, [0.018, 0.11 + hash(i) * 0.13, 0.16 + hash(i + 1) * 0.18], [x - side * 0.012, y, z], chipMat);
       }
+    }
+
+    // Dense derelict-pool damage: algae/scum tides, cracked tiles, missing tile scars and floating debris.
+    // These are physical/geometry details at delivery distance, not just a roughness parameter.
+    const algae = basic(0x24371f, 0.34);
+    const oldScum = basic(0x6b5531, 0.30);
+    const crackMat = mat(0x071114, 0.94);
+    const missingMat = mat(0x162a2d, 0.90);
+    for (const side of [-1, 1]) {
+      const x = side * 3.958;
+      // Irregular double tide line above the true waterline: mineral brown at the top, green-black below.
+      for (let seg = 0; seg < 34; seg++) {
+        const z = -20.6 + seg * 0.82 + (hash(seg * 2.1 + side) - 0.5) * 0.22;
+        const h = 0.035 + hash(seg * 3.7 + side) * 0.075;
+        plane(this.s, `z3_algae_scum_tide_${side}_${seg}`, 0.32 + hash(seg) * 0.58, h, [x - side * 0.009, 0.64 + hash(seg * 5.1) * 0.11, z], seg % 3 ? algae : oldScum, [0, side < 0 ? Math.PI / 2 : -Math.PI / 2, (hash(seg + side) - 0.5) * 0.18]);
+      }
+      // Larger missing-tile scars and radiating crack ticks break the clean modular wall rhythm.
+      for (let i = 0; i < 16; i++) {
+        const z = -20.8 + hash(i * 5.3 + side * 11) * 26.8, y = 0.95 + hash(i * 7.9 + side) * 2.8;
+        const w = 0.18 + hash(i) * 0.34, hh = 0.14 + hash(i + 2) * 0.32;
+        plane(this.s, `z3_missing_tile_scar_${side}_${i}`, w, hh, [x - side * 0.011, y, z], missingMat, [0, side < 0 ? Math.PI / 2 : -Math.PI / 2, (hash(i + 4) - 0.5) * 0.15]);
+        for (let c = 0; c < 2 + (i % 2); c++) {
+          plane(this.s, `z3_tile_crack_${side}_${i}_${c}`, 0.012 + hash(i + c) * 0.012, 0.22 + hash(i * 3 + c) * 0.48, [x - side * 0.014, y + (hash(i + c * 4) - 0.5) * 0.22, z + (hash(i * 5 + c) - 0.5) * 0.28], crackMat, [0, side < 0 ? Math.PI / 2 : -Math.PI / 2, (hash(i * 9 + c) - 0.5) * 1.1]);
+        }
+      }
+    }
+    // Column scum collars and vertical crack ticks make the repeated arches read aged rather than clean greybox.
+    for (let z = 2; z >= -20; z -= 4) for (const side of [-1, 1]) {
+      const cx = side * 3.72;
+      box(this.s, `z3_column_scum_front_${side}_${z}`, [0.52, 0.075 + hash(z) * 0.05, 0.018], [cx, 0.59 + hash(z * 2) * 0.07, z - 0.242], mat(0x2b3a25, 0.96));
+      box(this.s, `z3_column_scum_side_${side}_${z}`, [0.018, 0.075 + hash(z + 3) * 0.05, 0.52], [cx - side * 0.242, 0.59 + hash(z * 3) * 0.07, z], mat(0x2b3a25, 0.96));
+      for (let c = 0; c < 3; c++) box(this.s, `z3_column_crack_${side}_${z}_${c}`, [0.012, 0.30 + hash(z + c) * 0.42, 0.014], [cx + (hash(z * 5 + c) - 0.5) * 0.24, 1.15 + hash(z * 7 + c) * 1.7, z - 0.245], crackMat, [0, 0, (hash(z + c * 3) - 0.5) * 0.5]);
+    }
+    // Floating derelict debris: broken tile fragments, leaves, paper pulp and a few drowned plastic pieces.
+    const debrisMats = [mat(0xd0c9b7, 0.88), mat(0x25391f, 0.9), mat(0x6a5638, 0.86), mat(0x1c2e32, 0.82), mat(0xb94d35, 0.66)];
+    for (let i = 0; i < 42; i++) {
+      const x = -3.25 + hash(i * 2.7) * 6.5, z = -20.5 + hash(i * 4.1) * 25.5;
+      const sz = 0.035 + hash(i) * 0.12;
+      const d = box(this.s, `z3_floating_derelict_debris_${i}`, [sz * (1.4 + hash(i + 2)), 0.008 + hash(i + 3) * 0.018, sz], [x, 0.468 + hash(i + 4) * 0.008, z], debrisMats[i % debrisMats.length]!, [(hash(i + 5) - 0.5) * 0.12, hash(i + 6) * Math.PI, (hash(i + 7) - 0.5) * 0.12]);
+      d.receiveShadow = true;
+    }
+
+    // The terminating wall must not remain the cleanest surface in the hall: old flood lines,
+    // missing tiles and vertical leak stains are centered in the long lens composition.
+    for (let i = 0; i < 18; i++) {
+      const x = -3.45 + hash(i * 4.9) * 6.9, y = 0.9 + hash(i * 6.1) * 3.0;
+      if (i % 3 === 0) plane(this.s, `z3_endwall_missing_tile_${i}`, 0.20 + hash(i) * 0.32, 0.16 + hash(i + 1) * 0.30, [x, y, -22.485], missingMat, [0, 0, (hash(i + 2) - 0.5) * 0.15]);
+      else plane(this.s, `z3_endwall_leak_stain_${i}`, 0.07 + hash(i) * 0.12, 0.45 + hash(i + 3) * 1.1, [x, y, -22.482], i % 2 ? algae : damp, [0, 0, (hash(i + 4) - 0.5) * 0.12]);
+    }
+    for (let seg = 0; seg < 18; seg++) {
+      plane(this.s, `z3_endwall_scum_tide_${seg}`, 0.30 + hash(seg) * 0.42, 0.04 + hash(seg + 1) * 0.09, [-3.4 + seg * 0.40 + (hash(seg * 3) - 0.5) * 0.12, 0.64 + hash(seg * 5) * 0.10, -22.478], seg % 2 ? algae : oldScum, [0, 0, (hash(seg + 6) - 0.5) * 0.12]);
     }
 
     // simplified block numerals/depth ticks on the end wall, legible as pool depth signage even in grey-box.
@@ -404,7 +455,7 @@ export default class ThresholdZ3Pool extends Scene {
       box(this.s, `z3_column_mosaic_r_${z}`, [0.51, 0.16, 0.51], [3.72, 1.16, z], mat(0x126eab, 0.3));
     }
     // water plane and lane-rope/pipe details
-    this.waterMat = mat(0x55b6c0, 0.055, 0.18, 0x0a5964, 0.24) as THREE.MeshStandardMaterial;
+    this.waterMat = mat(0x3f969c, 0.075, 0.14, 0x073f47, 0.18) as THREE.MeshStandardMaterial;
     this.waterMat.transparent = true; this.waterMat.opacity = 0.78; this.waterMat.depthWrite = false; this.waterMat.side = THREE.DoubleSide;
     const wc = document.createElement('canvas'); wc.width = wc.height = 256;
     const wg = wc.getContext('2d')!;
