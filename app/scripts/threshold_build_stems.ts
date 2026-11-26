@@ -1042,7 +1042,7 @@ wav('t7_lightfall_home.wav', stem(1.4, (t) => {
 function edgeFade(t: number, dur: number, fadeIn: number, fadeOut: number): number {
   return Math.max(0, Math.min(1, t / fadeIn, (dur - t) / fadeOut));
 }
-function bed(file: string, dur: number, fadeIn: number, fadeOut: number, fn: (t: number, lp: () => number) => [number, number]): void {
+function bed(file: string, dur: number, fadeIn: number, fadeOut: number, fn: (t: number, lp: () => number) => [number, number], widthMod: (t: number) => number = () => 1): void {
   let lpState = 0;
   let airL = 0, airR = 0;
   const lp = () => (lpState = lpState * 0.86 + noise() * 0.14);
@@ -1055,7 +1055,8 @@ function bed(file: string, dur: number, fadeIn: number, fadeOut: number, fn: (t:
     airL = airL * 0.935 + (hash01(si, seed) - 0.5) * 0.065;
     airR = airR * 0.935 + (hash01(si, seed + 19.7) - 0.5) * 0.065;
     const e = edgeFade(t, dur, fadeIn, fadeOut);
-    return [(bl + airL * 0.18) * e, (br + airR * 0.18) * e];
+    const wm = widthMod(t);
+    return [(bl + airL * 0.18 * wm) * e, (br + airR * 0.18 * wm) * e];
   });
   wav(file, pcm);
 }
@@ -1161,6 +1162,6 @@ bed('end_office_afterimage_tone.wav', 10.0, 0.4, 2.4, (t, lp) => {
   const endFade = 1 - smoothstep(9.15, 10.0, t);
   const v = (hum + sharedHiss) * endFade;
   return [(v + airL * endFade) * 0.98, (v + airR * endFade) * 0.94];
-});
+}, (t) => 1 - smoothstep(9.15, 10.0, t));
 
 console.log(`wrote procedural THRESHOLD stems to ${OUT}`);
