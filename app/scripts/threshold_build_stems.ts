@@ -926,8 +926,8 @@ wav('end_office_events.wav', stem(10.0,(t)=>{
  const idx=Math.floor((at-225)/2.8);for(const base of[225,227.8,230.6,233.4])for(const off of[.02,1.18]){if(base+off+.88>235)continue;const u=at-base-off;if(u>=0&&u<.88){const trem=.45+.55*(Math.sin(u*Math.PI*40)>0?1:0);const gain=Math.pow(.794,idx);add((Math.sin(u*Math.PI*2*1280)*.0025+Math.sin(u*Math.PI*2*1735)*.0008+Math.sin(u*Math.PI*2*960)*.005+Math.sin(u*Math.PI*2*640)*.013+Math.sin(u*Math.PI*2*320)*.007+noise()*.010)*Math.exp(-u*3.1)*trem*gain,.14)}}
  const airloss=1-smoothstep(225,235,at);add((Math.sin(at*Math.PI*2*60)*.0025+Math.sin(at*Math.PI*2*120)*.0008+noise()*.0022*airloss),.05);
  const si=Math.floor(at*SR+.5);
- l+=(hash01(si,41.1)*2-1)*.0048*airloss;
- r+=(hash01(si,42.7)*2-1)*.0048*airloss;
+ l+=(hash01(si,41.1)*2-1)*.0026*airloss;
+ r+=(hash01(si,42.7)*2-1)*.0026*airloss;
  const endFade=1-smoothstep(234.15,235,at);
  return[l*endFade,r*endFade]
 }));
