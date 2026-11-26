@@ -756,8 +756,8 @@ wav('z7_cathedral_events.wav', stem(45.8,(t)=>{
  const at=t+149.5; z7lp=z7lp*.91+noise()*.09; let l=0,r=0;
  const add=(v:number,pan=0)=>{const a=(pan+1)*Math.PI/4;l+=v*Math.cos(a);r+=v*Math.sin(a)};
  // vast stone/machine nave pressure, then compressor-organ wake stack
- if(at>=150&&at<176){const breath=0.005+0.995*((1-smoothstep(150.25,150.55,at))+smoothstep(152.0,152.3,at));add((z7lp*.016+Math.sin(at*Math.PI*2*38)*.005)*breath,0)}
- if(at>=154&&at<173.35){const sw=smoothstep(154,158,at);const off=at<168.2?0:Math.max(0,Math.min(15,Math.floor((at-168.2)/.48)+1));const subtract=1-off*.045;for(let row=0;row<8;row++){const hz=54+row*7+hash01(row,31)*3;const pan=-.52+row*.15;const rowWake=smoothstep(154+row*.28,157.2+row*.28,at);add((Math.sin(at*Math.PI*2*hz)*.010+Math.sin(at*Math.PI*2*hz*1.5)*.004)*sw*rowWake*subtract,pan)}}
+ if(at>=150&&at<176){const breath=Math.min(0.005+0.995*((1-smoothstep(150.25,150.55,at))+smoothstep(152.0,152.3,at)),0.005+0.995*((1-smoothstep(165.62,165.85,at))+smoothstep(166.55,166.85,at)));add((z7lp*.016+Math.sin(at*Math.PI*2*38)*.005)*breath,0)}
+ if(at>=154&&at<173.35){const sw=smoothstep(154,158,at);const off=at<168.2?0:Math.max(0,Math.min(15,Math.floor((at-168.2)/.48)+1));const subtract=1-off*.045;const revealBreath=0.005+0.995*((1-smoothstep(165.62,165.85,at))+smoothstep(166.55,166.85,at));for(let row=0;row<8;row++){const hz=54+row*7+hash01(row,31)*3;const pan=-.52+row*.15;const rowWake=smoothstep(154+row*.28,157.2+row*.28,at);add((Math.sin(at*Math.PI*2*hz)*.010+Math.sin(at*Math.PI*2*hz*1.5)*.004)*sw*rowWake*subtract*revealBreath,pan)}}
  // sparse far coin drops with long nave echoes
  for(const hit of[151.4,154.8,156.7]){for(const [eo,m] of[[0,1],[.7,.38],[1.5,.18],[2.5,.08]] as const){const u=at-hit-eo;if(u>0&&u<.22)add((Math.sin(u*Math.PI*2*1150)*.018+noise()*.008)*Math.exp(-u*28)*m,0)}}
  // relay clunk wave sweeping row by row toward the camera
