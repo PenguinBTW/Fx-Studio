@@ -692,9 +692,9 @@ wav('z6_theatre_events.wav', stem(21.2,(t)=>{
  if(at>=136.5&&at<138){const u=(at-136.5)%0.7;if(u<.05)add(Math.sin(u*Math.PI*2*620)*.007*Math.exp(-u*35),.12)}
  if(at>=138&&at<139){const u=at-138;add((z6lp*.13+Math.sin(u*Math.PI*2*86)*.045)*Math.exp(-u*6),0)}
  // tiny puppet squeaks/foot taps across recap and chase
- for(const st of[133.2,133.8,134.35,135.2,136.1,136.9,137.6,138.35,139.1,139.35,139.62,139.9,140.16,140.42,140.7,140.98,141.24]){const u=at-st;if(u>0&&u<.09)add((noise()*.018+Math.sin(u*Math.PI*2*(700+hash01(Math.floor(st*10),3)*300))*.008)*Math.exp(-u*30),(hash01(Math.floor(st*10),4)-.5)*.4)}
+ for(const st of[133.2,133.8,134.35,135.2,136.1,136.9,137.6,138.35,139.1,139.35,139.62,139.9,140.16,140.42,140.7,140.98,141.24]){const u=at-st;if(u>0&&u<.12){const pan=(hash01(Math.floor(st*10),4)-.5)*.4;const hz=700+hash01(Math.floor(st*10),3)*300;add((noise()*.014+Math.sin(u*Math.PI*2*hz)*.006)*Math.exp(-u*30),pan);add((Math.sin(u*Math.PI*2*(120+hash01(Math.floor(st*10),5)*70))*.012+z6lp*.026)*Math.exp(-u*22),pan*.8)}}
  // rapid long-arm fabric swipes in puppet chase
- if(at>=139&&at<141.5){const u=at-139;add(z6lp*(.035+.04*Math.max(0,Math.sin(u*Math.PI*2*4)))+noise()*.008,0)}
+ if(at>=139&&at<141.5){const u=at-139;const scurry=Math.max(0,Math.sin(u*Math.PI*2*4));add(z6lp*(.030+.045*scurry)+noise()*(.005+.007*scurry),0);const cell=Math.floor(u*8);const cu=(u*8-cell)/8;if(cu<.055)add((Math.sin(cu*Math.PI*2*(150+hash01(cell,12)*90))*.018+z6lp*.028)*Math.exp(-cu*38),(hash01(cell,13)-.5)*.45)}
  // Lint armrest landing and warm close chirps
  if(at>=141.5&&at<142){const u=at-141.5;add(z6lp*.08*Math.sin(Math.PI*u/.5)+Math.sin(u*Math.PI*2*1120)*.008*Math.exp(-u*10),.38)}
  for(const st of[142.3,142.65,143.0]){const u=at-st;if(u>0&&u<.18)add(Math.sin(u*Math.PI*2*(880+Math.sin(u*20)*120))*.012*Math.sin(Math.PI*u/.18),.34)}
