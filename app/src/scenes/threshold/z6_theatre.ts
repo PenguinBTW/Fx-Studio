@@ -53,6 +53,7 @@ export default class ThresholdZ6Theatre extends Scene {
   private lint = new THREE.Group();
   private tableau = new THREE.Group();
   private houseTableau = new THREE.Group();
+  private recapScenes: THREE.Group[] = [];
   private backdropPanels: THREE.Mesh[] = [];
   private exitGlow!: THREE.MeshStandardMaterial;
   private disposables: { dispose(): void }[] = [];
@@ -183,6 +184,39 @@ export default class ThresholdZ6Theatre extends Scene {
     this.box(this.tableau, [0.65, 0.5, 0.08], [1.55, 0.92, -6.7], paper, [0, 0.25, 0]);
     this.s.add(this.tableau);
 
+    // One centered recap scene at a time. The greybox mistake to avoid is four tiny zones
+    // spread across the stage simultaneously; each 1.5s puppet scene gets the full proscenium.
+    const makeRecap = () => {
+      const g = new THREE.Group();
+      g.visible = false;
+      this.s.add(g);
+      this.recapScenes.push(g);
+      return g;
+    };
+    const officeRecap = makeRecap();
+    this.box(officeRecap, [1.45, 0.95, 0.08], [0, 1.25, -6.28], beige);
+    this.box(officeRecap, [1.15, 0.24, 0.52], [0, 0.78, -5.82], this.mat(0x6b5138, 0.8));
+    this.box(officeRecap, [0.24, 0.58, 0.16], [-0.28, 1.02, -5.55], paper);
+    this.box(officeRecap, [0.28, 0.045, 0.045], [0.02, 1.05, -5.42], this.mat(0xfff0b0, 0.35, 0, 0xffe38a, 1.8));
+    const pitRecap = makeRecap();
+    this.box(pitRecap, [1.55, 0.36, 0.82], [0, 0.68, -5.9], blue);
+    for (let i = 0; i < 11; i++) this.sphere(pitRecap, 0.11, [-0.62 + (i % 6) * 0.25, 0.91 + Math.floor(i / 6) * 0.12, -5.72 - (i % 2) * 0.25], i % 2 ? red : yellow);
+    this.box(pitRecap, [0.42, 0.24, 0.08], [0.25, 1.12, -5.5], this.mat(0x151719, 0.8));
+    const poolRecap = makeRecap();
+    this.box(poolRecap, [1.6, 0.08, 0.9], [0, 0.72, -5.85], aqua);
+    this.box(poolRecap, [1.6, 0.86, 0.08], [0, 1.16, -6.28], this.mat(0xb9d9d7, 0.8));
+    this.box(poolRecap, [0.18, 0.58, 0.14], [0.42, 1.02, -5.52], this.mat(0x26343a, 0.9));
+    this.box(poolRecap, [0.72, 0.055, 0.05], [0, 1.48, -6.2], aqua);
+    const bookRecap = makeRecap();
+    this.box(bookRecap, [0.95, 1.2, 0.08], [-0.36, 1.22, -5.9], paper, [0, -0.34, 0]);
+    this.box(bookRecap, [0.95, 1.2, 0.08], [0.36, 1.22, -5.9], paper, [0, 0.34, 0]);
+    this.box(bookRecap, [0.18, 0.55, 0.12], [0, 0.98, -5.45], this.mat(0x2a2025, 0.92));
+
+    // Stage steps make the follow route physically readable before any dressing/polish.
+    for (let i = 0; i < 4; i++) this.box(this.s, [1.05, 0.11, 0.38], [0.9, 0.06 + i * 0.11, -3.7 - i * 0.34], wood);
+
+    this.s.add(this.tableau);
+
     // Final puppet tableau: felt house, faceless flashlight puppet and felt Tenant silhouette.
     this.box(this.houseTableau, [0.9, 0.72, 0.58], [0.45, 0.95, -6.82], this.mat(0x7b3b2c, 0.94));
     this.box(this.houseTableau, [1.05, 0.34, 0.68], [0.45, 1.43, -6.82], this.mat(0x3e1c19, 0.94), [0, 0, 0.12]);
@@ -191,6 +225,8 @@ export default class ThresholdZ6Theatre extends Scene {
     this.box(this.houseTableau, [0.12, 0.36, 0.08], [-0.08, 0.86, -6.54], this.mat(0xe5d8a6, 0.95));
     this.box(this.houseTableau, [0.16, 0.65, 0.12], [-0.8, 1.05, -6.56], this.mat(0x2b2024, 0.95));
     this.box(this.houseTableau, [0.42, 0.08, 0.1], [-0.8, 1.34, -6.56], this.mat(0x51323b, 0.95));
+    this.houseTableau.scale.setScalar(1.55);
+    this.houseTableau.position.set(0, -0.35, 3.75);
     this.houseTableau.visible = false;
     this.s.add(this.houseTableau);
 
@@ -206,22 +242,39 @@ export default class ThresholdZ6Theatre extends Scene {
     for (let i = 0; i < 6; i++) this.box(this.s, [0.035, 1.7, 0.05], [3.6 + i * 0.16, 1.25, -8.9], wood, [0, 0, 0.4]);
     for (let i = 0; i < 7; i++) this.cyl(this.s, 0.025, 0.025, 0.28, [-2.8 + i * 0.8, 2.7, -9.3], gold, 8).rotation.x = Math.PI / 2;
 
+    // Limp puppets on backstage hooks clarify that the camera has crossed behind the set.
+    for (let i = 0; i < 3; i++) {
+      const x = -1.8 + i * 0.7;
+      this.cyl(this.s, 0.012, 0.012, 0.55, [x, 2.05, -8.75], gold, 6);
+      this.box(this.s, [0.22, 0.42, 0.08], [x, 1.55, -8.75], i === 1 ? paper : this.mat(0x6d3f35, 0.95), [0, 0, (i - 1) * 0.12]);
+      this.box(this.s, [0.08, 0.32, 0.06], [x - 0.16, 1.48, -8.75], feltRed, [0, 0, 0.35]);
+      this.box(this.s, [0.08, 0.32, 0.06], [x + 0.16, 1.48, -8.75], feltRed, [0, 0, -0.35]);
+    }
+
     // Backstage EXIT door and cold cathedral-blue slit beyond it.
     this.box(this.s, [1.0, 2.0, 0.12], [2.3, 1.0, -9.65], wood);
     this.exitGlow = this.mat(0xb9ecff, 0.3, 0, 0x8fdfff, 3.6);
     this.box(this.s, [0.7, 0.12, 0.03], [2.3, 1.72, -9.56], this.exitGlow);
     this.box(this.s, [0.06, 1.72, 0.035], [2.05, 1.0, -9.55], this.exitGlow);
 
+    // Viewer seat armrest: the closeup needs a physical perch or Lint reads as a floating streak.
+    this.box(this.s, [0.13, 0.2, 0.62], [0.62, 0.82, 3.66], wood);
+    this.box(this.s, [0.18, 0.08, 0.66], [0.62, 0.96, 3.66], seatEdge);
+
     // Lint: felt body, stitched wing panels, buttons and warm abdomen glow.
-    const lintBody = this.mat(0x704222, 0.98, 0, 0x2b1008, 0.22);
-    const lintWing = this.mat(0x9a6035, 0.98, 0, 0x4a1e0c, 0.32);
+    const lintBody = this.mat(0x7b4a28, 0.98, 0, 0x3a180a, 0.48);
+    const lintWing = this.mat(0xaa6b3c, 0.98, 0, 0x5a250e, 0.78);
     const button = this.mat(0x050505, 0.28);
     const glow = this.mat(0xff8c2a, 0.55, 0, 0xff7418, 4.2);
     this.cyl(this.lint, 0.032, 0.045, 0.14, [0, 0, 0], lintBody, 10).rotation.x = Math.PI / 2;
-    this.box(this.lint, [0.17, 0.02, 0.09], [-0.085, 0, 0.005], lintWing, [0, 0, 0.35]);
-    this.box(this.lint, [0.17, 0.02, 0.09], [0.085, 0, 0.005], lintWing, [0, 0, -0.35]);
+    this.sphere(this.lint, 0.075, [-0.085, 0, 0.005], lintWing, [1.3, 0.13, 0.75]).rotation.z = 0.35;
+    this.sphere(this.lint, 0.075, [0.085, 0, 0.005], lintWing, [1.3, 0.13, 0.75]).rotation.z = -0.35;
     this.sphere(this.lint, 0.015, [-0.018, 0.025, 0.065], button);
     this.sphere(this.lint, 0.015, [0.018, 0.025, 0.065], button);
+    this.sphere(this.lint, 0.005, [-0.014, 0.032, 0.077], this.mat(0xffe0b0, 0.5, 0, 0xffc47a, 1.2));
+    this.sphere(this.lint, 0.005, [0.014, 0.032, 0.077], this.mat(0xffe0b0, 0.5, 0, 0xffc47a, 1.2));
+    this.cyl(this.lint, 0.0025, 0.0025, 0.07, [-0.018, 0.04, 0.095], lintBody, 5).rotation.z = 0.55;
+    this.cyl(this.lint, 0.0025, 0.0025, 0.07, [0.018, 0.04, 0.095], lintBody, 5).rotation.z = -0.55;
     this.cyl(this.lint, 0.025, 0.03, 0.045, [0, -0.005, -0.07], glow, 10).rotation.x = Math.PI / 2;
     for (let i = 0; i < 6; i++) this.cyl(this.lint, 0.003, 0.003, 0.08, [(i - 2.5) * 0.012, -0.035, -0.01], lintBody, 5).rotation.z = (i - 2.5) * 0.25;
     const lintLight = new THREE.PointLight(0xff8c2a, 0.75, 2.2, 1.6);
@@ -242,9 +295,9 @@ export default class ThresholdZ6Theatre extends Scene {
   }
 
   private lintPath(t: number): THREE.Vector3 {
-    if (t < 143.5) return new THREE.Vector3(0.68, 1.02, 3.22);
+    if (t < 143.5) return new THREE.Vector3(0.68, 1.04, 3.58);
     const pts = [
-      new THREE.Vector3(0.68, 1.06, 3.18),
+      new THREE.Vector3(0.68, 1.06, 3.58),
       new THREE.Vector3(0.85, 1.45, 1.4),
       new THREE.Vector3(0.85, 1.55, -2.3),
       new THREE.Vector3(1.55, 1.7, -6.0),
@@ -275,7 +328,9 @@ export default class ThresholdZ6Theatre extends Scene {
       p.visible = i === panelIndex && t < 141.5;
       p.position.y = 2.0 + (i === panelIndex ? 0.12 * Math.sin(st * 3) : 0);
     });
-    this.tableau.visible = t >= 133 && t < 139.0;
+    this.tableau.visible = false;
+    const recapIndex = Math.max(0, Math.min(3, Math.floor((t - 133) / 1.5)));
+    this.recapScenes.forEach((g, i) => { g.visible = t >= 133 && t < 139 && i === recapIndex; });
     this.houseTableau.visible = t >= 139.0 && t < 141.5;
 
     // Lint appears on the armrest, then leads backstage; stop-motion inside Z6.
@@ -284,11 +339,12 @@ export default class ThresholdZ6Theatre extends Scene {
     if (lintOn) {
       const lp = this.lintPath(st);
       this.lint.position.copy(lp);
-      this.lint.scale.setScalar(t < 143.5 ? 1.85 : 1.12);
+      this.lint.scale.setScalar(t < 143.5 ? 1.1 : 0.9);
       this.lint.position.y += 0.035 * Math.sin(st * 19);
-      const flap = Math.sign(Math.sin(st * Math.PI * 12)) * 0.48;
-      this.lint.children[1]!.rotation.z = 0.35 + flap;
-      this.lint.children[2]!.rotation.z = -0.35 - flap;
+      const landed = t < 143.5;
+      const flap = landed ? 0.1 * Math.sin(st * Math.PI * 12) : Math.sign(Math.sin(st * Math.PI * 12)) * 0.42;
+      this.lint.children[1]!.rotation.z = (landed ? 0.08 : 0.28) + flap;
+      this.lint.children[2]!.rotation.z = -(landed ? 0.08 : 0.28) - flap;
       this.lint.rotation.y = t < 143.5 ? 0.7 : -0.3 + 0.18 * Math.sin(st * 5);
     }
 
