@@ -366,7 +366,11 @@ export default class ThresholdZ3Pool extends Scene {
       const x = side * 3.995;
       for (let y = 0.65; y <= 4.15; y += 0.5) box(this.s, `z3_wall_grout_h_${side}_${y.toFixed(1)}`, [0.008, 0.008, 29.5], [x, y, -7], grout);
       for (let z = -21.5; z <= 7; z += 0.75) box(this.s, `z3_wall_grout_v_${side}_${z.toFixed(2)}`, [0.008, 3.55, 0.008], [x, 2.35, z], grout);
-      box(this.s, `z3_mosaic_waterline_${side}`, [0.022, 0.18, 29.5], [side * 3.985, 1.06, -7], mat(0x126eab, 0.28));
+      for (let seg = 0; seg < 48; seg++) {
+        const z = -21.1 + seg * 0.62;
+        const shade = [0x17475f, 0x1a526b, 0x143f53][seg % 3]!;
+        box(this.s, `z3_mosaic_waterline_${side}_${seg}`, [0.022, 0.18, 0.56], [side * 3.985, 1.06 + (hash(seg * 2.7 + side) - 0.5) * 0.012, z], mat(shade, 0.58));
+      }
       box(this.s, `z3_pool_edge_gutter_${side}`, [0.24, 0.075, 27.5], [side * 3.78, 0.49, -6.3], mat(0xe7f2ed, 0.34));
       box(this.s, `z3_gutter_shadow_${side}`, [0.08, 0.045, 27.5], [side * 3.64, 0.475, -6.3], mat(0x061c22, 0.7));
     }
@@ -434,7 +438,7 @@ export default class ThresholdZ3Pool extends Scene {
     this.waterBase = (waterGeo.attributes.position.array as Float32Array).slice();
     // physical meniscus/edge thickness at the walls and step face: these small bright/dark lines
     // are what separate a knee-deep water surface from a polished floor at first-person distance.
-    const meniscus = mat(0x9be7df, 0.18, 0, 0x55d8d2, 0.35);
+    const meniscus = mat(0x476f6a, 0.30, 0, 0x123c3c, 0.07);
     for (const side of [-1, 1]) {
       // Segmented contact lines sit directly on the vertical tile, with small deterministic
       // height variation: this is the visible interruption real water makes on a wall.
@@ -443,7 +447,6 @@ export default class ThresholdZ3Pool extends Scene {
         box(this.s, `z3_wall_true_waterline_${side}_${seg}`, [0.026, 0.018, 0.56], [side * 3.968, yy, z], meniscus);
         box(this.s, `z3_wall_wet_immersion_band_${side}_${seg}`, [0.018, 0.18, 0.56], [side * 3.972, yy - 0.105, z], basic(0x031f27, 0.28));
       }
-      box(this.s, `z3_water_meniscus_wall_${side}`, [0.055, 0.018, 27], [side * 3.82, 0.462, -6], meniscus);
       box(this.s, `z3_water_wall_contact_shadow_${side}`, [0.028, 0.055, 27], [side * 3.88, 0.425, -6], basic(0x03262d, 0.26));
     }
     // Square pillar waterline collars and damp interruption bands at every column.
@@ -461,7 +464,6 @@ export default class ThresholdZ3Pool extends Scene {
       box(this.s, `z3_object_waterline_tick_${bi}`, [0.18, 0.018, 0.045], [x, 0.463, z], meniscus, [0, hash(bi) * 0.8, 0]);
       box(this.s, `z3_object_wet_tick_${bi}`, [0.15, 0.095, 0.032], [x, 0.405, z], basic(0x021d24, 0.32), [0, hash(bi) * 0.8, 0]);
     }
-    box(this.s, 'z3_water_step_contact_line', [7.6, 0.018, 0.035], [0, 0.463, 4.98], meniscus);
     box(this.s, 'z3_water_front_depth_edge', [7.6, 0.045, 0.025], [0, 0.43, 4.96], basic(0x063844, 0.32));
     for (let i = 0; i < 18; i++) {
       const side = i % 2 ? -1 : 1;
@@ -523,12 +525,14 @@ export default class ThresholdZ3Pool extends Scene {
     }
     // dense directional capillary wavelets: these catch strips as broken moving threads rather
     // than broad polished-floor sheen.
-    for (let y = 2; y < 256; y += 6) {
-      gg.strokeStyle = `rgba(225,255,250,${0.11 + hash(y * 4.7) * 0.16})`; gg.lineWidth = 0.7 + hash(y) * 0.9;
+    for (let y = 2; y < 256; y += 7) {
+      if (hash(y * 2.9) < 0.24) continue;
+      gg.strokeStyle = `rgba(225,255,250,${0.07 + hash(y * 4.7) * 0.12})`; gg.lineWidth = 0.7 + hash(y) * 0.9;
       gg.beginPath();
       for (let x = 0; x <= 256; x += 7) {
         const yy = y + Math.sin(x * 0.08 + y * 0.37) * 2.2 + Math.sin(x * 0.23 + y) * 0.9;
-        if (x === 0) gg.moveTo(x, yy); else gg.lineTo(x, yy);
+        const active = hash(y * 0.71 + Math.floor(x / 42) * 3.3) > 0.34;
+        if (x === 0 || !active) gg.moveTo(x, yy); else gg.lineTo(x, yy);
       }
       gg.stroke();
     }
