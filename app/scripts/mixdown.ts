@@ -177,16 +177,19 @@ export function applyGate(pcm: Float32Array, regions: Array<{ s0: number; s1: nu
     const s1 = Math.max(0, Math.min(frames, r.s1));
     if (s1 <= s0) continue;
     if (edgeFadeSamples > 0) {
-      const n = Math.max(1, Math.min(edgeFadeSamples, s0, frames - s1));
-      for (let k = 0; k < n; k++) {
-        const x = (k + 1) / (n + 1);
+      const preN = Math.min(edgeFadeSamples, s0);
+      const postN = Math.min(edgeFadeSamples, frames - s1);
+      for (let k = 0; k < preN; k++) {
+        const x = (k + 1) / (preN + 1);
         const g = x * x * (3 - 2 * x);
-        const pre = s0 - n + k;
+        const pre = s0 - preN + k;
+        for (let c = 0; c < CH; c++) pcm[pre * CH + c] = pcm[pre * CH + c]! * (1 - g);
+      }
+      for (let k = 0; k < postN; k++) {
+        const x = (k + 1) / (postN + 1);
+        const g = x * x * (3 - 2 * x);
         const post = s1 + k;
-        for (let c = 0; c < CH; c++) {
-          pcm[pre * CH + c] = pcm[pre * CH + c]! * (1 - g);
-          pcm[post * CH + c] = pcm[post * CH + c]! * g;
-        }
+        for (let c = 0; c < CH; c++) pcm[post * CH + c] = pcm[post * CH + c]! * g;
       }
     }
     pcm.fill(0, s0 * CH, s1 * CH);
