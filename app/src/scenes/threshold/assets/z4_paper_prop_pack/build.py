@@ -116,6 +116,24 @@ def scroll(x):
  add(box('scroll_loose_end',(.18,.015,.28),(x+.26,0,.02),PAPER,.005),r)
  return r
 
-builders=[ledger,fountain_pen,lamp,ink_bottle,paper_moth,letters_string,folded_phone,drawer_unit,globe,glasses,scissors,paper_clock,scroll];x=0
+
+def library_chair(x):
+ r=root('library_chair_root',x)
+ add(box('chair_seat',(.48,.45,.07),(x,0,.47),WOOD,.018,3),r)
+ add(box('chair_back',(.48,.07,.72),(x,.20,.87),WOOD,.018,3,rot=(.08,0,0)),r)
+ for sx in(-.19,.19):
+  for sy in(-.16,.16):add(box('chair_leg',(.055,.055,.47),(x+sx,sy,.235),WOOD,.008),r)
+ for i in range(3):add(box('chair_back_slat',(.38,.035,.045),(x,.155,.66+i*.15),PAPER2,.006),r)
+ return r
+
+def paper_vine(x):
+ r=root('paper_vine_root',x)
+ for i in range(9):
+  zz=i*.16;xx=x+math.sin(i*.9)*.06
+  add(cyl('vine_stem',.008,.20,(xx,0,zz),EDGE,rot=(.35,0,.2*math.sin(i)),verts=7),r)
+  if i%2==0:add(box('vine_paper_leaf',(.12,.015,.06),(xx+.045,0,zz+.05),PAPER2,.012,rot=(0,0,.5)),r)
+ return r
+
+builders=[ledger,fountain_pen,lamp,ink_bottle,paper_moth,letters_string,folded_phone,drawer_unit,globe,glasses,scissors,paper_clock,scroll,library_chair,paper_vine];x=0
 for b in builders:b(x);x+=2.4
 export(HERE)

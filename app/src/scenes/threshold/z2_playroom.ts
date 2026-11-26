@@ -203,18 +203,42 @@ export default class ThresholdZ2Playroom extends Scene {
 
     // Modular Blender playroom kit: repeated padded panels, shelf/net/frame modules, straight slide, stepping blocks and tunnel ribs.
     this.s.traverse((o) => {
-      if (/^z2_(tunnel_rib_|tunnel_grout_ring_|toy_piano|jack_in_box|xylophone|ball_cart|music_box|ballerina|block_)/.test(o.name)) o.visible = false;
+      if (/^z2_(tunnel_rib_|tunnel_grout_ring_|toy_piano|jack_in_box|xylophone|ball_cart|music_box|ballerina|block_|birthday_banner|balloon_)/.test(o.name)) o.visible = false;
     });
     this.toyPhone.visible = false;
     const padColors = [0xd96a55, 0xe7c85f, 0x78a8d8, 0x82bd7f, 0xe7dfca];
-    for (const side of [-1, 1]) for (let i = 0; i < 24; i++) {
-      const panel = this.cloneProp(this.playroomKit, 'padded_wall_panel_root', [-14.0 + i * 1.22, 0, side * 10.31], side < 0 ? 0 : Math.PI, 1, `z2_wall_panel_asset_${side}_${i}`);
-      const tint = padColors[(i + (side > 0 ? 2 : 0)) % padColors.length]!;
+    const panelMaterialCache = new Map<string, THREE.MeshStandardMaterial>();
+    for (const side of [-1, 1]) for (let row = 0; row < 5; row++) for (let i = 0; i < 24; i++) {
+      const panel = this.cloneProp(this.playroomKit, 'padded_wall_panel_root', [-14.0 + i * 1.22 + (row % 2) * 0.61, row * 1.1, side * 10.31], side < 0 ? 0 : Math.PI, 1, `z2_wall_panel_asset_${side}_${row}_${i}`);
+      const tint = row === 3 && i % 3 === 0 ? 0xe7dfca : padColors[(i + row * 2 + (side > 0 ? 2 : 0)) % padColors.length]!;
       panel?.traverse((o) => {
         const mesh = o as THREE.Mesh;
         if (!mesh.isMesh) return;
-        const mm = (mesh.material as THREE.MeshStandardMaterial).clone();
-        if (mm.name === 'foam_vinyl_ivory') mm.color.setHex(tint);
+        const src = mesh.material as THREE.MeshStandardMaterial;
+        const key = `${src.name}_${src.name === 'foam_vinyl_ivory' ? tint : 0}`;
+        let mm = panelMaterialCache.get(key);
+        if (!mm) {
+          mm = src.clone();
+          if (mm.name === 'foam_vinyl_ivory') mm.color.setHex(tint);
+          panelMaterialCache.set(key, mm);
+        }
+        mesh.material = mm;
+      });
+    }
+    for (const side of [-1, 1]) for (let row = 0; row < 5; row++) for (let i = 0; i < 17; i++) {
+      const panel = this.cloneProp(this.playroomKit, 'padded_wall_panel_root', [side * 15.31, row * 1.1, -9.2 + i * 1.15 + (row % 2) * 0.55], side < 0 ? Math.PI / 2 : -Math.PI / 2, 1, `z2_side_panel_asset_${side}_${row}_${i}`);
+      const tint = padColors[(i + row + (side > 0 ? 3 : 0)) % padColors.length]!;
+      panel?.traverse((o) => {
+        const mesh = o as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        const src = mesh.material as THREE.MeshStandardMaterial;
+        const key = `${src.name}_${src.name === 'foam_vinyl_ivory' ? tint : 0}`;
+        let mm = panelMaterialCache.get(key);
+        if (!mm) {
+          mm = src.clone();
+          if (mm.name === 'foam_vinyl_ivory') mm.color.setHex(tint);
+          panelMaterialCache.set(key, mm);
+        }
         mesh.material = mm;
       });
     }
@@ -239,6 +263,11 @@ export default class ThresholdZ2Playroom extends Scene {
     this.cloneProp(this.toyPack, 'stacking_rings_root', [4.7, 0, -2.7], 0, 1, 'z2_stacking_rings_asset');
     this.cloneProp(this.toyPack, 'toy_car_root', [5.15, 0, -2.1], 0.55, 1, 'z2_toy_car_asset');
     this.cloneProp(this.toyPack, 'music_box_root', [-7.8, 0, 1.8], 0.25, 1, 'z2_music_box_asset');
+    this.cloneProp(this.toyPack, 'ball_cart_root', [6.8, 0, 2.8], -0.15, 1, 'z2_ball_cart_asset');
+    this.cloneProp(this.toyPack, 'shoe_cubby_root', [-8.0, 0, -0.5], Math.PI / 2, 1, 'z2_shoe_cubby_asset');
+    this.cloneProp(this.toyPack, 'birthday_banner_root', [0, 4.12, -10.24], 0, 1, 'z2_birthday_banner_asset');
+    for (let i = 0; i < 4; i++) this.cloneProp(this.toyPack, 'alphabet_block_root', [1.1 + i * 0.38, 0, 4.1 - (i % 2) * 0.34], hash(i) * 1.2, 1, `z2_alphabet_block_asset_${i}`);
+    for (let i = 0; i < 3; i++) this.cloneProp(this.toyPack, 'balloon_cluster_root', [-6.8 + i * 2.8, 3.2 + hash(i) * 0.5, -6.3 + hash(i + 2) * 1.8], hash(i) * 0.5, 1, `z2_balloon_cluster_asset_${i}`);
 
     // tall Tenant glimpse silhouette at tunnel end
     this.tenant = box(this.s, 'z2_tenant_glimpse', [0.65, 2.7, 0.35], [-5, 1.35, 10.45], basic(0x070707, 1));

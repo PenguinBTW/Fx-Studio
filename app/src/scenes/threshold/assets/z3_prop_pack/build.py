@@ -42,6 +42,31 @@ def ring(x):
  r=root('rescue_ring_root',x);add(torus('rescue_ring',.24,.055,(x,0,0),RED,major_segments=32,minor_segments=12),r)
  for i in range(4):a=i*math.pi/2;add(box('ring_white_band',(.10,.12,.125),(x+math.cos(a)*.24,math.sin(a)*.24,0),WHITE,.012,rot=(0,0,a)),r)
  return r
-builders=[lifeguard,kickboard,noodle,duck,drain,bench,towel,sign,clock,ring];x=0
+
+def flipflops(x):
+ r=root('flipflops_root',x)
+ for sx in(-.09,.09):
+  add(sphere('flipflop_sole',.16,(x+sx,0,.025),BLUE if sx<0 else RED,scale=(.48,1.0,.13),segments=20),r)
+  add(cyl('flipflop_strap_l',.009,.12,(x+sx-.035,-.035,.065),WHITE,rot=(.72,.2,0),verts=8),r)
+  add(cyl('flipflop_strap_r',.009,.12,(x+sx+.035,-.035,.065),WHITE,rot=(.72,-.2,0),verts=8),r)
+  add(cyl('flipflop_toe_post',.010,.035,(x+sx,-.095,.045),WHITE,verts=8),r)
+ return r
+
+def shower_head(x):
+ r=root('shower_head_root',x)
+ add(cyl('shower_pipe',.025,.72,(x,0,.36),METAL,verts=16),r)
+ add(cyl('shower_arm',.022,.32,(x,0,.72),METAL,rot=(0,math.pi/2,0),verts=16),r)
+ add(cyl('shower_head_cone',.11,.10,(x+.17,0,.67),METAL,rot=(math.pi/2,0,0),verts=24),r)
+ for i in range(7):add(cyl('shower_nozzle',.006,.012,(x+.17-.045+(i%3)*.045,-.055,.67-.025+(i//3)*.025),DARK,rot=(math.pi/2,0,0),verts=8),r)
+ return r
+
+def floating_phone(x):
+ r=root('floating_pool_phone_root',x)
+ add(box('pool_phone_body',(.22,.07,.38),(x,0,0),DARK,.035,3),r)
+ add(box('pool_phone_screen',(.16,.012,.24),(x,.041,0),mat('phone_screen_glow',(.05,.22,.26),.2,emit=(.1,.5,.6),strength=.5),.015,2),r)
+ add(cyl('pool_phone_antenna',.008,.22,(x+.08,.12,-.16),METAL,rot=(.25,0,0),verts=8),r)
+ return r
+
+builders=[lifeguard,kickboard,noodle,duck,drain,bench,towel,sign,clock,ring,flipflops,shower_head,floating_phone];x=0
 for b in builders:b(x);x+=2.4
 export(HERE)

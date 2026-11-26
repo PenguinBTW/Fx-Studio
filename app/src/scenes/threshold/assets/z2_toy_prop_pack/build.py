@@ -108,7 +108,52 @@ def music_box(x):
  for sx in (-.055,.055): add(cyl('ballerina_arm',.009,.13,(x+sx,0,.31),CREAM,rot=(0,0,sx*4),verts=8),r)
  return r
 
-builders=[rocking_horse,robot,teddy,piano,stacking_rings,toy_phone,toy_car,jackbox,xylophone,music_box]
+
+def alphabet_block(x):
+ r=root('alphabet_block_root',x)
+ add(box('block_core',(.28,.28,.28),(x,0,.14),YELLOW,.025,3),r)
+ for z in(.02,.26):add(box('block_edge',(.30,.30,.025),(x,0,z),RED,.006),r)
+ add(box('block_letter_stem',(.035,.018,.15),(x,-.151,.14),DARK,.002),r)
+ add(box('block_letter_cross',(.11,.018,.035),(x,-.153,.15),DARK,.002),r)
+ return r
+
+def ball_cart(x):
+ r=root('ball_cart_root',x)
+ for sx in(-.34,.34):
+  for sz in(-.24,.24):add(cyl('cart_post',.018,.52,(x+sx,sz,.26),METAL if (METAL:=DARK) else DARK,verts=10),r)
+ for z in(.08,.48):
+  add(box('cart_rail_x',(.72,.018,.018),(x,-.25,z),DARK,.003),r);add(box('cart_rail_x',(.72,.018,.018),(x,.25,z),DARK,.003),r)
+  add(box('cart_rail_z',(.018,.52,.018),(x-.35,0,z),DARK,.003),r);add(box('cart_rail_z',(.018,.52,.018),(x+.35,0,z),DARK,.003),r)
+ for i in range(9):add(sphere('cart_ball',.09,(x-.22+(i%3)*.22,-.14+(i//3)*.14,.24+(i%2)*.08),[RED,YELLOW,BLUE,GREEN][i%4],segments=16),r)
+ return r
+
+def shoe_cubby(x):
+ r=root('shoe_cubby_root',x)
+ add(box('cubby_case',(1.05,.34,.82),(x,0,.41),WOOD,.018,2),r)
+ for row in range(2):
+  for col in range(4):
+   xx=x-.39+col*.26;zz=.22+row*.34
+   add(box('cubby_opening',(.21,.025,.25),(xx,-.18,zz),DARK,.006),r)
+   if (row+col)%2==0:add(box('small_shoe',(.16,.12,.055),(xx,-.22,zz-.06),[RED,BLUE,GREEN,YELLOW][col],.02,2),r)
+ return r
+
+def birthday_banner(x):
+ r=root('birthday_banner_root',x)
+ add(cyl('banner_string',.008,2.8,(x,0,0),DARK,rot=(0,math.pi/2,0),verts=8),r)
+ for i in range(9):
+  xx=x-1.25+i*.31
+  add(box('banner_flag',(.22,.012,.30),(xx,0,-.18),[RED,YELLOW,BLUE,GREEN,CREAM][i%5],.004,rot=(0,0,(i%2-.5)*.08)),r)
+ return r
+
+def balloon_cluster(x):
+ r=root('balloon_cluster_root',x)
+ for i in range(5):
+  xx=x-.28+(i%3)*.28;zz=.5+(i//3)*.32;yy=(i%2)*.08
+  add(sphere('balloon',.16,(xx,yy,zz),[RED,YELLOW,BLUE,GREEN,CREAM][i],scale=(.9,.9,1.15),segments=18),r)
+  add(cyl('balloon_string',.004,.75,(xx,yy,zz-.48),DARK,verts=6),r)
+ return r
+
+builders=[rocking_horse,robot,teddy,piano,stacking_rings,toy_phone,toy_car,jackbox,xylophone,music_box,alphabet_block,ball_cart,shoe_cubby,birthday_banner,balloon_cluster]
 x=0
 for b in builders:
  b(x); x+=2.2

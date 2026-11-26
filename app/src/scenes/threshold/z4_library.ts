@@ -185,6 +185,9 @@ export default class ThresholdZ4Library extends Scene {
     this.cloneProp(this.paperProps, 'card_catalog_drawer_root', [-1.4, 0, 13.5], 0, 2.1, 'z4_card_catalog_asset');
     this.cloneProp(this.paperProps, 'paper_globe_root', [1.6, 0, 12.2], -0.3, 1, 'z4_globe_asset');
     this.cloneProp(this.paperProps, 'tied_scroll_root', [1.55, 0.82, 6.2], 0.7, 1, 'z4_scroll_asset');
+    this.cloneProp(this.paperProps, 'library_chair_root', [-0.75, 0, 6.8], 0.2, 1, 'z4_chair_asset_l');
+    this.cloneProp(this.paperProps, 'library_chair_root', [1.25, 0, 8.9], -0.55, 1, 'z4_chair_asset_r');
+    for (let i = 0; i < 8; i++) this.cloneProp(this.paperProps, 'paper_vine_root', [(i % 2 ? -2.05 : 2.05), 1.2 + hash(i) * 2.8, 2.2 + i * 2.4], i % 2 ? Math.PI / 2 : -Math.PI / 2, 1, `z4_vine_asset_${i}`);
     this.cloneProp(this.libraryKit, 'library_ladder_root', [-1.75, 0, 16.5], 0.08, 1, 'z4_ladder_asset');
     for (let i = 0; i < 4; i++) this.cloneProp(this.libraryKit, 'hanging_lantern_root', [(i % 2 ? 1.4 : -1.4), 2.9, 4 + i * 5.2], 0, 1, `z4_lantern_asset_${i}`);
     for (let i = 0; i < 4; i++) {

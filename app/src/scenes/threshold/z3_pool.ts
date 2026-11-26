@@ -30,6 +30,7 @@ export default class ThresholdZ3Pool extends Scene {
   private flash!: ReturnType<typeof addFlashlight>;
   private water!: THREE.Mesh;
   private waterMat!: THREE.MeshStandardMaterial;
+  private waterGlintMat!: THREE.MeshBasicMaterial;
   private mirrorling!: THREE.Group;
   private reflection!: THREE.Group;
   private arms: THREE.Mesh[] = [];
@@ -143,6 +144,22 @@ export default class ThresholdZ3Pool extends Scene {
     const waterTex = new THREE.CanvasTexture(wc); waterTex.wrapS = waterTex.wrapT = THREE.RepeatWrapping; waterTex.repeat.set(4, 14);
     this.waterMat.map = waterTex;
     this.water = plane(this.s, 'z3_water_surface', 8, 27, [0, 0.45, -6], this.waterMat, [-Math.PI / 2, 0, 0]);
+    const gc = document.createElement('canvas'); gc.width = gc.height = 256;
+    const gg = gc.getContext('2d')!;
+    gg.clearRect(0, 0, 256, 256);
+    for (let i = 0; i < 26; i++) {
+      const x = 20 + hash(i * 3 + 1) * 216, y = 18 + hash(i * 5 + 2) * 220;
+      const rx = 12 + hash(i + 4) * 32, ry = 2.5 + hash(i + 8) * 7;
+      const grad = gg.createRadialGradient(0, 0, 0, 0, 0, rx);
+      grad.addColorStop(0, `rgba(210,255,248,${0.12 + hash(i) * 0.16})`);
+      grad.addColorStop(0.55, 'rgba(130,230,225,0.055)');
+      grad.addColorStop(1, 'rgba(130,230,225,0)');
+      gg.fillStyle = grad;
+      gg.save(); gg.translate(x, y); gg.scale(1, ry / rx); gg.beginPath(); gg.arc(0, 0, rx, 0, Math.PI * 2); gg.fill(); gg.restore();
+    }
+    const glintTex = new THREE.CanvasTexture(gc); glintTex.wrapS = glintTex.wrapT = THREE.RepeatWrapping; glintTex.repeat.set(2.2, 7.5);
+    this.waterGlintMat = new THREE.MeshBasicMaterial({ map: glintTex, transparent: true, opacity: 0.34, depthWrite: false, blending: THREE.AdditiveBlending });
+    plane(this.s, 'z3_water_specular_patches', 8, 27, [0, 0.456, -6], this.waterGlintMat, [-Math.PI / 2, 0, 0]);
     // knee-deep pool cues: submerged entry steps, floor lane markings, depth tiles, caustic strips and floating equipment
     for (let st = 0; st < 3; st++) {
       box(this.s, `z3_submerged_step_${st}`, [7.6, 0.16, 0.55], [0, 0.28 - st * 0.18, 4.75 - st * 0.55], st % 2 ? tileA : tileB);
@@ -208,6 +225,10 @@ export default class ThresholdZ3Pool extends Scene {
     this.cloneProp(this.propPack, 'rescue_ring_root', [3.5, 0.5, -6.5], 0, 1, 'z3_rescue_ring_asset');
     this.cloneProp(this.propPack, 'pool_noodle_root', [2.4, 0.48, -5.2], 0.5, 1, 'z3_noodle_asset');
     this.cloneProp(this.propPack, 'pool_drain_root', [2.8, -0.1, -12], 0, 1, 'z3_drain_asset');
+    this.cloneProp(this.propPack, 'folded_towel_root', [-3.55, 0.48, -1.45], 0.2, 1, 'z3_towel_asset');
+    this.cloneProp(this.propPack, 'handless_clock_root', [0, 3.45, -21.9], 0, 1, 'z3_clock_asset');
+    this.cloneProp(this.propPack, 'flipflops_root', [2.2, 0.02, 4.3], -0.35, 1, 'z3_flipflops_asset');
+    for (let i = 0; i < 3; i++) this.cloneProp(this.propPack, 'shower_head_root', [-3.92, 2.1, -13.5 - i * 1.4], Math.PI / 2, 1, `z3_shower_asset_${i}`);
 
     // phone floating with eye sticker/antenna
     this.phone = new THREE.Group(); this.phone.position.set(3, 0.5, -2);
@@ -275,6 +296,7 @@ export default class ThresholdZ3Pool extends Scene {
     // deterministic surface shimmer and drifting floaters
     this.water.position.y = 0.45 + Math.sin(t * 1.8) * 0.002;
     if (this.waterMat.map) { this.waterMat.map.offset.set((t * 0.012) % 1, (t * 0.018) % 1); }
+    if (this.waterGlintMat.map) { this.waterGlintMat.map.offset.set((t * 0.006) % 1, (t * 0.010) % 1); this.waterGlintMat.opacity = (0.25 + Math.sin(t * 0.9) * 0.05) * (1 - smooth(79.15, 80, t)); }
     this.waterMat.emissiveIntensity = 0.18 + Math.sin(t * 2.4) * 0.025;
     this.surfaceLeaves.forEach((l, i) => {
       const bp = l.userData.basePos as THREE.Vector3;
