@@ -199,7 +199,8 @@ export default class ThresholdZ7Cathedral extends Scene {
   private riftEdges: THREE.Mesh[] = [];
   private shaftLights: THREE.MeshBasicMaterial[] = [];
   private fallDebris: { mesh: THREE.Mesh; seed: number; baseY: number }[] = [];
-  private shaftMachines: { group: THREE.Group; seed: number; baseY: number; baseZ: number; baseX: number; speed: number }[] = [];
+  private shaftMachines: { group: THREE.Group; seed: number; baseY: number; baseZ: number; baseX: number; speed: number; orient: number }[] = [];
+  private shaftCamLight?: THREE.PointLight;
   private topplingMachines: { group: THREE.Group; seed: number; start: number }[] = [];
   private z7DetailObjects: THREE.Object3D[] = [];
   private disposables: { dispose(): void }[] = [];
@@ -632,7 +633,7 @@ export default class ThresholdZ7Cathedral extends Scene {
       this.disposables.push(lm);
       this.shaftLights.push(lm);
       const side = i % 2 ? -1 : 1;
-      this.box(this.s, [0.06, 1.4 + hash(i) * 2.5, 0.18], [side * (4 + hash(i * 2) * 6), -2 - i * 0.62, -98 - hash(i * 3) * 9], lm);
+      this.box(this.s, [0.032, 0.7 + hash(i) * 1.35, 0.12], [side * (4.6 + hash(i * 2) * 6.4), -2 - i * 0.62, -98 - hash(i * 3) * 9], lm);
     }
     for (let i = 0; i < 18; i++) {
       const side = i % 2 ? -1 : 1;
@@ -648,67 +649,129 @@ export default class ThresholdZ7Cathedral extends Scene {
     // Specific falling machines, not abstract debris: cabinet carcasses with glowing
     // marquees, edge rails, glass fronts and product rows. They are staged along the
     // camera's falling path so several pass close enough to identify in one frame.
-    const shaftGlassMat = new THREE.MeshBasicMaterial({ color: 0x79cfff, transparent: true, opacity: 0.74 });
-    const shaftWarmMat = new THREE.MeshBasicMaterial({ color: 0xffb45e });
+    const shaftGlassMat = new THREE.MeshPhysicalMaterial({ color: 0x9fdcff, roughness: 0.12, metalness: 0.04, transparent: true, opacity: 0.24, depthWrite: false, emissive: 0x0a3148, emissiveIntensity: 0.3, side: THREE.DoubleSide });
+    const shaftWarmMat = this.mat(0x9a5a2d, 0.58, 0.05, 0x3a1605, 0.26);
     const shaftEdgeMat = new THREE.MeshBasicMaterial({ color: 0xc8f2ff });
     const shaftDarkMat = this.mat(0x071018, 0.48, 0.62, 0x02070c, 0.18);
-    const shaftProductMats = [productRed, productTeal, paper, chrome];
-    this.disposables.push(shaftGlassMat, shaftWarmMat, shaftEdgeMat);
-    for (let i = 0; i < 16; i++) {
+    const shaftSideMat = this.mat(0x111923, 0.5, 0.58, 0x010305, 0.08);
+    const shaftTopMat = this.mat(0x1a252e, 0.43, 0.62, 0x020507, 0.1);
+    const shaftInnerMat = this.mat(0x020509, 0.72, 0.2);
+    const shaftWearMat = this.mat(0xb69b69, 0.86, 0.02, 0x160c04, 0.08);
+    const shaftProductMats = [
+      this.mat(0x9a3327, 0.38, 0.04, 0x330907, 0.34),
+      this.mat(0x287d82, 0.34, 0.05, 0x083236, 0.36),
+      this.mat(0xc0a36a, 0.56, 0.02, 0x30200a, 0.3),
+      this.mat(0x7d98a2, 0.3, 0.28, 0x17262c, 0.3),
+    ];
+    this.disposables.push(shaftGlassMat, shaftEdgeMat);
+    // Light the shaft volumetrically. Cabinet faces now shade by orientation instead
+    // of reading as uniform emissive printed cards.
+    for (let li = 0; li < 7; li++) {
+      const shaftPoint = new THREE.PointLight(li % 2 ? 0x8fd7ff : 0xffb06a, li % 2 ? 24 : 12, 11.5, 1.15);
+      shaftPoint.position.set((li % 2 ? -1 : 1) * (1.7 + hash(li * 3) * 1.2), -3.8 - li * 4.3, -95.5 - (li % 3) * 3.2);
+      this.s.add(shaftPoint);
+      this.z7DetailObjects.push(shaftPoint);
+    }
+    this.shaftCamLight = new THREE.PointLight(0x9fdcff, 34, 7.5, 1.18);
+    this.shaftCamLight.visible = false;
+    this.s.add(this.shaftCamLight);
+    this.z7DetailObjects.push(this.shaftCamLight);
+    for (let i = 0; i < 38; i++) {
       const seed = hash(i * 17.31 + 4.2);
       const side = i % 2 ? -1 : 1;
       const g = new THREE.Group();
       // Stage each cabinet along the camera's actual forward ray at a staggered target
       // time. This is image-first blocking: even while the camera rolls, successive machines
       // pass through the viewed volume instead of merely existing somewhere in the shaft.
-      const targetT = 186.32 + i * 0.43;
+      const targetT = 186.22 + i * 0.205;
       const pose = z7PoseAt(targetT);
-      const ahead = 3.4 + hash(i * 5.9) * 2.6;
+      const lane = i % 3;
+      const ahead = lane === 0 ? 2.05 + hash(i * 5.9) * 1.15 : lane === 1 ? 4.0 + hash(i * 5.9) * 2.2 : 6.6 + hash(i * 5.9) * 3.4;
       const speed = 0.62 + seed * 0.74;
-      const targetY = pose.pos[1] + pose.forward[1] * ahead + (hash(i * 11.3) - 0.5) * 1.15;
+      const targetY = pose.pos[1] + pose.forward[1] * ahead + (hash(i * 11.3) - 0.5) * (lane === 0 ? 0.75 : 1.35);
       const targetZ = pose.pos[2] + pose.forward[2] * ahead + (hash(i * 13.7) - 0.5) * 0.75;
       const baseY = targetY + (targetT - 186) * speed;
       const baseZ = targetZ;
-      const baseX = side * (0.62 + hash(i * 3.7) * 1.65);
+      const baseX = side * (lane === 0 ? 0.95 + hash(i * 3.7) * 0.85 : lane === 1 ? 1.35 + hash(i * 3.7) * 1.55 : 2.0 + hash(i * 3.7) * 2.4);
+      const orient = lane === 0 ? 0.18 + seed * 0.32 : 0.55 + seed * 1.05;
       g.position.set(baseX, baseY, baseZ);
-      g.rotation.set(seed * 1.2, side * (0.35 + seed * 0.4), (seed - 0.5) * 0.7);
-      this.box(g, [1.18, 2.28, 0.88], [0, 0, 0], shaftDarkMat);
+      g.rotation.set(seed * 2.4, side * orient, (seed - 0.5) * 1.5);
+      g.scale.setScalar(lane === 0 ? 1.18 + seed * 0.18 : lane === 1 ? 0.92 + seed * 0.16 : 0.72 + seed * 0.14);
+      // Hollow manufactured carcass: separate side/top/bottom panels and a central
+      // backing plate give real thickness during tumbling instead of a solid black slab.
+      this.box(g, [0.12, 2.16, 0.88], [-0.53, 0, 0], shaftSideMat);
+      this.box(g, [0.12, 2.16, 0.88], [0.53, 0, 0], shaftSideMat);
+      this.box(g, [1.18, 0.13, 0.88], [0, 1.075, 0], shaftTopMat);
+      this.box(g, [1.18, 0.13, 0.88], [0, -1.075, 0], shaftTopMat);
+      this.box(g, [1.02, 2.0, 0.07], [0, 0, 0], shaftInnerMat);
       // Front face in local +Z: bright rim first, then recessed glass and product rows.
       this.box(g, [0.9, 1.34, 0.045], [0, 0.08, 0.435], shaftGlassMat);
-      this.box(g, [1.02, 0.22, 0.06], [0, 0.98, 0.455], i % 3 ? shaftGlassMat : shaftWarmMat);
+      this.box(g, [1.02, 0.16, 0.06], [0, 0.98, 0.455], i % 5 === 0 ? shaftWarmMat : shaftGlassMat);
       for (const x of [-0.52, 0.52]) this.box(g, [0.035, 2.08, 0.055], [x, 0, 0.45], shaftEdgeMat);
       for (const y of [-1.02, 1.08]) this.box(g, [1.05, 0.035, 0.055], [0, y, 0.45], shaftEdgeMat);
+      // Luminous corner rails on both front and back make the cabinet body countable
+      // even when rotation shows rear/side rather than the product face.
+      for (const x of [-0.56, 0.56]) {
+        for (const z of [-0.43, 0.43]) this.box(g, [0.018, 2.16, 0.018], [x, 0, z], shaftEdgeMat);
+      }
+      for (const z of [-0.43, 0.43]) {
+        for (const y of [-1.08, 1.08]) this.box(g, [1.1, 0.018, 0.018], [0, y, z], shaftEdgeMat);
+      }
       for (let shelf = 0; shelf < 4; shelf++) {
-        this.box(g, [0.78, 0.025, 0.055], [0, -0.45 + shelf * 0.3, 0.47], chrome);
+        this.box(g, [0.78, 0.025, 0.055], [0, -0.45 + shelf * 0.3, 0.29], chrome);
         for (let col = 0; col < 4; col++) {
           if (hash(i * 31 + shelf * 7 + col) < 0.18) continue;
           const pm = shaftProductMats[(i + shelf + col) % shaftProductMats.length]!;
-          this.box(g, [0.105, 0.13, 0.055], [-0.29 + col * 0.19, -0.37 + shelf * 0.3, 0.49], pm);
+          this.box(g, [0.105, 0.13, 0.055], [-0.29 + col * 0.19, -0.37 + shelf * 0.3, 0.34], pm);
+        }
+      }
+      // Rear-facing simplified face: in the chaos of the fall the viewer often sees the
+      // back first. Cabinets remain identifiable instead of becoming blank black slabs.
+      this.box(g, [0.9, 1.34, 0.045], [0, 0.08, -0.435], shaftGlassMat);
+      this.box(g, [1.02, 0.16, 0.06], [0, 0.98, -0.455], i % 5 === 0 ? shaftWarmMat : shaftGlassMat);
+      for (let shelf = 0; shelf < 4; shelf++) {
+        this.box(g, [0.78, 0.025, 0.055], [0, -0.45 + shelf * 0.3, -0.29], chrome);
+        for (let col = 0; col < 4; col++) {
+          if (hash(i * 41 + shelf * 7 + col) < 0.18) continue;
+          const pm = shaftProductMats[(i + shelf + col + 1) % shaftProductMats.length]!;
+          this.box(g, [0.105, 0.13, 0.055], [-0.29 + col * 0.19, -0.37 + shelf * 0.3, -0.34], pm);
         }
       }
       this.box(g, [0.32, 0.42, 0.065], [0.28, -0.82, 0.48], darkMetal);
       this.box(g, [0.18, 0.06, 0.07], [0.28, -0.63, 0.49], shaftWarmMat);
+      // Wear and manufactured panel breaks: small tape/scuff pieces and side seams keep
+      // near cabinets from reading as pristine printed packaging.
+      for (let w = 0; w < 3; w++) {
+        const wx = (hash(i * 19 + w) - 0.5) * 0.72;
+        const wy = -0.72 + w * 0.58 + (hash(i * 23 + w) - 0.5) * 0.16;
+        const wz = (w % 2 ? -1 : 1) * 0.472;
+        this.box(g, [0.12 + hash(i * 29 + w) * 0.14, 0.018 + hash(i * 31 + w) * 0.028, 0.012], [wx, wy, wz], shaftWearMat, [0, 0, (hash(i * 37 + w) - 0.5) * 0.45]);
+      }
+      for (const x of [-0.596, 0.596]) {
+        for (const yy of [-0.55, 0.42]) this.box(g, [0.012, 0.018, 0.58], [x, yy, 0], chrome);
+        this.box(g, [0.014, 0.42, 0.018], [x, -0.1, 0.24], chrome);
+      }
       // A few side rails keep the object readable as a manufactured cabinet even when
       // the tumble shows a side or three-quarter rather than the lit front.
-      for (const x of [-0.56, 0.56]) this.box(g, [0.045, 1.88, 0.72], [x, 0, 0], chrome);
+      for (const x of [-0.56, 0.56]) this.box(g, [0.045, 1.88, 0.72], [x, 0, 0], shaftSideMat);
       g.visible = false;
       this.s.add(g);
       this.z7DetailObjects.push(g);
-      this.shaftMachines.push({ group: g, seed, baseY, baseZ, baseX, speed });
+      this.shaftMachines.push({ group: g, seed, baseY, baseZ, baseX, speed, orient });
     }
 
     // Falling environmental consequence: product cans, cartons, glass shards and small
     // machine fragments tumble in the shaft with the viewer instead of the fall reading as empty void.
     const debrisMats = [productRed, productTeal, paper, chrome, this.mat(0x6db7d8, 0.22, 0.08, 0x1b4c68, 0.5)];
-    for (let i = 0; i < 42; i++) {
+    for (let i = 0; i < 58; i++) {
       const seed = hash(i * 12.73);
       const mat = debrisMats[i % debrisMats.length]!;
       const x = (hash(i * 3.1) - 0.5) * 3.6;
       const y = -2.5 - hash(i * 5.7) * 26.0;
       const z = -95.5 - hash(i * 7.9) * 9.0;
       const mesh = i % 5 === 0
-        ? this.cyl(this.s, 0.045, 0.045, 0.14, [x, y, z], mat, 10)
-        : this.box(this.s, [0.09 + seed * 0.12, 0.025 + hash(i) * 0.06, 0.12 + hash(i * 2) * 0.16], [x, y, z], mat, [hash(i) * 2, hash(i * 4) * 2, hash(i * 6) * 2]);
+        ? this.cyl(this.s, 0.055, 0.055, 0.18, [x, y, z], mat, 10)
+        : this.box(this.s, [0.12 + seed * 0.15, 0.035 + hash(i) * 0.075, 0.15 + hash(i * 2) * 0.19], [x, y, z], mat, [hash(i) * 2, hash(i * 4) * 2, hash(i * 6) * 2]);
       mesh.visible = false;
       this.fallDebris.push({ mesh, seed, baseY: y });
     }
@@ -1332,16 +1395,25 @@ export default class ThresholdZ7Cathedral extends Scene {
         m.baseZ + Math.sin((t - 186) * 0.21 + m.seed * 5) * 0.18,
       );
       m.group.rotation.set(
-        m.seed * 1.2 + shaftFallT * (0.28 + m.seed * 0.34),
-        Math.sign(m.baseX || 1) * (0.35 + m.seed * 0.4) + shaftFallT * (0.2 + m.seed * 0.28),
-        (m.seed - 0.5) * 0.7 + shaftFallT * (0.34 + m.seed * 0.24),
+        m.seed * 2.4 + shaftFallT * (0.42 + m.seed * 0.58),
+        Math.sign(m.baseX || 1) * m.orient + shaftFallT * (0.31 + m.seed * 0.44),
+        (m.seed - 0.5) * 1.5 + shaftFallT * (0.43 + m.seed * 0.38),
       );
+    }
+
+    if (this.shaftCamLight) {
+      const shaftActive = t >= 185.8 && t < 193.8;
+      this.shaftCamLight.visible = shaftActive;
+      if (shaftActive) {
+        this.shaftCamLight.position.copy(this.cam.position);
+        this.shaftCamLight.position.y -= 0.25;
+      }
     }
 
     // Falling streaks slide upward past the camera as a pure function of time.
     this.shaftLights.forEach((m, i) => {
       const fall = t >= 186 && t < 192 ? (t - 186) * 4 : 0;
-      m.opacity = 0.25 + 0.35 * hash(i + Math.floor((t + fall) * 5));
+      m.opacity = 0.055 + 0.13 * hash(i + Math.floor((t + fall) * 5));
     });
 
     const replayLocal = t - REPLAY_T_OFFSET;
