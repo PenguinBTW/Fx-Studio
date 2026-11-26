@@ -2,6 +2,9 @@
 // Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
 import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
+import { evalFirstPerson, applyFirstPersonCamera, type FPKey, type GaitName } from './fp_cam';
+import { FlashlightRig, beamStateAt } from './flashlight';
+import { thresholdPost } from './sensor_post';
 
 const clamp = (x: number, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -26,33 +29,30 @@ const KEYS: PoseKey[] = [
   { t: 130.6, p: [2.05, 1.35, -17.2], yaw: -80, pitch: 0, fov: 66 },
 ];
 
-function poseAt(t: number) {
-  let i = 0;
-  while (i < KEYS.length - 2 && t >= KEYS[i + 1]!.t) i++;
-  const a = KEYS[i]!, b = KEYS[i + 1]!;
-  const u = smooth((t - a.t) / (b.t - a.t));
-  let dyaw = b.yaw - a.yaw;
-  if (dyaw > 180) dyaw -= 360;
-  if (dyaw < -180) dyaw += 360;
-  return {
-    p: [lerp(a.p[0], b.p[0], u), lerp(a.p[1], b.p[1], u), lerp(a.p[2], b.p[2], u)] as [number, number, number],
-    yaw: a.yaw + dyaw * u,
-    pitch: lerp(a.pitch, b.pitch, u),
-    fov: lerp(a.fov, b.fov, u),
-  };
+const FP_KEYS: FPKey[] = KEYS.map((k) => ({
+  t: k.t,
+  pos: k.p,
+  yaw: k.yaw * Math.PI / 180,
+  pitch: k.pitch * Math.PI / 180,
+  roll: ((k as { roll?: number }).roll ?? 0) * Math.PI / 180,
+  fov: k.fov,
+}));
+
+function poseAt(t: number, gait?: GaitName) {
+  return evalFirstPerson(FP_KEYS, clamp(t, FP_KEYS[0]!.t, FP_KEYS[FP_KEYS.length - 1]!.t), gait);
 }
 
-function lookDir(yawDeg: number, pitchDeg: number) {
-  const y = yawDeg * Math.PI / 180, p = pitchDeg * Math.PI / 180;
-  return new THREE.Vector3(Math.sin(y) * Math.cos(p), Math.sin(p), -Math.cos(y) * Math.cos(p));
+function z5Gait(t: number): GaitName {
+  if (t >= 121.3 && t < 122.5) return 'run';
+  if ((t >= 105 && t < 114.5) || (t >= 120.6 && t < 122.4)) return 'walk';
+  if (t >= 122.4 && t < 130) return 'holdBreath';
+  return 'still';
 }
 
 export default class ThresholdZ5Motel extends Scene {
   private s = new THREE.Scene();
   private cam = new THREE.PerspectiveCamera(72, 16 / 9, 0.05, 90);
-  private flash = new THREE.SpotLight(0xffc98a, 3.5, 24, 22 * Math.PI / 180, 0.55, 1.4);
-  private flashTarget = new THREE.Object3D();
-  private beamCone!: THREE.Mesh;
+  private flash = new FlashlightRig();
   private tenant = new THREE.Group();
   private lint = new THREE.Group();
   private tvScreens: THREE.MeshStandardMaterial[] = [];
@@ -243,63 +243,24 @@ export default class ThresholdZ5Motel extends Scene {
     this.tenant.visible = false;
     this.s.add(this.tenant);
 
-    // Flashlight and its faint visible cone.
-    this.flash.castShadow = false;
-    this.flash.target = this.flashTarget;
-    this.s.add(this.flash, this.flashTarget);
-    const coneGeo = new THREE.ConeGeometry(1, 7, 32, 1, true);
-    const coneMat = new THREE.MeshBasicMaterial({ color: 0xffc98a, transparent: true, opacity: 0.055, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
-    this.beamCone = new THREE.Mesh(coneGeo, coneMat);
-    this.disposables.push(coneGeo, coneMat);
-    this.s.add(this.beamCone);
+    this.s.add(this.flash.group);
 
     const ambient = new THREE.AmbientLight(0x273040, 0.42);
     this.s.add(ambient);
   }
 
-  private gaitOffset(t: number): [number, number, number] {
-    let rate = 0, amp = 0;
-    if ((t >= 105 && t < 114.5) || (t >= 120.6 && t < 122.4)) { rate = 1.9; amp = 0.022; }
-    if (t >= 121.3 && t < 122.5) { rate = 3.0; amp = 0.045; }
-    if (!rate) return [0.003 * Math.sin(t * 1.57), 0.006 * Math.sin(t * 1.57), 0];
-    const ph = t * rate * Math.PI * 2;
-    return [Math.sin(ph) * amp, Math.abs(Math.sin(ph)) * amp, Math.sin(ph * 0.5) * amp * 0.35];
-  }
-
-  private flicker(t: number) {
-    const inFlicker = (t >= 114.2 && t < 124.0) || (t >= 206 && t < 218);
-    if (!inFlicker) return 1;
-    const step = Math.floor(t * 13);
-    return hash(step) < 0.34 ? 0.25 + 0.35 * hash(step + 4) : 0.82 + 0.18 * hash(step + 9);
-  }
-
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
     const t = f.t;
-    const pose = poseAt(t);
-    const bob = this.gaitOffset(t);
-    this.cam.position.set(pose.p[0] + bob[0], pose.p[1] + bob[1], pose.p[2] + bob[2]);
-    const dir = lookDir(pose.yaw, pose.pitch);
-    const target = this.cam.position.clone().add(dir.multiplyScalar(5));
-    this.cam.fov = pose.fov;
-    this.cam.aspect = out.width / out.height;
-    this.cam.updateProjectionMatrix();
-    this.cam.lookAt(target);
+    const pose = poseAt(t, z5Gait(t));
+    applyFirstPersonCamera(this.cam, pose, out.width / out.height);
+    const dir = new THREE.Vector3(...pose.forward);
 
-    // Beam state: 50% battery in Z5, hard off while hiding, lagged 80 ms behind the head.
+    // Shared beam adapter: global battery/flicker plus the Z5 hiding blackout.
     const beamOn = t < 124.0 || t >= 130.0;
-    const lag = poseAt(Math.max(104.7, t - 0.08));
-    const lagDir = lookDir(lag.yaw, lag.pitch);
-    const right = new THREE.Vector3(Math.cos(lag.yaw * Math.PI / 180), 0, Math.sin(lag.yaw * Math.PI / 180));
-    const lp = new THREE.Vector3(...lag.p).add(right.multiplyScalar(0.25)).add(new THREE.Vector3(0, -0.2, 0)).add(lagDir.clone().multiplyScalar(0.1));
-    const lt = lp.clone().add(lagDir.clone().multiplyScalar(7));
-    this.flash.position.copy(lp);
-    this.flashTarget.position.copy(lt);
-    this.flash.intensity = beamOn ? 4.8 * 0.5 * this.flicker(t) : 0;
-    const coneMat = this.beamCone.material as THREE.MeshBasicMaterial;
-    coneMat.opacity = 0;
-    this.beamCone.position.copy(lp.clone().lerp(lt, 0.5));
-    this.beamCone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), lagDir.clone().negate().normalize());
-    this.beamCone.scale.set(1, 1, 1);
+    const threat = t >= 114.2 && t < 124.0 ? 0.95 : 0.2;
+    const baseBeam = beamStateAt(t, threat);
+    const beam = { ...baseBeam, intensity: beamOn ? baseBeam.intensity : 0, dead: !beamOn || baseBeam.dead };
+    this.flash.update(pose, t, beam, (time) => poseAt(time, z5Gait(time)).forward);
 
     // Tenant partial reveal and head-tilt tell.
     this.tenant.visible = t >= 120.45 && t < 121.65;
@@ -335,10 +296,11 @@ export default class ThresholdZ5Motel extends Scene {
     rr.render(this.s, this.cam);
     rr.resetState();
 
-    return { exposure: 1.14, bloom: 0.22, bloomThreshold: 0.9, vignette: 0.28, grain: 0.035, ca: 0.08 };
+    return thresholdPost(t, { exposure: 1.14, darkness: 0.82, stress: threat * 0.55 });
   }
 
   override dispose() {
+    this.flash.dispose();
     for (const d of this.disposables) d.dispose();
   }
 }

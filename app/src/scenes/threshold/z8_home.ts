@@ -2,6 +2,9 @@
 // Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
 import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
+import { evalFirstPerson, applyFirstPersonCamera, type FPKey, type GaitName } from './fp_cam';
+import { FlashlightRig, beamStateAt } from './flashlight';
+import { thresholdPost } from './sensor_post';
 
 const clamp = (x: number, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -28,30 +31,27 @@ const KEYS: PoseKey[] = [
   { t: 225.6, p: [4.6, 1.65, -6.8], yaw: 90, pitch: 0, fov: 74 },
 ];
 
-function poseAt(t: number) {
-  let i = 0;
-  while (i < KEYS.length - 2 && t >= KEYS[i + 1]!.t) i++;
-  const a = KEYS[i]!, b = KEYS[i + 1]!;
-  const u = smooth((t - a.t) / (b.t - a.t));
-  return {
-    p: [lerp(a.p[0], b.p[0], u), lerp(a.p[1], b.p[1], u), lerp(a.p[2], b.p[2], u)] as [number, number, number],
-    yaw: lerp(a.yaw, b.yaw, u),
-    pitch: lerp(a.pitch, b.pitch, u),
-    fov: lerp(a.fov, b.fov, u),
-  };
+const FP_KEYS: FPKey[] = KEYS.map((k) => ({
+  t: k.t,
+  pos: k.p,
+  yaw: k.yaw * Math.PI / 180,
+  pitch: k.pitch * Math.PI / 180,
+  roll: ((k as { roll?: number }).roll ?? 0) * Math.PI / 180,
+  fov: k.fov,
+}));
+
+function poseAt(t: number, gait?: GaitName) {
+  return evalFirstPerson(FP_KEYS, clamp(t, FP_KEYS[0]!.t, FP_KEYS[FP_KEYS.length - 1]!.t), gait);
 }
 
-function lookDir(yawDeg: number, pitchDeg: number) {
-  const y = yawDeg * Math.PI / 180, p = pitchDeg * Math.PI / 180;
-  return new THREE.Vector3(Math.sin(y) * Math.cos(p), Math.sin(p), -Math.cos(y) * Math.cos(p));
+function z8Gait(t: number): GaitName {
+  return (t >= 199 && t < 210) || t >= 222 ? 'walk' : 'still';
 }
 
 export default class ThresholdZ8Home extends Scene {
   private s = new THREE.Scene();
   private cam = new THREE.PerspectiveCamera(72, 16 / 9, 0.04, 80);
-  private flash = new THREE.SpotLight(0xffc98a, 0.75, 15, 22 * Math.PI / 180, 0.6, 1.4);
-  private flashTarget = new THREE.Object3D();
-  private beamCone!: THREE.Mesh;
+  private flash = new FlashlightRig();
   private doorGroup = new THREE.Group();
   private handle!: THREE.Mesh;
   private receiver!: THREE.Mesh;
@@ -234,44 +234,18 @@ export default class ThresholdZ8Home extends Scene {
     this.box(this.s, [0.14, 0.1, 0.42], [7.15, 1.0, -6.8], beige);
     for (let i = 0; i < 4; i++) this.box(this.s, [0.08, 1.45, 1.1], [3.1 + i * 1.2, 0.73, -5.45], officeWall, [0, 0.12 * (i % 2 ? 1 : -1), 0]);
 
-    // Flashlight rig.
-    this.flash.castShadow = false;
-    this.flash.target = this.flashTarget;
-    this.s.add(this.flash, this.flashTarget);
-    const coneGeo = new THREE.ConeGeometry(1, 5, 32, 1, true);
-    const coneMat = new THREE.MeshBasicMaterial({ color: 0xffc98a, transparent: true, opacity: 0.018, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
-    this.beamCone = new THREE.Mesh(coneGeo, coneMat);
-    this.disposables.push(coneGeo, coneMat);
-    this.s.add(this.beamCone);
+    this.s.add(this.flash.group);
 
     const sun = new THREE.DirectionalLight(0xffb36b, 2.2);
     sun.position.set(-3.5, 4.2, -2.0);
     this.s.add(sun, new THREE.AmbientLight(0x604632, 0.36));
   }
 
-  private gait(t: number): [number, number, number] {
-    const walking = (t >= 199 && t < 210) || t >= 222;
-    if (!walking) return [0.003 * Math.sin(t * 1.57), 0.006 * Math.sin(t * 1.57), 0];
-    const ph = t * 1.65 * Math.PI * 2;
-    return [Math.sin(ph) * 0.012, Math.abs(Math.sin(ph)) * 0.018, 0];
-  }
-
-  private flicker(t: number) {
-    if (t < 206 || t >= 218) return 1;
-    const step = Math.floor(t * 8);
-    return hash(step) < 0.22 ? 0.55 + 0.2 * hash(step + 4) : 0.9 + 0.1 * hash(step + 9);
-  }
-
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
     const t = f.t;
-    const pose = poseAt(t);
-    const bob = this.gait(t);
-    this.cam.position.set(pose.p[0] + bob[0], pose.p[1] + bob[1], pose.p[2] + bob[2]);
-    const dir = lookDir(pose.yaw, pose.pitch);
-    this.cam.fov = pose.fov;
-    this.cam.aspect = out.width / out.height;
-    this.cam.updateProjectionMatrix();
-    this.cam.lookAt(this.cam.position.clone().add(dir.multiplyScalar(5)));
+    const pose = poseAt(t, z8Gait(t));
+    applyFirstPersonCamera(this.cam, pose, out.width / out.height);
+    const dir = new THREE.Vector3(...pose.forward);
 
     // Phone rings 206-214; receiver lifts by itself and swings on its cord.
     const ring = t >= 206 && t < 210 ? (Math.sin(t * Math.PI * 20) > 0 ? 1 : 0.72) : 1;
@@ -289,18 +263,9 @@ export default class ThresholdZ8Home extends Scene {
     this.lampGlow.emissiveIntensity = 2.2 + 0.15 * Math.sin(t * 2.1);
     this.officeTubeMats.forEach((m, i) => { m.emissiveIntensity = 1.1 + (i === 2 ? 0.5 * hash(Math.floor(t * 7) + i) : 0.12 * hash(Math.floor(t * 3) + i)); });
 
-    // Flashlight is weak in daylight but still present at 25%.
-    const lag = poseAt(Math.max(194.4, t - 0.08));
-    const lagDir = lookDir(lag.yaw, lag.pitch);
-    const right = new THREE.Vector3(Math.cos(lag.yaw * Math.PI / 180), 0, Math.sin(lag.yaw * Math.PI / 180));
-    const lp = new THREE.Vector3(...lag.p).add(right.multiplyScalar(0.25)).add(new THREE.Vector3(0, -0.2, 0)).add(lagDir.clone().multiplyScalar(0.1));
-    const lt = lp.clone().add(lagDir.clone().multiplyScalar(6));
-    this.flash.position.copy(lp);
-    this.flashTarget.position.copy(lt);
-    this.flash.intensity = 0.75 * 0.25 * this.flicker(t);
-    (this.beamCone.material as THREE.MeshBasicMaterial).opacity = 0;
-    this.beamCone.position.copy(lp.clone().lerp(lt, 0.5));
-    this.beamCone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), lagDir.clone().negate().normalize());
+    // Shared beam adapter: weak 25% battery in daylight, with the low-battery stutter.
+    const threat = t >= 206 && t < 218 ? 0.55 : 0.1;
+    this.flash.update(pose, t, beamStateAt(t, threat), (time) => poseAt(time, z8Gait(time)).forward);
 
     const rr = this.ctx.renderer;
     rr.setRenderTarget(out);
@@ -309,10 +274,11 @@ export default class ThresholdZ8Home extends Scene {
     rr.render(this.s, this.cam);
     rr.resetState();
 
-    return { exposure: 0.86, bloom: 0.18, bloomThreshold: 0.95, vignette: 0.24, grain: 0.032, ca: 0.06 };
+    return thresholdPost(t, { exposure: 0.86, darkness: 0.38, stress: threat * 0.25 });
   }
 
   override dispose() {
+    this.flash.dispose();
     for (const d of this.disposables) d.dispose();
   }
 }

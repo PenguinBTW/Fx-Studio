@@ -2,6 +2,9 @@
 // Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
 import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
+import { evalFirstPerson, applyFirstPersonCamera, type FPKey, type GaitName } from './fp_cam';
+import { FlashlightRig, beamStateAt } from './flashlight';
+import { thresholdPost } from './sensor_post';
 
 const clamp = (x: number, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -24,30 +27,27 @@ const KEYS: PoseKey[] = [
   { t: 150.5, p: [2.1, 1.62, -8.4], yaw: -16, pitch: 0, fov: 76 },
 ];
 
-function poseAt(t: number) {
-  let i = 0;
-  while (i < KEYS.length - 2 && t >= KEYS[i + 1]!.t) i++;
-  const a = KEYS[i]!, b = KEYS[i + 1]!;
-  const u = smooth((t - a.t) / (b.t - a.t));
-  return {
-    p: [lerp(a.p[0], b.p[0], u), lerp(a.p[1], b.p[1], u), lerp(a.p[2], b.p[2], u)] as [number, number, number],
-    yaw: lerp(a.yaw, b.yaw, u),
-    pitch: lerp(a.pitch, b.pitch, u),
-    fov: lerp(a.fov, b.fov, u),
-  };
+const FP_KEYS: FPKey[] = KEYS.map((k) => ({
+  t: k.t,
+  pos: k.p,
+  yaw: k.yaw * Math.PI / 180,
+  pitch: k.pitch * Math.PI / 180,
+  roll: ((k as { roll?: number }).roll ?? 0) * Math.PI / 180,
+  fov: k.fov,
+}));
+
+function poseAt(t: number, gait?: GaitName) {
+  return evalFirstPerson(FP_KEYS, clamp(t, FP_KEYS[0]!.t, FP_KEYS[FP_KEYS.length - 1]!.t), gait);
 }
 
-function lookDir(yawDeg: number, pitchDeg: number) {
-  const y = yawDeg * Math.PI / 180, p = pitchDeg * Math.PI / 180;
-  return new THREE.Vector3(Math.sin(y) * Math.cos(p), Math.sin(p), -Math.cos(y) * Math.cos(p));
+function z6Gait(t: number): GaitName {
+  return t >= 143.5 && t < 149.5 ? 'walk' : 'still';
 }
 
 export default class ThresholdZ6Theatre extends Scene {
   private s = new THREE.Scene();
   private cam = new THREE.PerspectiveCamera(68, 16 / 9, 0.04, 70);
-  private flash = new THREE.SpotLight(0xffc98a, 2.1, 18, 22 * Math.PI / 180, 0.6, 1.4);
-  private flashTarget = new THREE.Object3D();
-  private beamCone!: THREE.Mesh;
+  private flash = new FlashlightRig();
   private curtainL!: THREE.Mesh;
   private curtainR!: THREE.Mesh;
   private lint = new THREE.Group();
@@ -238,15 +238,7 @@ export default class ThresholdZ6Theatre extends Scene {
     this.s.add(spot, spot.target);
     this.s.add(new THREE.AmbientLight(0x3a2028, 0.68));
 
-    // Flashlight cone.
-    this.flash.castShadow = false;
-    this.flash.target = this.flashTarget;
-    this.s.add(this.flash, this.flashTarget);
-    const coneGeo = new THREE.ConeGeometry(1, 6, 32, 1, true);
-    const coneMat = new THREE.MeshBasicMaterial({ color: 0xffc98a, transparent: true, opacity: 0.035, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
-    this.beamCone = new THREE.Mesh(coneGeo, coneMat);
-    this.disposables.push(coneGeo, coneMat);
-    this.s.add(this.beamCone);
+    this.s.add(this.flash.group);
   }
 
   private lintPath(t: number): THREE.Vector3 {
@@ -263,29 +255,12 @@ export default class ThresholdZ6Theatre extends Scene {
     return pts[i]!.clone().lerp(pts[i + 1]!, u - i);
   }
 
-  private flicker(t: number) {
-    if (t < 139 || t >= 143.6) return 1;
-    const step = Math.floor(t * 11);
-    return hash(step) < 0.38 ? 0.3 + 0.35 * hash(step + 4) : 0.86 + 0.14 * hash(step + 9);
-  }
-
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
     const t = f.t;
     const st = stepped(t, 12);
-    const pose = poseAt(t);
-    const breath = t < 143.5 ? 0.006 * Math.sin(t * 1.57) : 0;
-    const walking = t >= 143.5 && t < 149.5;
-    const stepPh = t * 1.9 * Math.PI * 2;
-    this.cam.position.set(
-      pose.p[0] + (walking ? Math.sin(stepPh) * 0.014 : 0),
-      pose.p[1] + breath + (walking ? Math.abs(Math.sin(stepPh)) * 0.022 : 0),
-      pose.p[2],
-    );
-    const dir = lookDir(pose.yaw, pose.pitch);
-    this.cam.fov = pose.fov;
-    this.cam.aspect = out.width / out.height;
-    this.cam.updateProjectionMatrix();
-    this.cam.lookAt(this.cam.position.clone().add(dir.multiplyScalar(5)));
+    const pose = poseAt(t, z6Gait(t));
+    applyFirstPersonCamera(this.cam, pose, out.width / out.height);
+    const dir = new THREE.Vector3(...pose.forward);
 
     // Stop-motion curtain opening, with 1-2 mm animator jitter.
     const open = smooth((st - 130.0) / 3.0);
@@ -317,18 +292,9 @@ export default class ThresholdZ6Theatre extends Scene {
       this.lint.rotation.y = t < 143.5 ? 0.7 : -0.3 + 0.18 * Math.sin(st * 5);
     }
 
-    // Flashlight: 50%, deliberately flickering even though Lint is friendly.
-    const lag = poseAt(Math.max(129.5, t - 0.08));
-    const lagDir = lookDir(lag.yaw, lag.pitch);
-    const right = new THREE.Vector3(Math.cos(lag.yaw * Math.PI / 180), 0, Math.sin(lag.yaw * Math.PI / 180));
-    const lp = new THREE.Vector3(...lag.p).add(right.multiplyScalar(0.25)).add(new THREE.Vector3(0, -0.2, 0)).add(lagDir.clone().multiplyScalar(0.1));
-    const lt = lp.clone().add(lagDir.clone().multiplyScalar(6));
-    this.flash.position.copy(lp);
-    this.flashTarget.position.copy(lt);
-    this.flash.intensity = 2.1 * 0.5 * this.flicker(t);
-    (this.beamCone.material as THREE.MeshBasicMaterial).opacity = 0;
-    this.beamCone.position.copy(lp.clone().lerp(lt, 0.5));
-    this.beamCone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), lagDir.clone().negate().normalize());
+    // Shared beam adapter: 50% battery with the deliberate friendly-Lint flicker.
+    const threat = t >= 139 && t < 143.6 ? 0.75 : 0.15;
+    this.flash.update(pose, t, beamStateAt(t, threat), (time) => poseAt(time, z6Gait(time)).forward);
 
     // EXIT slit swells near the threshold.
     this.exitGlow.emissiveIntensity = 2.4 + 2.2 * smooth((t - 147) / 3);
@@ -340,10 +306,11 @@ export default class ThresholdZ6Theatre extends Scene {
     rr.render(this.s, this.cam);
     rr.resetState();
 
-    return { exposure: 1.2, bloom: 0.18, bloomThreshold: 0.95, vignette: 0.3, grain: 0.038, ca: 0.07 };
+    return thresholdPost(t, { exposure: 1.2, darkness: 0.68, stress: threat * 0.25 });
   }
 
   override dispose() {
+    this.flash.dispose();
     for (const d of this.disposables) d.dispose();
   }
 }

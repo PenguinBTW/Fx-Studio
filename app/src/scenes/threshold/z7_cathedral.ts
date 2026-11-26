@@ -2,6 +2,9 @@
 // Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
 import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
+import { evalFirstPerson, applyFirstPersonCamera, type FPKey, type GaitName } from './fp_cam';
+import { FlashlightRig, beamStateAt } from './flashlight';
+import { thresholdPost } from './sensor_post';
 
 const clamp = (x: number, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -30,31 +33,30 @@ const KEYS: PoseKey[] = [
   { t: 195.6, p: [0, -28.35, -101.5], yaw: 0, pitch: 0, roll: 360, fov: 76 },
 ];
 
-function poseAt(t: number) {
-  let i = 0;
-  while (i < KEYS.length - 2 && t >= KEYS[i + 1]!.t) i++;
-  const a = KEYS[i]!, b = KEYS[i + 1]!;
-  const u = smooth((t - a.t) / (b.t - a.t));
-  return {
-    p: [lerp(a.p[0], b.p[0], u), lerp(a.p[1], b.p[1], u), lerp(a.p[2], b.p[2], u)] as [number, number, number],
-    yaw: lerp(a.yaw, b.yaw, u),
-    pitch: lerp(a.pitch, b.pitch, u),
-    roll: lerp(a.roll, b.roll, u),
-    fov: lerp(a.fov, b.fov, u),
-  };
+const FP_KEYS: FPKey[] = KEYS.map((k) => ({
+  t: k.t,
+  pos: k.p,
+  yaw: k.yaw * Math.PI / 180,
+  pitch: k.pitch * Math.PI / 180,
+  roll: ((k as { roll?: number }).roll ?? 0) * Math.PI / 180,
+  fov: k.fov,
+}));
+
+function poseAt(t: number, gait?: GaitName) {
+  return evalFirstPerson(FP_KEYS, clamp(t, FP_KEYS[0]!.t, FP_KEYS[FP_KEYS.length - 1]!.t), gait);
 }
 
-function lookDir(yawDeg: number, pitchDeg: number) {
-  const y = yawDeg * Math.PI / 180, p = pitchDeg * Math.PI / 180;
-  return new THREE.Vector3(Math.sin(y) * Math.cos(p), Math.sin(p), -Math.cos(y) * Math.cos(p));
+function z7Gait(t: number): GaitName {
+  if ((t >= 168 && t < 172) || (t >= 176 && t < 186)) return 'run';
+  if (t >= 158 && t < 163) return 'walk';
+  if (t >= 173.35 && t < 174.55) return 'holdBreath';
+  return 'still';
 }
 
 export default class ThresholdZ7Cathedral extends Scene {
   private s = new THREE.Scene();
   private cam = new THREE.PerspectiveCamera(80, 16 / 9, 0.08, 280);
-  private flash = new THREE.SpotLight(0xffc98a, 1.6, 26, 22 * Math.PI / 180, 0.58, 1.35);
-  private flashTarget = new THREE.Object3D();
-  private beamCone!: THREE.Mesh;
+  private flash = new FlashlightRig();
   private machineBodies!: THREE.InstancedMesh;
   private machineFronts!: THREE.InstancedMesh;
   private machineData: { x: number; y: number; z: number; seed: number }[] = [];
@@ -314,34 +316,9 @@ export default class ThresholdZ7Cathedral extends Scene {
     this.lint.visible = false;
     this.s.add(this.lint);
 
-    // Flashlight and beam cone.
-    this.flash.castShadow = false;
-    this.flash.target = this.flashTarget;
-    this.s.add(this.flash, this.flashTarget);
-    const coneGeo = new THREE.ConeGeometry(1, 8, 32, 1, true);
-    const coneMat = new THREE.MeshBasicMaterial({ color: 0xffc98a, transparent: true, opacity: 0.025, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
-    this.beamCone = new THREE.Mesh(coneGeo, coneMat);
-    this.disposables.push(coneGeo, coneMat);
-    this.s.add(this.beamCone);
+    this.s.add(this.flash.group);
 
     this.s.add(new THREE.AmbientLight(0x152033, 0.18));
-  }
-
-  private flicker(t: number) {
-    const active = (t >= 163 && t < 173.4);
-    if (!active) return 1;
-    const step = Math.floor(t * 14);
-    return hash(step) < 0.42 ? 0.2 + 0.35 * hash(step + 4) : 0.82 + 0.18 * hash(step + 9);
-  }
-
-  private gait(t: number): [number, number, number] {
-    const running = (t >= 168 && t < 172) || (t >= 176 && t < 186);
-    const walking = t >= 158 && t < 163;
-    if (!running && !walking) return [0.003 * Math.sin(t * 1.57), 0.006 * Math.sin(t * 1.57), 0];
-    const rate = running ? 3 : 1.9;
-    const amp = running ? 0.045 : 0.02;
-    const ph = t * rate * Math.PI * 2;
-    return [Math.sin(ph) * amp * 0.6, Math.abs(Math.sin(ph)) * amp, Math.sin(ph * 0.5) * amp * 0.25];
   }
 
   private updateMachineWave(t: number, camZ: number) {
@@ -368,15 +345,9 @@ export default class ThresholdZ7Cathedral extends Scene {
 
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
     const t = f.t;
-    const pose = poseAt(t);
-    const bob = this.gait(t);
-    this.cam.position.set(pose.p[0] + bob[0], pose.p[1] + bob[1], pose.p[2] + bob[2]);
-    const dir = lookDir(pose.yaw, pose.pitch);
-    this.cam.fov = pose.fov;
-    this.cam.aspect = out.width / out.height;
-    this.cam.updateProjectionMatrix();
-    this.cam.lookAt(this.cam.position.clone().add(dir.clone().multiplyScalar(7)));
-    this.cam.rotateZ(pose.roll * Math.PI / 180);
+    const pose = poseAt(t, z7Gait(t));
+    applyFirstPersonCamera(this.cam, pose, out.width / out.height);
+    const dir = new THREE.Vector3(...pose.forward);
 
     // Machine wave and chase darkness are pure timeline functions.
     this.updateMachineWave(t, this.cam.position.z);
@@ -426,7 +397,6 @@ export default class ThresholdZ7Cathedral extends Scene {
       const lp = this.cam.position.clone().add(dir.clone().multiplyScalar(0.7)).add(new THREE.Vector3(0.08, -0.12, 0));
       this.lint.position.copy(lp);
       this.lint.scale.setScalar(1.55);
-      this.flash.position.copy(lp);
       const flap = Math.sign(Math.sin(t * Math.PI * 12)) * 0.42;
       this.lint.children[1]!.rotation.z = 0.35 + flap;
       this.lint.children[2]!.rotation.z = -0.35 - flap;
@@ -448,23 +418,12 @@ export default class ThresholdZ7Cathedral extends Scene {
       m.opacity = 0.25 + 0.35 * hash(i + Math.floor((t + fall) * 5));
     });
 
-    // Flashlight: 25%, dies at 173.4, returns warm at 40% after Lint.
+    // Shared beam adapter: global 25% battery, exact dead beat, then warm Lint relight.
     const dead = t >= 173.35 && t < 174.55;
-    const relit = t >= 174.55;
-    const lag = poseAt(Math.max(149.5, t - 0.08));
-    const lagDir = lookDir(lag.yaw, lag.pitch);
-    const right = new THREE.Vector3(Math.cos(lag.yaw * Math.PI / 180), 0, Math.sin(lag.yaw * Math.PI / 180));
-    const lp = new THREE.Vector3(...lag.p).add(right.multiplyScalar(0.25)).add(new THREE.Vector3(0, -0.2, 0)).add(lagDir.clone().multiplyScalar(0.1));
-    const lt = lp.clone().add(lagDir.clone().multiplyScalar(8));
-    this.flash.position.copy(lp);
-    this.flashTarget.position.copy(lt);
-    this.flash.color.setHex(relit ? 0xff9a42 : 0xffc98a);
-    this.flash.intensity = dead ? 0 : (relit ? 1.4 : 1.1) * this.flicker(t);
-    const cm = this.beamCone.material as THREE.MeshBasicMaterial;
-    cm.color.setHex(relit ? 0xff9a42 : 0xffc98a);
-    cm.opacity = 0;
-    this.beamCone.position.copy(lp.clone().lerp(lt, 0.5));
-    this.beamCone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), lagDir.clone().negate().normalize());
+    const threat = t >= 167 ? 0.9 : 0.35;
+    const baseBeam = beamStateAt(t, threat);
+    const beam = { ...baseBeam, intensity: dead ? 0 : baseBeam.intensity, dead: dead || baseBeam.dead };
+    this.flash.update(pose, t, beam, (time) => poseAt(time, z7Gait(time)).forward);
 
     const rr = this.ctx.renderer;
     rr.setRenderTarget(out);
@@ -473,10 +432,11 @@ export default class ThresholdZ7Cathedral extends Scene {
     rr.render(this.s, this.cam);
     rr.resetState();
 
-    return { exposure: dead ? 0.15 : 0.92, bloom: 0.28, bloomThreshold: 0.8, vignette: 0.32, grain: 0.035, ca: 0.1 };
+    return thresholdPost(t, { exposure: dead ? 0.2 : 0.92, darkness: 0.86, stress: threat * 0.65, fade: dead ? 0.55 : 0 });
   }
 
   override dispose() {
+    this.flash.dispose();
     for (const d of this.disposables) d.dispose();
     this.machineBodies?.dispose();
     this.machineFronts?.dispose();
