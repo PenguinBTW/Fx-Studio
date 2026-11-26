@@ -30,6 +30,35 @@ export function coldOpenPose(t: number): FPPose {
   return evalFirstPerson(fpKeys(), clamp(t, 0, 4), t < 2.15 ? 'run' : t < 3.3 ? 'still' : 'holdBreath');
 }
 
+export const COLD_OPEN_REPLAY = { z7Start: 171.3, z7BeamDead: 173.4, z7End: 174.0, z0Start: 1.2, z0End: 3.3 } as const;
+
+/** Pure reference pose for W3's exact Z7 replay; mirrors the hero arm placement used in Z0. */
+export function coldOpenArmReference(t: number, pose: FPPose) {
+  const local = clamp(t, 0, 4);
+  const reach = sm(2.4, 3.25, local);
+  const dist = lerp(5.8, 3.6, reach);
+  const right = 0.55;
+  const towardLen = Math.hypot(-pose.forward[0] + pose.right[0] * 0.85, -pose.forward[2] + pose.right[2] * 0.85) || 1;
+  return {
+    reach,
+    visible: local > 1.15 && local < 3.32,
+    position: [
+      pose.pos[0] + pose.forward[0] * dist + pose.right[0] * right,
+      pose.pos[1] + 0.02 + 0.62 * (1 - reach) + 0.34 * reach,
+      pose.pos[2] + pose.forward[2] * dist + pose.right[2] * right,
+    ] as [number, number, number],
+    towardCamera: [
+      (-pose.forward[0] + pose.right[0] * 0.85) / towardLen,
+      0,
+      (-pose.forward[2] + pose.right[2] * 0.85) / towardLen,
+    ] as [number, number, number],
+    rotateX: 0.1 * reach,
+    rotateY: -0.28 * reach,
+    rotateZ: 0.16 * reach,
+    scale: lerp(1.05, 1.85, reach),
+  };
+}
+
 function cylinderBetween(a: THREE.Vector3, b: THREE.Vector3, r: number, mat: THREE.Material): THREE.Mesh {
   const d = new THREE.Vector3().subVectors(b, a);
   const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r * 0.82, d.length(), 10, 1), mat);
@@ -204,24 +233,14 @@ export default class Z0ColdOpen extends Scene {
   }
 
   private poseArm(t: number, pose: FPPose) {
-    const reach = sm(2.4, 3.25, t);
-    const dist = lerp(5.8, 3.6, reach);
-    this.arm.position.set(
-      pose.pos[0] + pose.forward[0] * dist + pose.right[0] * 0.55,
-      pose.pos[1] + 0.02 + 0.62 * (1 - reach) + 0.34 * reach,
-      pose.pos[2] + pose.forward[2] * dist + pose.right[2] * 0.55,
-    );
-    const towardCamera = new THREE.Vector3(
-      -pose.forward[0] + pose.right[0] * 0.85,
-      0,
-      -pose.forward[2] + pose.right[2] * 0.85,
-    ).normalize();
-    this.arm.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, -1), towardCamera);
-    this.arm.rotateX(0.1 * reach);
-    this.arm.rotateY(-0.28 * reach);
-    this.arm.rotateZ(0.16 * reach);
-    this.arm.scale.setScalar(lerp(1.05, 1.85, reach));
-    this.arm.visible = t > 1.15 && t < 3.32;
+    const ref = coldOpenArmReference(t, pose);
+    this.arm.position.set(...ref.position);
+    this.arm.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, -1), new THREE.Vector3(...ref.towardCamera));
+    this.arm.rotateX(ref.rotateX);
+    this.arm.rotateY(ref.rotateY);
+    this.arm.rotateZ(ref.rotateZ);
+    this.arm.scale.setScalar(ref.scale);
+    this.arm.visible = ref.visible;
   }
 
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
