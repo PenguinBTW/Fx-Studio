@@ -24,7 +24,7 @@ const KEYS: PoseKey[] = [
   { t: 176.0, p: [0, 1.6, -35.8], yaw: 0, pitch: 0, roll: 0, fov: 86 },
   { t: 181.0, p: [0, 1.6, -63.0], yaw: 0, pitch: 0, roll: -2, fov: 88 },
   { t: 186.0, p: [0, 1.35, -89.0], yaw: 0, pitch: -8, roll: 0, fov: 92 },
-  { t: 189.0, p: [0, -11.5, -96.0], yaw: 0, pitch: 70, roll: 180, fov: 95 },
+  { t: 189.0, p: [0, -11.5, -96.0], yaw: 0, pitch: 38, roll: 180, fov: 95 },
   { t: 192.0, p: [0, -27.5, -101.0], yaw: 0, pitch: -65, roll: 360, fov: 95 },
   { t: 193.5, p: [0, -29.1, -101.5], yaw: 0, pitch: 8, roll: 360, fov: 82 },
   { t: 195.6, p: [0, -28.35, -101.5], yaw: 0, pitch: 0, roll: 360, fov: 76 },
@@ -59,6 +59,7 @@ export default class ThresholdZ7Cathedral extends Scene {
   private machineFronts!: THREE.InstancedMesh;
   private machineData: { x: number; y: number; z: number; seed: number }[] = [];
   private tenant = new THREE.Group();
+  private reachArm = new THREE.Group();
   private lint = new THREE.Group();
   private assembly: { mesh: THREE.Object3D; start: THREE.Vector3; end: THREE.Vector3; seed: number }[] = [];
   private rift!: THREE.Mesh;
@@ -147,6 +148,28 @@ export default class ThresholdZ7Cathedral extends Scene {
     this.s.add(this.tenant);
   }
 
+  private buildReachArm() {
+    const paper = this.mat(0xd8c69d, 0.82);
+    const chrome = this.mat(0x9aa0a3, 0.2, 0.82);
+    const red = this.mat(0xa82d27, 0.28);
+    const tile = this.mat(0xb9d9d7, 0.26);
+    // Overscaled grey-box reach: a patchwork upper arm extending toward the fallen camera.
+    for (let i = 0; i < 7; i++) {
+      const mat = [red, chrome, paper, tile][i % 4]!;
+      this.box(this.reachArm, [0.34 - i * 0.018, 0.28 - i * 0.012, 0.68], [0, 2.95 - i * 0.11, -0.35 - i * 0.58], mat, [0.06 * i, 0.03 * (i % 2 ? 1 : -1), 0.04 * i]);
+    }
+    for (let f = 0; f < 5; f++) {
+      const x = (f - 2) * 0.095;
+      this.box(this.reachArm, [0.055, 0.055, 0.78], [x, 2.18 - Math.abs(f - 2) * 0.025, -4.35 - 0.08 * Math.abs(f - 2)], f % 2 ? chrome : paper, [0.12 * (f - 2), 0.05 * (f - 2), 0]);
+      this.box(this.reachArm, [0.07, 0.04, 0.16], [x, 2.15 - Math.abs(f - 2) * 0.025, -4.78 - 0.08 * Math.abs(f - 2)], chrome, [0.3, 0, 0]);
+    }
+    const armLight = new THREE.PointLight(0xffc98a, 2.4, 7, 1.35);
+    armLight.position.set(0, 2.55, -3.0);
+    this.reachArm.add(armLight);
+    this.reachArm.visible = false;
+    this.s.add(this.reachArm);
+  }
+
   override init() {
     this.s.background = new THREE.Color(0x020407);
     this.s.fog = new THREE.FogExp2(0x020407, 0.012);
@@ -233,6 +256,7 @@ export default class ThresholdZ7Cathedral extends Scene {
       piece.visible = false;
     }
     this.buildTenant();
+    this.buildReachArm();
 
     // Central floor rift, initially hairline and invisible, then widening.
     const riftMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
@@ -254,6 +278,17 @@ export default class ThresholdZ7Cathedral extends Scene {
       const side = i % 2 ? -1 : 1;
       this.box(this.s, [0.06, 1.4 + hash(i) * 2.5, 0.18], [side * (4 + hash(i * 2) * 6), -2 - i * 0.62, -98 - hash(i * 3) * 9], lm);
     }
+    for (let i = 0; i < 18; i++) {
+      const side = i % 2 ? -1 : 1;
+      const y = -4.0 - i * 1.45;
+      const z = -96.5 - (i % 5) * 2.2;
+      const x = side * (3.7 + hash(i * 4) * 2.3);
+      this.box(this.s, [1.15, 1.8, 0.82], [x, y, z], darkMetal, [0.08 * hash(i), 0.15 * side, 0.05 * side]);
+      const fm = new THREE.MeshBasicMaterial({ color: i % 3 ? 0x5aa8ff : 0xbfe8ff });
+      this.disposables.push(fm);
+      this.box(this.s, [0.9, 1.15, 0.045], [x - side * 0.43, y + 0.05, z], fm, [0.08 * hash(i), 0.15 * side, 0.05 * side]);
+    }
+
     const warmGlow = this.mat(0xffbd65, 0.6, 0, 0xff9b38, 2.8);
     this.box(this.s, [7.5, 0.08, 7.5], [0, -30.05, -101.5], warmGlow);
     this.box(this.s, [5.5, 0.025, 5.5], [0, -29.98, -101.5], this.mat(0x8a5b35, 0.7));
@@ -271,7 +306,7 @@ export default class ThresholdZ7Cathedral extends Scene {
     // Lint with warm relight glow.
     const lintBody = this.mat(0x704222, 0.98);
     const lintWing = this.mat(0x9a6035, 0.98);
-    const glow = this.mat(0xff8c2a, 0.5, 0, 0xff7418, 6.0);
+    const glow = this.mat(0xff8c2a, 0.5, 0, 0xff7418, 2.8);
     this.cyl(this.lint, 0.032, 0.045, 0.14, [0, 0, 0], lintBody, 10).rotation.x = Math.PI / 2;
     this.box(this.lint, [0.17, 0.02, 0.09], [-0.085, 0, 0.005], lintWing, [0, 0, 0.35]);
     this.box(this.lint, [0.17, 0.02, 0.09], [0.085, 0, 0.005], lintWing, [0, 0, -0.35]);
@@ -340,7 +375,7 @@ export default class ThresholdZ7Cathedral extends Scene {
     this.cam.fov = pose.fov;
     this.cam.aspect = out.width / out.height;
     this.cam.updateProjectionMatrix();
-    this.cam.lookAt(this.cam.position.clone().add(dir.multiplyScalar(7)));
+    this.cam.lookAt(this.cam.position.clone().add(dir.clone().multiplyScalar(7)));
     this.cam.rotateZ(pose.roll * Math.PI / 180);
 
     // Machine wave and chase darkness are pure timeline functions.
@@ -373,12 +408,25 @@ export default class ThresholdZ7Cathedral extends Scene {
       this.tenant.scale.set(1 + reach * 0.12, 1, 1 + reach * 0.35);
     }
 
+    const reachOn = t >= 171.65 && t < 174.2;
+    this.reachArm.visible = reachOn;
+    if (reachOn) {
+      const z = this.cam.position.z + 4.8;
+      const ext = smooth((t - 171.65) / 0.9);
+      this.reachArm.position.set(0.08 * Math.sin(t * 2), -0.15, z + 0.15);
+      this.reachArm.rotation.x = -0.08 + 0.05 * Math.sin(t * 5);
+      this.reachArm.rotation.y = 0.04 * Math.sin(t * 3);
+      this.reachArm.scale.set(1.25, 1.25, 0.45 + ext * 0.75);
+    }
+
     // Lint lands on the dead flashlight and relights it warm.
     const lintOn = t >= 174.0 && t < 176.2;
     this.lint.visible = lintOn;
     if (lintOn) {
-      const lp = this.cam.position.clone().add(dir.clone().multiplyScalar(0.42)).add(new THREE.Vector3(0.08, -0.12, 0));
+      const lp = this.cam.position.clone().add(dir.clone().multiplyScalar(0.7)).add(new THREE.Vector3(0.08, -0.12, 0));
       this.lint.position.copy(lp);
+      this.lint.scale.setScalar(1.55);
+      this.flash.position.copy(lp);
       const flap = Math.sign(Math.sin(t * Math.PI * 12)) * 0.42;
       this.lint.children[1]!.rotation.z = 0.35 + flap;
       this.lint.children[2]!.rotation.z = -0.35 - flap;
@@ -414,7 +462,7 @@ export default class ThresholdZ7Cathedral extends Scene {
     this.flash.intensity = dead ? 0 : (relit ? 1.4 : 1.1) * this.flicker(t);
     const cm = this.beamCone.material as THREE.MeshBasicMaterial;
     cm.color.setHex(relit ? 0xff9a42 : 0xffc98a);
-    cm.opacity = dead ? 0 : 0.006 * this.flicker(t);
+    cm.opacity = 0;
     this.beamCone.position.copy(lp.clone().lerp(lt, 0.5));
     this.beamCone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), lagDir.clone().negate().normalize());
 

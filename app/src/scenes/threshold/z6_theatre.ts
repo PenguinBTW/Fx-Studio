@@ -16,8 +16,8 @@ const KEYS: PoseKey[] = [
   { t: 136.0, p: [0, 1.2, 4.2], yaw: -10, pitch: 0, fov: 60 },
   { t: 139.0, p: [0, 1.2, 4.2], yaw: 6, pitch: 0, fov: 60 },
   { t: 141.5, p: [0, 1.2, 4.2], yaw: 5, pitch: -2, fov: 60 },
-  { t: 142.6, p: [0, 1.2, 4.2], yaw: 29, pitch: -24, fov: 62 },
-  { t: 143.5, p: [0, 1.2, 4.2], yaw: 27, pitch: -19, fov: 64 },
+  { t: 142.6, p: [0, 1.2, 4.2], yaw: 34, pitch: -10, fov: 62 },
+  { t: 143.5, p: [0, 1.2, 4.2], yaw: 32, pitch: -10, fov: 64 },
   { t: 145.0, p: [0.55, 1.65, 2.5], yaw: 10, pitch: -4, fov: 70 },
   { t: 147.0, p: [0.9, 1.65, -2.2], yaw: -3, pitch: -2, fov: 72 },
   { t: 148.5, p: [1.4, 1.65, -6.2], yaw: -25, pitch: 0, fov: 76 },
@@ -108,6 +108,7 @@ export default class ThresholdZ6Theatre extends Scene {
     const wood = this.mat(0x3a2115, 0.62);
     const woodDark = this.mat(0x1e120c, 0.7);
     const seatFelt = this.mat(0x571a1f, 0.92);
+    const seatEdge = this.mat(0x8e2d34, 0.86, 0, 0x4d0d12, 0.34);
     const warm = this.mat(0xffbd65, 0.5, 0, 0xff9d3c, 1.7);
     const stageFloor = this.mat(0x2a160f, 0.72);
 
@@ -128,10 +129,14 @@ export default class ThresholdZ6Theatre extends Scene {
         if (Math.abs(x) < 0.9) continue;
         this.box(this.s, [0.58, 0.16, 0.48], [x, 0.48, z], seatFelt);
         this.box(this.s, [0.58, 0.48, 0.13], [x, 0.72, z + 0.22], seatFelt, [-0.1, 0, 0]);
+        this.box(this.s, [0.56, 0.035, 0.025], [x, 0.98, z + 0.15], seatEdge, [-0.1, 0, 0]);
         this.box(this.s, [0.08, 0.34, 0.42], [x - 0.33, 0.52, z], wood);
         this.box(this.s, [0.08, 0.34, 0.42], [x + 0.33, 0.52, z], wood);
       }
     }
+
+    // Center aisle edges keep the auditorium geography readable in the dark.
+    for (const side of [-1, 1]) this.box(this.s, [0.055, 0.018, 5.2], [side * 0.78, 0.02, 3.05], seatEdge);
 
     // Proscenium arch, stitched gold strips and tassel-like trim blocks.
     this.box(this.s, [0.55, 3.65, 0.5], [-4.0, 2.05, -4.35], wood);
@@ -201,8 +206,8 @@ export default class ThresholdZ6Theatre extends Scene {
     this.box(this.s, [0.06, 1.72, 0.035], [2.05, 1.0, -9.55], this.exitGlow);
 
     // Lint: felt body, stitched wing panels, buttons and warm abdomen glow.
-    const lintBody = this.mat(0x704222, 0.98);
-    const lintWing = this.mat(0x9a6035, 0.98);
+    const lintBody = this.mat(0x704222, 0.98, 0, 0x2b1008, 0.22);
+    const lintWing = this.mat(0x9a6035, 0.98, 0, 0x4a1e0c, 0.32);
     const button = this.mat(0x050505, 0.28);
     const glow = this.mat(0xff8c2a, 0.55, 0, 0xff7418, 4.2);
     this.cyl(this.lint, 0.032, 0.045, 0.14, [0, 0, 0], lintBody, 10).rotation.x = Math.PI / 2;
@@ -212,6 +217,10 @@ export default class ThresholdZ6Theatre extends Scene {
     this.sphere(this.lint, 0.015, [0.018, 0.025, 0.065], button);
     this.cyl(this.lint, 0.025, 0.03, 0.045, [0, -0.005, -0.07], glow, 10).rotation.x = Math.PI / 2;
     for (let i = 0; i < 6; i++) this.cyl(this.lint, 0.003, 0.003, 0.08, [(i - 2.5) * 0.012, -0.035, -0.01], lintBody, 5).rotation.z = (i - 2.5) * 0.25;
+    const lintLight = new THREE.PointLight(0xff8c2a, 0.75, 2.2, 1.6);
+    lintLight.intensity = 1.35;
+    lintLight.position.set(0, 0, -0.05);
+    this.lint.add(lintLight);
     this.lint.visible = false;
     this.s.add(this.lint);
 
@@ -220,7 +229,7 @@ export default class ThresholdZ6Theatre extends Scene {
     spot.position.set(0, 4.0, 0.5);
     spot.target.position.set(0, 1.0, -6.5);
     this.s.add(spot, spot.target);
-    this.s.add(new THREE.AmbientLight(0x3a2028, 0.45));
+    this.s.add(new THREE.AmbientLight(0x3a2028, 0.68));
 
     // Flashlight cone.
     this.flash.castShadow = false;
@@ -234,9 +243,9 @@ export default class ThresholdZ6Theatre extends Scene {
   }
 
   private lintPath(t: number): THREE.Vector3 {
-    if (t < 143.5) return new THREE.Vector3(0.72, 1.05, 4.05);
+    if (t < 143.5) return new THREE.Vector3(0.68, 1.02, 3.22);
     const pts = [
-      new THREE.Vector3(0.72, 1.08, 4.0),
+      new THREE.Vector3(0.68, 1.06, 3.18),
       new THREE.Vector3(0.85, 1.45, 1.4),
       new THREE.Vector3(0.85, 1.55, -2.3),
       new THREE.Vector3(1.55, 1.7, -6.0),
@@ -293,6 +302,7 @@ export default class ThresholdZ6Theatre extends Scene {
     if (lintOn) {
       const lp = this.lintPath(st);
       this.lint.position.copy(lp);
+      this.lint.scale.setScalar(t < 143.5 ? 1.85 : 1.12);
       this.lint.position.y += 0.035 * Math.sin(st * 19);
       const flap = Math.sign(Math.sin(st * Math.PI * 12)) * 0.48;
       this.lint.children[1]!.rotation.z = 0.35 + flap;
@@ -309,7 +319,7 @@ export default class ThresholdZ6Theatre extends Scene {
     this.flash.position.copy(lp);
     this.flashTarget.position.copy(lt);
     this.flash.intensity = 2.1 * 0.5 * this.flicker(t);
-    (this.beamCone.material as THREE.MeshBasicMaterial).opacity = 0.007 * this.flicker(t);
+    (this.beamCone.material as THREE.MeshBasicMaterial).opacity = 0;
     this.beamCone.position.copy(lp.clone().lerp(lt, 0.5));
     this.beamCone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), lagDir.clone().negate().normalize());
 
@@ -323,7 +333,7 @@ export default class ThresholdZ6Theatre extends Scene {
     rr.render(this.s, this.cam);
     rr.resetState();
 
-    return { exposure: 1.08, bloom: 0.18, bloomThreshold: 0.95, vignette: 0.3, grain: 0.038, ca: 0.07 };
+    return { exposure: 1.2, bloom: 0.18, bloomThreshold: 0.95, vignette: 0.3, grain: 0.038, ca: 0.07 };
   }
 
   override dispose() {

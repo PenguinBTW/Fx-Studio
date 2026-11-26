@@ -18,7 +18,7 @@ const KEYS: PoseKey[] = [
   { t: 206.0, p: [0, 1.65, -3.1], yaw: 20, pitch: 0, fov: 69 },
   { t: 208.0, p: [0.15, 1.65, -4.6], yaw: 26, pitch: 0, fov: 68 },
   { t: 210.0, p: [0.35, 1.65, -5.3], yaw: 38, pitch: 0, fov: 66 },
-  { t: 212.0, p: [0.58, 1.65, -5.75], yaw: 52, pitch: -3, fov: 60 },
+  { t: 212.0, p: [0.58, 1.65, -5.75], yaw: 74, pitch: -2, fov: 66 },
   { t: 214.0, p: [0.68, 1.65, -5.9], yaw: 54, pitch: -4, fov: 60 },
   { t: 216.0, p: [0.66, 1.65, -5.95], yaw: 74, pitch: -2, fov: 64 },
   { t: 218.0, p: [0.66, 1.65, -5.95], yaw: 76, pitch: 0, fov: 70 },
@@ -144,7 +144,7 @@ export default class ThresholdZ8Home extends Scene {
     const zoneColors = [0xc9b26a, 0xe63b2e, 0x6fc7d0, 0xf1e6cf, 0xe4307a, 0x9e1e24, 0x93c9ff];
     zoneColors.forEach((c, i) => {
       const z = 0.8 - i * 0.78;
-      this.box(this.s, [0.06, 0.5, 0.42], [-1.29, 1.55, z], frameMat);
+      this.box(this.s, [0.06, 0.5, 0.42], [-1.29, 1.55, z], frameMat, [0, 0, (hash(i * 17) - 0.5) * 0.16]);
       this.box(this.s, [0.025, 0.38, 0.31], [-1.25, 1.55, z], this.mat(c, 0.7));
       this.box(this.s, [0.012, 0.3, 0.23], [-1.22, 1.55, z], this.mat(0x111111, 0.8));
     });
@@ -187,6 +187,7 @@ export default class ThresholdZ8Home extends Scene {
     this.lampGlow = this.mat(0xffbd65, 0.45, 0, 0xffa640, 2.4);
     this.sphere(this.s, 0.19, [2.0, 1.42, -4.35], this.lampGlow, [1, 0.65, 1]);
     const lampLight = new THREE.PointLight(0xffa957, 1.25, 6, 1.7);
+    lampLight.intensity = 0.9;
     lampLight.position.set(2.0, 1.45, -4.35);
     this.s.add(lampLight);
 
@@ -206,10 +207,12 @@ export default class ThresholdZ8Home extends Scene {
     this.s.add(this.doorGroup);
 
     // Beige wall phone: base, buttons, curly cord approximation, lifting receiver.
-    const beige = this.mat(0xd0c19d, 0.45);
-    this.box(this.s, [0.16, 0.5, 0.3], [1.27, 1.38, -5.85], beige);
+    const beige = this.mat(0xd0c19d, 0.45, 0, 0x5c4b32, 0.18);
+    this.box(this.s, [0.055, 0.58, 0.38], [1.29, 1.39, -5.85], black);
+    this.box(this.s, [0.17, 0.52, 0.32], [1.25, 1.38, -5.85], beige);
     for (let i = 0; i < 12; i++) this.box(this.s, [0.025, 0.035, 0.035], [1.17, 1.24 + Math.floor(i / 3) * 0.055, -5.94 + (i % 3) * 0.055], black);
-    this.receiver = this.box(this.s, [0.13, 0.11, 0.45], [1.15, 1.58, -5.85], beige, [0, 0, 0.08]);
+    const receiverMat = this.mat(0xb29b73, 0.5, 0, 0x6b5638, 0.24);
+    this.receiver = this.box(this.s, [0.13, 0.11, 0.32], [1.13, 1.61, -5.85], receiverMat, [0, 0, 0.08]);
     this.receiverHome.copy(this.receiver.position);
     for (let i = 0; i < 8; i++) this.cyl(this.s, 0.012, 0.012, 0.08, [1.16, 1.3 - i * 0.045, -5.68 + Math.sin(i * 1.7) * 0.035], black, 6);
 
@@ -243,7 +246,7 @@ export default class ThresholdZ8Home extends Scene {
 
     const sun = new THREE.DirectionalLight(0xffb36b, 2.2);
     sun.position.set(-3.5, 4.2, -2.0);
-    this.s.add(sun, new THREE.AmbientLight(0x604632, 0.5));
+    this.s.add(sun, new THREE.AmbientLight(0x604632, 0.36));
   }
 
   private gait(t: number): [number, number, number] {
@@ -273,7 +276,7 @@ export default class ThresholdZ8Home extends Scene {
     // Phone rings 206-214; receiver lifts by itself and swings on its cord.
     const ring = t >= 206 && t < 210 ? (Math.sin(t * Math.PI * 20) > 0 ? 1 : 0.72) : 1;
     const lift = smooth((t - 210) / 1.2);
-    this.receiver.position.copy(this.receiverHome).add(new THREE.Vector3(-0.03 - lift * 0.18, lift * 0.16, lift * 0.08));
+    this.receiver.position.copy(this.receiverHome).add(new THREE.Vector3(-0.01 - lift * 0.035, lift * 0.12, lift * 0.025));
     this.receiver.rotation.z = 0.08 + lift * (0.5 + 0.08 * Math.sin((t - 210) * 5));
     this.receiver.rotation.x = lift * 0.15 * Math.sin((t - 210) * 4);
     this.receiver.scale.setScalar(ring);
@@ -295,7 +298,7 @@ export default class ThresholdZ8Home extends Scene {
     this.flash.position.copy(lp);
     this.flashTarget.position.copy(lt);
     this.flash.intensity = 0.75 * 0.25 * this.flicker(t);
-    (this.beamCone.material as THREE.MeshBasicMaterial).opacity = 0.005 * this.flicker(t);
+    (this.beamCone.material as THREE.MeshBasicMaterial).opacity = 0;
     this.beamCone.position.copy(lp.clone().lerp(lt, 0.5));
     this.beamCone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), lagDir.clone().negate().normalize());
 
@@ -306,7 +309,7 @@ export default class ThresholdZ8Home extends Scene {
     rr.render(this.s, this.cam);
     rr.resetState();
 
-    return { exposure: 1.0, bloom: 0.18, bloomThreshold: 0.95, vignette: 0.24, grain: 0.032, ca: 0.06 };
+    return { exposure: 0.86, bloom: 0.18, bloomThreshold: 0.95, vignette: 0.24, grain: 0.032, ca: 0.06 };
   }
 
   override dispose() {

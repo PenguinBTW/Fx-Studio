@@ -296,7 +296,7 @@ export default class ThresholdZ5Motel extends Scene {
     this.flashTarget.position.copy(lt);
     this.flash.intensity = beamOn ? 4.8 * 0.5 * this.flicker(t) : 0;
     const coneMat = this.beamCone.material as THREE.MeshBasicMaterial;
-    coneMat.opacity = beamOn ? 0.007 * this.flicker(t) : 0;
+    coneMat.opacity = 0;
     this.beamCone.position.copy(lp.clone().lerp(lt, 0.5));
     this.beamCone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), lagDir.clone().negate().normalize());
     this.beamCone.scale.set(1, 1, 1);
