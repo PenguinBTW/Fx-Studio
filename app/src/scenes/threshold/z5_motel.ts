@@ -207,10 +207,10 @@ export default class ThresholdZ5Motel extends Scene {
     this.cyl(this.s, 0.025, 0.025, 0.9, [-1.42, 0.45, -19.3], this.mat(0x1c1c20, 0.7), 8).rotation.z = 0.25;
 
     // Wet footprint decals leading to where the viewer stands.
-    const fpMat = this.mat(0x090b0c, 0.18);
+    const fpMat = this.mat(0x1b2b32, 0.12, 0.25, 0x071014, 0.08);
     this.footprintMats.push(fpMat);
     for (let i = 0; i < 10; i++) {
-      const fp = this.box(this.s, [0.16, 0.006, 0.34], [(i % 2 ? 0.18 : -0.18), 0.025, -8.5 - i * 0.62], fpMat, [0, 0.08 * (i % 2 ? 1 : -1), 0]);
+      const fp = this.box(this.s, [0.2, 0.006, 0.42], [(i % 2 ? 0.18 : -0.18), 0.025, -8.5 - i * 0.62], fpMat, [0, 0.08 * (i % 2 ? 1 : -1), 0]);
       fp.castShadow = false;
     }
 

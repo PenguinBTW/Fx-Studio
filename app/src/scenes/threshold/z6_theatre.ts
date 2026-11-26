@@ -225,7 +225,7 @@ export default class ThresholdZ6Theatre extends Scene {
     this.s.add(this.lint);
 
     // Warm theatrical spotlight plus low house fill.
-    const spot = new THREE.SpotLight(0xffb15c, 2.8, 12, 0.55, 0.6, 1.2);
+    const spot = new THREE.SpotLight(0xffb15c, 4.2, 12, 0.55, 0.6, 1.2);
     spot.position.set(0, 4.0, 0.5);
     spot.target.position.set(0, 1.0, -6.5);
     this.s.add(spot, spot.target);
