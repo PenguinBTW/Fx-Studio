@@ -117,12 +117,12 @@ Uses Z7 cathedral assets (section 4.7) seen in motion. Build nothing extra excep
 - **Animation rules:** slow until the beam hits the eyes, then everything fast (fingers lash in 0.2 s). When chasing, tiles drop in a chain 1.5 m behind the viewer (gravity + a bounce + a puff of dust and insulation fibres).
 - **Triangles:** 40k-90k for the full creature (it's mostly fingers and eyes, so put detail there).
 
-### 4.2 Z2 -- The ball-pit playroom (style: saturated toy-commercial CG, perfect and too clean)
-- **Lure:** the most colourful and cheerful place in the film. Sun, toys, a play zone.
-- **Palette:** primary red #E63B2E, yellow #F6C83B, blue #2E6FE6, green #3BBF5A, on white foam walls; sunlight 5600 K bright and soft. Highest saturation in the film, so it slams against the office.
+### 4.2 Z2 -- The ball-pit playroom (style: abandoned soft-play beneath dead skylights)
+- **Lure:** the shape memory of a colourful cheerful play zone, now dimmed and wrong: sun-faded toys, worn vinyl, grime, and dead skylights.
+- **Palette:** sun-faded remnants of primary red #E63B2E, yellow #F6C83B, blue #2E6FE6, green #3BBF5A, on stained off-white foam walls. Saturation survives in fragments, but the overall grade is dim, dusty, and desaturated against the office.
 - **Geometry:** a huge indoor play zone (about 30 x 20 m, 6 m high): a ball pit 12 x 8 m and 1.2 m deep, padded foam walls, a two-level climbing frame with netting, two slides (one spiral), a tube tunnel (the exit, 0.8 m diameter, ribbed), stepping blocks, big skylights in the ceiling with fake sunlight.
-- **Materials:** glossy plastic (roughness 0.25, clearcoat if the engine has it), soft vinyl foam with stitched seams and slight creases (displaced normals), netting as curves. Everything spotless: no dirt, no wear, which is itself wrong after the office. Exception: under the pit balls, a single brown water ring like the office ceiling (seen at 47.5 s when the Swimmer surfaces).
-- **Lighting:** bright sun from the skylights (sharp light rays in the air), plus a big soft bounce fill. THE WRONG DETAIL: the toys and creatures cast no shadows (disable `castShadow` on all toys; the climbing frame and walls still cast). The flashlight is pointless here (barely visible) until 40 s when clouds pass the skylights and the room dims 50%.
+- **Materials:** once-glossy plastic now varies in sheen with dust and scuffs; soft vinyl foam has stitched seams, creases, stains, peeling patches, and occasional missing padding; netting as curves. Dirt, sun-fading, scuffed floors, ground-in grime, and the brown water ring under the pit balls are required. The wrongness is that the cheerful commercial language survives only as worn debris.
+- **Lighting:** dead/clouded skylights with no blown bloom, weak cold fill, and a dim abandoned-room grade. THE WRONG DETAIL: the toys and creatures cast no shadows (disable `castShadow` on all toys; the climbing frame and walls still cast). The flashlight remains weak, but becomes more important as the room dies into darkness after 40 s.
 - **Ball pit:** 6,000-10,000 balls as instanced spheres (7.5 cm), 5 colours, deterministic positions from a seeded pack; the surface slightly domed; balls displaced by a moving bulge field (the Swimmer); balls roll off the bulge's crest with simple per-ball offsets.
 - **Props (15+):** a rocking horse, a toy robot, a teddy bear with a stitched mouth, a jack-in-the-box (closed), a toy piano, stacking rings, a toy telephone on wheels (red, with eyes, for beat 2.7), building blocks spelling nothing, a toy car, a xylophone, a ball cart, shoe cubbies with tiny shoes, a birthday banner, a music box (the source of the jingle, a ballerina turning), balloons tied to the netting. All toys are turned to face the viewer, and they rotate to keep facing them (clicking, 12 fps stepped).
 - **Ambient motion:** the music box ballerina, balloons drifting on strings, sun dust in the light rays.
@@ -146,10 +146,10 @@ Uses Z7 cathedral assets (section 4.7) seen in motion. Build nothing extra excep
 - **Ambient motion:** ripples spreading from each footstep, drips with rings, a slowly drifting kickboard.
 
 #### The Mirrorling (Z3 creature)
-- **Concept:** a thin, tall figure made of reflections. It moves when you are not watching, and mirrors you when you are.
+- **Concept:** a thin, tall ceramic-tile figure made of the pool's reflections and surfaces. It moves when you are not watching, and mirrors you when you are.
 - **Silhouette:** 2.6 m tall, very thin, standing on the water surface; long arms to its knees; a head like an upside-down teardrop; no visible feet (it stands on its own reflection).
 - **Named parts:** `body`, `head`, `arm_l_upper/lower`, `arm_r_upper/lower`, `hand_l`, `hand_r` (long thin fingers), `reflection` (a mirrored copy under the water that moves on the same 0.4 s lag), `ripple_ring`.
-- **Material:** a mirror-like chrome surface (metallic 1.0, roughness 0.05) with a faint aqua tint that reflects the pool tiles, so it reads as part of the room until it moves. Its face: a smooth chrome surface showing a warped reflection of the flashlight (the viewer sees their own light in its face).
+- **Material:** a glazed white-tile ceramic surface with black grout seams, specular clearcoat variation, chipped edges, and grime caught in the grout. It should read as a ceramic humanoid assembled from the pool itself, neither emissive nor a clean mannequin. Its face is a smooth glazed tile surface showing a warped reflection/catchlight of the flashlight (the viewer sees their own light in its face).
 - **Animation:** when the beam centre is within 15 deg of it, it copies the camera's motion mirrored (a mirror image of the viewer). When not: it slides 1.5 m closer per 0.5 s with no ripples. When you look back after being away: it is closer, and a single ripple ring spreads from its feet.
 - **Triangles:** 30k-60k.
 
