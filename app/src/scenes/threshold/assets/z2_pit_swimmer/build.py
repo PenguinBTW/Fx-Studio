@@ -62,7 +62,9 @@ orange=material('ball_orange_vinyl',(1.0,0.25,0.025),.2)
 white=material('painted_eye_white',(0.95,0.92,0.82),.26)
 black=material('painted_pupil_black',(0.006,0.004,0.003),.18)
 mouthdark=material('mouth_deep_red_black',(0.055,0.002,0.004),.65)
-toothmat=material('slide_stopper_teeth',(0.95,0.86,0.62),.32)
+toothmat=material('slide_stopper_teeth',(0.76,0.64,0.40),.48)
+toothold=material('aged_stopper_teeth',(0.48,0.37,0.22),.62)
+toothdark=material('worn_tooth_edges',(0.28,0.19,0.10),.68)
 seammat=material('vinyl_seam_shadow',(0.08,0.025,0.02),.72)
 root=empty('pit_swimmer_root')
 
@@ -102,25 +104,57 @@ for side,rootobj,zsign in [('upper',upper,1),('lower',lower,-1)]:
         rail=cyl_between(f'slide_mouth_{side}_rail_{x}',(x,-.31,zsign*.08),(x,-.88,zsign*.34),.034,yellow,vertices=16)
         rail.parent=rootobj; rail.matrix_parent_inverse=rootobj.matrix_world.inverted()
 
-# Twenty stopper teeth, ten upper and ten lower, irregularly worn.
+# Twenty stopper teeth, ten upper and ten lower. They are small rubber slide-stoppers:
+# irregular lengths, clustered spacing, leaned angles, worn yellowing, chips and base flanges
+# rather than a uniform white picket fence.
+tooth_x=[-.285,-.225,-.176,-.116,-.065,-.012,.046,.105,.168,.252]
 for i in range(10):
-    x=-.25+i*.055
-    up=cone(f'tooth_upper_{i+1:02d}',(x,-.70,-.015+(i%2)*.012),.022+random.uniform(0,.010),.005,.125+random.uniform(0,.065),toothmat,rot=(math.pi+random.uniform(-.08,.08),random.uniform(-.06,.06),random.uniform(-.05,.05)),vertices=16); up.parent=upper
-    lo=cone(f'tooth_lower_{i+1:02d}',(x+.018,-.69,-.12-(i%2)*.009),.021+random.uniform(0,.009),.005,.12+random.uniform(0,.06),toothmat,rot=(random.uniform(-.07,.07),random.uniform(-.05,.05),random.uniform(-.05,.05)),vertices=16); lo.parent=lower
+    x=tooth_x[i]
+    um=toothold if i in (1,4,8) else toothmat
+    ul=.072+((i*37)%9)*.008+random.uniform(-.006,.012)
+    ur=.015+((i*19)%5)*.0025+random.uniform(0,.004)
+    uy=-.665-(i%3)*.018+random.uniform(-.008,.008)
+    up=cone(f'tooth_upper_{i+1:02d}',(x,uy,.005+(i%2)*.008),ur,.0035,ul,um,rot=(math.pi+random.uniform(-.30,.30),random.uniform(-.25,.25),random.uniform(-.26,.26)),vertices=14); up.parent=upper; up.matrix_parent_inverse=upper.matrix_world.inverted()
+    cyl_between(f'tooth_upper_{i+1:02d}_rubber_flange',(x,uy,.055),(x,uy,.038),ur*1.35,toothdark if i in (2,7) else um,vertices=14).parent=upper
+    ll=.060+((i*29)%8)*.009+random.uniform(-.004,.011)
+    lr=.014+((i*13)%5)*.0025+random.uniform(0,.004)
+    lx=x+.018+(-1)**i*.008
+    ly=-.655-(i%2)*.025+random.uniform(-.008,.008)
+    lm=toothold if i in (0,5,8) else toothmat
+    lo=cone(f'tooth_lower_{i+1:02d}',(lx,ly,-.105-(i%3)*.007),lr,.0035,ll,lm,rot=(random.uniform(-.30,.30),random.uniform(-.24,.24),random.uniform(-.26,.26)),vertices=14); lo.parent=lower; lo.matrix_parent_inverse=lower.matrix_world.inverted()
+    cyl_between(f'tooth_lower_{i+1:02d}_rubber_flange',(lx,ly,-.094),(lx,ly,-.075),lr*1.35,toothdark if i in (3,6) else lm,vertices=14).parent=lower
     if i in (2,7):
-        # chipped dark notch
-        cube(f'tooth_chip_{i+1}',(x,-.715,.035),(0.018,.012,.018),seammat,bevel=.002).parent=upper
+        # chipped dark notch biting into the upper tooth silhouette
+        cube(f'tooth_chip_{i+1}',(x,-.705,.012),(0.018,.012,.020),toothdark,bevel=.002,rot=(random.uniform(-.2,.2),0,random.uniform(-.4,.4))).parent=upper
 
-# Cartoon painted eyes: vinyl balls, white iris discs, off-centre pupils and pressure seams.
-for side,x in [('l',-.27),('r',.27)]:
-    sphere(f'eye_ball_{side}',(x,-.43,.36),(.18,.125,.18),red if side=='l' else blue,seg=32,rings=16).parent=root
-    # iris disc points roughly forward/down (-Y)
-    bpy.ops.mesh.primitive_cylinder_add(vertices=32,radius=.092,depth=.014,location=(x,-.535,.37),rotation=(math.pi/2,0,0))
-    iris=finish(bpy.context.object,f'eye_iris_{side}',f'eye_iris_{side}',white); smooth(iris); iris.parent=root
-    bpy.ops.mesh.primitive_cylinder_add(vertices=24,radius=.041,depth=.016,location=(x+(.014 if side=='l' else -.014),-.548,.37),rotation=(math.pi/2,0,0))
-    pup=finish(bpy.context.object,f'eye_pupil_{side}',f'eye_pupil_{side}',black); smooth(pup); pup.parent=root
-    sphere(f'eye_wet_catchlight_{side}',(x+(.018 if side=='l' else -.018),-.535,.382),(.014,.005,.014),white,seg=12,rings=6).parent=root
-    torus(f'eye_pressure_seam_{side}',(x,-.42,.34),.115,.012,seammat,rot=(math.pi/2,0,0)).parent=root
+# Cartoon painted eyes are embedded into the fused-ball skull, not pasted on top of it.
+# Asymmetric vinyl socket balls overlap the eye spheres; hand-painted irises sit flush on
+# the exposed front cap, with lids and pressure seams locking them into the head structure.
+eye_specs={
+    'l':dict(x=-.205,y=-.285,z=.385,sx=.124,sy=.082,sz=.132,base=red,lid=orange,irisr=.055,pupr=.026),
+    'r':dict(x=.225,y=-.265,z=.335,sx=.108,sy=.074,sz=.119,base=blue,lid=green,irisr=.049,pupr=.023),
+}
+for side,d in eye_specs.items():
+    x,y,z=d['x'],d['y'],d['z']
+    sphere(f'eye_ball_{side}',(x,y,z),(d['sx'],d['sy'],d['sz']),d['base'],seg=32,rings=16).parent=root
+    # socket cluster: fused balls partially swallow the eye ball edges
+    socket_cols=[d['lid'],yellow,palette[3 if side=='l' else 1],palette[0 if side=='l' else 2]]
+    socket_offsets=[(-.10,.025,.055),(.095,.015,.045),(-.075,.018,-.07),(.072,.018,-.075)]
+    for si,(ox,oy,oz) in enumerate(socket_offsets):
+        sr=.070+(si%2)*.012
+        sphere(f'eye_socket_{side}_{si+1}',(x+ox,y+oy,z+oz),(sr,sr*.72,sr),socket_cols[si],seg=24,rings=12).parent=root
+    # vinyl brow/lower lid pads overlap the ball physically and break the perfect sphere silhouette
+    sphere(f'eye_upper_lid_{side}',(x,y-.035,z+d['sz']*.54),(d['sx']*.92,.040,.050),d['lid'],seg=24,rings=12).parent=root
+    sphere(f'eye_lower_lid_{side}',(x,y-.030,z-d['sz']*.55),(d['sx']*.82,.034,.043),d['lid'],seg=24,rings=12).parent=root
+    # iris disc points roughly forward/down (-Y), scaled imperfectly like hand paint on vinyl
+    front=y-d['sy']-.010
+    bpy.ops.mesh.primitive_cylinder_add(vertices=32,radius=d['irisr'],depth=.012,location=(x,front,z+.008),rotation=(math.pi/2,0,0))
+    iris=finish(bpy.context.object,f'eye_iris_{side}',f'eye_iris_{side}',white); smooth(iris); iris.scale.x=1.0+(0.10 if side=='l' else -0.06); iris.parent=root
+    bpy.ops.mesh.primitive_cylinder_add(vertices=24,radius=d['pupr'],depth=.014,location=(x+(.016 if side=='l' else -.013),front-.010,z+.006),rotation=(math.pi/2,0,0))
+    pup=finish(bpy.context.object,f'eye_pupil_{side}',f'eye_pupil_{side}',black); smooth(pup); pup.scale.x=.88 if side=='l' else 1.08; pup.parent=root
+    sphere(f'eye_wet_catchlight_{side}',(x+(.020 if side=='l' else -.017),front-.006,z+.025),(.011,.004,.011),white,seg=12,rings=6).parent=root
+    # partial dark compression seam underneath the socket; small enough to read as pressure, not outline stickers
+    torus(f'eye_pressure_seam_{side}',(x,y+.004,z-.005),d['sx']*.68,.008,seammat,rot=(math.pi/2,0,0)).parent=root
 
 # asymmetric vinyl abrasion stickers/scuffs across the fused skull
 for i in range(18):
@@ -148,6 +182,12 @@ for i in range(10):
 sphere('tail_cap',(0,5.42,.02),(.09,.18,.08),blue,seg=24,rings=12).parent=root
 for side,x in [('l',-.13),('r',.13)]:
     fin=cube(f'tail_fin_{side}',(x,4.85,-.02),(.28,.48,.035),green if side=='l' else orange,bevel=.04,rot=(0,(-.25 if side=='l' else .25),(.35 if side=='l' else -.35))); fin.parent=root
+
+# Preserve authored world-space placement for jaw children while allowing the jaw control
+# empties to hinge them as one mechanism in the runtime.
+for o in bpy.data.objects:
+    if o.parent and o.parent.name in {'slide_mouth_upper_root','slide_mouth_lower_root'}:
+        o.matrix_parent_inverse=o.parent.matrix_world.inverted()
 
 bpy.ops.object.select_all(action='SELECT')
 out=os.path.join(HERE,'model.glb')
