@@ -56,7 +56,7 @@ export default class ThresholdZ1Office extends Scene {
     this.s.background = new THREE.Color(0x050505);
     this.s.fog = new THREE.FogExp2(0x111008, 0.026);
     this.flash = addFlashlight(this.s);
-    this.s.add(new THREE.AmbientLight(0x8b866f, 0.32));
+    this.s.add(new THREE.AmbientLight(0x9a9278, 0.43));
 
     const carpet = mat(0x756947, 0.92);
     const wall = mat(0xa89354, 0.82);
@@ -68,7 +68,7 @@ export default class ThresholdZ1Office extends Scene {
     const paper = mat(0xd8d0b9, 0.88);
     const green = mat(0x204020, 0.5, 0, 0x25ff56, 0.8);
     const red = mat(0x5d1512, 0.45, 0, 0xff1f18, 1.8);
-    const screen = mat(0x1c3032, 0.25, 0, 0x5de6e0, 0.65);
+    const screen = mat(0x1c3032, 0.25, 0, 0x5de6e0, 1.35);
     this.doorGlow = mat(0xfff4c8, 0.3, 0, 0xfff2b0, 5) as THREE.MeshStandardMaterial;
 
     box(this.s, 'z1_floor', [30, 0.08, 48], [0, -0.04, -3], carpet);
@@ -84,9 +84,9 @@ export default class ThresholdZ1Office extends Scene {
     box(this.s, 'z1_wall_right', [0.16, 2.7, 34], [13, 1.35, 3], wallDark);
     box(this.s, 'z1_wall_fire', [26, 2.7, 0.16], [0, 1.35, 16], wall);
     const partitions: [number, number, number, number, number][] = [
-      [-2.2, -2.5, 0.12, 2.1, 4.5], [2.2, -2.2, 0.12, 2.1, 4.2], [-4.8, 0.5, 4.2, 2.1, 0.12], [4.7, 1.2, 4.8, 2.1, 0.12],
-      [-6.4, -4.6, 0.12, 2.1, 5.4], [6.5, -4.7, 0.12, 2.1, 5.5], [-1.4, 4.2, 0.12, 2.1, 4.5], [6.3, 7.2, 0.12, 2.1, 5.2],
-      [-6.1, 7.4, 0.12, 2.1, 5.6], [1.6, 11.4, 5.0, 2.1, 0.12], [-6.8, 12.2, 4.5, 2.1, 0.12], [8.8, 3.3, 0.12, 2.1, 8],
+      [-2.2, -2.5, 0.12, 1.45, 4.5], [2.2, -2.2, 0.12, 1.45, 4.2], [-4.8, 0.5, 4.2, 1.45, 0.12], [4.7, 1.2, 4.8, 1.45, 0.12],
+      [-6.4, -4.6, 0.12, 1.45, 5.4], [6.5, -4.7, 0.12, 1.45, 5.5], [-1.4, 4.2, 0.12, 1.45, 4.5], [6.3, 7.2, 0.12, 1.45, 5.2],
+      [-6.1, 7.4, 0.12, 1.45, 5.6], [1.6, 11.4, 5.0, 1.45, 0.12], [-6.8, 12.2, 4.5, 1.45, 0.12], [8.8, 3.3, 0.12, 1.45, 8],
     ];
     partitions.forEach(([x, z, sx, sy, sz], i) => box(this.s, `z1_partition_${i}`, [sx, sy, sz], [x, sy / 2, z], i % 2 ? wall : wallDark));
     // Deep repeated maze beyond the first desk: foreground/midground/background cubicle rows make the office read as endless.
@@ -94,8 +94,8 @@ export default class ThresholdZ1Office extends Scene {
     for (let row = 0; row < 6; row++) {
       const z = -8.2 - row * 2.8;
       for (const side of [-1, 1]) {
-        box(this.s, `z1_deep_partition_${row}_${side}`, [0.12, 2.05, 1.9], [side * (2.7 + (row % 2) * 1.2), 1.02, z], row % 2 ? wall : wallDark);
-        box(this.s, `z1_deep_cross_${row}_${side}`, [2.5, 1.85, 0.11], [side * 4.3, 0.93, z - 0.85], row % 2 ? wallDark : wall);
+        box(this.s, `z1_deep_partition_${row}_${side}`, [0.12, 1.42, 1.9], [side * (2.7 + (row % 2) * 1.2), 0.71, z], row % 2 ? wall : wallDark);
+        box(this.s, `z1_deep_cross_${row}_${side}`, [2.5, 1.35, 0.11], [side * 4.3, 0.675, z - 0.85], row % 2 ? wallDark : wall);
         box(this.s, `z1_deep_desk_${row}_${side}`, [1.25, 0.07, 0.62], [side * (3.7 + (row % 2) * 0.8), 0.72, z + 0.35], mat(0x6f695c, 0.65));
         box(this.s, `z1_deep_monitor_${row}_${side}`, [0.36, 0.28, 0.28], [side * (3.7 + (row % 2) * 0.8), 1.0, z + 0.18], dark, [0, -side * 0.25, 0]);
         if ((row + (side > 0 ? 1 : 0)) % 2 === 0) plane(this.s, `z1_deep_screen_${row}_${side}`, 0.24, 0.16, [side * (3.7 + (row % 2) * 0.8), 1.01, z + 0.03], screen, [0, -side * 0.25, 0]);
@@ -105,6 +105,66 @@ export default class ThresholdZ1Office extends Scene {
         box(this.s, `z1_deep_tube_${row}`, [0.85, 0.025, 0.08], [row % 4 ? -2.2 : 2.1, 2.58, z], deepTubeGlow);
         const dp = new THREE.PointLight(0xdfffd2, 0.75, 4.5, 1.7); dp.position.set(row % 4 ? -2.2 : 2.1, 2.35, z); this.s.add(dp);
       }
+    }
+
+    // Dense workstation pods: repeated desks/chairs/monitors/props ground the maze as a working office rather than empty partitions.
+    const cubicleFabric = [mat(0xb09b6d, 0.92), mat(0x998b64, 0.95), mat(0x8b8270, 0.9)];
+    const deskTop = mat(0x807866, 0.62);
+    const keyboardMat = mat(0x242422, 0.7);
+    const podChairMat = mat(0x343b42, 0.72);
+    let pod = 0;
+    for (let zi = 0; zi < 11; zi++) {
+      const z = -10.4 + zi * 2.35;
+      for (const side of [-1, 1]) {
+        // Keep the camera/run corridors open while filling both sides of the maze.
+        if (z > 0.5 && z < 10.5 && side === 1 && zi % 2 === 0) continue;
+        if (z > 8.5 && side === -1 && zi % 2 === 1) continue;
+        const lane = zi % 3 === 0 ? 6.7 : 4.15;
+        const x = side * lane;
+        const face = -side;
+        // cubicle shell: thicker fabric walls, top/bottom rails, pinboard patches
+        box(this.s, `z1_pod_wall_back_${pod}`, [1.85, 1.42, 0.11], [x, 0.71, z - 0.72], cubicleFabric[pod % 3]!);
+        box(this.s, `z1_pod_wall_side_${pod}`, [0.11, 1.42, 1.45], [x + side * 0.93, 0.71, z], cubicleFabric[(pod + 1) % 3]!);
+        box(this.s, `z1_pod_toprail_${pod}`, [1.9, 0.045, 0.14], [x, 1.44, z - 0.72], metal);
+        box(this.s, `z1_pod_pinboard_${pod}`, [0.72, 0.48, 0.018], [x - side * 0.28, 1.04, z - 0.655], mat(0x6f4c2b, 0.9));
+        for (let pin = 0; pin < 3; pin++) plane(this.s, `z1_pod_note_${pod}_${pin}`, 0.11, 0.13, [x - side * (0.48 - pin * 0.18), 1.03 + (pin % 2) * 0.12, z - 0.642], pin % 2 ? paper : mat(0xd8c84e, 0.82), [0, 0, (hash(pod + pin) - 0.5) * 0.25]);
+        // work surface, legs, monitor, keyboard, phone/clipboard/cup variations
+        box(this.s, `z1_pod_desk_${pod}`, [1.55, 0.065, 0.68], [x, 0.72, z], deskTop);
+        box(this.s, `z1_pod_deskleg_l_${pod}`, [0.055, 0.7, 0.58], [x - 0.65, 0.35, z], metal);
+        box(this.s, `z1_pod_deskleg_r_${pod}`, [0.055, 0.7, 0.58], [x + 0.65, 0.35, z], metal);
+        box(this.s, `z1_pod_monitor_${pod}`, [0.42, 0.32, 0.25], [x - side * 0.28, 0.96, z - 0.15], dark, [0, face * 0.28, 0]);
+        plane(this.s, `z1_pod_screen_${pod}`, 0.31, 0.21, [x - side * 0.28, 0.97, z + 0.0], screen, [0, face * 0.28, 0]);
+        box(this.s, `z1_pod_keyboard_${pod}`, [0.42, 0.025, 0.14], [x + side * 0.05, 0.765, z + 0.16], keyboardMat, [0, face * 0.1, 0]);
+        if (pod % 3 !== 1) cyl(this.s, `z1_pod_cup_${pod}`, 0.035, 0.075, [x + side * 0.46, 0.79, z - 0.18], mat(pod % 2 ? 0xaaa18a : 0x7b3f32, 0.55), [0, 0, 0], 14);
+        if (pod % 4 === 0) box(this.s, `z1_pod_clipboard_${pod}`, [0.24, 0.012, 0.33], [x + side * 0.38, 0.765, z + 0.1], paper, [0, hash(pod) * 0.8, 0]);
+        if (pod % 5 === 0) box(this.s, `z1_pod_cableclump_${pod}`, [0.34, 0.035, 0.12], [x - side * 0.34, 0.035, z + 0.35], dark, [0, hash(pod) * 1.5, 0]);
+        // grounded rolling chair with base/post and contact patch
+        box(this.s, `z1_pod_chair_seat_${pod}`, [0.42, 0.11, 0.42], [x + face * 0.35, 0.43, z + 0.55], podChairMat, [0, hash(pod) * 1.6, 0]);
+        box(this.s, `z1_pod_chair_back_${pod}`, [0.43, 0.52, 0.09], [x + face * 0.35, 0.78, z + 0.75], podChairMat, [0.08, hash(pod) * 1.6, 0]);
+        cyl(this.s, `z1_pod_chair_post_${pod}`, 0.025, 0.34, [x + face * 0.35, 0.2, z + 0.55], metal, [0, 0, 0], 10);
+        plane(this.s, `z1_pod_contact_${pod}`, 1.8, 1.35, [x, 0.007 + pod * 0.00002, z + 0.1], basic(0x050403, 0.2), [-Math.PI / 2, 0, hash(pod) * 0.5]);
+        pod++;
+      }
+    }
+    // Run-lane island workstations are deliberately close to the camera path so chase frames remain spatially dressed.
+    const runPods: [number, number][] = [[-2.3, 1.7], [0.4, 3.6], [1.0, 5.8], [0.7, 8.0], [2.2, 10.4], [0.8, 12.4]];
+    runPods.forEach(([x, z], i) => {
+      box(this.s, `z1_runisland_desk_${i}`, [1.35, 0.07, 0.66], [x, 0.72, z], deskTop, [0, (i % 2 ? -0.18 : 0.18), 0]);
+      box(this.s, `z1_runisland_monitor_${i}`, [0.38, 0.3, 0.24], [x - 0.18, 0.96, z - 0.12], dark, [0, 0.35 + i * 0.15, 0]);
+      plane(this.s, `z1_runisland_screen_${i}`, 0.28, 0.19, [x - 0.18, 0.97, z + 0.02], screen, [0, 0.35 + i * 0.15, 0]);
+      box(this.s, `z1_runisland_keyboard_${i}`, [0.38, 0.025, 0.13], [x + 0.12, 0.765, z + 0.14], keyboardMat, [0, 0.2, 0]);
+      box(this.s, `z1_runisland_chair_${i}`, [0.44, 0.5, 0.44], [x + 0.48, 0.42, z + 0.48], podChairMat, [0, hash(i) * 2.5, i === 2 ? 0.55 : 0]);
+      box(this.s, `z1_runisland_paperstack_${i}`, [0.24, 0.045, 0.3], [x + 0.38, 0.78, z - 0.12], paper, [0, hash(i) * 0.7, 0]);
+      if (i % 2 === 0) cyl(this.s, `z1_runisland_cup_${i}`, 0.035, 0.075, [x - 0.43, 0.79, z + 0.12], mat(0xaaa18a, 0.55), [0, 0, 0], 14);
+      plane(this.s, `z1_runisland_contact_${i}`, 1.65, 1.1, [x + 0.1, 0.008 + i * 0.00003, z + 0.18], basic(0x050403, 0.22), [-Math.PI / 2, 0, hash(i) * 0.4]);
+    });
+
+    // Ground-level paper/cable clutter in the run lanes, dense enough to orient fast chase frames.
+    for (let i = 0; i < 44; i++) {
+      const z = -2 + hash(i * 2.7) * 17;
+      const x = (hash(i * 4.1) - 0.5) * 8 + (i % 5 === 0 ? 3.5 : 0);
+      plane(this.s, `z1_floor_paper_${i}`, 0.18 + hash(i) * 0.12, 0.25 + hash(i + 1) * 0.12, [x, 0.012 + i * 0.00002, z], paper, [-Math.PI / 2, 0, hash(i + 2) * Math.PI]);
+      if (i % 7 === 0) cyl(this.s, `z1_floor_cable_${i}`, 0.009, 0.75 + hash(i) * 0.8, [x + 0.25, 0.018, z - 0.1], dark, [Math.PI / 2, hash(i) * 2, 0], 8);
     }
 
     // suspended ceiling T-bar grid and individual tiles around the camera path
@@ -133,7 +193,7 @@ export default class ThresholdZ1Office extends Scene {
       box(this.s, `z1_troffer_${li}`, [1.15, 0.06, 0.34], [x, 2.66, z], metal);
       box(this.s, `z1_tube_a_${li}`, [0.48, 0.025, 0.08], [x - 0.25, 2.61, z], tubeMatA);
       box(this.s, `z1_tube_b_${li}`, [0.48, 0.025, 0.08], [x + 0.25, 2.61, z], tubeMatB);
-      const p = new THREE.PointLight(0xdfffd2, 1.6, 7, 1.5); p.position.set(x, 2.35, z); this.s.add(p); this.tubeLights.push(p);
+      const p = new THREE.PointLight(0xdfffd2, 1.9, 7, 1.5); p.position.set(x, 2.35, z); this.s.add(p); this.tubeLights.push(p);
       li++;
     }
 
@@ -241,7 +301,7 @@ export default class ThresholdZ1Office extends Scene {
     for (let i = 0; i < this.tubeLights.length; i++) {
       const cell = Math.floor(t * (i === 1 ? 9 : 4));
       const drop = i === 1 && hash(cell) < 0.38 ? 0.15 : i === 3 && hash(cell + 5) < 0.18 ? 0.35 : 1;
-      this.tubeLights[i]!.intensity = 1.6 * drop;
+      this.tubeLights[i]!.intensity = 1.9 * drop;
     }
     this.tubeMats[0]!.emissiveIntensity = 2.4 + 0.4 * hash(Math.floor(t * 7));
     this.tubeMats[1]!.emissiveIntensity = hash(Math.floor(t * 11)) < 0.28 ? 0.35 : 2.3;
