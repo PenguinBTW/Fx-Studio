@@ -18,6 +18,14 @@ export default defineMix({
     { id: 'z7_cathedral_room_tone', file: 'generated/z7_cathedral_room_tone.wav', bus: 'ambient', at: 149.5, gainDb: -5.5 },
     { id: 'z8_home_room_tone', file: 'generated/z8_home_room_tone.wav', bus: 'ambient', at: 194.4, gainDb: -6.5 },
     { id: 'end_office_afterimage_tone', file: 'generated/end_office_afterimage_tone.wav', bus: 'ambient', at: 225.0, gainDb: -7.0 },
+    // Material/event cues localized to each spatial seam. They sit on sfx so the ambient
+    // crossfade remains continuous while the physical transition object is unmistakable.
+    { id: 't2_plastic_to_water', file: 'generated/t2_plastic_to_water.wav', bus: 'sfx', at: 54.60, gainDb: -1.0 },
+    { id: 't3_ink_to_paper', file: 'generated/t3_ink_to_paper.wav', bus: 'sfx', at: 79.40, gainDb: -1.5 },
+    { id: 't4_page_slam_neon', file: 'generated/t4_page_slam_neon.wav', bus: 'sfx', at: 104.70, gainDb: 0.5 },
+    { id: 't5_static_to_felt', file: 'generated/t5_static_to_felt.wav', bus: 'sfx', at: 129.40, gainDb: -1.5 },
+    { id: 't6_felt_door_push', file: 'generated/t6_felt_door_push.wav', bus: 'sfx', at: 149.50, gainDb: 0.0 },
+    { id: 't7_lightfall_home', file: 'generated/t7_lightfall_home.wav', bus: 'sfx', at: 194.40, gainDb: -1.0 },
     { id: 'z1_phone_ring', file: 'generated/z1_phone_ring.wav', bus: 'sfx', at: 8.28, gainDb: 2.5 },
     { id: 'z1_receiver_breath', file: 'generated/z1_receiver_breath.wav', bus: 'sfx', at: 11.05, gainDb: -1.5 },
     { id: 'z1_ceiling_breath', file: 'generated/z1_ceiling_breath.wav', bus: 'sfx', at: 12.75, gainDb: -1.0 },

@@ -164,6 +164,112 @@ wav('z1_door_jingle_hit.wav', stem(3.0, (t) => {
   return [v, v * 0.94];
 }));
 
+
+// Transition-specific sound continuity. These short cues bind the material handoffs together;
+// zone beds underneath already crossfade, so these stems carry only the physical seam events.
+wav('t2_plastic_to_water.wav', stem(1.4, (t) => {
+  let plastic = 0;
+  for (const at of [0.10, 0.25, 0.42, 0.58]) {
+    const u = t - at;
+    if (u > 0 && u < 0.11) plastic += (noise() * 0.06 + Math.sin(u * Math.PI * 2 * 620) * 0.045) * Math.exp(-u * 34) * (1 - t / 1.2);
+  }
+  let water = 0;
+  for (const at of [0.55, 0.82, 1.08]) {
+    const u = t - at;
+    if (u > 0 && u < 0.42) water += noise() * 0.075 * Math.exp(-u * 9) * Math.min(1, u / 0.035);
+  }
+  const wetness = Math.min(1, Math.max(0, (t - 0.45) / 0.65));
+  const hollow = Math.sin(t * Math.PI * 2 * (180 - wetness * 70)) * 0.018 * (1 - wetness);
+  const v = plastic * (1 - wetness) + water * wetness + hollow;
+  return [v, v * 0.82];
+}));
+
+let inkLp = 0;
+wav('t3_ink_to_paper.wav', stem(1.6, (t) => {
+  inkLp = inkLp * 0.9 + noise() * 0.1;
+  const submerge = inkLp * 0.18 * Math.sin(Math.PI * Math.min(1, t / 0.72)) ** 1.2;
+  const pressure = Math.sin(t * Math.PI * 2 * (54 - t * 9)) * 0.028 * Math.exp(-t * 1.8);
+  const paperAt = t - 0.78;
+  let paper = 0;
+  if (paperAt > 0) {
+    paper = noise() * 0.045 * Math.min(1, paperAt / 0.12) * Math.exp(-paperAt * 1.3);
+    for (const at of [0.92, 1.18]) {
+      const u = t - at;
+      if (u > 0 && u < 0.16) paper += noise() * 0.055 * Math.exp(-u * 18);
+    }
+  }
+  const v = submerge * (1 - Math.min(1, paperAt / 0.3)) + pressure + paper;
+  return [v * 0.92, v];
+}));
+
+wav('t4_page_slam_neon.wav', stem(1.0, (t) => {
+  let v = 0;
+  if (t < 0.115) {
+    const k = t / 0.115;
+    v += noise() * 0.065 * Math.sin(Math.PI * k) + Math.sin(t * Math.PI * 2 * 190) * 0.012 * k;
+  }
+  const u = t - 0.108;
+  if (u > 0 && u < 0.10) {
+    v += noise() * 0.16 * Math.exp(-u * 42) + Math.sin(u * Math.PI * 2 * 72) * 0.16 * Math.exp(-u * 28);
+  }
+  // 0.12-0.20 stays deliberately empty: the master mute guarantees true black silence.
+  for (const at of [0.23, 0.39, 0.57]) {
+    const q = t - at;
+    if (q > 0 && q < 0.07) {
+      v += noise() * 0.045 * Math.exp(-q * 65) + Math.sin(q * Math.PI * 2 * 118) * 0.035 * Math.exp(-q * 28);
+    }
+  }
+  const neonOn = Math.max(0, Math.min(1, (t - 0.57) / 0.1));
+  v += (Math.sin(t * Math.PI * 2 * 119) * 0.022 + Math.sin(t * Math.PI * 2 * 238) * 0.006) * neonOn;
+  return [v, v * 0.9];
+}));
+
+let staticLp = 0;
+wav('t5_static_to_felt.wav', stem(1.4, (t) => {
+  staticLp = staticLp * 0.74 + noise() * 0.26;
+  const staticAmt = Math.max(0, 1 - t / 0.78);
+  const staticNoise = noise() * 0.09 * staticAmt + Math.sin(t * Math.PI * 2 * 60) * 0.012 * staticAmt;
+  const felt = staticLp * 0.16 * Math.min(1, Math.max(0, (t - 0.38) / 0.5));
+  let brush = 0;
+  for (const at of [0.66, 0.88, 1.08]) {
+    const u = t - at;
+    if (u > 0 && u < 0.24) brush += staticLp * 0.11 * Math.sin(Math.PI * u / 0.24);
+  }
+  const v = staticNoise + felt + brush;
+  return [v * 0.86, v];
+}));
+
+wav('t6_felt_door_push.wav', stem(1.2, (t) => {
+  let v = 0;
+  if (t < 0.42) {
+    const k = t / 0.42;
+    v += noise() * 0.045 * Math.sin(Math.PI * k) + Math.sin(t * Math.PI * 2 * (86 + k * 42)) * 0.022 * k;
+  }
+  const u = t - 0.38;
+  if (u > 0 && u < 0.16) {
+    v += noise() * 0.13 * Math.exp(-u * 24) + Math.sin(u * Math.PI * 2 * 142) * 0.08 * Math.exp(-u * 18);
+  }
+  const bloom = Math.max(0, Math.min(1, (t - 0.55) / 0.35));
+  v += (Math.sin(t * Math.PI * 2 * 58) * 0.028 + Math.sin(t * Math.PI * 2 * 116) * 0.008) * bloom;
+  return [v, v * 0.74];
+}));
+
+wav('t7_lightfall_home.wav', stem(1.4, (t) => {
+  let v = 0;
+  for (const [i, at] of [0.05, 0.28, 0.53, 0.82].entries()) {
+    const u = t - at;
+    if (u > 0 && u < 0.38) {
+      const fallHz = 980 - i * 140 - u * 290;
+      const warmth = Math.min(1, t / 1.1);
+      v += Math.sin(u * Math.PI * 2 * fallHz) * (0.030 - i * 0.003) * Math.exp(-u * 4.5) * (0.8 + warmth * 0.35);
+    }
+  }
+  const air = noise() * 0.012 * Math.max(0, (t - 0.55) / 0.6);
+  const curtain = noise() * 0.026 * Math.max(0, Math.min(1, (t - 0.82) / 0.28)) * Math.exp(-Math.max(0, t - 1.1) * 2.2);
+  v += air + curtain;
+  return [v * 0.9, v];
+}));
+
 // Full-timeline room-tone beds. These are architectural continuity layers, not final creature/cue passes:
 // every zone has a distinct physical space tone and edge fades overlap the engine transition windows.
 function edgeFade(t: number, dur: number, fadeIn: number, fadeOut: number): number {
