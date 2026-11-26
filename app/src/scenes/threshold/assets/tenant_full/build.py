@@ -23,10 +23,11 @@ try:
     GLASS.surface_render_method = 'DITHERED'
 except Exception:
     pass
-BALL_RED = mat('TenantBallRed', (0.22, 0.012, 0.008), 0.42)
-BALL_YELLOW = mat('TenantBallYellow', (0.32, 0.16, 0.01), 0.46)
-BALL_BLUE = mat('TenantBallBlue', (0.008, 0.045, 0.16), 0.42)
+BALL_RED = mat('TenantBallRed', (0.095, 0.012, 0.008), 0.46)
+BALL_YELLOW = mat('TenantBallYellow', (0.14, 0.085, 0.018), 0.5)
+BALL_BLUE = mat('TenantBallBlue', (0.01, 0.028, 0.055), 0.48)
 BALL_DARK = mat('TenantBallDark', (0.035, 0.028, 0.026), 0.48)
+BALL_GREEN = mat('TenantBallGreen', (0.018, 0.07, 0.038), 0.5)
 BLACK = mat('TenantFaceSlot', (0.002, 0.003, 0.003), 0.92)
 RUBBER = mat('TenantDarkRubber', (0.012, 0.01, 0.009), 0.8)
 
@@ -153,7 +154,7 @@ def build_ball_arm(side):
     upper_g = group_local(f'arm_{side}_upper_control', arm_g, f'arm_{side}_upper')
     lower_g = group_local(f'arm_{side}_lower_control', arm_g, f'arm_{side}_lower', (sx * 0.26, 0.09, -0.81))
     centers = []
-    count = 30
+    count = 22
     for i in range(count):
         u = i / (count - 1)
         if side == 'l':
@@ -165,23 +166,31 @@ def build_ball_arm(side):
             y = 0.02 + 0.92 * (u ** 1.16) - 0.04 * math.sin(u * math.pi)
             z = 3.23 - 2.38 * u + 0.25 * math.sin(u * math.pi)
         centers.append((x, y, z))
-    add(curve(f'arm_{side}_fused_rubber_mass', centers, 0.072, RUBBER), upper_g, 'melted_seams')
     add(curve(f'arm_{side}_coil_core', centers, 0.027, CHROME), upper_g, 'coil_core')
-    mats = [BALL_RED, BALL_DARK, BALL_DARK, BALL_YELLOW, BALL_DARK, BALL_BLUE, BALL_DARK, BALL_DARK]
+    for bi in range(len(centers) - 1):
+        add(curve(f'arm_{side}_fused_bridge_{bi}', [centers[bi], centers[bi + 1]], 0.031, RUBBER), upper_g if bi < 14 else lower_g, 'melted_seams')
+    mats = [BALL_RED, BALL_DARK, BALL_DARK, BALL_YELLOW, BALL_DARK, BALL_BLUE, BALL_GREEN, BALL_DARK, BALL_DARK]
     for i, c in enumerate(centers):
         u = i / (len(centers) - 1)
-        radius = 0.125 - 0.045 * u + R.uniform(-0.007, 0.007)
+        radius = 0.145 - 0.048 * u + R.uniform(-0.007, 0.007)
         # Aggressive overlap reads as melted/fused mass rather than a chain of separate beads.
-        ob = sphere(f'arm_{side}_fused_ball_{i}', radius, c, mats[(i + (0 if side == 'l' else 1)) % 3],
-                    scale=(1.08, 0.9 + 0.12 * hash(i), 1.04), segments=32, rings=16)
-        add(ob, upper_g if i < 15 else lower_g, 'ball_pit_shell')
+        ball_mat = mats[int(R.random() * len(mats)) % len(mats)]
+        ob = sphere(f'arm_{side}_fused_ball_{i}', radius, c, ball_mat,
+                    scale=(1.10 + 0.08 * R.random(), 0.9 + 0.16 * R.random(), 1.08 + 0.08 * R.random()), segments=32, rings=16)
+        add(ob, upper_g if i < 11 else lower_g, 'ball_pit_shell')
+        if i % 3 != 1:
+            sat_r = radius * (0.58 + 0.18 * R.random())
+            sat = (c[0] + sx * R.uniform(-0.075, 0.115), c[1] + R.uniform(-0.075, 0.075), c[2] + R.uniform(-0.075, 0.075))
+            sat_ob = sphere(f'arm_{side}_compressed_satellite_{i}', sat_r, sat, mats[int(R.random() * len(mats)) % len(mats)],
+                            scale=(1.05, 0.72 + 0.2 * R.random(), 1.0), segments=24, rings=12)
+            add(sat_ob, upper_g if i < 11 else lower_g, 'ball_pit_shell')
         if i % 3 == 1:
             add(torus(f'arm_{side}_melted_seam_{i}', radius * 0.9, 0.007, c, RUBBER,
-                      rot=(math.radians(90), 0, 0), major_segments=24, minor_segments=5), upper_g if i < 15 else lower_g, 'melted_seams')
-        if i in (5, 11, 18):
+                      rot=(math.radians(90), 0, 0), major_segments=24, minor_segments=5), upper_g if i < 11 else lower_g, 'melted_seams')
+        if i in (4, 9, 14, 18):
             # Sagging melted blobs bridge neighbouring balls and remove the toylike gaps.
             add(sphere(f'arm_{side}_sag_mass_{i}', radius * 0.82, (c[0], c[1] - 0.025, c[2] - 0.055), RUBBER,
-                       scale=(0.9, 0.62, 1.35), segments=24, rings=12), upper_g if i < 15 else lower_g, 'melted_seams')
+                       scale=(0.9, 0.62, 1.35), segments=24, rings=12), upper_g if i < 11 else lower_g, 'melted_seams')
     return arm_g, lower_g, centers[-1]
 
 arm_l_g, arm_l_lower_g, wrist_l = build_ball_arm('l')

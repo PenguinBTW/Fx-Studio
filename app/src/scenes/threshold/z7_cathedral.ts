@@ -169,7 +169,8 @@ export default class ThresholdZ7Cathedral extends Scene {
   private tenantRevealFill?: THREE.PointLight;
   private reachArm = new THREE.Group();
   private lint = new THREE.Group();
-  private assembly: { mesh: THREE.Object3D; start: THREE.Vector3; end: THREE.Vector3; seed: number }[] = [];
+  private assembly: { mesh: THREE.Object3D; start: THREE.Vector3; end: THREE.Vector3; seed: number; chain: 'spine' | 'rib' | 'limb' | 'head' }[] = [];
+  private assemblyShadowMat?: THREE.MeshBasicMaterial;
   private rift!: THREE.Mesh;
   private riftEdges: THREE.Mesh[] = [];
   private shaftLights: THREE.MeshBasicMaterial[] = [];
@@ -528,10 +529,25 @@ export default class ThresholdZ7Cathedral extends Scene {
         const j = i - 24;
         end = new THREE.Vector3((hash(i * 4) - 0.5) * 0.26, 3.28 + j * 0.15, -16.60);
       }
-      this.assembly.push({ mesh: piece, start, end, seed: hash(i * 9) });
+      const chain = i < 8 ? 'spine' as const : i < 14 ? 'rib' as const : i < 24 ? 'limb' as const : 'head' as const;
+      if (chain === 'limb') start.x = Math.sign(end.x || side) * Math.abs(start.x);
+      if (chain === 'spine') start.x *= 0.35;
+      // Chain-weighted seeds make anatomy sort in sequence: spine first, rib plates,
+      // limbs down lateral lanes, then head/coin fragments finish the silhouette.
+      const seed = chain === 'spine' ? 0.05 + i * 0.012 : chain === 'rib' ? 0.28 + (i - 8) * 0.018 : chain === 'limb' ? 0.48 + (i - 14) * 0.015 : 0.68 + (i - 24) * 0.02;
+      this.assembly.push({ mesh: piece, start, end, seed, chain });
       piece.scale.multiplyScalar(3.0);
       piece.visible = false;
     }
+    this.assemblyShadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0, depthWrite: false });
+    const assemblyShadow = new THREE.Mesh(new THREE.CircleGeometry(1, 40), this.assemblyShadowMat);
+    assemblyShadow.rotation.x = -Math.PI / 2;
+    assemblyShadow.position.set(0, 0.035, -16.58);
+    assemblyShadow.scale.set(1.35, 2.15, 1);
+    this.s.add(assemblyShadow);
+    this.z7DetailObjects.push(assemblyShadow);
+    this.disposables.push(this.assemblyShadowMat, assemblyShadow.geometry);
+
     const assemblyLight = new THREE.PointLight(0x8fd7ff, 8.5, 12.5, 1.25);
     assemblyLight.position.set(0, 2.2, -13.6);
     this.s.add(assemblyLight);
@@ -962,16 +978,22 @@ export default class ThresholdZ7Cathedral extends Scene {
     const asm = smooth((t - 163) / 2.4);
     const showPieces = t >= 163 && t < 166.4;
     for (const a of this.assembly) {
-      a.mesh.visible = showPieces;
-      if (!showPieces) continue;
-      const u = clamp(asm * 1.25 - a.seed * 0.25);
+      if (!showPieces) { a.mesh.visible = false; continue; }
+      const u = clamp(asm * 1.38 - a.seed * 0.32);
+      a.mesh.visible = showPieces && u > 0.002;
+      if (!a.mesh.visible) continue;
       const gather = smooth(u / 0.46);
       const rise = smooth((u - 0.34) / 0.66);
       const floorY = lerp(a.start.y, 0.24 + a.seed * 0.08, gather);
+      const laneSide = Math.sign(a.end.x || a.start.x || 1);
+      const lateralLane = a.chain === 'limb' ? laneSide * 0.72 : a.chain === 'rib' ? laneSide * 0.28 : 0;
+      const laneU = Math.sin(Math.PI * clamp(u / 0.72));
+      const depthLane = a.chain === 'spine' ? -0.42 : a.chain === 'head' ? 0.32 : 0;
+      const lift = a.chain === 'head' ? 0.42 : a.chain === 'rib' ? 0.22 : a.chain === 'limb' ? 0.12 : 0.08;
       a.mesh.position.set(
-        lerp(a.start.x, a.end.x, gather),
-        lerp(floorY, a.end.y, rise) + Math.sin(Math.PI * u) * 0.22,
-        lerp(a.start.z, a.end.z, gather),
+        lerp(a.start.x, a.end.x, gather) + lateralLane * laneU,
+        lerp(floorY, a.end.y, rise) + Math.sin(Math.PI * u) * lift,
+        lerp(a.start.z, a.end.z, gather) + depthLane * laneU,
       );
       const stepSpin = Math.floor(u * 5) / 5;
       a.mesh.rotation.set(stepSpin * (1 + a.seed) * 3.2, stepSpin * 4.4, stepSpin * 2.1);
@@ -1030,6 +1052,9 @@ export default class ThresholdZ7Cathedral extends Scene {
       if (armR) armR.rotation.x = 0.04 - 0.11 * heldPose - (t >= 168 ? 0.13 * gallop : 0);
     }
 
+    if (this.assemblyShadowMat) {
+      this.assemblyShadowMat.opacity = 0.46 * smooth((t - 163.2) / 0.65) * (1 - smooth((t - 168.02) / 0.2));
+    }
     const revealLight = smooth((t - 165.45) / 0.25) * (1 - smooth((t - 168.02) / 0.22));
     if (this.tenantRevealKey) {
       this.tenantRevealKey.intensity = 17.5 * revealLight;
