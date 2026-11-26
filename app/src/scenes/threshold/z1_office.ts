@@ -151,7 +151,7 @@ export default class ThresholdZ1Office extends Scene {
     runPods.forEach(([x, z], i) => {
       box(this.s, `z1_runisland_desk_${i}`, [1.35, 0.07, 0.66], [x, 0.72, z], deskTop, [0, (i % 2 ? -0.18 : 0.18), 0]);
       box(this.s, `z1_runisland_monitor_${i}`, [0.38, 0.3, 0.24], [x - 0.18, 0.96, z - 0.12], dark, [0, 0.35 + i * 0.15, 0]);
-      plane(this.s, `z1_runisland_screen_${i}`, 0.28, 0.19, [x - 0.18, 0.97, z + 0.02], screen, [0, 0.35 + i * 0.15, 0]);
+      plane(this.s, `z1_runisland_screen_${i}`, 0.28, 0.19, [x - 0.18, 0.97, z + 0.02], screen, [0, Math.PI + 0.35 + i * 0.15, 0]);
       box(this.s, `z1_runisland_keyboard_${i}`, [0.38, 0.025, 0.13], [x + 0.12, 0.765, z + 0.14], keyboardMat, [0, 0.2, 0]);
       box(this.s, `z1_runisland_chair_${i}`, [0.44, 0.5, 0.44], [x + 0.48, 0.42, z + 0.48], podChairMat, [0, hash(i) * 2.5, i === 2 ? 0.55 : 0]);
       box(this.s, `z1_runisland_paperstack_${i}`, [0.24, 0.045, 0.3], [x + 0.38, 0.78, z - 0.12], paper, [0, hash(i) * 0.7, 0]);
@@ -225,8 +225,8 @@ export default class ThresholdZ1Office extends Scene {
     box(this.s, 'z1_open_drawer', [0.5, 0.16, 0.5], [-4.8, 0.92, -2.35], metal);
     cyl(this.s, 'z1_water_cooler_bottle', 0.18, 0.48, [6.8, 1.05, -2.5], mat(0x7ea7bb, 0.2, 0, 0x223a44, 0.1), [0, 0, 0], 28);
     cyl(this.s, 'z1_water_cooler_base', 0.2, 0.72, [6.8, 0.36, -2.5], mat(0xd0cec3, 0.55));
-    cyl(this.s, 'z1_ficus_pot', 0.18, 0.28, [-7.4, 0.14, -5.6], mat(0x684329, 0.7));
-    for (let i = 0; i < 8; i++) cyl(this.s, `z1_dead_ficus_stem_${i}`, 0.012, 0.7 + hash(i) * 0.5, [-7.4 + (hash(i) - 0.5) * 0.22, 0.55, -5.6 + (hash(i + 3) - 0.5) * 0.22], mat(0x2f2719, 0.9), [0.3 * (hash(i) - 0.5), 0, 0.3 * (hash(i + 2) - 0.5)], 8);
+    cyl(this.s, 'z1_ficus_pot', 0.18, 0.28, [-2.7, 0.14, -4.2], mat(0x684329, 0.7));
+    for (let i = 0; i < 8; i++) cyl(this.s, `z1_dead_ficus_stem_${i}`, 0.012, 0.7 + hash(i) * 0.5, [-2.7 + (hash(i) - 0.5) * 0.22, 0.55, -4.2 + (hash(i + 3) - 0.5) * 0.22], mat(0x2f2719, 0.9), [0.3 * (hash(i) - 0.5), 0, 0.3 * (hash(i + 2) - 0.5)], 8);
     box(this.s, 'z1_cork_board', [1.3, 0.8, 0.04], [-8.2, 1.6, -1], mat(0x73532c, 0.9));
     cyl(this.s, 'z1_wall_clock', 0.22, 0.035, [7.8, 1.8, -1.2], plastic, [Math.PI / 2, 0, 0], 32);
     box(this.s, 'z1_clock_hand', [0.018, 0.006, 0.16], [7.8, 1.8, -1.17], dark, [0, 0.55, 0]);
