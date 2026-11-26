@@ -17,6 +17,8 @@ BALL_BLUE = mat('TenantBallBlue', (0.02, 0.17, 0.48), 0.28)
 RUBBER = mat('TenantDarkRubber', (0.018, 0.015, 0.013), 0.78)
 
 root = empty('tenant_arm_root')
+# Blender -Z is vertical; rotate so the authored downward arm reaches along glTF/engine -Z after +Y-up export.
+root.rotation_euler[0] = math.radians(90)
 root['fx_part'] = 'arm_only'
 seen_parts = set()
 def add(o, part=None):
@@ -26,7 +28,7 @@ def add(o, part=None):
         seen_parts.add(part)
     return o
 
-# Local arm reaches along -Z from a crude shoulder mass toward the hand at z=-1.75.
+# Authored down Blender -Z, then rotated so the exported engine-space arm reaches along -Z.
 add(sphere('shoulder_collage', 0.34, (0, 0, 0.05), PAPER, scale=(1.0, 0.7, 0.8), segments=36, rings=18), 'shoulder')
 segments = [
     ((0, 0, -0.05), (0.06, -0.03, -0.58), 0.13, TILE),

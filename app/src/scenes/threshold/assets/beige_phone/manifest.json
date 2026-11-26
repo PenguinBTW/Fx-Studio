@@ -7,7 +7,7 @@
   "parts": {
     "root": "beige_phone_root",
     "base": "base_shell",
-    "receiver": "receiver_grip",
+    "receiver": "receiver",
     "keypad": "key_0",
     "cord": "coiled_cord",
     "bell": "bell_-1",

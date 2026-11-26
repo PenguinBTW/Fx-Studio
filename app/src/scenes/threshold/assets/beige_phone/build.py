@@ -35,11 +35,17 @@ for side in (-1, 1):
     add(box(f'hook_{side}', (0.012, 0.028, 0.018), (side * 0.052, 0.022, 0.111), BEIGE_DARK, bev=0.005), 'hooks')
 
 # Receiver: central grip with two rounded ear/mouth pods.
-add(box('receiver_grip', (0.082, 0.022, 0.018), (0, 0.028, 0.136), BEIGE, bev=0.012, seg=6, rot=(0, 0, math.radians(1.5))), 'receiver')
+receiver_root = empty('receiver')
+parent(receiver_root, root)
+receiver_root['fx_part'] = 'receiver'
+grip = add(box('receiver_grip', (0.082, 0.022, 0.018), (0, 0.028, 0.136), BEIGE, bev=0.012, seg=6, rot=(0, 0, math.radians(1.5))))
+parent(grip, receiver_root)
 for side in (-1, 1):
-    pod = add(sphere(f'receiver_pod_{side}', 0.031, (side * 0.082, 0.03, 0.132), BEIGE, scale=(1.18, 0.72, 0.62), segments=22, rings=11), 'receiver')
+    pod = add(sphere(f'receiver_pod_{side}', 0.031, (side * 0.082, 0.03, 0.132), BEIGE, scale=(1.18, 0.72, 0.62), segments=22, rings=11))
+    parent(pod, receiver_root)
     pod.rotation_euler[1] = math.radians(side * 4)
-    add(cyl(f'receiver_cap_{side}', 0.019, 0.006, (side * 0.083, 0.012, 0.127), BEIGE_DARK, rot=(math.radians(90), 0, 0), verts=32), 'receiver')
+    cap = add(cyl(f'receiver_cap_{side}', 0.019, 0.006, (side * 0.083, 0.012, 0.127), BEIGE_DARK, rot=(math.radians(90), 0, 0), verts=32))
+    parent(cap, receiver_root)
 
 # Twelve raised keys in a 3x4 grid, slightly forward on the sloped face.
 digits = ['1','2','3','4','5','6','7','8','9','*','0','#']
