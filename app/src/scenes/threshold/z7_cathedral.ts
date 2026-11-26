@@ -499,7 +499,7 @@ export default class ThresholdZ7Cathedral extends Scene {
     this.replayMachines = new THREE.InstancedMesh(replayBodyGeo, this.replayMachineMat, replayRows * 2);
     this.replayPanels = new THREE.InstancedMesh(replayPanelGeo, this.replayPanelMat, replayRows * 2);
     let ri = 0;
-    for (const side of [-1, 1]) for (let row = 0; row < 18; row++) {
+    for (const side of [-1, 1]) for (let row = 0; row < replayRows; row++) {
       const z = -24.5 - row * 3.2;
       const h = 2.2 + 0.25 * hash(row * 2.13 + side);
       const x = side * (2.25 + 0.08 * hash(row * 4.7));
@@ -519,7 +519,7 @@ export default class ThresholdZ7Cathedral extends Scene {
     this.replayPanels.instanceMatrix.needsUpdate = true;
     if (this.replayMachines.instanceColor) this.replayMachines.instanceColor.needsUpdate = true;
     if (this.replayPanels.instanceColor) this.replayPanels.instanceColor.needsUpdate = true;
-    this.s.add(this.replayMachines, this.replayPanels);
+    this.replayEnvironment.add(this.replayMachines, this.replayPanels);
 
     // Same horizontal fascia vents as the current cold-open aisle.
     const replayVentMat = new THREE.MeshStandardMaterial({ color: 0x030609, roughness: 0.7, metalness: 0.35, emissive: 0x071923, emissiveIntensity: 0.32 });
@@ -539,7 +539,7 @@ export default class ThresholdZ7Cathedral extends Scene {
       }
     }
     this.replayVents.instanceMatrix.needsUpdate = true;
-    this.s.add(this.replayVents);
+    this.replayEnvironment.add(this.replayVents);
 
     // Replay-only floor/ambient/reflection environment copied from Z0's current hook treatment.
     // It is hidden outside 171.30-173.40 so the larger cathedral floor/detail pass is untouched.
