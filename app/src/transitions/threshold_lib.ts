@@ -58,7 +58,7 @@ const BODY: Record<ThresholdTransitionMode, string> = {
     float edgeNoise = (n0 - 0.5) * 0.18;
     float x = vUv.x + edgeNoise;
     float behind = 1.0 - smoothstep(front - 0.012, front + 0.012, x);
-    float nearFront = 1.0 - smoothstep(0.0, 0.24, abs(x - front));
+    float nearFront = (1.0 - smoothstep(0.0, 0.24, abs(x - front))) * smoothstep(0.0, 0.04, u);
     vec2 flow = vec2(0.0, nearFront * nearFront * (0.09 + 0.07 * fbm(vUv * 9.0 + u, 3)));
     vec3 cb = texture(texB, vUv + flow * (1.0 - behind)).rgb;
     vec3 ahead = ca;
@@ -93,7 +93,7 @@ const BODY: Record<ThresholdTransitionMode, string> = {
     float front = mix(-0.20, 1.34, smoothstep(0.02, 0.97, u));
     float inside = 1.0 - smoothstep(front - 0.014, front + 0.014, d);
     float wetBand = (1.0 - smoothstep(0.0, 0.22, abs(d - front))) * smoothstep(0.02, 0.10, u);
-    float inkSub = 1.0 - smoothstep(front - 0.02, front + 0.20, d);
+    float inkSub = (1.0 - smoothstep(front - 0.02, front + 0.20, d)) * smoothstep(0.0, 0.04, u);
     vec3 drowned = mix(ca, vec3(0.001, 0.004, 0.006), sat(inkSub * 1.25));
     // Paper fibre field: long torn cellulose threads and small dry pinholes.
     float fibreA = fbm(vec2(vUv.x * 42.0, vUv.y * 9.0), 5);
