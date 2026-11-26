@@ -26,8 +26,6 @@ const KEYS: PoseKey[] = [
   { t: 163.0, p: [-10.9, 1.65, -9.2], yaw: -28, pitch: 0, roll: 0, fov: 68 },
   { t: 165.5, p: [-3.6, 1.65, -11.0], yaw: 18, pitch: 0, roll: 0, fov: 70 },
   { t: 168.0, p: [0, 1.6, -13.0], yaw: 0, pitch: 0, roll: 0, fov: 84 },
-  { t: 168.5, p: [0, 1.6, -14.7], yaw: 64, pitch: -1, roll: 3, fov: 84 },
-  { t: 169.1, p: [0, 1.6, -19.3], yaw: 0, pitch: 0, roll: 3, fov: 84 },
   { t: 170.0, p: [0, 1.6, -24.0], yaw: 0, pitch: 0, roll: 2, fov: 84 },
   { t: 172.0, p: [0, 1.15, -33.5], yaw: 163, pitch: -12, roll: 12, fov: 86 },
   { t: 173.4, p: [0, 0.35, -34.6], yaw: 184, pitch: -5, roll: 70, fov: 90 },
@@ -72,8 +70,27 @@ function replayPoseAt(t: number) {
     target: [p.target[0], p.target[1], p.target[2] + REPLAY_Z_OFFSET] as [number, number, number],
   };
 }
+function rotateForwardYaw(v: [number, number, number], yaw: number): [number, number, number] {
+  const c = Math.cos(yaw), s = Math.sin(yaw);
+  return [c * v[0] - s * v[2], v[1], s * v[0] + c * v[2]];
+}
+
 function z7PoseAt(t: number) {
-  return t >= REPLAY_T_OFFSET && t <= COLD_OPEN_REPLAY.z7BeamDead ? replayPoseAt(t) : poseAt(t, z7Gait(t));
+  if (t >= REPLAY_T_OFFSET && t <= COLD_OPEN_REPLAY.z7BeamDead) return replayPoseAt(t);
+  const pose = poseAt(t, z7Gait(t));
+  const glanceU = clamp((t - 168.05) / 1.05);
+  const glanceYaw = t >= 168.05 && t < 169.1 ? Math.pow(Math.sin(Math.PI * glanceU), 0.65) * 1.2 : 0;
+  if (!glanceYaw) return pose;
+  const forward = rotateForwardYaw(pose.forward, glanceYaw);
+  const right = rotateForwardYaw(pose.right, glanceYaw);
+  const up = rotateForwardYaw(pose.up, glanceYaw);
+  return {
+    ...pose,
+    forward,
+    right,
+    up,
+    target: [pose.pos[0] + forward[0], pose.pos[1] + forward[1], pose.pos[2] + forward[2]] as [number, number, number],
+  };
 }
 
 export default class ThresholdZ7Cathedral extends Scene {
@@ -102,6 +119,8 @@ export default class ThresholdZ7Cathedral extends Scene {
   private replayReflectionMats: THREE.MeshBasicMaterial[] = [];
   private baseAmbient?: THREE.AmbientLight;
   private tenant = new THREE.Group();
+  private tenantRevealKey?: THREE.PointLight;
+  private tenantRevealFill?: THREE.PointLight;
   private reachArm = new THREE.Group();
   private lint = new THREE.Group();
   private assembly: { mesh: THREE.Object3D; start: THREE.Vector3; end: THREE.Vector3; seed: number }[] = [];
@@ -396,6 +415,10 @@ export default class ThresholdZ7Cathedral extends Scene {
     this.s.add(assemblyWarm);
     this.z7DetailObjects.push(assemblyWarm);
     await this.buildTenant();
+    this.tenantRevealKey = new THREE.PointLight(0xa9e6ff, 0, 8.5, 1.32);
+    this.tenantRevealFill = new THREE.PointLight(0xffb36b, 0, 5.5, 1.45);
+    this.s.add(this.tenantRevealKey, this.tenantRevealFill);
+    this.z7DetailObjects.push(this.tenantRevealKey, this.tenantRevealFill);
     this.buildReachArm();
 
     // Central floor rift, initially hairline and invisible, then widening.
@@ -782,23 +805,41 @@ export default class ThresholdZ7Cathedral extends Scene {
     const tenantVisible = t >= 165.6 && t < 186 && !exactReplay;
     this.tenant.visible = tenantVisible;
     if (tenantVisible) {
-      let z = -18;
+      const chaseK = smooth((t - 168.05) / 0.45);
+      let z = -16.6;
+      let x = 0.15 * Math.sin(t * 1.7);
       if (t >= 168) {
-        const pursuitZ = this.cam.position.z + 4.8 + 0.4 * Math.sin(Math.floor(t * 3.3) * 2.1);
-        z = lerp(-18, pursuitZ, smooth((t - 168.05) / 0.45));
+        const pursuitZ = this.cam.position.z + 6.3 + 0.4 * Math.sin(Math.floor(t * 3.3) * 2.1);
+        z = lerp(-16.6, pursuitZ, chaseK);
+        x = lerp(x, -1.25 + 0.22 * Math.sin(t * 1.9), chaseK);
       }
       const burst = hash(Math.floor(t * 3.3)) > 0.45 ? 1 : 0;
-      this.tenant.position.set(0.15 * Math.sin(t * 1.7), 0, z);
+      this.tenant.position.set(x, 0, z);
       this.tenant.rotation.z = 0.12 * burst + 0.05 * Math.sin(t * 2.2);
       this.tenant.rotation.y = t >= 168 ? 0 : Math.PI;
       const reach = smooth((t - 172.4) / 0.8) * (1 - smooth((t - 174.0) / 0.5));
-      this.tenant.scale.set(1 + reach * 0.12, 1, 1 + reach * 0.35);
+      const revealScale = t < 168 ? 1.18 : lerp(1.18, 1, chaseK);
+      this.tenant.scale.set(revealScale * (1 + reach * 0.12), revealScale, revealScale * (1 + reach * 0.35));
       const head = this.tenantInst?.parts.get('head');
       const armL = this.tenantInst?.parts.get('arm_l');
       const armR = this.tenantInst?.parts.get('arm_r');
       if (head) head.rotation.z = 0.18 * burst + 0.04 * Math.sin(Math.floor(t * 3.3) * 1.7);
       if (armL) armL.rotation.x = 0.08 * burst;
       if (armR) armR.rotation.x = -0.06 * burst;
+    }
+
+    const revealLight = smooth((t - 165.45) / 0.25) * (1 - smooth((t - 168.02) / 0.22));
+    if (this.tenantRevealKey) {
+      this.tenantRevealKey.intensity = 17.5 * revealLight;
+      this.tenantRevealKey.position.set(
+        pose.pos[0] + pose.forward[0] * 1.25,
+        pose.pos[1] - 0.08,
+        pose.pos[2] + pose.forward[2] * 1.25,
+      );
+    }
+    if (this.tenantRevealFill) {
+      this.tenantRevealFill.intensity = 5.2 * revealLight;
+      this.tenantRevealFill.position.set(-0.75, 1.1, -15.25);
     }
 
     this.reachArm.visible = false;
