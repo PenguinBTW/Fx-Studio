@@ -572,6 +572,8 @@ wav('z4_library_events.wav', stem(25.9, (t) => {
     const tear = z4PaperLp * 0.18 + noise() * 0.075;
     const riffle = Math.sin(u * Math.PI * 2 * (180 + u * 420)) * 0.050;
     add((tear + riffle) * Math.min(1, u / 0.16) * Math.exp(-u * 1.2), 0);
+    const tearCell=Math.floor(u*22),tq=(u*22-tearCell)/22;
+    if(tq<.028)add((noise()*.052+Math.sin(tq*Math.PI*2*(900+hash01(tearCell,14)*1300))*.014)*Math.exp(-tq*90),(hash01(tearCell,15)-.5)*.5);
   }
   if (at >= 95.0 && at < 96.2) {
     const cell = Math.floor((at - 95.0) * 18);
@@ -590,7 +592,8 @@ wav('z4_library_events.wav', stem(25.9, (t) => {
       const slam = Math.sin(u * Math.PI * 2 * 72) * (0.060 + closeK * 0.050) * Math.exp(-u * 12);
       const fibre = z4PaperLp * (0.070 + closeK * 0.040) * Math.exp(-u * 8);
       const snap = noise() * (0.030 + closeK * 0.020) * Math.exp(-u * 30);
-      add(slam + fibre + snap, (i % 2 ? 0.12 : -0.12) * (1 - closeK * 0.5));
+      const fold=Math.sin(u*Math.PI*2*(240+closeK*180+i*13))*.018*Math.exp(-u*34);
+      add(slam + fibre + snap + fold, (i % 2 ? 0.12 : -0.12) * (1 - closeK * 0.5));
     }
     if (hit >= 97.0) {
       const bu = at - hit - 0.28;
