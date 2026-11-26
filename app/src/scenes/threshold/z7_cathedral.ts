@@ -199,6 +199,7 @@ export default class ThresholdZ7Cathedral extends Scene {
   private riftEdges: THREE.Mesh[] = [];
   private shaftLights: THREE.MeshBasicMaterial[] = [];
   private fallDebris: { mesh: THREE.Mesh; seed: number; baseY: number }[] = [];
+  private shaftMachines: { group: THREE.Group; seed: number; baseY: number; baseZ: number; baseX: number; speed: number }[] = [];
   private topplingMachines: { group: THREE.Group; seed: number; start: number }[] = [];
   private z7DetailObjects: THREE.Object3D[] = [];
   private disposables: { dispose(): void }[] = [];
@@ -642,6 +643,58 @@ export default class ThresholdZ7Cathedral extends Scene {
       const fm = new THREE.MeshBasicMaterial({ color: i % 3 ? 0x5aa8ff : 0xbfe8ff });
       this.disposables.push(fm);
       this.box(this.s, [0.9, 1.15, 0.045], [x - side * 0.43, y + 0.05, z], fm, [0.08 * hash(i), 0.15 * side, 0.05 * side]);
+    }
+
+    // Specific falling machines, not abstract debris: cabinet carcasses with glowing
+    // marquees, edge rails, glass fronts and product rows. They are staged along the
+    // camera's falling path so several pass close enough to identify in one frame.
+    const shaftGlassMat = new THREE.MeshBasicMaterial({ color: 0x79cfff, transparent: true, opacity: 0.74 });
+    const shaftWarmMat = new THREE.MeshBasicMaterial({ color: 0xffb45e });
+    const shaftEdgeMat = new THREE.MeshBasicMaterial({ color: 0xc8f2ff });
+    const shaftDarkMat = this.mat(0x071018, 0.48, 0.62, 0x02070c, 0.18);
+    const shaftProductMats = [productRed, productTeal, paper, chrome];
+    this.disposables.push(shaftGlassMat, shaftWarmMat, shaftEdgeMat);
+    for (let i = 0; i < 16; i++) {
+      const seed = hash(i * 17.31 + 4.2);
+      const side = i % 2 ? -1 : 1;
+      const g = new THREE.Group();
+      // Stage each cabinet along the camera's actual forward ray at a staggered target
+      // time. This is image-first blocking: even while the camera rolls, successive machines
+      // pass through the viewed volume instead of merely existing somewhere in the shaft.
+      const targetT = 186.32 + i * 0.43;
+      const pose = z7PoseAt(targetT);
+      const ahead = 3.4 + hash(i * 5.9) * 2.6;
+      const speed = 0.62 + seed * 0.74;
+      const targetY = pose.pos[1] + pose.forward[1] * ahead + (hash(i * 11.3) - 0.5) * 1.15;
+      const targetZ = pose.pos[2] + pose.forward[2] * ahead + (hash(i * 13.7) - 0.5) * 0.75;
+      const baseY = targetY + (targetT - 186) * speed;
+      const baseZ = targetZ;
+      const baseX = side * (0.62 + hash(i * 3.7) * 1.65);
+      g.position.set(baseX, baseY, baseZ);
+      g.rotation.set(seed * 1.2, side * (0.35 + seed * 0.4), (seed - 0.5) * 0.7);
+      this.box(g, [1.18, 2.28, 0.88], [0, 0, 0], shaftDarkMat);
+      // Front face in local +Z: bright rim first, then recessed glass and product rows.
+      this.box(g, [0.9, 1.34, 0.045], [0, 0.08, 0.435], shaftGlassMat);
+      this.box(g, [1.02, 0.22, 0.06], [0, 0.98, 0.455], i % 3 ? shaftGlassMat : shaftWarmMat);
+      for (const x of [-0.52, 0.52]) this.box(g, [0.035, 2.08, 0.055], [x, 0, 0.45], shaftEdgeMat);
+      for (const y of [-1.02, 1.08]) this.box(g, [1.05, 0.035, 0.055], [0, y, 0.45], shaftEdgeMat);
+      for (let shelf = 0; shelf < 4; shelf++) {
+        this.box(g, [0.78, 0.025, 0.055], [0, -0.45 + shelf * 0.3, 0.47], chrome);
+        for (let col = 0; col < 4; col++) {
+          if (hash(i * 31 + shelf * 7 + col) < 0.18) continue;
+          const pm = shaftProductMats[(i + shelf + col) % shaftProductMats.length]!;
+          this.box(g, [0.105, 0.13, 0.055], [-0.29 + col * 0.19, -0.37 + shelf * 0.3, 0.49], pm);
+        }
+      }
+      this.box(g, [0.32, 0.42, 0.065], [0.28, -0.82, 0.48], darkMetal);
+      this.box(g, [0.18, 0.06, 0.07], [0.28, -0.63, 0.49], shaftWarmMat);
+      // A few side rails keep the object readable as a manufactured cabinet even when
+      // the tumble shows a side or three-quarter rather than the lit front.
+      for (const x of [-0.56, 0.56]) this.box(g, [0.045, 1.88, 0.72], [x, 0, 0], chrome);
+      g.visible = false;
+      this.s.add(g);
+      this.z7DetailObjects.push(g);
+      this.shaftMachines.push({ group: g, seed, baseY, baseZ, baseX, speed });
     }
 
     // Falling environmental consequence: product cans, cartons, glass shards and small
@@ -1264,6 +1317,25 @@ export default class ThresholdZ7Cathedral extends Scene {
       m.group.rotation.x = u * (0.18 + m.seed * 0.2);
       m.group.position.y = -u * u * (1.2 + m.seed * 0.8);
       m.group.position.x += 0; // position is otherwise static; rotation carries the topple read
+    }
+
+    // Cabinets tumble as closed-form functions of fall time. They fall slower than the
+    // camera, so they sweep upward past the lens while retaining readable machine fronts.
+    const shaftFallT = Math.max(0, t - 186);
+    for (const m of this.shaftMachines) {
+      const active = t >= 185.8 && t < 193.8;
+      m.group.visible = active;
+      if (!active) continue;
+      m.group.position.set(
+        m.baseX + Math.sin((t - 186) * (0.33 + m.seed * 0.25) + m.seed * 7) * 0.28,
+        m.baseY - shaftFallT * m.speed,
+        m.baseZ + Math.sin((t - 186) * 0.21 + m.seed * 5) * 0.18,
+      );
+      m.group.rotation.set(
+        m.seed * 1.2 + shaftFallT * (0.28 + m.seed * 0.34),
+        Math.sign(m.baseX || 1) * (0.35 + m.seed * 0.4) + shaftFallT * (0.2 + m.seed * 0.28),
+        (m.seed - 0.5) * 0.7 + shaftFallT * (0.34 + m.seed * 0.24),
+      );
     }
 
     // Falling streaks slide upward past the camera as a pure function of time.
