@@ -616,6 +616,12 @@ export async function mixdown(o: MixOptions): Promise<MixReport> {
         finalTp = await measureOut();
       }
       report.measuredTruePeak = Number.isFinite(finalTp) ? finalTp.toFixed(2) : undefined;
+      if (report.loudnorm && Number.isFinite(finalTp)) {
+        // loudnorm's output_* fields are a simulation of the reference ffmpeg chain;
+        // this master uses explicit EBU gain plus the lookahead limiter, so report the
+        // artifact's measured reconstruction peak instead of the unused simulated value.
+        report.loudnorm.output_tp = finalTp.toFixed(2);
+      }
     }
     log(`[mixdown] wrote ${o.out} (${frames} samples @ ${sr} Hz, ${dur.toFixed(3)} s)`);
 

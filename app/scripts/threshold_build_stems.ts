@@ -22,6 +22,19 @@ function roomize(input: Float32Array, wet = 0.12): Float32Array {
 }
 
 function wav(file: string, pcmIn: Float32Array): void {
+  if (file.includes('room_tone') || file.includes('fluorescent_bed')) {
+    // Room air is not a point source: two independent low-passed micro-noise fields
+    // decorrelate the pressure texture while shared hum/body energy remains centered.
+    let airL = 0, airR = 0;
+    const seed = file.length * 3.17;
+    for (let f = 0; f < pcmIn.length / 2; f++) {
+      airL = airL * 0.935 + (hash01(f, seed) - 0.5) * 0.065;
+      airR = airR * 0.935 + (hash01(f, seed + 19.7) - 0.5) * 0.065;
+      const widthAmount = file.includes('fluorescent_bed') ? 0.29 : 0.18;
+      pcmIn[f * 2] += airL * widthAmount;
+      pcmIn[f * 2 + 1] += airR * widthAmount;
+    }
+  }
   const pcm = roomize(pcmIn);
   const n = pcm.length, buf = Buffer.alloc(44 + n * 3);
   buf.write('RIFF', 0); buf.writeUInt32LE(36 + n * 3, 4); buf.write('WAVE', 8);
@@ -57,8 +70,8 @@ wav('z1_fluorescent_bed.wav', stem(27, (t) => {
   const tickA = t > 2.42 && t < 2.49 ? noise() * 0.09 : 0;
   const tickB = t > 8.72 && t < 8.78 ? noise() * 0.07 : 0;
   const fade = Math.min(1, t / 1.15, (27 - t) / 1.4);
-  const v = (hum + hiss + tickA + tickB) * Math.max(0, fade);
-  return [v * 0.96, v];
+  const center = (hum + hiss * 0.45 + tickA + tickB) * Math.max(0, fade);
+  return [center * 0.96, center];
 }));
 
 // Two old mechanical bell bursts.
@@ -130,7 +143,8 @@ wav('z1_run_carpet.wav', stem(8.4, (t) => {
     const k = 1 - step / 0.075;
     // Keep the low footstep weight, but shave the noisy attack crest that otherwise
     // makes the master limiter pump throughout the first chase.
-    const thud = (noise() * 0.03 + carpetLp * 0.16 + Math.sin(step * Math.PI * 2 * 58) * 0.22) * k;
+    const stepVar = 0.82 + hash01(idx, 5.1) * 0.36;
+    const thud = (noise() * 0.03 + carpetLp * 0.16 + Math.sin(step * Math.PI * 2 * 58) * 0.22) * k * stepVar;
     if (idx % 2) r += thud * 1.2, l += thud * 0.72;
     else l += thud * 1.2, r += thud * 0.72;
   }
@@ -516,7 +530,8 @@ wav('z4_library_events.wav', stem(25.9, (t) => {
 
   // Dead paper-room microtone: dry air, leaf-like rustles and clock teeth until 88.0.
   if (at >= 80.0 && at < 94.0) {
-    add(z4PaperLp * 0.018, 0);
+    const breath = 0.005 + 0.995 * ((1 - smoothstep(88.1, 88.35, at)) + smoothstep(89.45, 89.7, at));
+    add(z4PaperLp * 0.018 * breath, 0);
     const leafCell = Math.floor((at - 80) * 3.0);
     const lu = ((at - 80) * 3.0) - leafCell;
     if (hash01(leafCell, 12.4) < 0.34 && lu < 0.22) {
@@ -698,7 +713,7 @@ wav('z6_theatre_events.wav', stem(21.2,(t)=>{
  const at=t+129.4; z6lp=z6lp*.90+noise()*.10; let l=0,r=0;
  const add=(v:number,pan=0)=>{const a=(pan+1)*Math.PI/4;l+=v*Math.cos(a);r+=v*Math.sin(a)};
  // absorbent felt room tone: very little high air or reflection
- if(at>=130&&at<150)add(z6lp*.010,0);
+ if(at>=130&&at<150){const breath=0.005+0.995*((1-smoothstep(141.75,142.05,at))+smoothstep(143.55,143.85,at));add(z6lp*.010*breath,0)}
  // slowed music box, missing note restored; after 139 it stumbles and dies by 141.5
  if(at>=130&&at<141.5){
    const slow=at<139?1:Math.max(0,1-(at-139)/2.5); const pos=at-130; const nl=.52; const idx=Math.floor(pos/nl)%8; const u=pos%nl;
@@ -741,7 +756,7 @@ wav('z7_cathedral_events.wav', stem(45.8,(t)=>{
  const at=t+149.5; z7lp=z7lp*.91+noise()*.09; let l=0,r=0;
  const add=(v:number,pan=0)=>{const a=(pan+1)*Math.PI/4;l+=v*Math.cos(a);r+=v*Math.sin(a)};
  // vast stone/machine nave pressure, then compressor-organ wake stack
- if(at>=150&&at<176)add(z7lp*.016+Math.sin(at*Math.PI*2*38)*.005,0);
+ if(at>=150&&at<176){const breath=0.005+0.995*((1-smoothstep(150.25,150.55,at))+smoothstep(152.0,152.3,at));add((z7lp*.016+Math.sin(at*Math.PI*2*38)*.005)*breath,0)}
  if(at>=154&&at<173.35){const sw=smoothstep(154,158,at);const off=at<168.2?0:Math.max(0,Math.min(15,Math.floor((at-168.2)/.48)+1));const subtract=1-off*.045;for(let row=0;row<8;row++){const hz=54+row*7+hash01(row,31)*3;const pan=-.52+row*.15;const rowWake=smoothstep(154+row*.28,157.2+row*.28,at);add((Math.sin(at*Math.PI*2*hz)*.010+Math.sin(at*Math.PI*2*hz*1.5)*.004)*sw*rowWake*subtract,pan)}}
  // sparse far coin drops with long nave echoes
  for(const hit of[151.4,154.8,156.7]){for(const [eo,m] of[[0,1],[.7,.38],[1.5,.18],[2.5,.08]] as const){const u=at-hit-eo;if(u>0&&u<.22)add((Math.sin(u*Math.PI*2*1150)*.018+noise()*.008)*Math.exp(-u*28)*m,0)}}
@@ -772,7 +787,7 @@ wav('z7_cathedral_events.wav', stem(45.8,(t)=>{
  // huge hollow material inhalation, intermittent pressure rather than voice
  if(at>=166.5&&at<173.35){const c=(at-166.5)%2.7;if(c<1.15){const gate=Math.sin(Math.PI*c/1.15)**1.4;add((z7lp*.13+Math.sin(at*Math.PI*2*74)*.024)*gate,0)}}
  // hard stone chase steps with nave slap
- for(let i=0;i<18;i++){const hit=168+i*.44;const pan=i%2?.10:-.10;for(const [eo,m] of[[0,1],[.38,.28],[.9,.12]] as const){const u=at-hit-eo;if(at<173.35&&u>0&&u<.12)add((noise()*.042+Math.sin(u*Math.PI*2*95)*.040+z7lp*.04)*Math.exp(-u*28)*m,pan)}}
+ for(let i=0;i<18;i++){const hit=168+i*.44;const pan=i%2?.10:-.10;const stepVar=.82+hash01(i,20.1)*.36;for(const [eo,m] of[[0,1],[.38,.28],[.9,.12]] as const){const u=at-hit-eo;if(at<173.35&&u>0&&u<.12)add((noise()*.042+Math.sin(u*Math.PI*2*95)*.040+z7lp*.04)*Math.exp(-u*28)*m*stepVar,pan)}}
  // machines relay off behind the runner and subtract the organ bed perceptually
  for(let i=0;i<16;i++){const hit=168.2+i*.48;const u=at-hit;if(at<173.35&&u>0&&u<.16)add((Math.sin(u*Math.PI*2*88)*.055+noise()*.018)*Math.exp(-u*24),-.3+i*.04)}
  // uneven composite Tenant rattling pursuit
@@ -796,7 +811,8 @@ wav('z7_cathedral_events.wav', stem(45.8,(t)=>{
    const u=at-hit;
    if(u>0&&u<3.4){
      const attack=Math.min(1,u/.028);
-     const sub=Math.sin(u*Math.PI*2*(47-u*7))*.115*Math.exp(-u*2.15)*attack;
+     const toppleVar=.86+hash01(Math.floor(hit*10),21.1)*.28;
+     const sub=Math.sin(u*Math.PI*2*(47-u*7))*.115*toppleVar*Math.exp(-u*2.15)*attack;
      const shell=(noise()*.052+z7lp*.082+Math.sin(u*Math.PI*2*(82-u*13))*.046)*Math.exp(-u*2.8)*attack;
      add(sub+shell,pan);
      for(const [eo,m,spread] of[[.34,.42,.18],[.78,.24,-.24],[1.38,.13,.31],[2.15,.07,-.18]] as const){
@@ -818,7 +834,7 @@ wav('z7_cathedral_events.wav', stem(45.8,(t)=>{
    const u=at-186;const narrow=smoothstep(1.2,5,u);
    const rollAngle=u*Math.PI*2/6;
    const rotatingPan=Math.sin(rollAngle)*.72;
-   const wind=noise()*(.018-narrow*.010)+z7lp*(.052+narrow*.038);
+   const wind=noise()*(.006-narrow*.004)+z7lp*(.022+narrow*.016);
    add(wind,rotatingPan);
    // Decorrelated air edges rotate once with the 360° camera roll, widening the fall
    // without adding new event density or breaking the mono-compatible wind core.
@@ -829,7 +845,21 @@ wav('z7_cathedral_events.wav', stem(45.8,(t)=>{
    l+=airA*(.62+.38*curl)+airB*(.18-.18*Math.sin(rollAngle));
    r+=airB*(.62-.38*curl)+airA*(.18+.18*Math.sin(rollAngle));
  }
- // physical debris cascade: metal mass, glass spray and stone clatter passing upward
+ // dense physical impact cascade: separate bottles, cans, glass and stone chips
+for(let k=0;k<30;k++){
+  const st=186.08+k*.185+(hash01(k,30.1)-.5)*.055;
+  const u=at-st;
+  if(u>0&&u<.30){
+    const metalHz=170+hash01(k,30.2)*390;
+    const glassHz=1450+hash01(k,30.3)*1500;
+    const pan=(hash01(k,30.4)-.5)*1.35+Math.sin((at-186)*Math.PI*2/6)*.25;
+    const attack=Math.min(1,u/.006);
+    const impact=noise()*.105*Math.exp(-u*48)+Math.sin(u*Math.PI*2*metalHz)*.066*Math.exp(-u*21)+Math.sin(u*Math.PI*2*metalHz*.51)*.040*Math.exp(-u*15);
+    const glass=Math.sin(u*Math.PI*2*glassHz)*.018*Math.exp(-u*58)+noise()*.038*Math.exp(-u*86);
+    add((impact+glass)*attack,Math.max(-.92,Math.min(.92,pan)));
+  }
+}
+// physical debris cascade: metal mass, glass spray and stone clatter passing upward
 for(const st of[186.18,186.55,186.92,187.35,187.72,188.18,188.62,189.05,189.48,189.92,190.35,190.82,191.25,191.62]){
   const u=at-st;
   if(u>0&&u<.48){
@@ -837,8 +867,8 @@ for(const st of[186.18,186.55,186.92,187.35,187.72,188.18,188.62,189.05,189.48,1
     const metalHz=210+hash01(seed,31)*260;
     const glassHz=1250+hash01(seed,32)*900;
     const pan=(hash01(seed,33)-.5)*1.2+Math.sin((at-186)*Math.PI*2/6)*.28;
-    const mass=(Math.sin(u*Math.PI*2*metalHz)*.070+Math.sin(u*Math.PI*2*(metalHz*.49))*.048+z7lp*.070)*Math.exp(-u*11);
-    const clatter=(noise()*.052+Math.sin(u*Math.PI*2*glassHz)*.018)*Math.exp(-u*19);
+    const mass=(Math.sin(u*Math.PI*2*metalHz)*.048+Math.sin(u*Math.PI*2*(metalHz*.49))*.032+z7lp*.042)*Math.exp(-u*17);
+    const clatter=(noise()*.040+Math.sin(u*Math.PI*2*glassHz)*.014)*Math.exp(-u*28);
     add((mass+clatter)*Math.min(1,u/.025),Math.max(-.9,Math.min(.9,pan)));
   }
 }
@@ -1015,11 +1045,12 @@ function edgeFade(t: number, dur: number, fadeIn: number, fadeOut: number): numb
 function bed(file: string, dur: number, fadeIn: number, fadeOut: number, fn: (t: number, lp: () => number) => [number, number]): void {
   let lpState = 0;
   const lp = () => (lpState = lpState * 0.86 + noise() * 0.14);
-  wav(file, stem(dur, (t) => {
+  const pcm = stem(dur, (t) => {
     const [l, r] = fn(t, lp);
     const e = edgeFade(t, dur, fadeIn, fadeOut);
     return [l * e, r * e];
-  }));
+  });
+  wav(file, pcm);
 }
 
 bed('z0_machine_room_tone.wav', 4.2, 0.18, 0.42, (t, lp) => {

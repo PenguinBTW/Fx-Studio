@@ -440,7 +440,6 @@ export function applyLookaheadLimiter(
   // 3. Compute target gains & apply fast attack / smooth exponential release (tau = 50ms)
   const releaseTau = 0.050; // 50ms exponential release
   const releaseAlpha = 1.0 - Math.exp(-1.0 / (sampleRate * releaseTau));
-
   let currentGain = 1.0;
 
   for (let f = 0; f < totalFrames; f++) {
