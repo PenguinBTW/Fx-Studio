@@ -44,13 +44,16 @@ export function drawPremiseLine(
   y?: number,
   maxWidth?: number,
 ): void {
-  void maxWidth; // accepted for migration compatibility; canonical type size is never rescaled
   const s = premiseTypeAt(t, start);
   if (s.alpha <= 0) return;
   const width = g.canvas.width;
   const height = g.canvas.height;
   const scale = height / 1080;
-  const fontPx = Math.round(PREMISE_SIZE_1080 * scale);
+  let fontPx = Math.round(PREMISE_SIZE_1080 * scale);
+  const usableWidth = maxWidth ?? width * 0.82;
+  // Landscape 1920x1080 remains the canonical 48px. Narrow/portrait canvases fit the
+  // same single line by shrinking proportionally instead of clipping outside the safe width.
+  fontPx = Math.max(1, Math.min(fontPx, Math.floor(usableWidth / (PREMISE_TEXT.length * 0.61))));
   x ??= Math.round(width * 0.065);
   y ??= Math.round(height * 0.79);
   const text = PREMISE_TEXT.slice(0, s.visibleChars) + (s.cursor ? '▌' : '');
