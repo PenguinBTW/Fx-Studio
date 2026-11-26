@@ -728,8 +728,22 @@ wav('z7_cathedral_events.wav', stem(45.8,(t)=>{
  if(at>=160&&at<163){const c=(at-160)%.68;if(c<.32){const hz=520+Math.sin(c*Math.PI*2*7)*70;add((Math.sin(c*Math.PI*2*hz)*.048+Math.sin(c*Math.PI*2*hz*2.1)*.015)*Math.sin(Math.PI*c/.32),-.42)}}
  // product-drop cascade: balls, tile, paper, felt, coils converging center
  if(at>=163&&at<165.2){const u=at-163;const cell=Math.floor(u*28);const cu=(u*28-cell)/28;if(cu<.16){const hz=260+hash01(cell,9)*1450;const pan=(hash01(cell,10)-.5)*(1-u/2.2);add((noise()*.042+Math.sin(cu*Math.PI*2*hz)*.018)*Math.exp(-cu*35),pan)}}
- // Tenant assembly: object-specific snaps, creases, knocks and extending coils
- if(at>=163&&at<166.4){const u=at-163;const pulse=Math.max(0,Math.sin(u*Math.PI*2*2.4));add((z7lp*(.05+u*.018)+noise()*.026+Math.sin((190*u+27.5*u*u)*Math.PI*2)*.024)*pulse,0)}
+ // Tenant assembly: object-specific snaps, creases, knocks and extending coils.
+ // Matches the visual chain sort: spine/rib/limb/head complete by 164.92, then releases before the 165.6 reveal hold.
+ if(at>=163&&at<165.58){
+   const u=at-163;
+   const formation=1.9206;
+   const sort=smoothstep(.12,formation,u);
+   const release=Math.exp(-Math.max(0,u-formation)*7.5);
+   const endGate=1-smoothstep(2.28,2.58,u);
+   const envelope=(.14+.86*sort)*release*endGate;
+   const pulse=Math.max(0,Math.sin((u*2.4+.6406)*Math.PI*2));
+   add((z7lp*(.035+.07*sort)+noise()*(.012+.02*sort)+Math.sin((190*u+27.5*u*u)*Math.PI*2)*(.012+.018*sort))*pulse*envelope,0);
+   for(const [hit,pan,hz] of [[164.592,-.08,180],[164.731,.05,230],[164.852,-.03,290],[164.921,0,360]] as const){
+     const q=at-hit;
+     if(q>0&&q<.18)add((noise()*.07+Math.sin(q*Math.PI*2*hz)*.05)*Math.exp(-q*24),pan);
+   }
+ }
  // huge hollow material inhalation, intermittent pressure rather than voice
  if(at>=166.5&&at<173.35){const c=(at-166.5)%2.7;if(c<1.15){const gate=Math.sin(Math.PI*c/1.15)**1.4;add((z7lp*.13+Math.sin(at*Math.PI*2*74)*.024)*gate,0)}}
  // hard stone chase steps with nave slap
