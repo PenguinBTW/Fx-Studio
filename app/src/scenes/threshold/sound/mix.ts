@@ -67,7 +67,7 @@ export default defineMix({
   ],
   master: {
     lufs: -14,
-    truePeak: -1.2,
+    truePeak: -1.5,
     limiterLookaheadMs: 5,
     lowLevelLift: { thresholdDb: -40, ratio: 1.2, maxLiftDb: 4 },
     downwardCompress: { thresholdDb: -34, ratio: 2.0 },
