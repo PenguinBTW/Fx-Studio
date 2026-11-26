@@ -4,33 +4,57 @@ sys.dont_write_bytecode=True
 HERE=os.path.dirname(os.path.abspath(__file__));sys.path.insert(0,os.path.dirname(HERE))
 from _bl import *
 reset()
-PAPER=mat('aged_ledger_paper',(.70,.64,.47),.88);PAPER2=mat('letter_paper pale',(.82,.77,.62),.9);EDGE=mat('paper_edge_dark',(.24,.18,.10),.9);WOOD=mat('dark_desk_wood',(.15,.065,.02),.65);BRASS=mat('aged_brass_prop',(.42,.25,.045),.32,metal=.55);INK=mat('black_ink',(.012,.009,.006),.9);RULE=mat('faint_ledger_rules',(.32,.25,.14),.94);GREEN=mat('bankers_lamp_green',(.02,.19,.065),.24,emit=(.01,.10,.025),strength=.3);RED=mat('red_string',(.45,.018,.012),.7);GLASS=mat('dim_glass',(.28,.38,.34),.12)
+PAPER=mat('aged_ledger_paper',(.70,.64,.47),.88);PAPER2=mat('letter_paper pale',(.82,.77,.62),.9);EDGE=mat('paper_edge_dark',(.24,.18,.10),.9);WOOD=mat('dark_desk_wood',(.15,.065,.02),.65);BRASS=mat('aged_brass_prop',(.42,.25,.045),.32,metal=.55);INK=mat('black_ink',(.012,.009,.006),.9);RULE=mat('faint_ledger_rules',(.32,.25,.14),.94);GREEN=mat('bankers_lamp_green',(.02,.19,.065),.24,emit=(.01,.10,.025),strength=.3);RED=mat('red_string',(.45,.018,.012),.7);GLASS=mat('dim_glass',(.13,.20,.17),.28)
 def root(n,x):r=empty(n,(x,0,0));r['fx_part']=n;return r
 def add(o,r):o.location.x-=r.location.x;o.parent=r;return o
 
 def ledger(x):
  r=root('open_ledger_root',x)
  add(box('ledger_cover',(.76,.52,.045),(x,0,.025),WOOD,.018,3),r)
- add(box('ledger_page_left',(.34,.46,.025),(x-.18,0,.062),PAPER,.012,3,rot=(0,0,.035)),r)
- add(box('ledger_page_right',(.34,.46,.025),(x+.18,0,.062),PAPER2,.012,3,rot=(0,0,-.035)),r)
- add(box('ledger_spine',(.055,.50,.065),(x,0,.07),EDGE,.01),r)
+ add(box('ledger_page_left',(.34,.46,.010),(x-.18,0,.058),PAPER,.006,2,rot=(0,0,.035)),r)
+ add(box('ledger_page_right',(.34,.46,.010),(x+.18,0,.058),PAPER2,.006,2,rot=(0,0,-.035)),r)
+ add(box('ledger_spine',(.030,.48,.025),(x,0,.060),EDGE,.005),r)
  for side in(-1,1):
-  for i in range(8):add(box('ledger_ruled_line',(.25,.0035,.002),(x+side*.18,-.17+i*.045,.079),RULE,.0005),r)
+  for i in range(8):
+   add(box('ledger_ruled_line',(.25,.0035,.0015),(x+side*.18,-.17+i*.045,.068),RULE,.0003),r)
+   for k in range(6):
+    ww=.012+((i*7+k*3)%5)*.006; xx=x+side*.18-.105+k*.038+((i+k)%3)*.003
+    add(box('ledger_handwriting_stroke',(ww,.0022,.002),(xx,-.17+i*.045+((k*5)%3)*.003,.071),INK,.0002,rot=(0,0,((i*3+k)%5-2)*.09)),r)
  return r
 
 def fountain_pen(x):
  r=root('fountain_pen_root',x)
- add(cyl('pen_barrel',.018,.28,(x,0,.02),INK,rot=(0,math.pi/2,0),verts=16),r)
- add(cyl('pen_cap_band',.019,.018,(x+.07,0,.02),BRASS,rot=(0,math.pi/2,0),verts=16),r)
- add(box('pen_nib',(.07,.025,.008),(x+.18,0,.02),BRASS,.003,2),r)
- add(box('pen_slit',(.035,.003,.002),(x+.19,0,.026),INK,.0005),r)
+ add(cyl('pen_barrel',.012,.17,(x,0,.018),INK,rot=(0,math.pi/2,0),verts=16),r)
+ add(cyl('pen_cap_band',.013,.014,(x+.045,0,.018),BRASS,rot=(0,math.pi/2,0),verts=16),r)
+ add(box('pen_nib',(.045,.018,.006),(x+.112,0,.018),BRASS,.002,2),r)
+ add(box('pen_slit',(.024,.002,.0015),(x+.118,0,.023),INK,.0003),r)
  return r
+
+def lamp_shade_mesh(name,x,zbase):
+ verts=[];faces=[];nx=7;ny=10
+ # elongated open half-cylinder: curved across y, straight along x, no closed balloon belly.
+ for ix in range(nx):
+  xx=x-.25+ix*(.50/(nx-1))
+  crown=1-abs(ix/(nx-1)-.5)*.10
+  for iy in range(ny):
+   u=-1+iy*(2/(ny-1)); yy=u*.145; zz=zbase+math.sqrt(max(0,1-u*u))*.145*crown
+   verts.append((xx,yy,zz))
+ for ix in range(nx-1):
+  for iy in range(ny-1):
+   a=ix*ny+iy;b=(ix+1)*ny+iy
+   faces.append((a,b,b+1,a+1))
+ mesh=bpy.data.meshes.new(name+'_mesh');mesh.from_pydata(verts,[],faces);mesh.update()
+ o=bpy.data.objects.new(name,mesh);bpy.context.collection.objects.link(o)
+ sol=o.modifiers.new('shade_shell_thickness','SOLIDIFY');sol.thickness=.012
+ bevel=o.modifiers.new('rolled_shade_edges','BEVEL');bevel.width=.006;bevel.segments=2
+ assign(o,GREEN);smooth(o)
+ return o
 
 def lamp(x):
  r=root('bankers_lamp_root',x)
  add(cyl('lamp_base',.15,.045,(x,0,.025),BRASS,verts=28),r)
  add(cyl('lamp_stem',.025,.52,(x,0,.30),BRASS,verts=16),r)
- add(sphere('lamp_green_shade',.20,(x,0,.58),GREEN,scale=(1.35,.72,.55),segments=24),r)
+ add(lamp_shade_mesh('lamp_green_shade',x,.50),r)
  add(box('lamp_shade_rim',(.48,.16,.025),(x,0,.50),BRASS,.008),r)
  return r
 
@@ -89,9 +113,9 @@ def globe(x):
 
 def glasses(x):
  r=root('reading_glasses_root',x)
- for sx in(-.075,.075):add(torus('glasses_lens',.065,.006,(x+sx,0,0),GLASS,major_segments=24,minor_segments=6),r)
- add(cyl('glasses_bridge',.006,.035,(x,0,0),BRASS,rot=(0,math.pi/2,0),verts=8),r)
- for sx in(-.15,.15):add(cyl('glasses_temple',.005,.16,(x+sx,.07,0),BRASS,rot=(math.pi/2,0,0),verts=8),r)
+ for sx in(-.043,.043):add(torus('glasses_lens',.038,.004,(x+sx,0,0),GLASS,major_segments=24,minor_segments=6),r)
+ add(cyl('glasses_bridge',.004,.024,(x,0,0),BRASS,rot=(0,math.pi/2,0),verts=8),r)
+ for sx in(-.088,.088):add(cyl('glasses_temple',.0035,.12,(x+sx,.055,0),BRASS,rot=(math.pi/2,0,0),verts=8),r)
  return r
 
 def scissors(x):
