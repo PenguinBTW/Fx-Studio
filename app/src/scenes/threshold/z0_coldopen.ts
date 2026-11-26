@@ -177,19 +177,22 @@ export default class Z0ColdOpen extends Scene {
     this.tenantInst = await GLTFManager.instantiate(resolveAsset('tenant_arm', this.ctx.project ?? 'threshold').url, {});
     this.arm = new THREE.Group();
     this.arm.add(this.tenantInst.root);
-    const machineGlint = new THREE.PointLight(0x7fc9ff, 0.85, 2.4, 1.6);
+    const machineGlint = new THREE.PointLight(0x7fc9ff, 1.8, 3.0, 1.6);
     machineGlint.position.set(-0.18, 0.18, -0.95);
     this.arm.add(machineGlint);
-    const fingerGlint = new THREE.PointLight(0xffc28a, 1.35, 2.2, 1.8);
+    const fingerGlint = new THREE.PointLight(0xffc28a, 3.4, 3.4, 1.8);
     fingerGlint.position.set(0.06, 0.08, -1.92);
     this.arm.add(fingerGlint);
+    const rimGlint = new THREE.PointLight(0x9fdcff, 2.2, 3.0, 1.9);
+    rimGlint.position.set(-0.36, 0.32, -1.25);
+    this.arm.add(rimGlint);
     this.tenantInst.root.traverse((obj) => {
       if (!(obj instanceof THREE.Mesh)) return;
       if (obj.name === 'shoulder_collage') obj.scale.multiplyScalar(0.72);
       const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
       for (const m of mats) {
         if (!(m instanceof THREE.MeshStandardMaterial)) continue;
-        if (m.name === 'TenantChrome') { m.emissive.setHex(0x182230); m.emissiveIntensity = 0.18; m.roughness = 0.24; }
+        if (m.name === 'TenantChrome') { m.emissive.setHex(0x182230); m.emissiveIntensity = 0.28; m.roughness = 0.2; }
         if (m.name === 'TenantPoolTile') { m.emissive.setHex(0x07191e); m.emissiveIntensity = 0.12; }
       }
     });
@@ -202,22 +205,22 @@ export default class Z0ColdOpen extends Scene {
 
   private poseArm(t: number, pose: FPPose) {
     const reach = sm(2.4, 3.25, t);
-    const dist = lerp(5.8, 4.35, reach);
+    const dist = lerp(5.8, 3.6, reach);
     this.arm.position.set(
-      pose.pos[0] + pose.forward[0] * dist + pose.right[0] * 0.78,
-      pose.pos[1] - 0.24 + 0.62 * (1 - reach) + 0.34 * reach,
-      pose.pos[2] + pose.forward[2] * dist + pose.right[2] * 0.78,
+      pose.pos[0] + pose.forward[0] * dist + pose.right[0] * 0.55,
+      pose.pos[1] + 0.02 + 0.62 * (1 - reach) + 0.34 * reach,
+      pose.pos[2] + pose.forward[2] * dist + pose.right[2] * 0.55,
     );
     const towardCamera = new THREE.Vector3(
-      -pose.forward[0] + pose.right[0] * 1.35,
+      -pose.forward[0] + pose.right[0] * 0.85,
       0,
-      -pose.forward[2] + pose.right[2] * 1.35,
+      -pose.forward[2] + pose.right[2] * 0.85,
     ).normalize();
     this.arm.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, -1), towardCamera);
     this.arm.rotateX(0.1 * reach);
     this.arm.rotateY(-0.28 * reach);
     this.arm.rotateZ(0.16 * reach);
-    this.arm.scale.setScalar(lerp(0.95, 1.36, reach));
+    this.arm.scale.setScalar(lerp(1.05, 1.85, reach));
     this.arm.visible = t > 1.15 && t < 3.32;
   }
 
