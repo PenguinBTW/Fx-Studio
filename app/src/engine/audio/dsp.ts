@@ -280,11 +280,12 @@ export function applyReconstructionLowpass(
   pcm: Float32Array,
   cutoffHz: number = 16000,
   sampleRate: number = 48000,
+  channels: number = 2,
 ): Float32Array {
   const totalSamples = pcm.length;
   if (totalSamples === 0) return new Float32Array(0);
-  const isStereo = totalSamples % 2 === 0;
-  const frames = isStereo ? totalSamples / 2 : totalSamples;
+  const chCount = Math.max(1, Math.floor(channels));
+  const frames = Math.floor(totalSamples / chCount);
   const output = new Float32Array(totalSamples);
   const fc = Math.max(1000, Math.min(sampleRate * 0.45, cutoffHz));
   const omega = 2 * Math.PI * fc / sampleRate;
@@ -298,10 +299,10 @@ export function applyReconstructionLowpass(
   const b2 = b0;
   const a1 = (-2 * cos) / a0;
   const a2 = (1 - alpha) / a0;
-  for (const ch of isStereo ? [0, 1] : [0]) {
+  for (let ch = 0; ch < chCount; ch++) {
     let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
     for (let f = 0; f < frames; f++) {
-      const i = isStereo ? f * 2 + ch : f;
+      const i = f * chCount + ch;
       const x = pcm[i] ?? 0;
       const y = b0 * x + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
       output[i] = y;
