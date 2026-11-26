@@ -103,6 +103,21 @@ function proceduralSurface(kind: SurfaceKind, repeat: number) {
   tex.repeat.set(repeat, repeat);
   return tex;
 }
+function exitSignTexture() {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 96;
+  const g = c.getContext('2d')!;
+  const grad = g.createLinearGradient(0, 0, 0, 96);
+  grad.addColorStop(0, '#6e100c'); grad.addColorStop(0.48, '#b8221a'); grad.addColorStop(1, '#4b0907');
+  g.fillStyle = grad; g.fillRect(0, 0, 256, 96);
+  g.strokeStyle = 'rgba(255,105,78,.75)'; g.lineWidth = 5; g.strokeRect(5, 5, 246, 86);
+  g.font = 'bold 58px Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.shadowColor = 'rgba(255,235,210,.75)'; g.shadowBlur = 7;
+  g.fillStyle = '#fff0df'; g.fillText('EXIT', 128, 51);
+  g.shadowBlur = 0; g.fillStyle = 'rgba(70,0,0,.25)'; g.fillRect(0, 78, 256, 18);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 function wetGoatEyeTexture() {
   const size = 128;
   const c = document.createElement('canvas'); c.width = c.height = size;
@@ -625,14 +640,24 @@ export default class ThresholdZ1Office extends Scene {
     box(this.s, 'z1_fire_door', [1.0, 2.1, 0.09], [-2, 1.05, 15.92], this.assetMats.firedoor_paint ?? mat(0x4c5a4e, 0.55));
     box(this.s, 'z1_fire_door_frame_top', [1.18, 0.09, 0.14], [-2, 2.16, 15.9], mat(0x242821, 0.72));
     for (const x of [-2.56,-1.44]) box(this.s, `z1_fire_door_frame_side_${x}`, [0.08, 2.2, 0.14], [x, 1.08, 15.9], mat(0x242821, 0.72));
-    box(this.s, 'z1_exit_panic_bar', [0.72, 0.075, 0.07], [-2, 1.04, 15.84], mat(0x9b9a8e, 0.32, 0.55));
+    // Panic hardware is cylindrical and mounted on standoffs rather than a painted stripe.
     box(this.s, 'z1_exit_push_plate', [0.28, 0.48, 0.018], [-2, 0.83, 15.86], mat(0x77776d, 0.42, 0.35));
+    box(this.s, 'z1_exit_kick_plate', [0.84, 0.20, 0.018], [-2, 0.16, 15.858], mat(0x55564f, 0.48, 0.32));
+    cyl(this.s, 'z1_fire_pushbar_round', 0.034, 0.72, [-2, 1.04, 15.805], mat(0xa9a89b, 0.26, 0.62), [0, 0, Math.PI / 2], 18);
+    for (const x of [-2.31,-1.69]) {
+      box(this.s, `z1_pushbar_mount_${x}`, [0.055, 0.12, 0.075], [x, 1.04, 15.845], mat(0x5f6058, 0.34, 0.5));
+      cyl(this.s, `z1_pushbar_endcap_${x}`, 0.041, 0.035, [x, 1.04, 15.803], mat(0x8f8e82, 0.3, 0.58), [0, 0, Math.PI / 2], 16);
+    }
     for (const y of [0.48,1.08,1.68]) box(this.s, `z1_exit_hinge_${y}`, [0.055,0.18,0.045], [-2.48,y,15.84], mat(0x4c4c45,0.38,0.5));
     for (let i=0;i<7;i++) box(this.s, `z1_exit_scratch_${i}`, [0.16+hash(i)*0.18,0.006,0.008], [-2.25+hash(i+2)*0.5,0.62+hash(i+3)*1.1,15.855], basic(0xd2cdbb,0.35), [0,0,(hash(i+4)-.5)*.5]);
+    // Deep frame stop and threshold give the fire door an architectural reveal rather than a flat decal outline.
+    for (const x of [-2.49,-1.51]) box(this.s, `z1_frame_inner_stop_${x}`, [0.035, 2.02, 0.055], [x, 1.08, 15.825], mat(0x151812, 0.78));
+    box(this.s, 'z1_frame_inner_stop_top', [1.02, 0.035, 0.055], [-2, 2.08, 15.825], mat(0x151812, 0.78));
+    box(this.s, 'z1_fire_threshold', [1.14, 0.035, 0.18], [-2, 0.018, 15.82], mat(0x4b4c43, 0.38, 0.45));
     const exitSpill = new THREE.PointLight(0xff8b68, 1.15, 4.5, 2); exitSpill.position.set(-2,2.25,15.45); this.s.add(exitSpill);
-    box(this.s, 'z1_fire_pushbar', [0.72, 0.07, 0.08], [-2, 1.02, 15.84], metal);
-    box(this.s, 'z1_exit_sign', [0.62, 0.22, 0.08], [-2, 2.32, 15.82], red);
-    plane(this.s, 'z1_exit_text_proxy', 0.42, 0.12, [-2, 2.32, 15.77], basic(0xff4038), [0, 0, 0]);
+    box(this.s, 'z1_exit_sign_case', [0.66, 0.25, 0.105], [-2, 2.32, 15.82], mat(0x270b08, 0.42, 0.18));
+    const exitFace = new THREE.MeshBasicMaterial({ map: exitSignTexture() });
+    plane(this.s, 'z1_exit_sign_face', 0.58, 0.19, [-2, 2.32, 15.762], exitFace, [0, Math.PI, 0]);
     plane(this.s, 'z1_daylight_slit', 0.92, 0.045, [-2, 0.035, 15.76], basic(0xfff0ba), [-Math.PI / 2, 0, 0]);
 
     // true dark rectangular opening behind the creature details; the ordinary slab otherwise reads as solid ceiling
