@@ -533,7 +533,7 @@ export async function mixdown(o: MixOptions): Promise<MixReport> {
       };
     }
     if (m.reconstructionLowpassHz && hasSignal) {
-      master = applyReconstructionLowpass(master, m.reconstructionLowpassHz, sr);
+      master = applyReconstructionLowpass(master, m.reconstructionLowpassHz, sr, CH);
       report.reconstructionLowpassHz = m.reconstructionLowpassHz.toFixed(0);
     }
     if ((m as any).normalize !== false && hasSignal) {

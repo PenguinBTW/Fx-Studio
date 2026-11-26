@@ -280,7 +280,7 @@ export function applyReconstructionLowpass(
   pcm: Float32Array,
   cutoffHz: number = 16000,
   sampleRate: number = 48000,
-  channels: number = 2,
+  channels: number = 1,
 ): Float32Array {
   const totalSamples = pcm.length;
   if (totalSamples === 0) return new Float32Array(0);
