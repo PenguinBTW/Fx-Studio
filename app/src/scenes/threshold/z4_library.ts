@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
+import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { resolveAsset } from '../../engine/assets';
 import { thresholdPost } from './sensor_post';
 import { addFlashlight, applyFpCamera, basic, box, clamp, cyl, disposeTree, hash, mat, plane, smooth, sph, updateFlashlight, type CamKey } from './z1_scene_util';
@@ -42,10 +43,16 @@ export default class ThresholdZ4Library extends Scene {
   private ledgerLines: THREE.Mesh[] = [];
 
   private archivistAsset!: GLTFInstance;
+  private libraryKit!: GLTFInstance;
+  private paperProps!: GLTFInstance;
 
   override async init() {
     const resolved = resolveAsset('threshold/z4_archivist');
     this.archivistAsset = await GLTFManager.instantiate(resolved.url, { ...resolved.manifest.load, castShadow: true, receiveShadow: true });
+    const kitResolved = resolveAsset('threshold/z4_library_kit');
+    const propResolved = resolveAsset('threshold/z4_paper_prop_pack');
+    this.libraryKit = await GLTFManager.instantiate(kitResolved.url, { ...kitResolved.manifest.load, castShadow: true, receiveShadow: true });
+    this.paperProps = await GLTFManager.instantiate(propResolved.url, { ...propResolved.manifest.load, castShadow: true, receiveShadow: true });
     this.archivistAsset.root.position.set(1.15, 0.02, 2.35);
     this.archivistAsset.root.visible = false;
     this.s.add(this.archivistAsset.root);
@@ -151,6 +158,35 @@ export default class ThresholdZ4Library extends Scene {
     box(this.s, 'z4_exit_gap_glow', [1.0, 2.0, 0.04], [0, 1.0, 25.5], this.gapGlow);
     box(this.s, 'z4_neon_preview', [0.08, 0.7, 0.035], [0.15, 1.7, 25.45], mat(0xff356e, 0.2, 0, 0xff2d74, 4));
 
+    // Modular Blender library architecture and paper props replace the primitive repeating/desk dressing.
+    this.s.traverse((o) => {
+      if (/^z4_(stack_body|shelf_line|bookblock|index_label|bookmark|librarian_desk|desk_left|desk_right|ledger_base|ledger_page|lamp_stem|lamp_shade|card_catalog|catalog_drawer|ladder_side|ladder_rung)/.test(o.name)) o.visible = false;
+    });
+    this.phone.visible = false;
+    for (const side of [-1, 1]) {
+      for (let bay = 0; bay < 22; bay++) {
+        const z = 0.5 + bay * 1.1;
+        this.cloneProp(this.libraryKit, 'paper_stack_bay_root', [side * (2.45 + hash(bay) * 0.14), 0, z], side < 0 ? 0 : Math.PI, 1, `z4_stack_bay_asset_${side}_${bay}`);
+      }
+    }
+    this.cloneProp(this.libraryKit, 'reading_desk_root', [0, 0, 6], 0, 1, 'z4_reading_desk_asset');
+    this.cloneProp(this.paperProps, 'open_ledger_root', [0, 0.845, 6], 0, 1, 'z4_open_ledger_asset');
+    this.cloneProp(this.paperProps, 'fountain_pen_root', [0.34, 0.91, 5.78], -0.35, 1, 'z4_fountain_pen_asset');
+    this.cloneProp(this.paperProps, 'ink_bottle_root', [-0.38, 0.82, 5.78], 0, 1, 'z4_ink_bottle_asset');
+    this.cloneProp(this.paperProps, 'reading_glasses_root', [0.46, 0.91, 6.18], 0.35, 1, 'z4_glasses_asset');
+    this.cloneProp(this.paperProps, 'scissors_root', [-0.52, 0.9, 6.12], -0.8, 1, 'z4_scissors_asset');
+    for (const x of [-0.7, 0.7]) this.cloneProp(this.paperProps, 'bankers_lamp_root', [x, 0.79, 5.75], 0, 1, `z4_bankers_lamp_asset_${x}`);
+    this.cloneProp(this.paperProps, 'folded_paper_phone_root', [0.8, 1.08, 7.0], -0.25, 1, 'z4_folded_phone_asset');
+    this.cloneProp(this.paperProps, 'card_catalog_drawer_root', [-1.4, 0, 13.5], 0, 2.1, 'z4_card_catalog_asset');
+    this.cloneProp(this.paperProps, 'paper_globe_root', [1.6, 0, 12.2], -0.3, 1, 'z4_globe_asset');
+    this.cloneProp(this.paperProps, 'tied_scroll_root', [1.55, 0.82, 6.2], 0.7, 1, 'z4_scroll_asset');
+    this.cloneProp(this.libraryKit, 'library_ladder_root', [-1.75, 0, 16.5], 0.08, 1, 'z4_ladder_asset');
+    for (let i = 0; i < 4; i++) this.cloneProp(this.libraryKit, 'hanging_lantern_root', [(i % 2 ? 1.4 : -1.4), 2.9, 4 + i * 5.2], 0, 1, `z4_lantern_asset_${i}`);
+    this.cloneProp(this.libraryKit, 'spiral_paper_stair_root', [1.65, 0, 19.5], -0.3, 1, 'z4_spiral_stair_asset');
+    for (let i = 0; i < 5; i++) this.cloneProp(this.libraryKit, 'hinged_stack_wall_root', [i % 2 ? -2.1 : 2.1, 0, 9 + i * 2.5], i % 2 ? 0.15 : -0.15, 1, `z4_hinged_wall_asset_${i}`);
+    for (let i = 0; i < 7; i++) this.cloneProp(this.paperProps, 'letters_string_root', [(i % 2 ? -1.9 : 1.9), 2.4 + hash(i) * 0.8, 3 + i * 2.8], i % 2 ? Math.PI / 2 : -Math.PI / 2, 1, `z4_letters_asset_${i}`);
+    for (let i = 0; i < 5; i++) this.cloneProp(this.paperProps, 'paper_clock_root', [(i % 2 ? -2.0 : 2.0), 2.0 + hash(i) * 1.2, 5 + i * 3.7], i % 2 ? Math.PI / 2 : -Math.PI / 2, 0.8, `z4_paper_clock_asset_${i}`);
+
     // dust/lint motes hanging in flashlight shafts
     for (let i = 0; i < 80; i++) {
       const m = sph(this.s, `z4_mote_${i}`, 0.006 + hash(i) * 0.008, [(hash(i) - 0.5) * 4, 0.4 + hash(i + 1) * 4.5, hash(i + 2) * 22], basic(0xfff2c7, 0.45), 6);
@@ -190,6 +226,18 @@ export default class ThresholdZ4Library extends Scene {
       }
       for (let fi = 0; fi < 5; fi++) box(this.archivist, `z4_archivist_finger_${side}_${fi}`, [0.035, 0.025, 0.38], [side * (0.48 - fi * 0.04), 0.88 - fi * 0.025, 2.85 + fi * 0.03], paper, [0.25, side * 0.15, 0]);
     }
+  }
+
+  private cloneProp(source: GLTFInstance, part: string, pos: [number, number, number], rotY = 0, scale = 1, name = part) {
+    const src = source.part(part);
+    if (!src) return null;
+    const c = skeletonClone(src);
+    c.name = c.userData.fx_entity = name;
+    c.position.set(...pos);
+    c.rotation.set(0, rotY, 0);
+    c.scale.setScalar(scale);
+    this.s.add(c);
+    return c;
   }
 
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
