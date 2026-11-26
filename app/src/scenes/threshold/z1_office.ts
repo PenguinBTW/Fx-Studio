@@ -15,8 +15,8 @@ const KEYS: CamKey[] = [
   { t: 6.5, pos: [0, 1.65, 0], look: [0, 1.35, -6], fov: 74, gait: 'still' },
   { t: 7.2, pos: [0, 1.65, 0], look: [-2.4, 1.35, -4], fov: 74, gait: 'still' },
   { t: 8.0, pos: [0, 1.65, 0], look: [0, 1.25, -6], fov: 74, gait: 'still' },
-  { t: 11.0, pos: [0, 1.45, -5.15], look: [0, 0.83, -6], fov: 68, gait: 'walk' },
-  { t: 13.0, pos: [0, 1.45, -5.15], look: [0, 0.9, -6], fov: 68, gait: 'still' },
+  { t: 11.0, pos: [0.24, 1.1, -5.3], look: [0.34, 0.86, -5.76], fov: 58, gait: 'walk' },
+  { t: 13.0, pos: [0.24, 1.1, -5.3], look: [0.34, 0.89, -5.76], fov: 58, gait: 'still' },
   { t: 15.5, pos: [0, 1.48, -5.15], look: [0, 1.9, -6], fov: 68, gait: 'still' },
   { t: 18.5, pos: [0, 1.5, -5.15], look: [0, 2.68, -6], fov: 66, gait: 'still' },
   { t: 19.3, pos: [0, 1.5, -5.15], look: [0, 2.68, -6], fov: 66, gait: 'still' },
@@ -120,11 +120,44 @@ export default class ThresholdZ1Office extends Scene {
   private propPack!: GLTFInstance;
   private glbReceiver?: THREE.Object3D;
   private assetMats: Record<string, THREE.Material> = {};
+  private breatherEyeMats: THREE.MeshStandardMaterial[] = [];
 
   override async init() {
     const resolved = resolveAsset('threshold/z1_ceiling_breather');
     this.breather = await GLTFManager.instantiate(resolved.url, { ...resolved.manifest.load, castShadow: true, receiveShadow: true });
     this.breather.root.position.set(0,2.72,-6.02); this.breather.root.visible = false; this.s.add(this.breather.root);
+    // Corpse-pale organic material separation: the accepted silhouette remains unchanged, but skin,
+    // veins, pads and nails must not collapse into uniform grey pipe plastic under the beam.
+    const breatherMatCache = new Map<THREE.Material, THREE.Material>();
+    this.breather.root.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      const remap = (m: THREE.Material) => {
+        const hit = breatherMatCache.get(m);
+        if (hit) return hit;
+        const mm = m.clone() as THREE.MeshStandardMaterial;
+        if (/wet_eye_yellow/.test(mm.name)) {
+          mm.color.setHex(0xd6dc63); mm.emissive.setHex(0xc8f05a); mm.emissiveIntensity = 1.15; mm.roughness = 0.025; mm.metalness = 0.05;
+          this.breatherEyeMats.push(mm);
+        } else if (/purple_vein/.test(mm.name)) {
+          mm.color.setHex(0x551047); mm.emissive.setHex(0x250029); mm.emissiveIntensity = 0.18; mm.roughness = 0.42;
+        } else if (/tile_skin_warm_grey/.test(mm.name)) {
+          mm.color.setHex(0x776a5f); mm.roughness = 0.68;
+        } else if (/tile_skin_pressure_edges/.test(mm.name)) {
+          mm.color.setHex(0x9a8a78); mm.roughness = 0.62;
+        } else if (/cracked_nail_yellow/.test(mm.name)) {
+          mm.color.setHex(0xb98f32); mm.roughness = 0.42;
+        } else if (/suction_pad_pale/.test(mm.name)) {
+          mm.color.setHex(0xbfa891); mm.roughness = 0.34;
+        }
+        mm.needsUpdate = true;
+        breatherMatCache.set(m, mm);
+        return mm;
+      };
+      const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      const mapped = mats.map(remap);
+      mesh.material = Array.isArray(mesh.material) ? mapped : mapped[0]!;
+    });
     const phoneResolved = resolveAsset('threshold/beige_phone');
     this.phoneAsset = await GLTFManager.instantiate(phoneResolved.url, { ...phoneResolved.manifest.load, castShadow: true, receiveShadow: true });
     this.phoneAsset.root.position.set(0.38, 0.785, -5.76);
@@ -591,6 +624,7 @@ export default class ThresholdZ1Office extends Scene {
     this.tileShift.position.y = 2.69 - smooth(13, 15.4, t) * 0.025;
     this.tileShift.rotation.x = smooth(14.2, 15.5, t) * 0.04;
     const eyesOn = smooth(15.45, 15.8, t);
+    this.breatherEyeMats.forEach((m) => { m.emissiveIntensity = (0.55 + 1.9 * eyeBeam) * eyesOn; });
     this.breather.root.visible = eyesOn > 0.02;
     this.breather.root.position.y = 2.72 + Math.sin(t * 1.1) * 0.012 * eyesOn;
     for (let bi = 1; bi <= 8; bi++) {

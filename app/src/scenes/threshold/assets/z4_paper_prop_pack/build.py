@@ -4,7 +4,7 @@ sys.dont_write_bytecode=True
 HERE=os.path.dirname(os.path.abspath(__file__));sys.path.insert(0,os.path.dirname(HERE))
 from _bl import *
 reset()
-PAPER=mat('aged_ledger_paper',(.70,.64,.47),.88);PAPER2=mat('letter_paper pale',(.82,.77,.62),.9);EDGE=mat('paper_edge_dark',(.24,.18,.10),.9);WOOD=mat('dark_desk_wood',(.15,.065,.02),.65);BRASS=mat('aged_brass_prop',(.42,.25,.045),.32,metal=.55);INK=mat('black_ink',(.012,.009,.006),.9);GREEN=mat('bankers_lamp_green',(.02,.19,.065),.24,emit=(.01,.10,.025),strength=.3);RED=mat('red_string',(.45,.018,.012),.7);GLASS=mat('dim_glass',(.28,.38,.34),.12)
+PAPER=mat('aged_ledger_paper',(.70,.64,.47),.88);PAPER2=mat('letter_paper pale',(.82,.77,.62),.9);EDGE=mat('paper_edge_dark',(.24,.18,.10),.9);WOOD=mat('dark_desk_wood',(.15,.065,.02),.65);BRASS=mat('aged_brass_prop',(.42,.25,.045),.32,metal=.55);INK=mat('black_ink',(.012,.009,.006),.9);RULE=mat('faint_ledger_rules',(.32,.25,.14),.94);GREEN=mat('bankers_lamp_green',(.02,.19,.065),.24,emit=(.01,.10,.025),strength=.3);RED=mat('red_string',(.45,.018,.012),.7);GLASS=mat('dim_glass',(.28,.38,.34),.12)
 def root(n,x):r=empty(n,(x,0,0));r['fx_part']=n;return r
 def add(o,r):o.location.x-=r.location.x;o.parent=r;return o
 
@@ -15,7 +15,7 @@ def ledger(x):
  add(box('ledger_page_right',(.34,.46,.025),(x+.18,0,.062),PAPER2,.012,3,rot=(0,0,-.035)),r)
  add(box('ledger_spine',(.055,.50,.065),(x,0,.07),EDGE,.01),r)
  for side in(-1,1):
-  for i in range(8):add(box('ledger_ruled_line',(.25,.006,.003),(x+side*.18,-.17+i*.045,.079),INK,.0005),r)
+  for i in range(8):add(box('ledger_ruled_line',(.25,.0035,.002),(x+side*.18,-.17+i*.045,.079),RULE,.0005),r)
  return r
 
 def fountain_pen(x):

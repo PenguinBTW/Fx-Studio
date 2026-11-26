@@ -14,7 +14,8 @@ const KEYS: CamKey[] = [
   { t: 84.5, pos: [0, 1.65, 1.8], look: [0, 1.35, 8], fov: 76, gait: 'walk' },
   { t: 87.8, pos: [0, 1.65, 4.0], look: [0, 0.95, 6.0], fov: 74, gait: 'walk' },
   { t: 90.5, pos: [0, 1.65, 5.0], look: [2.4, 2.8, 10], fov: 74, gait: 'still' },
-  { t: 92.7, pos: [0, 1.65, 5.2], look: [0.8, 1.0, 7.0], fov: 74, gait: 'still' },
+  { t: 91.7, pos: [0.04, 1.24, 5.38], look: [0.03, 0.91, 6.02], fov: 58, gait: 'still' },
+  { t: 92.7, pos: [0.08, 1.3, 5.42], look: [0.25, 1.0, 6.2], fov: 62, gait: 'still' },
   { t: 94.8, pos: [0, 1.65, 5.2], look: [0.95, 2.55, 1.3], fov: 64, gait: 'still' },
   { t: 97.0, pos: [0, 1.65, 4.5], look: [0, 2.8, 9.0], fov: 78, gait: 'run' },
   { t: 99.0, pos: [0, 1.65, 3.6], look: [0, 2.2, 9.5], fov: 82, gait: 'run' },
@@ -118,13 +119,31 @@ export default class ThresholdZ4Library extends Scene {
       ['it is behind you.', 91.7],
     ] as const;
     inkLines.forEach(([txt], li) => {
-      const c = document.createElement('canvas'); c.width = 512; c.height = 72;
+      const c = document.createElement('canvas'); c.width = 768; c.height = 104;
       const g = c.getContext('2d')!; g.clearRect(0, 0, c.width, c.height);
-      g.fillStyle = '#17130e'; g.font = '42px serif'; g.textBaseline = 'middle'; g.fillText(txt, 12, 38);
-      const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+      // Handwritten ink rather than placeholder rule marks: per-letter pressure, baseline wander,
+      // and slight rotation remain deterministic while staying legible in the close scare frame.
+      let x = 22;
+      for (let ci = 0; ci < txt.length; ci++) {
+        const ch = txt[ci]!;
+        const seed = li * 131 + ci * 17;
+        const size = 43 + (hash(seed) - 0.5) * 7;
+        g.save();
+        g.translate(x, 57 + (hash(seed + 1) - 0.5) * 7);
+        g.rotate((hash(seed + 2) - 0.5) * 0.12);
+        g.font = `italic ${size.toFixed(1)}px Georgia, serif`;
+        g.fillStyle = ci % 5 === 0 ? '#120f0b' : '#1b1712';
+        g.textBaseline = 'middle';
+        g.fillText(ch, 0, 0);
+        const cw = g.measureText(ch).width;
+        g.restore();
+        x += Math.max(10, cw * 0.78) + (ch === ' ' ? 8 : 1.5);
+      }
+      const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.repeat.set(-1, -1); tex.offset.set(1, 1);
       const mm = new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.9, polygonOffset: true, polygonOffsetFactor: -1 });
-      const line = new THREE.Mesh(new THREE.PlaneGeometry(0.29, 0.042), mm);
-      line.position.set(0.01, 0.932 + li * 0.002, 5.88 + li * 0.07); line.rotation.x = -Math.PI / 2;
+      const line = new THREE.Mesh(new THREE.PlaneGeometry(0.27, 0.038), mm);
+      line.position.set(0.18, 0.932 + li * 0.002, 5.86 + li * 0.072); line.rotation.x = -Math.PI / 2;
+      line.rotation.z = (li - 1.5) * 0.012;
       line.name = line.userData.fx_entity = `z4_ledger_ink_line_${li}`; line.visible = false; this.s.add(line); this.ledgerLines.push(line);
     });
 
@@ -264,7 +283,7 @@ export default class ThresholdZ4Library extends Scene {
       m.position.y = bp.y + Math.sin(t * 0.35 + i) * 0.055;
       m.position.x = bp.x + Math.cos(t * 0.27 + i * 2) * 0.04;
     });
-    this.ledgerLines.forEach((l, i) => { l.visible = t > ([84.0, 86.4, 88.0, 91.7][i] ?? 99); });
+    this.ledgerLines.forEach((l, i) => { l.visible = t > ([84.0, 86.4, 88.0, 91.65][i] ?? 99); });
     this.moths.forEach((m, i) => {
       const bp = m.userData.basePos as THREE.Vector3;
       const active = i === 0 ? (t > 80.4 && t < 82.2) : t < 94;

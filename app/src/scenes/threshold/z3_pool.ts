@@ -7,7 +7,7 @@ import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.j
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { resolveAsset } from '../../engine/assets';
 import { thresholdPost } from './sensor_post';
-import { addFlashlight, applyFpCamera, basic, box, clamp, cyl, disposeTree, hash, mat, plane, smooth, sph, updateFlashlight, type CamKey } from './z1_scene_util';
+import { addFlashlight, applyFpCamera, basic, box, clamp, cyl, disposeTree, evalCam, hash, mat, plane, smooth, sph, updateFlashlight, type CamKey } from './z1_scene_util';
 
 const KEYS: CamKey[] = [
   { t: 55, pos: [0, 1.65, 6.4], look: [0, 1.2, -2], fov: 74, gait: 'walk' },
@@ -47,6 +47,10 @@ export default class ThresholdZ3Pool extends Scene {
   private propPack!: GLTFInstance;
   private envReady = false;
   private chromeEnv: THREE.Texture | null = null;
+  private playerReflection!: THREE.Mesh;
+  private playerReflectionMat!: THREE.MeshBasicMaterial;
+  private beamReflection!: THREE.Mesh;
+  private beamReflectionMat!: THREE.MeshBasicMaterial;
 
   override async init() {
     const resolved = resolveAsset('threshold/z3_mirrorling');
@@ -56,11 +60,32 @@ export default class ThresholdZ3Pool extends Scene {
     this.poolKit = await GLTFManager.instantiate(kitResolved.url, { ...kitResolved.manifest.load, castShadow: true, receiveShadow: true });
     this.propPack = await GLTFManager.instantiate(packResolved.url, { ...packResolved.manifest.load, castShadow: true, receiveShadow: true });
     this.mirrorlingReflection = await GLTFManager.instantiate(resolved.url, { ...resolved.manifest.load, castShadow: false, receiveShadow: false });
+    // Convert the surface figure from mirror-chrome/hologram back to wet white ceramic tile:
+    // glossy enough to catch strips, matte enough that black grout registrations remain legible.
+    const mirrorlingMatCache = new Map<THREE.Material, THREE.Material>();
+    this.mirrorlingAsset.root.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      const remap = (m: THREE.Material) => {
+        const hit = mirrorlingMatCache.get(m);
+        if (hit) return hit;
+        const mm = m.clone() as THREE.MeshStandardMaterial;
+        if (/aqua_chrome_tile/.test(mm.name)) { mm.color.setHex(0xd8eeee); mm.metalness = 0.1; mm.roughness = 0.3; mm.emissive.setHex(0x000000); mm.emissiveIntensity = 0; }
+        if (/pale_tile_highlight/.test(mm.name)) { mm.color.setHex(0xf0f5e9); mm.metalness = 0.04; mm.roughness = 0.24; mm.emissive.setHex(0x000000); mm.emissiveIntensity = 0; }
+        if (/black_grout_lines/.test(mm.name)) { mm.color.setHex(0x020708); mm.roughness = 0.78; }
+        mm.needsUpdate = true;
+        mirrorlingMatCache.set(m, mm);
+        return mm;
+      };
+      const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      const mapped = mats.map(remap);
+      mesh.material = Array.isArray(mesh.material) ? mapped : mapped[0]!;
+    });
     this.mirrorlingAsset.root.traverse((o) => {
       const mesh = o as THREE.Mesh;
       if (!mesh.isMesh) return;
       const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-      mats.forEach((m) => { const mm = m as THREE.MeshStandardMaterial; if (/chrome|tile_highlight/.test(mm.name)) mm.envMapIntensity = 1.65; });
+      mats.forEach((m) => { const mm = m as THREE.MeshStandardMaterial; if (/chrome|tile_highlight/.test(mm.name)) mm.envMapIntensity = 0.48; });
     });
     this.mirrorlingAsset.root.visible = false;
     this.mirrorlingReflection.root.visible = false;
@@ -158,8 +183,30 @@ export default class ThresholdZ3Pool extends Scene {
       gg.save(); gg.translate(x, y); gg.scale(1, ry / rx); gg.beginPath(); gg.arc(0, 0, rx, 0, Math.PI * 2); gg.fill(); gg.restore();
     }
     const glintTex = new THREE.CanvasTexture(gc); glintTex.wrapS = glintTex.wrapT = THREE.RepeatWrapping; glintTex.repeat.set(2.2, 7.5);
-    this.waterGlintMat = new THREE.MeshBasicMaterial({ map: glintTex, transparent: true, opacity: 0.34, depthWrite: false, blending: THREE.AdditiveBlending });
+    this.waterGlintMat = new THREE.MeshBasicMaterial({ map: glintTex, transparent: true, opacity: 0.34, depthWrite: false });
     plane(this.s, 'z3_water_specular_patches', 8, 27, [0, 0.456, -6], this.waterGlintMat, [-Math.PI / 2, 0, 0]);
+    // Player-proxy reflection for the look-down beat: a flattened dark body silhouette lies just under
+    // the transparent surface, with a separate warm beam patch computed from the camera pose 0.42s ago.
+    const pc = document.createElement('canvas'); pc.width = 256; pc.height = 256;
+    const pg = pc.getContext('2d')!; pg.clearRect(0, 0, 256, 256);
+    pg.fillStyle = 'rgba(0,5,7,0.9)';
+    pg.beginPath(); pg.ellipse(128, 54, 28, 35, 0, 0, Math.PI * 2); pg.fill();
+    pg.beginPath(); pg.ellipse(128, 145, 48, 88, 0, 0, Math.PI * 2); pg.fill();
+    pg.beginPath(); pg.ellipse(77, 140, 15, 72, -0.18, 0, Math.PI * 2); pg.fill();
+    pg.beginPath(); pg.ellipse(179, 140, 15, 72, 0.18, 0, Math.PI * 2); pg.fill();
+    const playerTex = new THREE.CanvasTexture(pc); playerTex.colorSpace = THREE.SRGBColorSpace;
+    this.playerReflectionMat = new THREE.MeshBasicMaterial({ map: playerTex, transparent: true, opacity: 0, depthWrite: false });
+    this.playerReflection = plane(this.s, 'z3_player_proxy_reflection', 0.86, 1.78, [0, 0.448, 3.0], this.playerReflectionMat, [-Math.PI / 2, 0, 0]);
+    this.playerReflection.renderOrder = 4; this.playerReflection.visible = false;
+    const bc = document.createElement('canvas'); bc.width = 256; bc.height = 256;
+    const bg = bc.getContext('2d')!; bg.clearRect(0, 0, 256, 256);
+    const bgrad = bg.createRadialGradient(128, 128, 2, 128, 128, 118);
+    bgrad.addColorStop(0, 'rgba(255,238,190,0.48)'); bgrad.addColorStop(0.42, 'rgba(180,245,230,0.18)'); bgrad.addColorStop(1, 'rgba(180,245,230,0)');
+    bg.fillStyle = bgrad; bg.save(); bg.translate(128, 128); bg.scale(0.55, 1.0); bg.beginPath(); bg.arc(0, 0, 118, 0, Math.PI * 2); bg.fill(); bg.restore();
+    const beamTex = new THREE.CanvasTexture(bc); beamTex.colorSpace = THREE.SRGBColorSpace;
+    this.beamReflectionMat = new THREE.MeshBasicMaterial({ map: beamTex, transparent: true, opacity: 0, depthWrite: false });
+    this.beamReflection = plane(this.s, 'z3_lagging_beam_reflection', 1.1, 2.35, [0, 0.452, 2.0], this.beamReflectionMat, [-Math.PI / 2, 0, 0]);
+    this.beamReflection.renderOrder = 5; this.beamReflection.visible = false;
     // knee-deep pool cues: submerged entry steps, floor lane markings, depth tiles, caustic strips and floating equipment
     for (let st = 0; st < 3; st++) {
       box(this.s, `z3_submerged_step_${st}`, [7.6, 0.16, 0.55], [0, 0.28 - st * 0.18, 4.75 - st * 0.55], st % 2 ? tileA : tileB);
@@ -283,7 +330,7 @@ export default class ThresholdZ3Pool extends Scene {
         const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
         mats.forEach((m) => {
           const mm = m as THREE.MeshStandardMaterial;
-          if (/chrome|tile_highlight/.test(mm.name)) { mm.envMap = this.chromeEnv; mm.envMapIntensity = 1.65; mm.needsUpdate = true; }
+          if (/chrome|tile_highlight/.test(mm.name)) { mm.envMap = this.chromeEnv; mm.envMapIntensity = 0.48; mm.needsUpdate = true; }
         });
       });
       applyChromeEnv(this.mirrorlingAsset.root);
@@ -311,6 +358,28 @@ export default class ThresholdZ3Pool extends Scene {
 
     // strip hum/flicker
     this.strips.forEach((s, i) => { const m = s.material as THREE.MeshStandardMaterial; m.emissiveIntensity = hash(Math.floor(t * 12) + i * 11) < (i === 2 ? 0.22 : 0.04) ? 0.2 : 2.0; });
+
+    // Beat 3.2: planar water reflection of the player-proxy. The dark body is locked to the
+    // current camera position, while the warm beam patch is intentionally lagged by 0.42 s.
+    const reflPlayer = smooth(58.35, 58.75, t) * (1 - smooth(61.0, 61.55, t));
+    this.playerReflection.visible = reflPlayer > 0.015;
+    this.beamReflection.visible = reflPlayer > 0.015;
+    this.playerReflectionMat.opacity = 0.58 * reflPlayer;
+    this.beamReflectionMat.opacity = 0.46 * reflPlayer;
+    if (reflPlayer > 0) {
+      const fwdX = this.cam.position.x, fwdZ = this.cam.position.z - 2.25;
+      this.playerReflection.position.set(fwdX, 0.448, fwdZ);
+      this.playerReflection.rotation.z = Math.sin(t * 0.7) * 0.035;
+      const lag = evalCam(KEYS, t - 0.42);
+      const dx = lag.look[0] - lag.pos[0], dy = lag.look[1] - lag.pos[1], dz = lag.look[2] - lag.pos[2];
+      const len = Math.hypot(dx, dy, dz) || 1;
+      const ny = dy / len;
+      const hit = Math.abs(ny) > 1e-4 ? (0.452 - lag.pos[1]) / ny : 2.0;
+      const bx = lag.pos[0] + (dx / len) * hit;
+      const bz = lag.pos[2] + (dz / len) * hit;
+      this.beamReflection.position.set(bx, 0.452, bz);
+      this.beamReflection.rotation.z = -Math.atan2(dx / len, dz / len);
+    }
 
     // Mirrorling rule approximation: reflection first, surface reveal only after look-away
     const reflVisible = t > 59.5 && t < 75.0;
