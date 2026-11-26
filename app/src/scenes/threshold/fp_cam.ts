@@ -127,6 +127,26 @@ export function keyAt(keys: FPKey[], t: number): Required<Omit<FPKey, 'gait'>> &
   return base;
 }
 
+/** Integral of the blended step frequency, so changing gaits preserves phase continuity. */
+function stepPhaseAt(keys: FPKey[], t: number, gaitOverride?: GaitName): number {
+  if (!keys.length) return 0;
+  const sorted = [...keys].sort((a, b) => a.t - b.t);
+  const freq = (g?: GaitName) => GAITS[gaitOverride ?? g ?? 'still'].stepHz;
+  let phase = freq(sorted[0]!.gait) * Math.min(t, sorted[0]!.t);
+  for (let i = 0; i + 1 < sorted.length; i++) {
+    const a = sorted[i]!, b = sorted[i + 1]!;
+    if (t <= a.t) break;
+    const span = Math.max(1e-6, b.t - a.t);
+    const u = clamp((Math.min(t, b.t) - a.t) / span);
+    const fa = freq(a.gait), fb = freq(b.gait);
+    phase += span * (fa * u + (fb - fa) * (u ** 3 - 0.5 * u ** 4));
+    if (t <= b.t) return phase;
+  }
+  const last = sorted[sorted.length - 1]!;
+  if (t > last.t) phase += freq(last.gait) * (t - last.t);
+  return phase;
+}
+
 /**
  * Evaluate a first-person pose at time `t`. `keys` describe the deliberate camera path;
  * this function adds breath, gait bob/sway/roll and micro head noise without mutable state.
@@ -153,7 +173,7 @@ export function evalFirstPerson(keys: FPKey[], t: number, gaitOverride?: GaitNam
     tremorAmp: blend(ga.tremorAmp, gb.tremorAmp),
     forwardLean: blend(ga.forwardLean, gb.forwardLean),
   };
-  const stepPhase = g.stepHz > 0 ? t * g.stepHz : 0;
+  const stepPhase = stepPhaseAt(keys, t, gaitOverride);
   const stepWave = g.stepHz > 0 ? Math.sin(stepPhase * TAU) : 0;
   const stepImpulse = g.stepHz > 0 ? Math.max(0, Math.sin(stepPhase * TAU)) : 0;
   const breath = g.breathAmp * Math.sin(t * TAU * g.breathHz + 0.8);
