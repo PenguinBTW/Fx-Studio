@@ -1,4 +1,4 @@
-// THRESHOLD Z7 grey-box blockout. Vending cathedral, 150-195 s.
+// THRESHOLD Z7 vending cathedral, 150-195 s.
 // Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
 import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
@@ -7,6 +7,7 @@ import { FlashlightRig, beamStateAt } from './flashlight';
 import { thresholdPost } from './sensor_post';
 import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import vendingMachinesUrl from './assets/z7_vending_machines/model.glb?url';
+import tenantFullUrl from './assets/tenant_full/model.glb?url';
 import { resolveAsset } from '../../engine/assets';
 import { coldOpenPose, coldOpenArmReference, COLD_OPEN_REPLAY } from './z0_coldopen';
 
@@ -83,6 +84,7 @@ export default class ThresholdZ7Cathedral extends Scene {
   private heroMachinesL?: GLTFInstance;
   private heroMachinesR?: GLTFInstance;
   private tenantArmInst?: GLTFInstance;
+  private tenantInst?: GLTFInstance;
   private replayArm = new THREE.Group();
   private replayHeroMachines = new THREE.Group();
   private replayMachines?: THREE.InstancedMesh;
@@ -143,38 +145,25 @@ export default class ThresholdZ7Cathedral extends Scene {
     return mesh;
   }
 
-  private buildTenant() {
-    const tile = this.mat(0xb9d9d7, 0.24);
-    const grout = this.mat(0x1a2224, 0.65);
-    const paper = this.mat(0xd8c69d, 0.82);
-    const felt = this.mat(0x6b3f24, 0.94);
-    const chrome = this.mat(0x9aa0a3, 0.2, 0.82);
-    const red = this.mat(0xa82d27, 0.28);
-    const yellow = this.mat(0xd0aa35, 0.3);
-    const blue = this.mat(0x2e5fa8, 0.28);
-    const glass = new THREE.MeshStandardMaterial({ color: 0x25333a, roughness: 0.18, metalness: 0.15, transparent: true, opacity: 0.64 });
-    this.disposables.push(glass);
-
-    this.box(this.tenant, [0.28, 0.34, 0.24], [0, 3.96, 0], tile);
-    this.box(this.tenant, [0.3, 0.035, 0.25], [0, 3.96, 0.01], grout);
-    for (let i = 0; i < 4; i++) this.cyl(this.tenant, 0.07, 0.085, 0.2, [0, 3.66 - i * 0.14, 0], felt, 8);
-    this.box(this.tenant, [0.78, 1.05, 0.34], [0, 2.82, 0], glass);
-    for (let i = 0; i < 6; i++) this.box(this.tenant, [0.66, 0.035, 0.37], [0, 2.42 + i * 0.16, 0.01], chrome);
-    this.box(this.tenant, [0.58, 0.46, 0.34], [0, 2.02, 0], paper, [0, 0, 0.1]);
-
-    for (const side of [-1, 1]) {
-      for (let i = 0; i < 6; i++) {
-        const ballMat = i % 3 === 0 ? red : i % 3 === 1 ? yellow : blue;
-        this.sphere(this.tenant, 0.13 - i * 0.006, [side * (0.47 + i * 0.15), 3.18 - i * 0.13, 0], ballMat, [1, 0.9, 1]);
+  private async buildTenant() {
+    // Full production Tenant: zone materials collage, stable pivots for stop-start head/arm motion.
+    this.tenantInst = await GLTFManager.instantiate(tenantFullUrl, { castShadow: true, receiveShadow: true });
+    this.tenant.add(this.tenantInst.root);
+    this.tenantInst.root.traverse((obj) => {
+      if (!(obj instanceof THREE.Mesh)) return;
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      for (const m of mats) {
+        if (!(m instanceof THREE.MeshStandardMaterial)) continue;
+        if (m.name === 'TenantPoolTile') { m.emissive.setHex(0x07191e); m.emissiveIntensity = 0.16; }
+        if (m.name === 'TenantChrome') { m.emissive.setHex(0x101a24); m.emissiveIntensity = 0.22; }
+        if (m.name === 'TenantRibcageGlass') { m.emissive.setHex(0x08232c); m.emissiveIntensity = 0.3; }
       }
-      for (let i = 0; i < 4; i++) this.cyl(this.tenant, 0.025, 0.036, 0.5, [side * (1.18 + i * 0.05), 2.35 - i * 0.07, 0.02 * i], chrome, 8).rotation.z = side * (1.1 + i * 0.18);
-      for (let i = 0; i < 5; i++) this.box(this.tenant, [0.035, 0.42, 0.07], [side * (0.9 + i * 0.04), 2.25 - i * 0.03, 0.1], paper, [0, 0, side * (-0.3 - i * 0.1)]);
-      for (let i = 0; i < 5; i++) {
-        this.box(this.tenant, [0.22, 0.28, 0.2], [side * 0.3, 1.7 - i * 0.29, 0], i % 2 ? tile : paper, [0, 0, side * 0.06 * i]);
-      }
-      this.box(this.tenant, [0.34, 0.16, 0.48], [side * 0.32, 0.12, 0.06], grout);
-    }
-    for (let i = 0; i < 7; i++) this.cyl(this.tenant, 0.035, 0.045, 0.36, [0, 2.3 - i * 0.22, -0.22], chrome, 8).rotation.x = 0.25;
+    });
+    const chestGlow = new THREE.PointLight(0x5bb9d7, 1.3, 5.5, 1.8);
+    chestGlow.position.set(0, 2.8, 0.65);
+    const rim = new THREE.PointLight(0x83cfff, 1.8, 6.5, 1.7);
+    rim.position.set(-0.8, 3.7, -1.0);
+    this.tenant.add(chestGlow, rim);
     this.tenant.visible = false;
     this.s.add(this.tenant);
   }
@@ -308,7 +297,7 @@ export default class ThresholdZ7Cathedral extends Scene {
       this.assembly.push({ mesh: piece, start, end, seed: hash(i * 9) });
       piece.visible = false;
     }
-    this.buildTenant();
+    await this.buildTenant();
     this.buildReachArm();
 
     // Central floor rift, initially hairline and invisible, then widening.
@@ -574,9 +563,15 @@ export default class ThresholdZ7Cathedral extends Scene {
       const burst = hash(Math.floor(t * 3.3)) > 0.45 ? 1 : 0;
       this.tenant.position.set(0.15 * Math.sin(t * 1.7), 0, z);
       this.tenant.rotation.z = 0.12 * burst + 0.05 * Math.sin(t * 2.2);
-      this.tenant.rotation.y = t >= 168 ? Math.PI : 0;
+      this.tenant.rotation.y = t >= 168 ? 0 : Math.PI;
       const reach = smooth((t - 172.4) / 0.8) * (1 - smooth((t - 174.0) / 0.5));
       this.tenant.scale.set(1 + reach * 0.12, 1, 1 + reach * 0.35);
+      const head = this.tenantInst?.parts.get('head');
+      const armL = this.tenantInst?.parts.get('arm_l');
+      const armR = this.tenantInst?.parts.get('arm_r');
+      if (head) head.rotation.z = 0.18 * burst + 0.04 * Math.sin(Math.floor(t * 3.3) * 1.7);
+      if (armL) armL.rotation.x = 0.08 * burst;
+      if (armR) armR.rotation.x = -0.06 * burst;
     }
 
     this.reachArm.visible = false;
@@ -656,6 +651,7 @@ export default class ThresholdZ7Cathedral extends Scene {
     this.heroMachinesL?.dispose();
     this.heroMachinesR?.dispose();
     this.tenantArmInst?.dispose();
+    this.tenantInst?.dispose();
     this.replayMachines?.dispose();
     this.replayPanels?.dispose();
     for (const d of this.disposables) d.dispose();

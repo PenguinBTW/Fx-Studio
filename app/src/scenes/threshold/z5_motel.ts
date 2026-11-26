@@ -1,10 +1,12 @@
-// THRESHOLD Z5 grey-box blockout. Motel corridor at night, 105-130 s.
+// THRESHOLD Z5 motel corridor at night, 105-130 s.
 // Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
 import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
 import { evalFirstPerson, applyFirstPersonCamera, type FPKey, type GaitName } from './fp_cam';
 import { FlashlightRig, beamStateAt } from './flashlight';
 import { thresholdPost } from './sensor_post';
+import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
+import tenantFullUrl from './assets/tenant_full/model.glb?url';
 
 const clamp = (x: number, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -56,6 +58,7 @@ export default class ThresholdZ5Motel extends Scene {
   private cam = new THREE.PerspectiveCamera(72, 16 / 9, 0.05, 90);
   private flash = new FlashlightRig();
   private tenant = new THREE.Group();
+  private tenantInst?: GLTFInstance;
   private lint = new THREE.Group();
   private tvScreens: THREE.MeshStandardMaterial[] = [];
   private neonMats: THREE.MeshStandardMaterial[] = [];
@@ -169,7 +172,7 @@ export default class ThresholdZ5Motel extends Scene {
     return mat;
   }
 
-  override init() {
+  override async init() {
     this.s.background = new THREE.Color(0x050608);
     this.s.fog = new THREE.FogExp2(0x050608, 0.035);
 
@@ -334,35 +337,24 @@ export default class ThresholdZ5Motel extends Scene {
     this.lint.position.set(-1.25, 1.9, -10.0);
     this.s.add(this.lint);
 
-    // Tenant upper-body blockout: small tile head, vending-glass ribcage, ball arm and coil hand.
-    const tile = this.mat(0xb9d9d7, 0.26);
-    const paper = this.mat(0xd8c69d, 0.82);
-    const plasticRed = this.mat(0xa92624, 0.28);
-    const chrome = this.mat(0x8c9296, 0.22, 0.8);
-    const glass = new THREE.MeshStandardMaterial({ color: 0x25333a, roughness: 0.18, metalness: 0.1, transparent: true, opacity: 0.62, emissive: 0x102a30, emissiveIntensity: 0.28 });
-    this.disposables.push(glass);
-    // Lanky upper-body silhouette first: too-small tile head, thin neck, narrow vending ribcage,
-    // long downward-hanging collage arms, and only a hint of legs disappearing into darkness.
-    const silhouette = this.mat(0x11181b, 0.82, 0, 0x0b252c, 0.72);
-    this.box(this.tenant, [0.34, 1.08, 0.12], [0, 1.42, -0.08], silhouette);
-    this.box(this.tenant, [0.42, 1.5, 0.055], [0, 1.48, 0.18], silhouette);
-    this.box(this.tenant, [0.13, 1.48, 0.11], [-0.52, 1.25, 0.15], silhouette, [0, 0, 0.04]);
-    this.box(this.tenant, [0.09, 1.22, 0.09], [-0.48, 1.25, -0.04], silhouette, [0, 0, 0.08]);
-    this.box(this.tenant, [0.09, 1.22, 0.09], [0.48, 1.25, -0.04], silhouette, [0, 0, -0.08]);
-    this.box(this.tenant, [0.12, 0.92, 0.1], [-0.18, 0.46, -0.06], silhouette);
-    this.box(this.tenant, [0.12, 0.92, 0.1], [0.18, 0.46, -0.06], silhouette);
-    this.sphere(this.tenant, 0.18, [0, 2.48, 0.02], tile, [0.82, 1.08, 0.72]);
-    this.box(this.tenant, [0.045, 0.16, 0.018], [0, 2.48, 0.145], this.mat(0x020303, 0.9));
-    for (let i = 0; i < 5; i++) this.cyl(this.tenant, 0.052, 0.062, 0.16, [0, 2.2 - i * 0.12, 0], this.mat(0x5a342b, 0.9), 8);
-    this.box(this.tenant, [0.58, 0.98, 0.3], [0, 1.43, 0], glass);
-    for (let i = 0; i < 5; i++) this.box(this.tenant, [0.49, 0.032, 0.33], [0, 1.1 + i * 0.16, 0.01], chrome);
-    this.box(this.tenant, [0.42, 0.28, 0.28], [0, 0.83, 0], paper, [0, 0, 0.12]);
-    for (let i = 0; i < 6; i++) this.cyl(this.tenant, 0.075, 0.085, 0.22, [-0.46 - i * 0.012, 1.9 - i * 0.2, 0.01], i % 2 ? plasticRed : this.mat(0xd1a62c, 0.3), 10).rotation.z = 0.08;
-    for (let i = 0; i < 5; i++) this.cyl(this.tenant, 0.023, 0.033, 0.44, [0.46 + i * 0.012, 1.85 - i * 0.22, 0.03 * i], chrome, 8).rotation.z = -0.06;
-    for (let i = 0; i < 5; i++) this.box(this.tenant, [0.032, 0.4, 0.065], [0.51 + i * 0.035, 0.86 - i * 0.025, 0.08], paper, [0, 0, -0.12 - i * 0.08]);
-    for (const side of [-1, 1]) {
-      this.box(this.tenant, [0.13, 0.72, 0.16], [side * 0.18, 0.38, -0.02], side < 0 ? tile : paper, [0.04, 0, side * 0.04]);
-    }
+    // Tenant partial reveal uses the production collage asset, upper-body LOD only.
+    // Scale and placement preserve the accepted continuous-silhouette read inside the 2.7 m motel ceiling.
+    this.tenantInst = await GLTFManager.instantiate(tenantFullUrl, { castShadow: true, receiveShadow: true });
+    const lowerBody = this.tenantInst.parts.get('lower_body');
+    if (lowerBody) lowerBody.visible = false;
+    this.tenantInst.root.traverse((obj) => {
+      if (!(obj instanceof THREE.Mesh)) return;
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      for (const m of mats) {
+        if (!(m instanceof THREE.MeshStandardMaterial)) continue;
+        if (m.name === 'TenantPoolTile') { m.emissive.setHex(0x07191e); m.emissiveIntensity = 0.18; }
+        if (m.name === 'TenantChrome') { m.emissive.setHex(0x111923); m.emissiveIntensity = 0.2; }
+        if (m.name === 'TenantRibcageGlass') { m.emissive.setHex(0x071d24); m.emissiveIntensity = 0.22; }
+      }
+    });
+    this.tenant.add(this.tenantInst.root);
+    this.tenant.scale.setScalar(0.62);
+    this.tenant.rotation.y = Math.PI;
     this.tenant.position.set(0.05, 0, -21.6);
     const tenantRim = new THREE.PointLight(0x9adbe4, 1.35, 4.2, 1.7);
     tenantRim.position.set(-0.45, 2.25, -20.85);
@@ -391,7 +383,12 @@ export default class ThresholdZ5Motel extends Scene {
 
     // Tenant partial reveal and head-tilt tell.
     this.tenant.visible = t >= 120.45 && t < 121.65;
-    if (this.tenant.visible) this.tenant.rotation.z = 0.12 * smooth((t - 120.45) / 0.8);
+    if (this.tenant.visible) {
+      const tell = smooth((t - 120.45) / 0.8);
+      this.tenant.rotation.z = 0.035 * tell;
+      const head = this.tenantInst?.parts.get('head');
+      if (head) head.rotation.z = 0.26 * tell;
+    }
 
     // Lint bats at the sconce for 0.6 s during beat 5.3.
     const lintOn = t >= 112.3 && t <= 113.2;
@@ -428,6 +425,7 @@ export default class ThresholdZ5Motel extends Scene {
 
   override dispose() {
     this.flash.dispose();
+    this.tenantInst?.dispose();
     for (const d of this.disposables) d.dispose();
   }
 }
