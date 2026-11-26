@@ -109,6 +109,7 @@ export class FlashlightRig {
       alphaMap: hazeAlpha,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
     });
     this.hazeMats.push(mat);
     const moteGeom = new THREE.CircleGeometry(1, 10);
