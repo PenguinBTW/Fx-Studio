@@ -1,0 +1,252 @@
+// Don't forget to ground yourself when its time USE THE SKILL and REREAD IT ALL
+// Z2 ball-pit playroom: deterministic grey-box beat blockout with real scale/camera path; local rig is W2 scaffolding pending W1's shared kit.
+import * as THREE from 'three';
+import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
+import { addFlashlight, applyFpCamera, basic, box, clamp, cyl, disposeTree, hash, mat, plane, smooth, sph, updateFlashlight, type CamKey } from './z1_fp_local';
+
+const KEYS: CamKey[] = [
+  { t: 30, pos: [0, 1.65, 7], look: [0, 0.7, 0], fov: 76, gait: 'still' },
+  { t: 32.5, pos: [0, 1.65, 7], look: [0, 0.7, 0], fov: 76, gait: 'still' },
+  { t: 36, pos: [1.4, 1.65, 5.8], look: [7.5, 1.1, 0.5], fov: 76, gait: 'walk' },
+  { t: 38, pos: [1.6, 1.65, 5.2], look: [0, 5.8, -2], fov: 76, gait: 'walk' },
+  { t: 40.5, pos: [1.0, 1.65, 4.55], look: [0, 0.65, 2.2], fov: 76, gait: 'walk' },
+  { t: 44.5, pos: [1.0, 1.65, 4.55], look: [0, 0.75, 2.4], fov: 74, gait: 'hold' },
+  { t: 47.5, pos: [1.0, 1.65, 4.55], look: [0.1, 0.85, 2.4], fov: 74, gait: 'hold' },
+  { t: 49.5, pos: [1.0, 1.65, 4.55], look: [3.2, 0.72, 2.4], fov: 74, gait: 'hold' },
+  { t: 52.0, pos: [-3.8, 1.38, 5.3], look: [-5, 1.05, 9.8], fov: 76, gait: 'creep' },
+  { t: 53.5, pos: [-5, 1.16, 6.3], look: [-5, 1.0, 10.8], fov: 76, gait: 'creep' },
+  { t: 55, pos: [-5, 1.05, 8.9], look: [-5, 1.05, 11.5], fov: 78, gait: 'creep' },
+];
+
+export default class ThresholdZ2Playroom extends Scene {
+  private s = new THREE.Scene();
+  private cam = new THREE.PerspectiveCamera(76, 16 / 9, 0.04, 90);
+  private flash!: ReturnType<typeof addFlashlight>;
+  private balls!: THREE.InstancedMesh;
+  private ballBase: { x: number; z: number; y: number; c: number }[] = [];
+  private swimmer = new THREE.Group();
+  private ridge: THREE.Mesh[] = [];
+  private mouthUpper!: THREE.Mesh;
+  private mouthLower!: THREE.Mesh;
+  private eyeL!: THREE.Mesh;
+  private eyeR!: THREE.Mesh;
+  private toys: THREE.Object3D[] = [];
+  private toyPhone!: THREE.Group;
+  private tenant!: THREE.Mesh;
+  private sun!: THREE.DirectionalLight;
+  private skylightMats: THREE.MeshStandardMaterial[] = [];
+  private tunnelRibs: THREE.Mesh[] = [];
+  private dummy = new THREE.Object3D();
+
+  override init() {
+    this.s.background = new THREE.Color(0xcfe8ff);
+    this.s.fog = new THREE.Fog(0xcfe8ff, 18, 55);
+    this.flash = addFlashlight(this.s);
+    this.s.add(new THREE.HemisphereLight(0xffffff, 0x5c78a8, 1.4));
+    this.sun = new THREE.DirectionalLight(0xffffff, 2.5); this.sun.position.set(-4, 9, 2); this.s.add(this.sun);
+
+    const foam = mat(0xf1efe8, 0.55);
+    const red = mat(0xe63b2e, 0.28);
+    const yellow = mat(0xf6c83b, 0.25);
+    const blue = mat(0x2e6fe6, 0.25);
+    const green = mat(0x3bbf5a, 0.3);
+    const plasticDark = mat(0x204074, 0.3);
+    const mats = [red, yellow, blue, green, mat(0xff7b2e, 0.28)];
+
+    box(this.s, 'z2_floor', [31, 0.1, 21], [0, -0.05, 0], foam);
+    box(this.s, 'z2_wall_n', [31, 6, 0.16], [0, 3, -10.5], foam);
+    box(this.s, 'z2_wall_s', [31, 6, 0.16], [0, 3, 10.5], foam);
+    box(this.s, 'z2_wall_w', [0.16, 6, 21], [-15.5, 3, 0], foam);
+    box(this.s, 'z2_wall_e', [0.16, 6, 21], [15.5, 3, 0], foam);
+    // painted clouds on walls
+    for (let i = 0; i < 11; i++) {
+      const x = -13 + hash(i) * 26, z = i % 2 ? -10.39 : 10.39, y = 2.4 + hash(i + 5) * 2.3;
+      const cloud = sph(this.s, `z2_cloud_${i}`, 0.42 + hash(i + 2) * 0.25, [x, y, z], basic(0xffffff, 0.88), 16);
+      cloud.scale.set(1.8, 0.55, 0.12);
+    }
+    // skylights
+    for (let i = 0; i < 3; i++) {
+      const m = mat(0xffffff, 0.2, 0, 0xffffff, 2.8) as THREE.MeshStandardMaterial;
+      this.skylightMats.push(m);
+      box(this.s, `z2_skylight_${i}`, [4.8, 0.05, 2.8], [-6 + i * 6, 5.95, -2], m);
+    }
+
+    // ball pit padded rim and dense instanced ball surface
+    box(this.s, 'z2_pit_n', [12.6, 0.8, 0.35], [0, 0.4, -4.2], blue);
+    box(this.s, 'z2_pit_s', [12.6, 0.8, 0.35], [0, 0.4, 4.2], red);
+    box(this.s, 'z2_pit_w', [0.35, 0.8, 8.4], [-6.2, 0.4, 0], yellow);
+    box(this.s, 'z2_pit_e', [0.35, 0.8, 8.4], [6.2, 0.4, 0], green);
+    const geom = new THREE.SphereGeometry(0.075, 8, 5);
+    const inst = new THREE.InstancedMesh(geom, new THREE.MeshStandardMaterial({ roughness: 0.26, metalness: 0 }), 4900);
+    inst.castShadow = false; inst.receiveShadow = true;
+    let bi = 0;
+    for (let ix = 0; ix < 86 && bi < 4900; ix++) for (let iz = 0; iz < 57 && bi < 4900; iz++) {
+      const x = -5.95 + ix * 0.14 + (hash(ix * 91 + iz * 17) - 0.5) * 0.035;
+      const z = -3.95 + iz * 0.14 + (hash(ix * 19 + iz * 71) - 0.5) * 0.035;
+      const dome = 0.03 * (1 - (x / 6) ** 2) + 0.025 * (1 - (z / 4) ** 2);
+      const y = 0.55 + dome + (hash(ix * 7 + iz * 13) - 0.5) * 0.025;
+      const c = bi % mats.length;
+      this.ballBase.push({ x, z, y, c });
+      inst.setColorAt(bi, new THREE.Color((mats[c]!.color as THREE.Color).getHex()));
+      bi++;
+    }
+    inst.count = bi;
+    this.balls = inst; this.s.add(inst);
+
+    // climbing frame, net, slides, tunnel
+    for (const x of [-6.8, -4.6]) for (const z of [-5.8, -3.6]) cyl(this.s, `z2_frame_post_${x}_${z}`, 0.06, 3.2, [x, 1.6, z], blue);
+    box(this.s, 'z2_frame_deck_low', [2.8, 0.18, 2.5], [-5.7, 1.25, -4.7], yellow);
+    box(this.s, 'z2_frame_deck_high', [2.4, 0.18, 2.1], [-5.8, 2.55, -4.8], red);
+    for (let i = 0; i < 8; i++) {
+      cyl(this.s, `z2_net_v_${i}`, 0.012, 1.3, [-4.4 + i * 0.28, 1.95, -3.55], plasticDark, [0, 0, 0], 8);
+      cyl(this.s, `z2_net_h_${i}`, 0.012, 2.0, [-3.4, 1.45 + i * 0.16, -3.55], plasticDark, [0, 0, Math.PI / 2], 8);
+    }
+    // spiral slide as stacked torus arcs/ribbon-like tube segments
+    for (let i = 0; i < 16; i++) {
+      const a = i * 0.34, r = 1.0, y = 2.5 - i * 0.12;
+      const seg = cyl(this.s, `z2_spiral_slide_${i}`, 0.16, 0.75, [-7.6 + Math.cos(a) * r, y, -4.8 + Math.sin(a) * r], yellow, [Math.PI / 2, 0, -a], 16);
+      seg.scale.x = 0.55;
+    }
+    for (let i = 0; i < 7; i++) box(this.s, `z2_step_block_${i}`, [0.7, 0.25, 0.7], [3.1 + (i % 2) * 0.8, 0.13 + i * 0.11, 3.8 - i * 0.55], mats[i % mats.length]!);
+    // tube tunnel ribs along z
+    for (let i = 0; i < 16; i++) {
+      const rib = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.035, 8, 28), blue);
+      rib.position.set(-5, 0.82, 5.6 + i * 0.38); rib.rotation.x = Math.PI / 2; rib.castShadow = rib.receiveShadow = true;
+      rib.name = `z2_tunnel_rib_${i}`; rib.userData.fx_entity = rib.name; this.s.add(rib); this.tunnelRibs.push(rib);
+    }
+
+    // shelves with toys facing the viewer; simple grey-box toy archetypes but real placement
+    for (let s = 0; s < 3; s++) box(this.s, `z2_shelf_${s}`, [0.35, 0.08, 6.5], [8.2, 0.9 + s * 0.65, -1], mat(0xffffff, 0.4));
+    const toyCols = [red, yellow, blue, green];
+    for (let i = 0; i < 20; i++) {
+      const g = new THREE.Group(); g.position.set(8.0, 1.05 + (i % 3) * 0.62, -3.8 + Math.floor(i / 3) * 0.72);
+      const body = sph(g, `z2_toy_body_${i}`, 0.13, [0, 0, 0], toyCols[i % 4]!, 12); body.scale.set(1, 1.25, 0.75);
+      sph(g, `z2_toy_head_${i}`, 0.09, [0, 0.19, 0.02], toyCols[(i + 1) % 4]!, 12);
+      if (i % 5 === 0) cyl(g, `z2_toy_neck_${i}`, 0.025, 0.3, [0, 0.26, 0], toyCols[i % 4]!, [0, 0, 0.3], 8);
+      g.userData.fx_entity = `z2_toy_${i}`; g.name = `z2_toy_${i}`; this.s.add(g); this.toys.push(g);
+    }
+    // additional named playroom props
+    for (let i = 0; i < 9; i++) box(this.s, `z2_block_${i}`, [0.28, 0.28, 0.28], [4.6 + hash(i) * 1.1, 0.14, -2.6 + hash(i + 2) * 1.1], mats[i % mats.length]!, [0, hash(i) * 1.5, 0]);
+    box(this.s, 'z2_toy_piano', [0.75, 0.35, 0.32], [5.3, 0.18, -4.8], red);
+    box(this.s, 'z2_jack_in_box', [0.38, 0.38, 0.38], [-3.8, 0.19, 3.6], blue);
+    cyl(this.s, 'z2_xylophone', 0.08, 0.65, [2.2, 0.1, -4.7], yellow, [0, 0, Math.PI / 2], 12);
+    box(this.s, 'z2_ball_cart', [0.8, 0.5, 0.55], [6.8, 0.25, 2.8], green);
+    box(this.s, 'z2_birthday_banner', [4.8, 0.42, 0.025], [0, 4.1, -10.35], red);
+    cyl(this.s, 'z2_music_box', 0.24, 0.18, [-7.8, 0.09, 1.8], mat(0xb66d34, 0.45), [0, 0, 0], 24);
+    sph(this.s, 'z2_ballerina', 0.07, [-7.8, 0.32, 1.8], mat(0xffe5d0, 0.5), 12);
+    for (let i = 0; i < 7; i++) {
+      const b = sph(this.s, `z2_balloon_${i}`, 0.18, [-7 + i * 1.8, 3.8 + hash(i) * 0.8, -6.5 + hash(i + 3) * 2], mats[i % mats.length]!, 16);
+      cyl(this.s, `z2_balloon_string_${i}`, 0.006, 1.4, [b.position.x, b.position.y - 0.8, b.position.z], mat(0xdddddd, 0.8), [0, 0, 0], 6);
+    }
+    // toy phone with eyes on foam step
+    this.toyPhone = new THREE.Group(); this.toyPhone.position.set(3.2, 0.68, 2.4);
+    box(this.toyPhone, 'z2_toy_phone_base', [0.38, 0.2, 0.28], [0, 0, 0], red);
+    box(this.toyPhone, 'z2_toy_phone_receiver', [0.42, 0.09, 0.1], [0, 0.16, 0], mat(0xd9caaa, 0.4));
+    sph(this.toyPhone, 'z2_toy_phone_eye_l', 0.035, [-0.08, 0.08, 0.15], basic(0xffffff), 10);
+    sph(this.toyPhone, 'z2_toy_phone_eye_r', 0.035, [0.08, 0.08, 0.15], basic(0xffffff), 10);
+    this.toyPhone.name = 'z2_toy_phone'; this.toyPhone.userData.fx_entity = 'z2_toy_phone'; this.s.add(this.toyPhone);
+
+    // swimmer placeholder: fused ball head, yellow split-slide mouth, eyes, dorsal balls
+    this.swimmer.position.set(0, 0.62, 2.4); this.swimmer.visible = false; this.s.add(this.swimmer);
+    for (let i = 0; i < 44; i++) {
+      const a = hash(i) * Math.PI * 2, r = 0.22 + hash(i + 1) * 0.38, y = (hash(i + 2) - 0.45) * 0.34;
+      sph(this.swimmer, `z2_swimmer_skull_ball_${i}`, 0.11 + hash(i + 4) * 0.035, [Math.cos(a) * r, y, Math.sin(a) * r * 0.62], mats[i % mats.length]!, 10);
+    }
+    this.mouthUpper = box(this.swimmer, 'z2_slide_mouth_upper', [0.62, 0.16, 0.58], [0, 0.05, 0.42], yellow, [-0.2, 0, 0]);
+    this.mouthLower = box(this.swimmer, 'z2_slide_mouth_lower', [0.62, 0.14, 0.58], [0, -0.13, 0.42], yellow, [0.2, 0, 0]);
+    this.eyeL = sph(this.swimmer, 'z2_swimmer_eye_l', 0.095, [-0.24, 0.24, 0.3], basic(0xffffff), 16);
+    this.eyeR = sph(this.swimmer, 'z2_swimmer_eye_r', 0.095, [0.24, 0.24, 0.3], basic(0xffffff), 16);
+    sph(this.eyeL, 'z2_swimmer_pupil_l', 0.035, [0, 0, 0.085], basic(0x111111), 10);
+    sph(this.eyeR, 'z2_swimmer_pupil_r', 0.035, [0, 0, 0.085], basic(0x111111), 10);
+    for (let i = 0; i < 10; i++) {
+      const r = sph(this.s, `z2_swimmer_ridge_${i}`, 0.1, [0, 0.55, -1 - i * 0.35], mats[i % mats.length]!, 10);
+      this.ridge.push(r);
+    }
+
+    // tall Tenant glimpse silhouette at tunnel end
+    this.tenant = box(this.s, 'z2_tenant_glimpse', [0.55, 3.8, 0.35], [-5, 1.9, 10.8], basic(0x070707, 0.82));
+    this.tenant.visible = false;
+  }
+
+  render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
+    const t = f.t;
+    applyFpCamera(this.cam, KEYS, t, out.width / out.height);
+    updateFlashlight(this.flash.light, this.flash.target, this.cam, t, 0.85, t > 40.5 && t < 49.5 ? 0.3 : 0.05);
+    // clouded skylight dimming after 40s
+    const dim = 1 - smooth(39.5, 41.5, t) * 0.5;
+    this.sun.intensity = 2.5 * dim;
+    this.skylightMats.forEach((m) => { m.emissiveIntensity = 2.8 * dim; });
+
+    // toys face the viewer, stepped at 6fps
+    const qcamX = Math.round(this.cam.position.x * 8) / 8, qcamZ = Math.round(this.cam.position.z * 8) / 8;
+    const stepT = Math.floor(t * 6) / 6;
+    this.toys.forEach((g, i) => {
+      const dx = qcamX - g.position.x, dz = qcamZ - g.position.z;
+      g.rotation.y = Math.atan2(dx, dz) + (hash(Math.floor(stepT * 6) + i) - 0.5) * 0.04;
+    });
+
+    // swimmer path: approaches before freeze, obeys movement rule, dives toward phone
+    let sx = 0, sz = -1.2;
+    if (t < 40.5) sz = -1.2 + smooth(38, 40.5, t) * 3.3;
+    else if (t < 47.5) sz = 2.1;
+    else {
+      const u = smooth(47.6, 49.3, t); sx = u * 2.7; sz = 2.1 + u * 0.2;
+    }
+    // surface head appears at 44.5 and vanishes in the dive
+    this.swimmer.visible = t > 44.4 && t < 49.2;
+    this.swimmer.position.set(sx, 0.62 + smooth(44.5, 45.4, t) * 0.42 - smooth(48.6, 49.2, t) * 0.7, sz + 0.2);
+    this.swimmer.rotation.y = smooth(47.6, 48.4, t) * 0.7;
+    const mouth = smooth(46.8, 47.2, t) * (1 - smooth(48.4, 49, t));
+    this.mouthUpper.rotation.x = -0.2 - mouth * 0.65;
+    this.mouthLower.rotation.x = 0.2 + mouth * 0.65;
+    const eyeTurn = Math.floor(t * 12) / 12;
+    this.eyeL.rotation.y = this.eyeR.rotation.y = smooth(45, 45.5, eyeTurn) * 0.35;
+
+    // displace balls around moving bulge; deterministic per-frame closed form
+    for (let i = 0; i < this.ballBase.length; i++) {
+      const b = this.ballBase[i]!;
+      const dx = b.x - sx, dz = b.z - sz;
+      const d2 = dx * dx + dz * dz;
+      const bulge = Math.exp(-d2 / 0.55) * (t > 38 && t < 49.2 ? 0.24 : 0.0);
+      const trail = Math.exp(-((b.x - sx * 0.5) ** 2 + (b.z - sz + 0.8) ** 2) / 1.8) * 0.05;
+      this.dummy.position.set(b.x, b.y + bulge + trail, b.z);
+      this.dummy.rotation.set(hash(i) * 3, hash(i + 1) * 3, hash(i + 2) * 3);
+      this.dummy.updateMatrix();
+      this.balls.setMatrixAt(i, this.dummy.matrix);
+    }
+    this.balls.instanceMatrix.needsUpdate = true;
+    this.ridge.forEach((r, i) => {
+      const w = Math.sin(t * 2.8 - i * 0.55) * 0.12;
+      r.position.set(sx + w, 0.52 + Math.sin(t * 3.2 - i) * 0.035, sz - 0.5 - i * 0.34);
+      r.visible = t > 38 && t < 49.2 && i < 5;
+    });
+
+    // toy phone ring vibrate and tunnel material wetting cue
+    const ring = t > 47.5 && t < 49.5 ? Math.sin(t * 55) * 0.012 : 0;
+    this.toyPhone.position.y = 0.68 + Math.abs(ring);
+    this.toyPhone.rotation.z = ring * 2;
+    const wet = smooth(53.4, 55, t);
+    this.tunnelRibs.forEach((r, i) => {
+      const m = r.material as THREE.MeshStandardMaterial;
+      m.color.setHex(i / this.tunnelRibs.length < wet ? 0x8cc8d8 : 0x2e6fe6);
+      m.roughness = 0.25 + wet * 0.2;
+    });
+    // tenant crosses far tunnel light only 52.2-52.7
+    this.tenant.visible = t > 52.15 && t < 52.75;
+    if (this.tenant.visible) this.tenant.position.x = -5 + (t - 52.15) * 1.8 - 0.5;
+
+    const gl = this.ctx.renderer;
+    gl.setRenderTarget(out); gl.setClearColor(0xcfe8ff, 1); gl.clear(true, true, true); gl.render(this.s, this.cam); gl.resetState();
+    return {
+      flash: 1 - smooth(30, 31.0, t),
+      exposure: 1.08,
+      bloom: 0.12,
+      bloomThreshold: 1.1,
+      vignette: 0.16,
+      grain: 0.025,
+      ca: 0.05,
+      shake: t > 40.5 && t < 44.5 ? [0.15 * (hash(Math.floor(t * 90)) - 0.5), 0.15 * (hash(Math.floor(t * 90) + 3) - 0.5)] : [0, 0],
+    };
+  }
+  override dispose() { disposeTree(this.s); }
+}
