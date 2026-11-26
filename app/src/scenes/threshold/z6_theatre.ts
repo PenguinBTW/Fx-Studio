@@ -311,9 +311,12 @@ export default class ThresholdZ6Theatre extends Scene {
     const lintButton = this.mat(0x070403, 0.22, 0, 0x090302, 0.18);
     const lintThread = this.mat(0x090504, 0.86);
     for (const side of [-1, 1]) {
-      const broadWing = this.sphere(this.lint, 0.028, [side * 0.034, -0.002, -0.006], lintWingMat, [1.65, 0.12, 0.86]);
+      const broadWing = this.sphere(this.lint, 0.028, [side * 0.034, -0.002, -0.006], lintWingMat, [1.28, 0.10, 1.42]);
       broadWing.userData.side = side;
       this.lintWings.push(broadWing);
+      const rearLobe = this.sphere(this.lint, 0.021, [side * 0.029, -0.004, -0.026], lintWingEdge, [1.0, 0.08, 1.05]);
+      rearLobe.userData.side = side;
+      this.lintWings.push(rearLobe);
       for (let vein = 0; vein < 3; vein++) {
         const spread = (vein - 1) * 0.018;
         const pts = [
@@ -330,6 +333,7 @@ export default class ThresholdZ6Theatre extends Scene {
         this.sphere(this.lint, 0.009, [side * (0.018 + scallop * 0.014), -0.006, -0.029 - scallop * 0.002], lintWingEdge, [1.2, 0.16, 0.8]);
       }
       this.sphere(this.lint, 0.0038, [side * 0.0062, 0.006, 0.038], lintButton, [1, 0.72, 0.5]);
+      this.sphere(this.lint, 0.00095, [side * 0.0052, 0.0072, 0.0405], this.mat(0xffffff, 0.08, 0, 0xffffff, 0.35), [1, 0.7, 0.5]);
       const pts = [
         new THREE.Vector3(side * 0.005, 0.006, 0.028),
         new THREE.Vector3(side * 0.016, 0.026, 0.044),
@@ -340,6 +344,15 @@ export default class ThresholdZ6Theatre extends Scene {
       antenna.castShadow = true;
       this.lint.add(antenna);
       this.disposables.push(geo);
+      for (let barb = 0; barb < 5; barb++) {
+        const q = barb / 4;
+        const bx = side * (0.012 + q * 0.017), by = 0.018 + q * 0.018, bz = 0.037 + q * 0.014;
+        const bgeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
+          new THREE.Vector3(bx, by, bz),
+          new THREE.Vector3(bx + side * 0.006, by + 0.002, bz + 0.001),
+        ]), 2, 0.00028, 4, false);
+        const bm = new THREE.Mesh(bgeo, lintThread); this.lint.add(bm); this.disposables.push(bgeo);
+      }
     }
     const lintLight = new THREE.PointLight(0xff8c2a, 1.35, 2.2, 1.6);
     lintLight.position.set(0, 0, -0.05);
@@ -417,7 +430,7 @@ export default class ThresholdZ6Theatre extends Scene {
       this.lintWings.forEach((wing) => {
         const side = wing.userData.side as number;
         const settle = landed ? smooth((t - 141.5) / 1.4) : 1;
-        wing.rotation.z = side * (0.08 + 0.18 * settle + 0.025 * Math.sin(st * 2.4 + side));
+        wing.rotation.z = side * (0.035 + 0.075 * settle + 0.018 * Math.sin(st * 2.4 + side));
       });
       this.lint.rotation.y = t < 143.5 ? -0.75 : -0.3 + 0.18 * Math.sin(st * 5);
     }

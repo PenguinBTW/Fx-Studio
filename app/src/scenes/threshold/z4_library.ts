@@ -160,8 +160,7 @@ export default class ThresholdZ4Library extends Scene {
     inkLines.forEach(([txt], li) => {
       const c = document.createElement('canvas'); c.width = 768; c.height = 104;
       const g = c.getContext('2d')!; g.clearRect(0, 0, c.width, c.height);
-      g.fillStyle = 'rgba(216,205,177,0.82)';
-      g.fillRect(0, 8, c.width, c.height - 16);
+      // transparent ink layer: no tape or label strip, only pigment absorbed by the page
       // Handwritten ink rather than placeholder rule marks: per-letter pressure, baseline wander,
       // and slight rotation remain deterministic while staying legible in the close scare frame.
       let x = 22;
@@ -173,8 +172,10 @@ export default class ThresholdZ4Library extends Scene {
         g.translate(x, 57 + (hash(seed + 1) - 0.5) * 7);
         g.rotate((hash(seed + 2) - 0.5) * 0.12);
         g.font = `italic ${size.toFixed(1)}px Georgia, serif`;
-        g.fillStyle = ci % 5 === 0 ? '#120f0b' : '#1b1712';
         g.textBaseline = 'middle';
+        g.shadowColor = 'rgba(30,20,10,0.32)'; g.shadowBlur = 2.2;
+        g.fillStyle = 'rgba(32,22,14,0.30)'; g.fillText(ch, 0.7, 0.6);
+        g.shadowBlur = 0; g.fillStyle = ci % 5 === 0 ? '#120f0b' : '#1b1712';
         g.fillText(ch, 0, 0);
         const cw = g.measureText(ch).width;
         g.restore();
@@ -183,7 +184,7 @@ export default class ThresholdZ4Library extends Scene {
       const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.repeat.set(-1, -1); tex.offset.set(1, 1);
       const mm = new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.9, polygonOffset: true, polygonOffsetFactor: -1 });
       const line = new THREE.Mesh(new THREE.PlaneGeometry(0.27, 0.052), mm);
-      line.position.set(0.18, 0.944 + li * 0.002, 5.86 + li * 0.072); line.rotation.x = -Math.PI / 2; line.userData.basePos = line.position.clone();
+      line.position.set(0.18, 0.949 + li * 0.002, 5.86 + li * 0.072); line.rotation.x = -Math.PI / 2; line.userData.basePos = line.position.clone();
       line.rotation.z = (li - 1.5) * 0.012;
       line.name = line.userData.fx_entity = `z4_ledger_ink_line_${li}`; line.visible = false; this.s.add(line); this.ledgerLines.push(line);
     });

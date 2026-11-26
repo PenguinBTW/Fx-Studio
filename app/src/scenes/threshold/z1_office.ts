@@ -28,6 +28,33 @@ const KEYS: CamKey[] = [
   { t: 30.0, pos: [-2.0, 1.54, 14.72], look: [-2, 1.15, 16], fov: 88, gait: 'run', roll: 0.08 },
 ];
 
+const CHASE_KEYS = KEYS.filter((k) => k.t >= 19.8 && k.t <= 30).map((k) => ({ t: k.t, pos: k.pos }));
+function chaseSlope(i: number) {
+  const a = CHASE_KEYS[Math.max(0, i - 1)]!, b = CHASE_KEYS[Math.min(CHASE_KEYS.length - 1, i + 1)]!;
+  const dt = Math.max(1e-6, b.t - a.t);
+  return [(b.pos[0] - a.pos[0]) / dt, (b.pos[1] - a.pos[1]) / dt, (b.pos[2] - a.pos[2]) / dt] as [number, number, number];
+}
+function chaseContinuousPos(t: number): [number, number, number] {
+  if (t <= CHASE_KEYS[0]!.t) return [...CHASE_KEYS[0]!.pos] as [number, number, number];
+  const last = CHASE_KEYS[CHASE_KEYS.length - 1]!;
+  if (t >= last.t) return [...last.pos] as [number, number, number];
+  let i = 0; while (i < CHASE_KEYS.length - 2 && t >= CHASE_KEYS[i + 1]!.t) i++;
+  const a = CHASE_KEYS[i]!, b = CHASE_KEYS[i + 1]!;
+  const dt = b.t - a.t, u = clamp((t - a.t) / dt);
+  const m0 = chaseSlope(i), m1 = chaseSlope(i + 1);
+  const h00 = 2 * u ** 3 - 3 * u ** 2 + 1, h10 = u ** 3 - 2 * u ** 2 + u, h01 = -2 * u ** 3 + 3 * u ** 2, h11 = u ** 3 - u ** 2;
+  return [0, 1, 2].map((j) => h00 * a.pos[j]! + h10 * dt * m0[j]! + h01 * b.pos[j]! + h11 * dt * m1[j]!) as [number, number, number];
+}
+function chaseSmoothPos(t: number): [number, number, number] {
+  if (t <= CHASE_KEYS[0]!.t) return [...CHASE_KEYS[0]!.pos] as [number, number, number];
+  const last = CHASE_KEYS[CHASE_KEYS.length - 1]!;
+  if (t >= last.t) return [...last.pos] as [number, number, number];
+  let i = 0; while (i < CHASE_KEYS.length - 2 && t >= CHASE_KEYS[i + 1]!.t) i++;
+  const a = CHASE_KEYS[i]!, b = CHASE_KEYS[i + 1]!;
+  const u = clamp((t - a.t) / (b.t - a.t)), e = u * u * (3 - 2 * u);
+  return [0, 1, 2].map((j) => a.pos[j]! + (b.pos[j]! - a.pos[j]!) * e) as [number, number, number];
+}
+
 type SurfaceKind = 'carpet' | 'fabric' | 'ceiling' | 'paper' | 'plastic' | 'metal' | 'laminate';
 function surfaceNoise(x: number, y: number, seed: number) {
   const v = Math.sin(x * 12.9898 + y * 78.233 + seed * 37.719) * 43758.5453;
@@ -595,6 +622,15 @@ export default class ThresholdZ1Office extends Scene {
     const t = f.t;
     const gl = this.ctx.renderer;
     applyFpCamera(this.cam, KEYS, t, out.width / out.height);
+    // Override only positional easing through the office chase: the shared rig intentionally
+    // smoothsteps ordinary keys, but panic flight must not brake at editorial waypoints.
+    if (t >= 19.8 && t <= 30) {
+      const continuous = chaseContinuousPos(t), eased = chaseSmoothPos(t);
+      const delta = new THREE.Vector3(continuous[0] - eased[0], continuous[1] - eased[1], continuous[2] - eased[2]);
+      this.cam.position.add(delta);
+      const pose = this.cam.userData.fpPose as { pos: [number, number, number] } | undefined;
+      if (pose) { pose.pos[0] += delta.x; pose.pos[1] += delta.y; pose.pos[2] += delta.z; }
+    }
     // flicker teaches the creature rule; hard irregular drops from 13s onward
     const flicker = t < 13 ? 0 : t < 15.5 ? 0.14 : t < 19.3 ? 0.32 : t < 27.5 ? 0.16 : 0.06;
     const eyeBeam = 1 - 0.58 * smooth(15.3, 15.8, t) * (1 - smooth(19.2, 19.8, t));

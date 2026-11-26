@@ -22,6 +22,24 @@ const KEYS: CamKey[] = [
   { t: 55, pos: [-5, 0.74, 8.9], look: [-5, 0.78, 11.5], fov: 78, gait: 'creep' },
 ];
 
+function playGrimeTexture() {
+  const size = 256;
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const g = c.getContext('2d')!;
+  const img = g.createImageData(size, size);
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    const n = hash(x * 0.37 + y * 2.13) * 34 + hash(Math.floor(x / 9) * 4.1 + Math.floor(y / 9)) * 24;
+    const stain = Math.max(0, Math.sin(x * 0.025 + y * 0.016) + Math.sin(y * 0.041) - 1.22) * 62;
+    const scuff = hash(x * 5.7 + y * 0.71) > 0.978 ? 44 : 0;
+    const v = 218 + n - stain - scuff;
+    const id = (y * size + x) * 4;
+    img.data[id] = img.data[id + 1] = img.data[id + 2] = Math.max(86, Math.min(255, v)); img.data[id + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(2.5, 2.5);
+  return tex;
+}
+
 export default class ThresholdZ2Playroom extends Scene {
   private s = new THREE.Scene();
   private cam = new THREE.PerspectiveCamera(76, 16 / 9, 0.04, 90);
@@ -86,6 +104,12 @@ export default class ThresholdZ2Playroom extends Scene {
     const swimmerPale = [mat(0xbdb4a4, 0.38), mat(0x99a7a4, 0.42), mat(0xc8bd8e, 0.36), mat(0xa88f8b, 0.44), mat(0x81939c, 0.4)];
     const mouthMat = mat(0xd9b83c, 0.62);
     const submergedRidgeMat = mat(0x3f4b4e, 0.30, 0, 0x101a1c, 0.10);
+    const grimeTex = playGrimeTexture();
+    for (const m of [foam, red, yellow, blue, green, plasticDark, ...mats]) {
+      const sm = m as THREE.MeshStandardMaterial;
+      sm.map = grimeTex; sm.roughnessMap = grimeTex; sm.bumpMap = grimeTex; sm.bumpScale = 0.008;
+      sm.color.multiplyScalar(0.78 + hash(sm.color.getHex() * 0.001) * 0.12); sm.roughness = Math.max(sm.roughness, 0.42); sm.needsUpdate = true;
+    }
 
     box(this.s, 'z2_floor', [31, 0.1, 21], [0, -0.05, 0], foam);
     box(this.s, 'z2_wall_n', [31, 6, 0.16], [0, 3, -10.5], foam);
@@ -98,6 +122,20 @@ export default class ThresholdZ2Playroom extends Scene {
       const cloud = sph(this.s, `z2_cloud_${i}`, 0.42 + hash(i + 2) * 0.25, [x, y, z], basic(0xffffff, 0.88), 16);
       cloud.scale.set(1.8, 0.55, 0.12);
     }
+    // abandoned soft-play wear: water stains, hand grime and peeling sticker rectangles on the wall skins
+    const stainMat = basic(0x4a3522, 0.24);
+    const stickerMats = [basic(0xf3e6a8, 0.78), basic(0xb7d7ef, 0.72), basic(0xe5b2c8, 0.68)];
+    for (let i = 0; i < 34; i++) {
+      const north = i % 2 === 0, z = north ? -10.405 : 10.405, x = -13.5 + hash(i * 3.1) * 27, y = 0.75 + hash(i * 7.3) * 4.7;
+      if (i % 3 === 0) {
+        const st = plane(this.s, `z2_wall_peeling_sticker_${i}`, 0.28 + hash(i) * 0.42, 0.14 + hash(i + 2) * 0.28, [x, y, z], stickerMats[i % 3]!, [0, north ? 0 : Math.PI, (hash(i + 5) - 0.5) * 0.35]);
+        st.renderOrder = 2;
+      } else {
+        const st = plane(this.s, `z2_wall_stain_${i}`, 0.35 + hash(i) * 0.8, 0.2 + hash(i + 2) * 0.9, [x, y, z], stainMat, [0, north ? 0 : Math.PI, (hash(i + 5) - 0.5) * 0.7]);
+        st.renderOrder = 1;
+      }
+    }
+
     // skylights
     for (let i = 0; i < 3; i++) {
       const m = mat(0xffffff, 0.2, 0, 0xffffff, 2.8) as THREE.MeshStandardMaterial;
@@ -121,7 +159,9 @@ export default class ThresholdZ2Playroom extends Scene {
       const y = 0.55 + dome + (hash(ix * 7 + iz * 13) - 0.5) * 0.025;
       const c = bi % mats.length;
       this.ballBase.push({ x, z, y, c });
-      inst.setColorAt(bi, new THREE.Color((mats[c]!.color as THREE.Color).getHex()));
+      const ballColor = new THREE.Color((mats[c]!.color as THREE.Color).getHex());
+      ballColor.multiplyScalar(0.66 + hash(bi * 1.37) * 0.38).lerp(new THREE.Color(0x8b8272), hash(bi * 2.71) * 0.30);
+      inst.setColorAt(bi, ballColor);
       bi++;
     }
     inst.count = bi;
@@ -361,6 +401,8 @@ export default class ThresholdZ2Playroom extends Scene {
       const parting = Math.exp(-d2 / 1.35) * 0.16 * activeWake;
       this.dummy.position.set(b.x + (dx / dist) * parting, b.y + bulge + trail, b.z + (dz / dist) * parting);
       this.dummy.rotation.set(hash(i) * 3, hash(i + 1) * 3, hash(i + 2) * 3);
+      const deflate = hash(i * 9.13);
+      this.dummy.scale.set(0.88 + hash(i * 4.7) * 0.28, deflate < 0.08 ? 0.46 + deflate * 2.5 : 0.88 + hash(i * 6.1) * 0.24, 0.88 + hash(i * 5.3) * 0.28);
       this.dummy.updateMatrix();
       this.balls.setMatrixAt(i, this.dummy.matrix);
     }
@@ -388,7 +430,7 @@ export default class ThresholdZ2Playroom extends Scene {
     const gl = this.ctx.renderer;
     gl.setRenderTarget(out); gl.setClearColor(0xcfe8ff, 1); gl.clear(true, true, true); gl.render(this.s, this.cam); gl.resetState();
     return {
-      ...thresholdPost(t, { darkness: 0.12, exposure: 1.16, stress: t > 40.5 && t < 49.5 ? 0.22 : 0.02 }),
+      ...thresholdPost(t, { darkness: 0.12, exposure: 0.72, stress: t > 40.5 && t < 49.5 ? 0.22 : 0.02 }),
       flash: 1 - smooth(30, 31.0, t),
       shake: t > 40.5 && t < 44.5 ? [0.15 * (hash(Math.floor(t * 90)) - 0.5), 0.15 * (hash(Math.floor(t * 90) + 3) - 0.5)] : [0, 0],
     };
