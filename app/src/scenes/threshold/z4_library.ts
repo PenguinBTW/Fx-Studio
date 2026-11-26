@@ -21,6 +21,15 @@ function paperFiberTexture() {
     img.data[id] = img.data[id + 1] = img.data[id + 2] = Math.max(105, Math.min(255, v)); img.data[id + 3] = 255;
   }
   g.putImageData(img, 0, 0);
+  for (let i = 0; i < 180; i++) {
+    const y = hash(i * 2.17) * size, x = hash(i * 5.91) * size, len = 8 + hash(i) * 34;
+    g.strokeStyle = `rgba(72,54,34,${0.035 + hash(i + 4) * 0.07})`; g.lineWidth = 0.45 + hash(i + 2) * 0.65;
+    g.beginPath(); g.moveTo(x, y); g.lineTo(x + len, y + (hash(i + 7) - 0.5) * 3); g.stroke();
+  }
+  for (let i = 0; i < 55; i++) {
+    g.fillStyle = `rgba(92,70,42,${0.05 + hash(i) * 0.08})`;
+    g.fillRect(hash(i * 3.3) * size, hash(i * 6.2) * size, 1 + hash(i) * 2.5, 1 + hash(i + 1) * 1.5);
+  }
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace; tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(2.5, 2.5);
   return tex;
@@ -101,9 +110,9 @@ export default class ThresholdZ4Library extends Scene {
     this.s.fog = new THREE.FogExp2(0x241e14, 0.038);
     this.flash = addFlashlight(this.s);
     this.s.add(new THREE.AmbientLight(0x8b7a59, 0.48));
-    const paper = mat(0xd8cdb1, 0.82);
-    const paper2 = mat(0xb8ac8d, 0.9);
-    const edge = mat(0x8c7c5d, 0.88);
+    const paper = mat(0xd8cdb1, 0.82); paper.name = 'library_ivory_paper';
+    const paper2 = mat(0xb8ac8d, 0.9); paper2.name = 'library_compressed_paper_edge';
+    const edge = mat(0x8c7c5d, 0.88); edge.name = 'library_dark_page_edge';
     const wood = mat(0x44301f, 0.7);
     const brass = mat(0x9c7a35, 0.3, 0.35, 0x392100, 0.15);
     const ink = mat(0x11100d, 0.9);
@@ -301,6 +310,22 @@ export default class ThresholdZ4Library extends Scene {
       m.userData.basePos = m.position.clone(); this.motes.push(m);
     }
 
+    // All library-kit and paper-prop clones share the same close-range fibre/roughness treatment,
+    // so paper reads fibrous and compressed rather than smooth plastic or fondant.
+    const libraryPaperSeen = new Set<THREE.Material>();
+    this.s.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      mats.forEach((m) => {
+        const mm = m as THREE.MeshStandardMaterial;
+        if (libraryPaperSeen.has(mm) || !/paper|page|ivory|compressed|card|scroll|letter|ledger/i.test(mm.name)) return;
+        libraryPaperSeen.add(mm);
+        mm.map = archivistPaperTex; mm.roughnessMap = archivistPaperTex; mm.bumpMap = archivistPaperTex; mm.bumpScale = 0.016;
+        mm.roughness = Math.max(mm.roughness, 0.84); mm.color.multiplyScalar(0.93); mm.needsUpdate = true;
+      });
+    });
+
     // Archivist: folded-paper silhouette high in canyon, fanned torso pages, accordion arms
     this.archivist = new THREE.Group(); this.archivist.position.set(1.15, 2.0, 1.35); this.archivist.visible = false; this.s.add(this.archivist);
     for (let i = 0; i < 12; i++) {
@@ -440,7 +465,10 @@ export default class ThresholdZ4Library extends Scene {
         const ripple = Math.sin(t * 4.6 - ai * 0.72 + sign) * 0.055 * unfold;
         const stage = 0.78 + unfold * 0.46 + ai * 0.006 * unfold;
         panel.position.x = bp.x * stage;
+        panel.position.y = bp.y + Math.sin(ai * 0.82 + sign) * 0.026 * unfold - ai * 0.0045 * unfold;
+        panel.position.z = (panel.userData.basePos as THREE.Vector3).z + Math.cos(ai * 0.63 - sign) * 0.018 * unfold;
         panel.scale.x = bs.x * (0.88 + unfold * 0.20 + ripple);
+        panel.scale.y = bs.y * (1.0 + unfold * 0.10);
         panel.rotation.z = (panel.userData.baseRotZ as number) + sign * ripple * 0.55;
       }
     }

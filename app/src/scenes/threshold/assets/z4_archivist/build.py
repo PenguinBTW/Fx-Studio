@@ -37,7 +37,7 @@ spine_mat=material('book_spine_leather',(0.18,0.085,0.035),.62)
 root=empty('archivist_root')
 spine=empty('spine_control',(0,0,1.65)); spine.parent=root
 # vertical book spine and layered hinge ribs
-cyl('book_spine',(0,0,1.55),.11,2.25,spine_mat,vertices=32).parent=spine
+cyl('book_spine',(0,0,1.28),.11,1.72,spine_mat,vertices=32).parent=spine
 for i in range(9):
     z=.55+i*.24
     cube(f'spine_hinge_band_{i+1}',(-.005,-.005,z),(.26,.18,.035),paper2,rot=(0,0,(i%2-.5)*.04),bevel=.006).parent=spine
@@ -68,24 +68,26 @@ for i in range(12):
 face=cube('blank_face_page',(0,-.09,2.55),(.43,.035,.66),paperhi,bevel=.018); face.parent=root
 cube('face_left_fold',(-.28,-.082,2.55),(.045,.04,.68),paper2,rot=(0,0,-.08),bevel=.006).parent=root
 cube('face_right_fold',(.28,-.082,2.55),(.045,.04,.68),paper2,rot=(0,0,.08),bevel=.006).parent=root
-cube('face_brow_fold',(0,-.105,2.9),(.55,.035,.045),paper2,rot=(.08,0,0),bevel=.006).parent=root
+cube('face_brow_fold',(0,-.112,2.9),(.58,.045,.065),paper2,rot=(.08,0,0),bevel=.006).parent=root
 # mouth is a crease system, not a drawn smile: central fold plus branching cracks
-cube('mouth_crease_main',(0,-.116,2.39),(.38,.012,.018),ink,rot=(0,0,-.035),bevel=.002).parent=root
+cube('mouth_crease_main',(0,-.121,2.39),(.46,.018,.038),ink,rot=(0,0,-.035),bevel=.002).parent=root
 for i,x in enumerate((-.16,-.07,.06,.15)):
     cube(f'mouth_crease_branch_{i+1}',(x,-.118,2.42+i%2*.025),(.11,.01,.009),ink,rot=(0,0,(i-1.5)*.28),bevel=.001).parent=root
+for i,x in enumerate((-.19,-.08,.04,.17)):
+    cube(f'mouth_jagged_shadow_{i+1}',(x,-.123,2.36-i%2*.018),(.10,.012,.028),ink,rot=(0,0,(i-1.5)*.22),bevel=.002).parent=root
 # accordion arms: alternating folded panels and hinge beads, extending sideways in canonical asset space
 for side,sgn in [('l',-1),('r',1)]:
     armroot=empty(f'arm_{side}_root',(sgn*.28,0,2.03)); armroot.parent=root
     for j in range(12):
         # zig-zag in both depth and vertical angle; panels overlap like a party blower
-        x=sgn*(.43+j*.225); z=2.03+math.sin(j*.9)*.085-j*.014; y=(j%2-.5)*.095
-        panel=cube(f'arm_{side}_accordion_panel_{j+1:02d}',(x,y,z),(.30+random.uniform(-.025,.035),.026,.105+random.uniform(-.018,.026)),paper if j%2 else paper2,rot=(0,sgn*(j%2-.5)*.48,sgn*(j%2-.5)*.30),bevel=.006)
+        x=sgn*(.43+j*.18); z=2.03+math.sin(j*.9)*.13-j*.018; y=(j%2-.5)*.115
+        panel=cube(f'arm_{side}_accordion_panel_{j+1:02d}',(x,y,z),(.38+random.uniform(-.02,.04),.045,.165+random.uniform(-.015,.025)),paper if j%2 else paper2,rot=(0,sgn*(j%2-.5)*.48,sgn*(j%2-.5)*.30),bevel=.006)
         panel.parent=armroot; panel.matrix_parent_inverse=armroot.matrix_world.inverted()
-        hinge=cube(f'arm_{side}_hinge_{j+1:02d}',(x,y,z),(.085,.042,.07),paperhi,rot=(random.uniform(-.2,.2),sgn*(j%2-.5)*.35,random.uniform(-.3,.3)),bevel=.012); hinge.parent=armroot; hinge.matrix_parent_inverse=armroot.matrix_world.inverted()
+        hinge=cube(f'arm_{side}_hinge_{j+1:02d}',(x,y,z),(.12,.052,.105),paperhi,rot=(random.uniform(-.2,.2),sgn*(j%2-.5)*.35,random.uniform(-.3,.3)),bevel=.012); hinge.parent=armroot; hinge.matrix_parent_inverse=armroot.matrix_world.inverted()
         if j%2==0: cube(f'arm_{side}_panel_crease_{j+1:02d}',(x,y-.019,z),(.22,.005,.008),ink,rot=(0,0,sgn*.08),bevel=.001).parent=armroot
         if j%3==1: cube(f'arm_{side}_panel_tear_{j+1:02d}',(x+sgn*.1,y-.02,z+.035),(.045,.005,.012),ink,rot=(0,0,sgn*.18),bevel=.001).parent=armroot
     # paper-strip hand fan and five long fingers
-    handx=sgn*(.43+12*.255)
+    handx=sgn*(.43+12*.19)
     cube(f'hand_{side}_paper_fan',(handx,0,1.86),(.28,.035,.22),paperhi,rot=(0,0,sgn*.08),bevel=.01).parent=armroot
     for fi in range(5):
         length=.42+fi*.035+random.uniform(-.02,.02)

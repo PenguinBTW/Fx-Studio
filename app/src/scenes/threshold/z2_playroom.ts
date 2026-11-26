@@ -58,6 +58,7 @@ export default class ThresholdZ2Playroom extends Scene {
   private sun!: THREE.DirectionalLight;
   private skylightMats: THREE.MeshStandardMaterial[] = [];
   private tunnelRibs: THREE.Mesh[] = [];
+  private swimmerLight!: THREE.PointLight;
   private dummy = new THREE.Object3D();
 
   private swimmerAsset!: GLTFInstance;
@@ -93,6 +94,7 @@ export default class ThresholdZ2Playroom extends Scene {
     this.flash = addFlashlight(this.s);
     this.s.add(new THREE.HemisphereLight(0xffffff, 0x2d3b4e, 0.48));
     this.sun = new THREE.DirectionalLight(0xffffff, 0.68); this.sun.position.set(-4, 9, 2); this.s.add(this.sun);
+    this.swimmerLight = new THREE.PointLight(0xffe0a8, 0, 4.2, 1.8); this.s.add(this.swimmerLight);
 
     const foam = mat(0xf1efe8, 0.55);
     const red = mat(0xe63b2e, 0.28);
@@ -143,6 +145,36 @@ export default class ThresholdZ2Playroom extends Scene {
       if (i < 5) box(this.s, `z2_missing_padding_backing_${i}`, [0.75, 0.48, 0.025], [-10 + i * 4.8, 2.0 + hash(i) * 2.2, z], mat(0x62594d, 0.88));
     }
 
+    // Larger readable abandonment damage: torn vinyl pads hinge away from the wall, exposing dark compressed backing.
+    for (let i = 0; i < 20; i++) {
+      const north = i % 2 === 0, inward = north ? 1 : -1, zwall = north ? -10.23 : 10.23;
+      const x = -12.5 + hash(i * 3.9) * 25, y = 0.9 + hash(i * 6.1) * 4.0;
+      const flapMat = mats[i % mats.length]!;
+      const flap = box(this.s, `z2_torn_vinyl_pad_flap_${i}`, [0.46 + hash(i) * 0.42, 0.52 + hash(i + 1) * 0.55, 0.038], [x, y, zwall + inward * (0.035 + hash(i + 2) * 0.055)], flapMat, [(north ? -1 : 1) * (0.22 + hash(i + 4) * 0.42), 0, (hash(i + 6) - 0.5) * 0.22]);
+      flap.scale.z = 0.75 + hash(i + 8) * 0.6;
+      box(this.s, `z2_torn_pad_dark_backing_${i}`, [0.52 + hash(i) * 0.42, 0.58 + hash(i + 1) * 0.55, 0.018], [x, y, zwall + inward * 0.006], mat(0x29231d, 0.92));
+      if (i % 3 === 0) box(this.s, `z2_pad_exposed_foam_edge_${i}`, [0.08, 0.48 + hash(i + 1) * 0.42, 0.045], [x + 0.24, y - 0.03, zwall + inward * 0.055], mat(0xd7cdb8, 0.86), [0, 0, (hash(i + 5) - 0.5) * 0.3]);
+    }
+    // Floor and pit-edge disorder: cracked plastic shards, wrappers, scattered blocks and crushed debris.
+    const debrisMats = [mat(0xd8d1bd, 0.82), mat(0x7d2e25, 0.72), mat(0x2c506e, 0.76), mat(0xb79b54, 0.78), mat(0x24201c, 0.9)];
+    for (let i = 0; i < 52; i++) {
+      const nearPit = i % 3 === 0;
+      const x = nearPit ? (i % 2 ? -6.8 - hash(i) * 2.2 : 6.8 + hash(i) * 2.2) : -13 + hash(i * 2.7) * 26;
+      const z = nearPit ? -3.5 + hash(i * 4.1) * 7 : -8.6 + hash(i * 5.3) * 17.2;
+      const shard = box(this.s, `z2_floor debris_shard_${i}`.replace(' ', '_'), [0.05 + hash(i) * 0.18, 0.012 + hash(i + 1) * 0.035, 0.035 + hash(i + 2) * 0.16], [x, 0.018, z], debrisMats[i % debrisMats.length]!, [(hash(i + 3) - 0.5) * 0.22, hash(i + 4) * Math.PI, (hash(i + 5) - 0.5) * 0.28]);
+      shard.receiveShadow = true;
+    }
+    // Matte dust drifts sitting on the ball surface break the uniform toy-plastic highlight at wide-read distance.
+    for (let i = 0; i < 34; i++) {
+      const x = -5.5 + hash(i * 3.3) * 11, z = -3.5 + hash(i * 5.7) * 7;
+      const dust = sph(this.s, `z2_ball_surface_dust_clump_${i}`, 0.055 + hash(i) * 0.075, [x, 0.64 + hash(i + 2) * 0.045, z], mat(0x9a8d74, 0.96), 8);
+      dust.scale.y = 0.18 + hash(i + 4) * 0.15;
+    }
+    // A few overturned blocks/stepping pieces make the play structure feel disturbed rather than merely dirty.
+    for (let i = 0; i < 7; i++) {
+      box(this.s, `z2_overturned_play_block_${i}`, [0.34 + hash(i) * 0.24, 0.22 + hash(i + 1) * 0.18, 0.32 + hash(i + 2) * 0.22], [2.6 + hash(i * 2.1) * 4.6, 0.12, 1.3 + hash(i * 3.8) * 3.6], mats[i % mats.length]!, [(hash(i + 5) - 0.5) * 0.7, hash(i + 6) * Math.PI, (hash(i + 7) - 0.5) * 0.7]);
+    }
+
     // skylights
     for (let i = 0; i < 3; i++) {
       const m = mat(0xb9c8d2, 0.5, 0, 0xaebdca, 0.32) as THREE.MeshStandardMaterial;
@@ -183,8 +215,19 @@ export default class ThresholdZ2Playroom extends Scene {
     box(this.s, 'z2_frame_deck_low', [2.8, 0.18, 2.5], [-5.7, 1.25, -4.7], yellow);
     box(this.s, 'z2_frame_deck_high', [2.4, 0.18, 2.1], [-5.8, 2.55, -4.8], red);
     for (let i = 0; i < 8; i++) {
-      cyl(this.s, `z2_net_v_${i}`, 0.012, 1.3, [-4.4 + i * 0.28, 1.95, -3.55], plasticDark, [0, 0, 0], 8);
-      cyl(this.s, `z2_net_h_${i}`, 0.012, 2.0, [-3.4, 1.45 + i * 0.16, -3.55], plasticDark, [0, 0, Math.PI / 2], 8);
+      if (i === 2 || i === 3) {
+        cyl(this.s, `z2_net_v_broken_stub_${i}`, 0.012, 0.42, [-4.4 + i * 0.28, 2.42 - i * 0.08, -3.55], plasticDark, [0.18 * (i - 2), 0, 0.12], 8);
+      } else {
+        cyl(this.s, `z2_net_v_${i}`, 0.012, 1.3, [-4.4 + i * 0.28, 1.95, -3.55], plasticDark, [0, 0, 0], 8);
+      }
+      if (i === 3 || i === 4) {
+        cyl(this.s, `z2_net_h_sagging_${i}`, 0.012, 1.15, [-3.82, 1.45 + i * 0.16 - 0.16, -3.49], plasticDark, [0.34, 0, Math.PI / 2 + 0.22], 8);
+      } else {
+        cyl(this.s, `z2_net_h_${i}`, 0.012, 2.0, [-3.4, 1.45 + i * 0.16, -3.55], plasticDark, [0, 0, Math.PI / 2], 8);
+      }
+    }
+    for (let d = 0; d < 5; d++) {
+      cyl(this.s, `z2_net_dangling_thread_${d}`, 0.008, 0.45 + hash(d) * 0.35, [-4.15 + d * 0.18, 1.42 - hash(d + 2) * 0.18, -3.47], plasticDark, [0.25 + hash(d) * 0.4, 0, (hash(d + 4) - 0.5) * 0.5], 7);
     }
     // spiral slide as stacked torus arcs/ribbon-like tube segments
     for (let i = 0; i < 16; i++) {
@@ -275,18 +318,36 @@ export default class ThresholdZ2Playroom extends Scene {
     this.toyPhone.visible = false;
     const padColors = [0xd96a55, 0xe7c85f, 0x78a8d8, 0x82bd7f, 0xe7dfca];
     const panelMaterialCache = new Map<string, THREE.MeshStandardMaterial>();
+    const distressPanel = (panel: THREE.Object3D | null | undefined, seed: number) => {
+      if (!panel) return;
+      // Sparse actual losses/misalignment break the toy-catalogue grid at delivery distance.
+      if (hash(seed * 1.913) < 0.045) { panel.visible = false; return; }
+      panel.position.x += (hash(seed + 1.1) - 0.5) * 0.055;
+      panel.position.y += (hash(seed + 2.3) - 0.5) * 0.045;
+      panel.position.z += (hash(seed + 3.7) - 0.5) * 0.035;
+      panel.rotation.z += (hash(seed + 4.9) - 0.5) * 0.045;
+    };
+    const distressPadMaterial = (mm: THREE.MeshStandardMaterial, seed: number) => {
+      mm.map = grimeTex; mm.roughnessMap = grimeTex; mm.bumpMap = grimeTex; mm.bumpScale = 0.012;
+      const fade = 0.18 + hash(seed * 2.17) * 0.38;
+      mm.color.lerp(new THREE.Color(0x8f8877), fade);
+      mm.color.multiplyScalar(0.62 + hash(seed * 3.11) * 0.25);
+      mm.roughness = Math.max(mm.roughness, 0.66); mm.needsUpdate = true;
+    };
     for (const side of [-1, 1]) for (let row = 0; row < 5; row++) for (let i = 0; i < 24; i++) {
       const panel = this.cloneProp(this.playroomKit, 'padded_wall_panel_root', [-14.0 + i * 1.22 + (row % 2) * 0.61, row * 1.1, side * 10.31], side < 0 ? 0 : Math.PI, 1, `z2_wall_panel_asset_${side}_${row}_${i}`);
+      const seed = 11 + row * 31 + i * 7 + (side > 0 ? 101 : 0);
+      distressPanel(panel, seed);
       const tint = row === 3 && i % 3 === 0 ? 0xe7dfca : padColors[(i + row * 2 + (side > 0 ? 2 : 0)) % padColors.length]!;
       panel?.traverse((o) => {
         const mesh = o as THREE.Mesh;
         if (!mesh.isMesh) return;
         const src = mesh.material as THREE.MeshStandardMaterial;
-        const key = `${src.name}_${src.name === 'foam_vinyl_ivory' ? tint : 0}`;
+        const key = `${src.name}_${src.name === 'foam_vinyl_ivory' ? tint : 0}_${Math.floor(hash(seed) * 5)}`;
         let mm = panelMaterialCache.get(key);
         if (!mm) {
           mm = src.clone();
-          if (mm.name === 'foam_vinyl_ivory') mm.color.setHex(tint);
+          if (mm.name === 'foam_vinyl_ivory') { mm.color.setHex(tint); distressPadMaterial(mm, seed); }
           panelMaterialCache.set(key, mm);
         }
         mesh.material = mm;
@@ -294,16 +355,18 @@ export default class ThresholdZ2Playroom extends Scene {
     }
     for (const side of [-1, 1]) for (let row = 0; row < 5; row++) for (let i = 0; i < 17; i++) {
       const panel = this.cloneProp(this.playroomKit, 'padded_wall_panel_root', [side * 15.31, row * 1.1, -9.2 + i * 1.15 + (row % 2) * 0.55], side < 0 ? Math.PI / 2 : -Math.PI / 2, 1, `z2_side_panel_asset_${side}_${row}_${i}`);
+      const seed = 211 + row * 29 + i * 5 + (side > 0 ? 77 : 0);
+      distressPanel(panel, seed);
       const tint = padColors[(i + row + (side > 0 ? 3 : 0)) % padColors.length]!;
       panel?.traverse((o) => {
         const mesh = o as THREE.Mesh;
         if (!mesh.isMesh) return;
         const src = mesh.material as THREE.MeshStandardMaterial;
-        const key = `${src.name}_${src.name === 'foam_vinyl_ivory' ? tint : 0}`;
+        const key = `${src.name}_${src.name === 'foam_vinyl_ivory' ? tint : 0}_${Math.floor(hash(seed) * 5)}`;
         let mm = panelMaterialCache.get(key);
         if (!mm) {
           mm = src.clone();
-          if (mm.name === 'foam_vinyl_ivory') mm.color.setHex(tint);
+          if (mm.name === 'foam_vinyl_ivory') { mm.color.setHex(tint); distressPadMaterial(mm, seed); }
           panelMaterialCache.set(key, mm);
         }
         mesh.material = mm;
@@ -382,8 +445,12 @@ export default class ThresholdZ2Playroom extends Scene {
     const swimmerVisible = t > 44.4 && t < 49.2;
     const sy = 0.58 + smooth(44.5, 45.4, t) * 0.42 - smooth(48.6, 49.2, t) * 0.7;
     this.swimmerAsset.root.visible = swimmerVisible;
+    this.swimmerAsset.root.scale.setScalar(1.22);
     this.swimmerAsset.root.position.set(sx, sy, sz + 0.2);
     this.swimmerAsset.root.rotation.y = smooth(47.6, 48.4, t) * 0.7;
+    this.swimmerLight.visible = swimmerVisible;
+    this.swimmerLight.intensity = swimmerVisible ? 0.95 : 0;
+    this.swimmerLight.position.set(sx + 0.25, sy + 0.55, sz + 1.15);
     for (const side of ['l', 'r'] as const) {
       const pupil = this.swimmerAsset.part(`eye_pupil_${side}`);
       if (pupil) {

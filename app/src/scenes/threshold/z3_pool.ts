@@ -13,15 +13,37 @@ function glazeBreakupTexture() {
   const size = 256;
   const c = document.createElement('canvas'); c.width = c.height = size;
   const g = c.getContext('2d')!;
-  const img = g.createImageData(size, size);
+  g.fillStyle = 'rgb(166,184,180)'; g.fillRect(0, 0, size, size);
+  const img = g.getImageData(0, 0, size, size);
   for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
-    const tileLine = (x % 42 < 2 || y % 42 < 2) ? -70 : 0;
-    const n = (hash(x * 0.19 + y * 1.7) - 0.5) * 24 + Math.sin(x * 0.09 + y * 0.04) * 10;
-    const v = 205 + n + tileLine;
+    const mineral = (hash(x * 0.19 + y * 1.7) - 0.5) * 34 + Math.sin(x * 0.09 + y * 0.04) * 14;
+    const stain = hash(Math.floor(x / 37) * 2.1 + Math.floor(y / 31) * 5.7) > 0.72 ? -34 : 0;
     const id = (y * size + x) * 4;
-    img.data[id] = img.data[id + 1] = img.data[id + 2] = Math.max(75, Math.min(255, v)); img.data[id + 3] = 255;
+    const v = Math.max(78, Math.min(225, 174 + mineral + stain));
+    img.data[id] = v * 0.92; img.data[id + 1] = v; img.data[id + 2] = v * 0.97; img.data[id + 3] = 255;
   }
   g.putImageData(img, 0, 0);
+  // thick tile registration lines and glaze crazing are intentionally high contrast:
+  // they must survive delivery-distance rendering, not only close crops.
+  g.strokeStyle = 'rgba(8,25,27,0.72)'; g.lineWidth = 4;
+  for (let q = 0; q <= size; q += 42) {
+    g.beginPath(); g.moveTo(q + Math.sin(q) * 1.5, 0); g.lineTo(q + Math.cos(q) * 1.5, size); g.stroke();
+    g.beginPath(); g.moveTo(0, q + Math.cos(q) * 1.5); g.lineTo(size, q + Math.sin(q) * 1.5); g.stroke();
+  }
+  for (let i = 0; i < 42; i++) {
+    let x = hash(i * 3.1) * size, y = hash(i * 5.7) * size;
+    g.strokeStyle = `rgba(10,26,28,${0.28 + hash(i) * 0.34})`; g.lineWidth = 0.8 + hash(i + 4) * 1.4;
+    g.beginPath(); g.moveTo(x, y);
+    for (let k = 0; k < 5; k++) {
+      x += (hash(i * 11 + k) - 0.5) * 32; y += (hash(i * 17 + k) - 0.5) * 32;
+      g.lineTo(x, y);
+    }
+    g.stroke();
+  }
+  for (let i = 0; i < 22; i++) {
+    g.fillStyle = `rgba(24,45,42,${0.08 + hash(i) * 0.12})`;
+    g.beginPath(); g.ellipse(hash(i * 2.3) * size, hash(i * 4.9) * size, 6 + hash(i) * 20, 3 + hash(i + 3) * 12, hash(i + 8) * Math.PI, 0, Math.PI * 2); g.fill();
+  }
   const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(1.8, 1.8);
   return tex;
 }
@@ -46,6 +68,7 @@ export default class ThresholdZ3Pool extends Scene {
   private cam = new THREE.PerspectiveCamera(76, 16 / 9, 0.04, 90);
   private flash!: ReturnType<typeof addFlashlight>;
   private water!: THREE.Mesh;
+  private waterBase!: Float32Array;
   private waterMat!: THREE.MeshStandardMaterial;
   private waterGlintMat!: THREE.MeshBasicMaterial;
   private mirrorling!: THREE.Group;
@@ -91,7 +114,7 @@ export default class ThresholdZ3Pool extends Scene {
         if (hit) return hit;
         const mm = new THREE.MeshPhysicalMaterial({ color: (m as THREE.MeshStandardMaterial).color.clone(), roughness: 0.24, metalness: 0.0, clearcoat: 0.72, clearcoatRoughness: 0.12 });
         mm.map = mirrorlingGlazeTex; mm.roughnessMap = mirrorlingGlazeTex; mm.bumpMap = mirrorlingGlazeTex; mm.bumpScale = 0.009;
-        mm.color.multiplyScalar(0.82);
+        mm.color.multiplyScalar(0.64);
         mm.name = m.name;
         if (/aqua_chrome_tile/.test(mm.name)) { mm.color.setHex(0xd8eeee); mm.roughness = 0.15; }
         if (/pale_tile_highlight/.test(mm.name)) { mm.color.setHex(0xf0f5e9); mm.roughness = 0.12; }
@@ -103,7 +126,7 @@ export default class ThresholdZ3Pool extends Scene {
       const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
       const mapped = mats.map(remap);
       mesh.material = Array.isArray(mesh.material) ? mapped : mapped[0]!;
-      if (/water_ripple_ring|torso_tile_band|head_grout_|(?:arm|leg)_.*_grout_|shoulder_socket|elbow_|wrist_|knee_|hip_socket|body_tile_chip/.test(mesh.name)) mesh.visible = false;
+      if (/water_ripple_ring|torso_tile_band|head_grout_|(?:arm|leg)_.*_grout_|shoulder_socket|elbow_|wrist_|knee_|hip_socket|body_tile_chip|^(?:arm|leg)_[lr]_(?:upper|lower)$/.test(mesh.name)) mesh.visible = false;
     });
     this.mirrorlingAsset.root.traverse((o) => {
       const mesh = o as THREE.Mesh;
@@ -113,8 +136,8 @@ export default class ThresholdZ3Pool extends Scene {
     });
     // Ceramic limb volume overlay: the GLB supplies the teardrop head, torso, joints and fingers;
     // these continuous tiled sleeves guarantee the limbs read as the same ceramic being at film distance.
-    const limbTile = new THREE.MeshPhysicalMaterial({ color: 0xafc7c6, roughness: 0.28, metalness: 0.0, clearcoat: 0.74, clearcoatRoughness: 0.12, envMapIntensity: 0.65 });
-    limbTile.map = mirrorlingGlazeTex; limbTile.roughnessMap = mirrorlingGlazeTex; limbTile.bumpMap = mirrorlingGlazeTex; limbTile.bumpScale = 0.008;
+    const limbTile = new THREE.MeshPhysicalMaterial({ color: 0xf0f6ec, roughness: 0.25, metalness: 0.0, clearcoat: 0.78, clearcoatRoughness: 0.10, envMapIntensity: 1.15, emissive: 0x102526, emissiveIntensity: 0.12 });
+    limbTile.roughnessMap = mirrorlingGlazeTex; limbTile.bumpMap = mirrorlingGlazeTex; limbTile.bumpScale = 0.006;
     const limbGrout = new THREE.MeshStandardMaterial({ color: 0x102a2d, roughness: 0.82, metalness: 0.0 });
     const addLimbCylinder = (name: string, a: [number, number, number], b: [number, number, number], r1: number, r2: number, material: THREE.Material) => {
       const va = new THREE.Vector3(...a), vb = new THREE.Vector3(...b);
@@ -178,8 +201,8 @@ export default class ThresholdZ3Pool extends Scene {
       }
     });
     this.s.add(this.mirrorlingAsset.root, this.mirrorlingReflection.root);
-    const glazeKey = new THREE.PointLight(0xdfffff, 0.48, 3.8, 2); glazeKey.position.set(0.55, 2.15, 0.85); this.mirrorlingAsset.root.add(glazeKey);
-    const glazeRim = new THREE.PointLight(0x7fd7e8, 0.28, 3.2, 2); glazeRim.position.set(-0.65, 1.35, -0.65); this.mirrorlingAsset.root.add(glazeRim);
+    const glazeKey = new THREE.PointLight(0xdfffff, 0.38, 3.8, 2); glazeKey.position.set(0.55, 2.15, 0.85); this.mirrorlingAsset.root.add(glazeKey);
+    const glazeRim = new THREE.PointLight(0x7fd7e8, 0.16, 3.2, 2); glazeRim.position.set(-0.65, 1.35, -0.65); this.mirrorlingAsset.root.add(glazeRim);
     this.s.background = new THREE.Color(0x08262d);
     this.s.fog = new THREE.FogExp2(0x0b4652, 0.055);
     this.flash = addFlashlight(this.s);
@@ -245,12 +268,13 @@ export default class ThresholdZ3Pool extends Scene {
       box(this.s, `z3_column_mosaic_r_${z}`, [0.51, 0.16, 0.51], [3.72, 1.16, z], mat(0x126eab, 0.3));
     }
     // water plane and lane-rope/pipe details
-    this.waterMat = mat(0x1b8fa0, 0.025, 0.28, 0x073f4a, 0.18) as THREE.MeshStandardMaterial;
-    this.waterMat.transparent = true; this.waterMat.opacity = 0.34; this.waterMat.depthWrite = false;
+    this.waterMat = mat(0x55b6c0, 0.055, 0.18, 0x0a5964, 0.24) as THREE.MeshStandardMaterial;
+    this.waterMat.transparent = true; this.waterMat.opacity = 0.52; this.waterMat.depthWrite = false; this.waterMat.side = THREE.DoubleSide;
     const wc = document.createElement('canvas'); wc.width = wc.height = 256;
     const wg = wc.getContext('2d')!;
-    wg.fillStyle = 'rgba(20,120,135,0.24)'; wg.fillRect(0, 0, 256, 256);
-    wg.strokeStyle = 'rgba(190,255,250,0.20)'; wg.lineWidth = 1;
+    wg.fillStyle = 'rgb(92,174,184)'; wg.fillRect(0, 0, 256, 256);
+  const deep = wg.createLinearGradient(0, 0, 256, 256); deep.addColorStop(0, 'rgba(8,70,88,0.32)'); deep.addColorStop(0.55, 'rgba(20,120,136,0.08)'); deep.addColorStop(1, 'rgba(4,48,68,0.42)'); wg.fillStyle = deep; wg.fillRect(0, 0, 256, 256);
+    wg.strokeStyle = 'rgba(224,255,248,0.42)'; wg.lineWidth = 1.4;
     for (let y = 8; y < 256; y += 18) {
       wg.beginPath();
       for (let x = 0; x <= 256; x += 8) {
@@ -261,7 +285,27 @@ export default class ThresholdZ3Pool extends Scene {
     }
     const waterTex = new THREE.CanvasTexture(wc); waterTex.wrapS = waterTex.wrapT = THREE.RepeatWrapping; waterTex.repeat.set(4, 14);
     this.waterMat.map = waterTex;
-    this.water = plane(this.s, 'z3_water_surface', 8, 27, [0, 0.45, -6], this.waterMat, [-Math.PI / 2, 0, 0]);
+    // segmented closed-form water surface: genuine shallow wave displacement catches light at
+    // grazing angles, rather than a single perfectly planar glossy sheet.
+    const waterGeo = new THREE.PlaneGeometry(8, 27, 24, 72);
+    this.water = new THREE.Mesh(waterGeo, this.waterMat);
+    this.water.name = 'z3_water_surface'; this.water.userData.fx_entity = 'z3_water_surface';
+    this.water.position.set(0, 0.45, -6); this.water.rotation.set(-Math.PI / 2, 0, 0);
+    this.water.receiveShadow = true; this.s.add(this.water);
+    this.waterBase = (waterGeo.attributes.position.array as Float32Array).slice();
+    // physical meniscus/edge thickness at the walls and step face: these small bright/dark lines
+    // are what separate a knee-deep water surface from a polished floor at first-person distance.
+    const meniscus = mat(0x9be7df, 0.18, 0, 0x55d8d2, 0.35);
+    for (const side of [-1, 1]) {
+      box(this.s, `z3_water_meniscus_wall_${side}`, [0.07, 0.026, 27], [side * 3.73, 0.462, -6], meniscus);
+      box(this.s, `z3_water_wall_contact_shadow_${side}`, [0.032, 0.075, 27], [side * 3.755, 0.425, -6], basic(0x03262d, 0.34));
+    }
+    box(this.s, 'z3_water_step_contact_line', [7.6, 0.018, 0.035], [0, 0.463, 4.98], meniscus);
+    box(this.s, 'z3_water_front_depth_edge', [7.6, 0.045, 0.025], [0, 0.43, 4.96], basic(0x063844, 0.32));
+    for (let i = 0; i < 18; i++) {
+      const side = i % 2 ? -1 : 1;
+      plane(this.s, `z3_water_edge_foam_break_${i}`, 0.08 + hash(i) * 0.18, 0.012 + hash(i + 2) * 0.025, [side * (3.58 + hash(i) * 0.12), 0.466, -18 + hash(i * 4.2) * 23], basic(0xd9fff6, 0.22 + hash(i + 5) * 0.16), [-Math.PI / 2, 0, hash(i + 7) * Math.PI]);
+    }
     const gc = document.createElement('canvas'); gc.width = gc.height = 256;
     const gg = gc.getContext('2d')!;
     gg.clearRect(0, 0, 256, 256);
@@ -319,7 +363,7 @@ export default class ThresholdZ3Pool extends Scene {
     }
     const playerTex = new THREE.CanvasTexture(pc); playerTex.colorSpace = THREE.SRGBColorSpace;
     this.playerReflectionMat = new THREE.MeshBasicMaterial({ map: playerTex, transparent: true, opacity: 0, depthWrite: false });
-    this.playerReflection = plane(this.s, 'z3_player_proxy_reflection', 1.34, 3.65, [0, 0.448, 1.5], this.playerReflectionMat, [-Math.PI / 2, 0, 0]);
+    this.playerReflection = plane(this.s, 'z3_player_proxy_reflection', 1.86, 4.75, [0, 0.448, 1.5], this.playerReflectionMat, [-Math.PI / 2, 0, 0]);
     this.playerReflection.renderOrder = 4; this.playerReflection.visible = false;
     const bc = document.createElement('canvas'); bc.width = 256; bc.height = 256;
     const bg = bc.getContext('2d')!; bg.clearRect(0, 0, 256, 256);
@@ -492,6 +536,13 @@ export default class ThresholdZ3Pool extends Scene {
     updateFlashlight(this.flash.light, this.flash.target, this.cam, t, 0.38, t > 73 ? 0.16 : 0.04);
     // deterministic surface shimmer and drifting floaters
     this.water.position.y = 0.45 + Math.sin(t * 1.8) * 0.002;
+    const wp = this.water.geometry.attributes.position;
+    const arr = wp.array as Float32Array;
+    for (let i = 0; i < arr.length; i += 3) {
+      const x = this.waterBase[i]!, y = this.waterBase[i + 1]!;
+      arr[i + 2] = Math.sin(x * 2.35 + t * 1.12) * 0.0065 + Math.sin(y * 1.48 - t * 0.82) * 0.0075 + Math.sin((x * 1.7 + y * 2.9) + t * 1.85) * 0.0032;
+    }
+    wp.needsUpdate = true; this.water.geometry.computeVertexNormals();
     if (this.waterMat.map) { this.waterMat.map.offset.set((t * 0.012) % 1, (t * 0.018) % 1); }
     if (this.waterGlintMat.map) { this.waterGlintMat.map.offset.set((t * 0.006) % 1, (t * 0.010) % 1); this.waterGlintMat.opacity = (0.25 + Math.sin(t * 0.9) * 0.05) * (1 - smooth(79.15, 80, t)); }
     this.waterMat.emissiveIntensity = 0.18 + Math.sin(t * 2.4) * 0.025;
@@ -511,15 +562,17 @@ export default class ThresholdZ3Pool extends Scene {
 
     // Beat 3.2: planar water reflection of the player-proxy. The dark body is locked to the
     // current camera position, while the warm beam patch is intentionally lagged by 0.42 s.
-    const reflPlayer = smooth(58.35, 58.75, t) * (1 - smooth(61.0, 61.55, t));
+    const reflPlayer = smooth(58.35, 58.75, t) * (1 - smooth(63.2, 63.9, t));
     this.playerReflection.visible = reflPlayer > 0.015;
     this.beamReflection.visible = reflPlayer > 0.015;
-    this.playerReflectionMat.opacity = 0.48 * reflPlayer;
+    this.playerReflectionMat.opacity = 0.66 * reflPlayer;
     this.beamReflectionMat.opacity = 0.50 * reflPlayer;
     if (reflPlayer > 0) {
-      const fwdX = this.cam.position.x, fwdZ = this.cam.position.z - 1.55;
+      const fwdX = this.cam.position.x, fwdZ = this.cam.position.z - 1.08;
       this.playerReflection.position.set(fwdX, 0.448, fwdZ);
-      this.playerReflection.rotation.z = Math.sin(t * 0.7) * 0.055 + Math.sin(t * 1.9) * 0.018;
+      const wrongU = smooth(61.0, 62.2, t) * (1 - smooth(63.0, 63.8, t));
+      this.playerReflection.rotation.z = Math.sin(t * 0.7) * 0.055 + Math.sin(t * 1.9) * 0.018 + wrongU * Math.sin((t - 61) * 4.2) * 0.13;
+      this.playerReflection.position.x = fwdX + wrongU * Math.sin((t - 61) * 3.1) * 0.11;
       const lag = evalCam(KEYS, t - 0.42);
       const dx = lag.look[0] - lag.pos[0], dy = lag.look[1] - lag.pos[1], dz = lag.look[2] - lag.pos[2];
       const len = Math.hypot(dx, dy, dz) || 1;
@@ -582,7 +635,7 @@ export default class ThresholdZ3Pool extends Scene {
 
     const underwater = smooth(79.15, 80, t);
     this.s.fog = new THREE.FogExp2(underwater > 0.4 ? 0x061c22 : 0x0b4652, 0.055 + underwater * 0.22);
-    this.waterMat.opacity = 0.42 - underwater * 0.16;
+    this.waterMat.opacity = 0.52 - underwater * 0.18;
 
     const gl = this.ctx.renderer;
     gl.setRenderTarget(out); gl.setClearColor(underwater > 0.4 ? 0x03151a : 0x08262d, 1); gl.clear(true, true, true); gl.render(this.s, this.cam); gl.resetState();

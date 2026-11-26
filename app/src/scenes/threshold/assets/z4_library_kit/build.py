@@ -11,15 +11,29 @@ def add(o,r):o.location.x-=r.location.x;o.parent=r;return o
 def stack_bay(x):
  r=root('paper_stack_bay_root',x)
  add(box('stack_back',(.72,.10,5.4),(x,.04,2.7),PAPER2,.018,2),r)
- for side in(-.34,.34):add(box('stack_upright',(.08,.24,5.55),(x+side,0,2.78),EDGE,.012,2),r)
- for shelf in range(7):
-  z=.38+shelf*.74
-  add(box('stack_shelf',(.78,.28,.055),(x,0,z),EDGE,.008),r)
-  for b in range(5):
-   h=.34+((shelf*7+b*3)%5)*.035;w=.065+((shelf+b)%3)*.015
-   xx=x-.25+b*.12+((shelf*b)%2)*.012
-   add(box('compressed_book_block',(w,.19,h),(xx,-.025,z+.055+h/2),PAPER if (b+shelf)%2 else PAPER2,.004),r)
-  if shelf%2==0:add(box('paper_layer_line',(.70,.012,.008),(x,-.135,z+.08),PAPER,.001),r)
+ # compressed irregular paper lifts stacked directly on one another: a canyon wall of pages,
+ # not a conventional bookcase with shelves and individual books.
+ for layer in range(24):
+  z=.12+layer*.225+((layer*7)%5)*.008
+  w=.56+((layer*5)%7)*.025
+  d=.20+((layer*3)%5)*.018
+  h=.13+((layer*4)%6)*.014
+  xx=x+(((layer*11)%9)-4)*.008
+  yy=-.015+(((layer*13)%7)-3)*.006
+  rotz=(((layer*17)%11)-5)*.006
+  add(box('compressed_page_lift',(w,d,h),(xx,yy,z),PAPER if layer%2 else PAPER2,.006,2,rot=(0,0,rotz)),r)
+  # exposed dark laminated edge at the front of each lift
+  add(box('compressed_page_edge_line',(w*.92,.010,.010),(xx,yy-d*.54,z+h*.30),EDGE,.001,1,rot=(0,0,rotz)),r)
+  if layer%3==1:
+   # slipped loose signatures protrude unevenly from the compressed stack
+   sx=x-.24+((layer*5)%6)*.09
+   add(box('protruding_loose_signature',(.18,.028,.16),(sx,-.155,z+.03),PAPER,.002,1,rot=(.05,0,(((layer*3)%7)-3)*.04)),r)
+  if layer%4==2:
+   # vertical leaning card pieces break the horizontal barcode rhythm
+   sx=x-.27+((layer*7)%8)*.07
+   add(box('leaning_card_insert',(.045,.15,.34),(sx,-.03,z+.12),PAPER2,.003,1,rot=(0,.08,(((layer*5)%7)-3)*.08)),r)
+  if layer%5==0:
+   add(box('paper_layer_line',(.62,.012,.008),(x,-.155,z+.10),PAPER,.001),r)
  add(box('bay_index_label',(.24,.018,.12),(x,-.16,2.20),PAPER,.004),r)
  add(box('bay_red_bookmark',(.035,.012,.46),(x+.19,-.17,3.05),RED,.003),r)
  return r

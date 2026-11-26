@@ -99,25 +99,25 @@ for side,rootobj,zsign in [('upper',upper,1),('lower',lower,-1)]:
         panel.parent=rootobj; panel.matrix_parent_inverse=rootobj.matrix_world.inverted()
     # side rails make the slide silhouette unmistakable
     for x in (-.31,.31):
-        rail=cyl_between(f'slide_mouth_{side}_rail_{x}',(x,-.31,zsign*.08),(x,-.88,zsign*.34),.025,yellow,vertices=16)
+        rail=cyl_between(f'slide_mouth_{side}_rail_{x}',(x,-.31,zsign*.08),(x,-.88,zsign*.34),.034,yellow,vertices=16)
         rail.parent=rootobj; rail.matrix_parent_inverse=rootobj.matrix_world.inverted()
 
 # Twenty stopper teeth, ten upper and ten lower, irregularly worn.
 for i in range(10):
     x=-.25+i*.055
-    up=cone(f'tooth_upper_{i+1:02d}',(x,-.70,-.015+(i%2)*.012),.014+random.uniform(0,.009),.004,.085+random.uniform(0,.055),toothmat,rot=(math.pi+random.uniform(-.08,.08),random.uniform(-.06,.06),random.uniform(-.05,.05)),vertices=16); up.parent=upper
-    lo=cone(f'tooth_lower_{i+1:02d}',(x+.018,-.69,-.12-(i%2)*.009),.014+random.uniform(0,.008),.004,.08+random.uniform(0,.05),toothmat,rot=(random.uniform(-.07,.07),random.uniform(-.05,.05),random.uniform(-.05,.05)),vertices=16); lo.parent=lower
+    up=cone(f'tooth_upper_{i+1:02d}',(x,-.70,-.015+(i%2)*.012),.022+random.uniform(0,.010),.005,.125+random.uniform(0,.065),toothmat,rot=(math.pi+random.uniform(-.08,.08),random.uniform(-.06,.06),random.uniform(-.05,.05)),vertices=16); up.parent=upper
+    lo=cone(f'tooth_lower_{i+1:02d}',(x+.018,-.69,-.12-(i%2)*.009),.021+random.uniform(0,.009),.005,.12+random.uniform(0,.06),toothmat,rot=(random.uniform(-.07,.07),random.uniform(-.05,.05),random.uniform(-.05,.05)),vertices=16); lo.parent=lower
     if i in (2,7):
         # chipped dark notch
         cube(f'tooth_chip_{i+1}',(x,-.715,.035),(0.018,.012,.018),seammat,bevel=.002).parent=upper
 
 # Cartoon painted eyes: vinyl balls, white iris discs, off-centre pupils and pressure seams.
 for side,x in [('l',-.27),('r',.27)]:
-    sphere(f'eye_ball_{side}',(x,-.42,.34),(.14,.10,.14),red if side=='l' else blue,seg=32,rings=16).parent=root
+    sphere(f'eye_ball_{side}',(x,-.43,.36),(.18,.125,.18),red if side=='l' else blue,seg=32,rings=16).parent=root
     # iris disc points roughly forward/down (-Y)
-    bpy.ops.mesh.primitive_cylinder_add(vertices=32,radius=.072,depth=.012,location=(x,-.515,.35),rotation=(math.pi/2,0,0))
+    bpy.ops.mesh.primitive_cylinder_add(vertices=32,radius=.092,depth=.014,location=(x,-.535,.37),rotation=(math.pi/2,0,0))
     iris=finish(bpy.context.object,f'eye_iris_{side}',f'eye_iris_{side}',white); smooth(iris); iris.parent=root
-    bpy.ops.mesh.primitive_cylinder_add(vertices=24,radius=.029,depth=.014,location=(x+(.012 if side=='l' else -.012),-.525,.35),rotation=(math.pi/2,0,0))
+    bpy.ops.mesh.primitive_cylinder_add(vertices=24,radius=.041,depth=.016,location=(x+(.014 if side=='l' else -.014),-.548,.37),rotation=(math.pi/2,0,0))
     pup=finish(bpy.context.object,f'eye_pupil_{side}',f'eye_pupil_{side}',black); smooth(pup); pup.parent=root
     sphere(f'eye_wet_catchlight_{side}',(x+(.018 if side=='l' else -.018),-.535,.382),(.014,.005,.014),white,seg=12,rings=6).parent=root
     torus(f'eye_pressure_seam_{side}',(x,-.42,.34),.115,.012,seammat,rot=(math.pi/2,0,0)).parent=root
