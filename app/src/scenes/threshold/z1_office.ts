@@ -21,10 +21,10 @@ const KEYS: CamKey[] = [
   { t: 18.5, pos: [0, 1.5, -5.15], look: [0, 2.68, -6], fov: 66, gait: 'still' },
   { t: 19.3, pos: [0, 1.5, -5.15], look: [0, 2.68, -6], fov: 66, gait: 'still' },
   { t: 19.8, pos: [0, 1.58, -4.6], look: [0, 1.45, 1], fov: 84, gait: 'run' },
-  { t: 21.6, pos: [0, 1.6, 1.2], look: [2.5, 1.5, 4.2], fov: 84, gait: 'run' },
-  { t: 23.3, pos: [4.0, 1.6, 4.2], look: [4.0, 1.5, 9], fov: 84, gait: 'run' },
-  { t: 25.5, pos: [4.0, 1.6, 9.0], look: [-2, 1.5, 15], fov: 85, gait: 'run' },
-  { t: 27.5, pos: [-2.0, 1.6, 12.0], look: [-2, 1.25, 15], fov: 88, gait: 'run' },
+  { t: 21.6, pos: [0, 1.6, -1.0], look: [2.5, 1.5, 4.2], fov: 84, gait: 'run' },
+  { t: 23.3, pos: [4.0, 1.6, 1.4], look: [4.0, 1.5, 9], fov: 84, gait: 'run' },
+  { t: 25.5, pos: [4.0, 1.6, 4.2], look: [-2, 1.5, 15], fov: 85, gait: 'run' },
+  { t: 27.5, pos: [-2.0, 1.6, 8.0], look: [-2, 1.25, 15], fov: 88, gait: 'run' },
   { t: 30.0, pos: [-2.0, 1.54, 14.72], look: [-2, 1.15, 16], fov: 88, gait: 'run', roll: 0.08 },
 ];
 
@@ -43,7 +43,9 @@ function chaseContinuousPos(t: number): [number, number, number] {
   const dt = b.t - a.t, u = clamp((t - a.t) / dt);
   const m0 = chaseSlope(i), m1 = chaseSlope(i + 1);
   const h00 = 2 * u ** 3 - 3 * u ** 2 + 1, h10 = u ** 3 - 2 * u ** 2 + u, h01 = -2 * u ** 3 + 3 * u ** 2, h11 = u ** 3 - u ** 2;
-  return [0, 1, 2].map((j) => h00 * a.pos[j]! + h10 * dt * m0[j]! + h01 * b.pos[j]! + h11 * dt * m1[j]!) as [number, number, number];
+  const base = [0, 1, 2].map((j) => h00 * a.pos[j]! + h10 * dt * m0[j]! + h01 * b.pos[j]! + h11 * dt * m1[j]!) as [number, number, number];
+  if (t > 27.5 && t < 30) base[0] += Math.sin((t - 27.5) / 2.5 * Math.PI * 2) * 0.10;
+  return base;
 }
 function chaseSmoothPos(t: number): [number, number, number] {
   if (t <= CHASE_KEYS[0]!.t) return [...CHASE_KEYS[0]!.pos] as [number, number, number];
@@ -694,9 +696,18 @@ export default class ThresholdZ1Office extends Scene {
         const spread = (bi - 4.5) / 3.5;
         fp.position.x = bp.x + spread * 0.12 * emerge + Math.sin(t * 0.31 + bi) * 0.008 * eyesOn;
         fp.position.z = bp.z + ((bi % 2) - 0.5) * 0.11 * emerge;
-        fp.rotation.x = (Math.sin(t * 0.9 + bi) * 0.12 - 0.06 * emerge + lash * (0.24 + (bi % 3) * 0.07) + (bi % 2 ? 0.09 : -0.04) * emerge) * eyesOn;
-        fp.rotation.z = side * (0.07 + (bi % 3) * 0.045 + Math.sin(t * 0.55 + bi * 1.7) * 0.035) * eyesOn + spread * 0.045 * emerge;
-        fp.rotation.y = Math.sin(t * 0.42 + bi) * 0.075 * eyesOn + spread * 0.025 * emerge + (bi % 2 ? -0.08 : 0.06) * emerge;
+        fp.rotation.x = (Math.sin(t * 0.9 + bi) * 0.24 - 0.06 * emerge + lash * (0.24 + (bi % 3) * 0.07) + (bi % 2 ? 0.09 : -0.04) * emerge) * eyesOn;
+        fp.rotation.z = side * (0.07 + (bi % 3) * 0.045 + Math.sin(t * 0.55 + bi * 1.7) * 0.085) * eyesOn + spread * 0.045 * emerge;
+        fp.rotation.y = Math.sin(t * 0.42 + bi) * 0.16 * eyesOn + spread * 0.025 * emerge + (bi % 2 ? -0.08 : 0.06) * emerge;
+        for (let sj = 1; sj <= 4; sj++) {
+          const seg = this.breather.part(`finger_${bi}_segment_${sj}`);
+          if (!seg) continue;
+          if (!seg.userData.baseRot) seg.userData.baseRot = seg.rotation.clone();
+          const br = seg.userData.baseRot as THREE.Euler;
+          const creep = Math.sin(t * 0.52 + bi * 0.9 + sj * 1.35) * 0.055 * eyesOn * (sj / 4);
+          const secondary = Math.sin(t * 0.23 + bi * 1.4 - sj) * 0.028 * eyesOn;
+          seg.rotation.set(br.x + creep, br.y + secondary * 0.45, br.z + secondary);
+        }
       }
     }
     this.eyes.forEach((e) => { e.visible = eyesOn > 0.02 && !this.breather.root.visible; (e.material as THREE.MeshStandardMaterial).emissiveIntensity = 1.5 * eyesOn; });
@@ -723,7 +734,7 @@ export default class ThresholdZ1Office extends Scene {
       d.m.rotation.z = a * 0.5;
     }
     this.chair.rotation.y = 0.4 + smooth(22.8, 23.6, t) * 4.5;
-    this.slidingPrintout.position.x = 0.55 + smooth(4, 29, t) * 0.22;
+    this.slidingPrintout.position.x = 0.55 + smooth(4, 29, t) * 0.10;
     this.slidingPrintout.rotation.z = 0.2 + Math.sin(t * 0.8) * 0.04;
     this.ventRibbon.rotation.z = Math.sin(t * 2.1) * 0.18;
     this.doorGlow.emissiveIntensity = 5 + smooth(27.5, 30, t) * 12;

@@ -88,11 +88,11 @@ export default class ThresholdZ2Playroom extends Scene {
       }
     });
     this.swimmerAsset.root.position.set(0,0.58,2.35); this.swimmerAsset.root.visible = false; this.s.add(this.swimmerAsset.root);
-    this.s.background = new THREE.Color(0xcfe8ff);
-    this.s.fog = new THREE.Fog(0xcfe8ff, 18, 55);
+    this.s.background = new THREE.Color(0x8fa2ad);
+    this.s.fog = new THREE.Fog(0x8fa2ad, 15, 48);
     this.flash = addFlashlight(this.s);
-    this.s.add(new THREE.HemisphereLight(0xffffff, 0x36475f, 0.68));
-    this.sun = new THREE.DirectionalLight(0xffffff, 1.05); this.sun.position.set(-4, 9, 2); this.s.add(this.sun);
+    this.s.add(new THREE.HemisphereLight(0xffffff, 0x2d3b4e, 0.48));
+    this.sun = new THREE.DirectionalLight(0xffffff, 0.68); this.sun.position.set(-4, 9, 2); this.s.add(this.sun);
 
     const foam = mat(0xf1efe8, 0.55);
     const red = mat(0xe63b2e, 0.28);
@@ -108,7 +108,7 @@ export default class ThresholdZ2Playroom extends Scene {
     for (const m of [foam, red, yellow, blue, green, plasticDark, ...mats]) {
       const sm = m as THREE.MeshStandardMaterial;
       sm.map = grimeTex; sm.roughnessMap = grimeTex; sm.bumpMap = grimeTex; sm.bumpScale = 0.008;
-      sm.color.multiplyScalar(0.78 + hash(sm.color.getHex() * 0.001) * 0.12); sm.roughness = Math.max(sm.roughness, 0.42); sm.needsUpdate = true;
+      sm.color.multiplyScalar((0.78 + hash(sm.color.getHex() * 0.001) * 0.12) * (m === foam ? 0.58 : 0.86)); sm.roughness = Math.max(sm.roughness, 0.42); sm.needsUpdate = true;
     }
 
     box(this.s, 'z2_floor', [31, 0.1, 21], [0, -0.05, 0], foam);
@@ -145,7 +145,7 @@ export default class ThresholdZ2Playroom extends Scene {
 
     // skylights
     for (let i = 0; i < 3; i++) {
-      const m = mat(0xffffff, 0.2, 0, 0xffffff, 1.1) as THREE.MeshStandardMaterial;
+      const m = mat(0xb9c8d2, 0.5, 0, 0xaebdca, 0.32) as THREE.MeshStandardMaterial;
       this.skylightMats.push(m);
       box(this.s, `z2_skylight_${i}`, [4.8, 0.05, 2.8], [-6 + i * 6, 5.95, -2], m);
     }
@@ -156,8 +156,11 @@ export default class ThresholdZ2Playroom extends Scene {
     box(this.s, 'z2_pit_w', [0.35, 0.8, 8.4], [-6.2, 0.4, 0], yellow);
     box(this.s, 'z2_pit_e', [0.35, 0.8, 8.4], [6.2, 0.4, 0], green);
     box(this.s, 'z2_ballpit_dark_substrate', [12.0, 0.035, 8.0], [0, 0.515, 0], mat(0x2d241e, 0.92));
+    for (let fg = 0; fg < 18; fg++) {
+      plane(this.s, `z2_floor_ground_in_grime_${fg}`, 1.0 + hash(fg) * 2.4, 0.7 + hash(fg + 3) * 1.8, [-13 + hash(fg * 2.1) * 26, 0.006, -8.5 + hash(fg * 4.7) * 17], basic(0x241b14, 0.16 + hash(fg + 5) * 0.12), [-Math.PI / 2, 0, hash(fg + 7) * Math.PI]);
+    }
     const geom = new THREE.SphereGeometry(0.075, 8, 5);
-    const inst = new THREE.InstancedMesh(geom, new THREE.MeshStandardMaterial({ roughness: 0.26, metalness: 0 }), 4900);
+    const inst = new THREE.InstancedMesh(geom, new THREE.MeshStandardMaterial({ roughness: 0.78, metalness: 0, map: grimeTex, roughnessMap: grimeTex }), 4900);
     inst.castShadow = false; inst.receiveShadow = true;
     let bi = 0;
     for (let ix = 0; ix < 86 && bi < 4900; ix++) for (let iz = 0; iz < 57 && bi < 4900; iz++) {
@@ -358,7 +361,7 @@ export default class ThresholdZ2Playroom extends Scene {
     // clouded skylight dimming after 40s
     const dim = 1 - smooth(39.5, 41.5, t) * 0.5;
     this.sun.intensity = 2.5 * dim;
-    this.skylightMats.forEach((m) => { m.emissiveIntensity = 2.8 * dim; });
+    this.skylightMats.forEach((m) => { m.emissiveIntensity = 0.38 * dim; });
 
     // toys face the viewer, stepped at 6fps
     const qcamX = Math.round(this.cam.position.x * 8) / 8, qcamZ = Math.round(this.cam.position.z * 8) / 8;
@@ -449,7 +452,7 @@ export default class ThresholdZ2Playroom extends Scene {
     const gl = this.ctx.renderer;
     gl.setRenderTarget(out); gl.setClearColor(0xcfe8ff, 1); gl.clear(true, true, true); gl.render(this.s, this.cam); gl.resetState();
     return {
-      ...thresholdPost(t, { darkness: 0.12, exposure: 0.40, stress: t > 40.5 && t < 49.5 ? 0.22 : 0.02 }),
+      ...thresholdPost(t, { darkness: 0.12, exposure: 0.18, stress: t > 40.5 && t < 49.5 ? 0.22 : 0.02 }),
       flash: 1 - smooth(30, 31.0, t),
       shake: t > 40.5 && t < 44.5 ? [0.15 * (hash(Math.floor(t * 90)) - 0.5), 0.15 * (hash(Math.floor(t * 90) + 3) - 0.5)] : [0, 0],
     };

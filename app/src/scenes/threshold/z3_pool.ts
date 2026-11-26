@@ -9,6 +9,23 @@ import { resolveAsset } from '../../engine/assets';
 import { thresholdPost } from './sensor_post';
 import { addFlashlight, applyFpCamera, basic, box, clamp, cyl, disposeTree, evalCam, hash, mat, plane, smooth, sph, updateFlashlight, type CamKey } from './z1_scene_util';
 
+function glazeBreakupTexture() {
+  const size = 256;
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const g = c.getContext('2d')!;
+  const img = g.createImageData(size, size);
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    const tileLine = (x % 42 < 2 || y % 42 < 2) ? -70 : 0;
+    const n = (hash(x * 0.19 + y * 1.7) - 0.5) * 24 + Math.sin(x * 0.09 + y * 0.04) * 10;
+    const v = 205 + n + tileLine;
+    const id = (y * size + x) * 4;
+    img.data[id] = img.data[id + 1] = img.data[id + 2] = Math.max(75, Math.min(255, v)); img.data[id + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(1.8, 1.8);
+  return tex;
+}
+
 const KEYS: CamKey[] = [
   { t: 55, pos: [0, 1.65, 6.4], look: [0, 1.2, -2], fov: 74, gait: 'walk' },
   { t: 56.5, pos: [0, 1.65, 5.1], look: [0, 0.5, 1], fov: 74, gait: 'walk' },
@@ -64,6 +81,7 @@ export default class ThresholdZ3Pool extends Scene {
     this.mirrorlingReflection = await GLTFManager.instantiate(resolved.url, { ...resolved.manifest.load, castShadow: false, receiveShadow: false });
     // Convert the surface figure from mirror-chrome/hologram back to wet white ceramic tile:
     // glossy enough to catch strips, matte enough that black grout registrations remain legible.
+    const mirrorlingGlazeTex = glazeBreakupTexture();
     const mirrorlingMatCache = new Map<THREE.Material, THREE.Material>();
     this.mirrorlingAsset.root.traverse((o) => {
       const mesh = o as THREE.Mesh;
@@ -71,7 +89,9 @@ export default class ThresholdZ3Pool extends Scene {
       const remap = (m: THREE.Material) => {
         const hit = mirrorlingMatCache.get(m);
         if (hit) return hit;
-        const mm = new THREE.MeshPhysicalMaterial({ color: (m as THREE.MeshStandardMaterial).color.clone(), roughness: 0.16, metalness: 0.0, clearcoat: 0.72, clearcoatRoughness: 0.12 });
+        const mm = new THREE.MeshPhysicalMaterial({ color: (m as THREE.MeshStandardMaterial).color.clone(), roughness: 0.24, metalness: 0.0, clearcoat: 0.72, clearcoatRoughness: 0.12 });
+        mm.map = mirrorlingGlazeTex; mm.roughnessMap = mirrorlingGlazeTex; mm.bumpMap = mirrorlingGlazeTex; mm.bumpScale = 0.009;
+        mm.color.multiplyScalar(0.82);
         mm.name = m.name;
         if (/aqua_chrome_tile/.test(mm.name)) { mm.color.setHex(0xd8eeee); mm.roughness = 0.15; }
         if (/pale_tile_highlight/.test(mm.name)) { mm.color.setHex(0xf0f5e9); mm.roughness = 0.12; }
@@ -93,8 +113,9 @@ export default class ThresholdZ3Pool extends Scene {
     });
     // Ceramic limb volume overlay: the GLB supplies the teardrop head, torso, joints and fingers;
     // these continuous tiled sleeves guarantee the limbs read as the same ceramic being at film distance.
-    const limbTile = new THREE.MeshPhysicalMaterial({ color: 0xd8eeee, roughness: 0.15, metalness: 0.0, clearcoat: 0.74, clearcoatRoughness: 0.12, envMapIntensity: 0.65 });
-    const limbGrout = new THREE.MeshStandardMaterial({ color: 0x334d50, roughness: 0.7, metalness: 0.0 });
+    const limbTile = new THREE.MeshPhysicalMaterial({ color: 0xafc7c6, roughness: 0.28, metalness: 0.0, clearcoat: 0.74, clearcoatRoughness: 0.12, envMapIntensity: 0.65 });
+    limbTile.map = mirrorlingGlazeTex; limbTile.roughnessMap = mirrorlingGlazeTex; limbTile.bumpMap = mirrorlingGlazeTex; limbTile.bumpScale = 0.008;
+    const limbGrout = new THREE.MeshStandardMaterial({ color: 0x102a2d, roughness: 0.82, metalness: 0.0 });
     const addLimbCylinder = (name: string, a: [number, number, number], b: [number, number, number], r1: number, r2: number, material: THREE.Material) => {
       const va = new THREE.Vector3(...a), vb = new THREE.Vector3(...b);
       const d = vb.clone().sub(va);

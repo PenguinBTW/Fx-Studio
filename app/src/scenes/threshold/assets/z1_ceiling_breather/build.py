@@ -109,19 +109,19 @@ for fi in range(8):
     curl_dir=(-1 if fi%2 else 1)
     # articulated phalanx chain in the vertical plane: each joint changes angle enough
     # that the silhouette reads as a curling finger rather than a straight rod.
-    seg_lens=[.27,.25,.23,.2]
+    seg_lens=[.20+random.uniform(-.025,.025),.17+random.uniform(-.02,.02),.135+random.uniform(-.018,.018),.105+random.uniform(-.015,.015)]
     xx=x; yy=.04; zz=-.03
     pts.append((xx,yy,zz))
     base_ang=side*(.08+.045*(fi%3))+random.uniform(-.035,.035)
     for j,sl in enumerate(seg_lens):
-        ang=base_ang+side*(j*.23+.08*math.sin(fi*1.3+j))
+        ang=base_ang+side*(j*.43+.12*math.sin(fi*1.3+j))
         xx+=math.sin(ang)*sl
         zz-=math.cos(ang)*sl
-        yy+=curl_dir*(.018+.007*j)*math.sin((j+1)*math.pi/4)+math.cos(fi*1.1+j*.7)*.012
+        yy+=curl_dir*(.032+.012*j)*math.sin((j+1)*math.pi/4)+math.cos(fi*1.1+j*.7)*.018
         pts.append((xx,yy,zz))
     for j in range(4):
-        r0=.052-j*.008
-        r1=.045-j*.008
+        r0=.072-j*.012
+        r1=.061-j*.013
         seg=taper_between(f'finger_{fi+1}_segment_{j+1}',pts[j],pts[j+1],r0,r1,skin,f'finger_{fi+1}',24)
         seg.parent=rootE; seg.matrix_parent_inverse=rootE.matrix_world.inverted()
         jr=max(.019,.047-j*.0085)

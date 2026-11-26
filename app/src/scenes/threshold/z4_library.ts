@@ -259,6 +259,12 @@ export default class ThresholdZ4Library extends Scene {
     }
     this.cloneProp(this.libraryKit, 'reading_desk_root', [0, 0, 6], 0, 1, 'z4_reading_desk_asset');
     this.cloneProp(this.paperProps, 'open_ledger_root', [0, 0.845, 6], 0, 1, 'z4_open_ledger_asset');
+    const ledgerSpine = this.s.getObjectByName('ledger_spine') as THREE.Mesh | undefined;
+    if (ledgerSpine) {
+      ledgerSpine.scale.x *= 0.46;
+      const lm = ledgerSpine.material as THREE.MeshStandardMaterial;
+      lm.color.lerp(new THREE.Color(0xd8cdb5), 0.55); lm.roughness = 0.9;
+    }
     this.cloneProp(this.paperProps, 'fountain_pen_root', [0.34, 0.91, 5.78], -0.35, 1, 'z4_fountain_pen_asset');
     this.cloneProp(this.paperProps, 'ink_bottle_root', [-0.38, 0.82, 5.78], 0, 1, 'z4_ink_bottle_asset');
     this.cloneProp(this.paperProps, 'reading_glasses_root', [0.46, 0.91, 6.18], 0.35, 1, 'z4_glasses_asset');
