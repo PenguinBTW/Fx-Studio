@@ -26,6 +26,7 @@ export default defineMix({
     { id: 't3_ink_to_paper', file: 'generated/t3_ink_to_paper.wav', bus: 'sfx', at: 79.40, gainDb: -1.5 },
     { id: 'z4_library_events', file: 'generated/z4_library_events.wav', bus: 'sfx', at: 79.40, gainDb: -2.5 },
     { id: 't4_page_slam_neon', file: 'generated/t4_page_slam_neon.wav', bus: 'sfx', at: 104.70, gainDb: 0.5 },
+    { id: 'z5_motel_events', file: 'generated/z5_motel_events.wav', bus: 'sfx', at: 104.70, gainDb: -2.5 },
     { id: 't5_static_to_felt', file: 'generated/t5_static_to_felt.wav', bus: 'sfx', at: 129.40, gainDb: -1.5 },
     { id: 't6_felt_door_push', file: 'generated/t6_felt_door_push.wav', bus: 'sfx', at: 149.50, gainDb: 0.0 },
     { id: 't7_lightfall_home', file: 'generated/t7_lightfall_home.wav', bus: 'sfx', at: 194.40, gainDb: -1.0 },
