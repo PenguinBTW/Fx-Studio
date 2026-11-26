@@ -46,6 +46,16 @@ export default class ThresholdZ2Playroom extends Scene {
   override async init() {
     const resolved = resolveAsset('threshold/z2_pit_swimmer');
     this.swimmerAsset = await GLTFManager.instantiate(resolved.url, { ...resolved.manifest.load, castShadow: true, receiveShadow: true });
+    const corpse = new THREE.Color(0xb8b2a2);
+    this.swimmerAsset.root.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      const mm = mesh.material as THREE.MeshStandardMaterial;
+      if (/ball_.*vinyl|slide_yellow|vinyl_seam/.test(mm.name)) {
+        mm.color.lerp(corpse, /slide_yellow/.test(mm.name) ? 0.34 : 0.58);
+        mm.roughness = Math.min(mm.roughness, 0.22);
+      }
+    });
     this.swimmerAsset.root.position.set(0,0.58,2.35); this.swimmerAsset.root.visible = false; this.s.add(this.swimmerAsset.root);
     this.s.background = new THREE.Color(0xcfe8ff);
     this.s.fog = new THREE.Fog(0xcfe8ff, 18, 55);

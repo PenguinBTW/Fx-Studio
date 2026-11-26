@@ -235,11 +235,21 @@ export default class ThresholdZ1Office extends Scene {
     const eyesOn = smooth(15.45, 15.8, t);
     this.breather.root.visible = eyesOn > 0.02;
     this.breather.root.position.y = 2.72 + Math.sin(t * 1.1) * 0.012 * eyesOn;
-    for (let bi = 1; bi <= 8; bi++) { const fp = this.breather.part(`finger_${bi}_root`); if (fp) fp.rotation.x = Math.sin(t * 0.9 + bi) * 0.055 * eyesOn; }
+    for (let bi = 1; bi <= 8; bi++) {
+      const fp = this.breather.part(`finger_${bi}_root`);
+      if (fp) {
+        const emerge = smooth(15.8 + (bi % 4) * 0.32, 16.35 + (bi % 4) * 0.32, t);
+        fp.visible = emerge > 0.03;
+        const side = bi < 5 ? -1 : 1;
+        fp.rotation.x = (Math.sin(t * 0.9 + bi) * 0.075 - 0.08 * emerge) * eyesOn;
+        fp.rotation.z = side * (0.045 + (bi % 3) * 0.025 + Math.sin(t * 0.55 + bi * 1.7) * 0.018) * eyesOn;
+        fp.rotation.y = Math.sin(t * 0.42 + bi) * 0.025 * eyesOn;
+      }
+    }
     this.eyes.forEach((e) => { e.visible = eyesOn > 0.02 && !this.breather.root.visible; (e.material as THREE.MeshStandardMaterial).emissiveIntensity = 1.5 * eyesOn; });
     const blink = t > 16.7 && t < 17.15 ? smooth(16.7, 16.9, t) * (1 - smooth(16.95, 17.15, t)) : 0;
     this.lids.forEach((l, i) => { l.visible = eyesOn > 0.02; l.position.y = 2.62 - blink * (i === 0 ? 0.045 : 0.032); });
-    this.fingers.forEach((fi, i) => { fi.visible = t > 18.45; fi.rotation.x = 0.4 + smooth(18.5, 19.3, t) * (0.5 + i * 0.03); fi.position.y = 2.43 - smooth(18.5, 19.3, t) * 0.12; });
+    this.fingers.forEach((fi, i) => { fi.visible = false; fi.rotation.x = 0.4 + smooth(18.5, 19.3, t) * (0.5 + i * 0.03); fi.position.y = 2.43 - smooth(18.5, 19.3, t) * 0.12; });
     this.skinTiles.forEach((tile, i) => { tile.position.y = 2.68 + Math.sin(t * Math.PI * 0.5 + i * 0.65) * 0.012; });
 
     // chase: tiles detach behind the run, chairs clip-spin, paper and vent move in HVAC draft

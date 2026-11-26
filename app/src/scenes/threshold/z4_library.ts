@@ -43,7 +43,7 @@ export default class ThresholdZ4Library extends Scene {
   override async init() {
     const resolved = resolveAsset('threshold/z4_archivist');
     this.archivistAsset = await GLTFManager.instantiate(resolved.url, { ...resolved.manifest.load, castShadow: true, receiveShadow: true });
-    this.archivistAsset.root.position.set(1.15, 0.02, 1.35);
+    this.archivistAsset.root.position.set(1.15, 0.02, 2.35);
     this.archivistAsset.root.visible = false;
     this.s.add(this.archivistAsset.root);
     this.s.background = new THREE.Color(0x090806);
@@ -161,7 +161,7 @@ export default class ThresholdZ4Library extends Scene {
   render(f: Frame, out: THREE.WebGLRenderTarget): PostOverrides {
     const t = f.t;
     applyFpCamera(this.cam, KEYS, t, out.width / out.height);
-    const archivistBeam = 1 - 0.84 * smooth(94.0, 94.8, t) * (1 - smooth(99.0, 100.0, t));
+    const archivistBeam = 1 - 0.68 * smooth(94.0, 94.8, t) * (1 - smooth(99.0, 100.0, t));
     updateFlashlight(this.flash.light, this.flash.target, this.cam, t, 0.45 * archivistBeam, t > 98 ? 0.22 : 0.04);
     // motes hang and drift deterministically
     this.motes.forEach((m, i) => { m.position.y += Math.sin(t * 0.35 + i) * 0.0008; m.position.x += Math.cos(t * 0.27 + i * 2) * 0.0005; });
@@ -183,7 +183,7 @@ export default class ThresholdZ4Library extends Scene {
     this.archivist.visible = false;
     const reveal = smooth(94.2, 95.4, t);
     this.archivistAsset.root.visible = t > 94.2;
-    this.archivistAsset.root.scale.setScalar(0.58 + reveal * 0.42);
+    this.archivistAsset.root.scale.setScalar(0.64 + reveal * 0.52);
     this.archivistAsset.root.position.y = 0.02 + (1 - reveal) * 0.45;
     this.archivistAsset.root.rotation.y = -0.08 + reveal * 0.08;
     const mouth = this.archivistAsset.part('mouth_crease_main');
