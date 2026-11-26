@@ -46,7 +46,7 @@ function proceduralSurface(kind: SurfaceKind, repeat: number) {
       const damp = Math.max(0, Math.sin(x * 0.043 + Math.sin(y * 0.031)) + Math.sin(y * 0.037 + Math.sin(x * 0.021)) - 1.22) * 34;
       v = 202 + fibre - damp;
     } else if (kind === 'fabric') {
-      v = 208 + (n - 0.5) * 34 + (n2 - 0.5) * 15 + Math.sin(x * 0.11 + n2 * 3) * Math.sin(y * 0.13 + n * 2) * 9 + Math.sin(x * 1.9) * 2.5 + Math.sin(y * 2.3) * 2.5;
+      v = 208 + (n - 0.5) * 66 + (n2 - 0.5) * 24 + Math.sin(x * 0.11 + n2 * 3) * Math.sin(y * 0.13 + n * 2) * 16 + Math.sin(x * 1.9) * 3 + Math.sin(y * 2.3) * 3;
     } else if (kind === 'ceiling') {
       const fissure = Math.abs(Math.sin(x * 0.08 + Math.sin(y * 0.06) * 2.4)) < 0.045 ? -34 : 0;
       const pit = n > 0.955 ? -55 : 0;
@@ -273,6 +273,18 @@ export default class ThresholdZ1Office extends Scene {
     cyl(this.s, 'z1_opening_tucked_chair_post', 0.026, 0.34, [-1.35, 0.2, -3.25], metal, [0, 0, 0], 10);
     cyl(this.s, 'z1_opening_deadplant_pot', 0.13, 0.24, [2.55, 0.12, -0.72], mat(0x6d4631, 0.86), [0, 0, 0], 16);
     for (let i = 0; i < 5; i++) cyl(this.s, `z1_opening_deadplant_stem_${i}`, 0.009, 0.48 + hash(i) * 0.2, [2.55 + (hash(i * 2) - 0.5) * 0.12, 0.42, -0.72 + (hash(i * 3) - 0.5) * 0.12], mat(0x4b3b21, 0.9), [(hash(i) - 0.5) * 0.5, 0, (hash(i + 2) - 0.5) * 0.5], 7);
+
+    // Camera-facing pinboards on the two opening partitions break up the large fabric slabs at readable distance.
+    for (const [side, rotY] of [[-1, Math.PI / 2], [1, -Math.PI / 2]] as const) {
+      const x = side * 2.135;
+      for (let b = 0; b < 2; b++) {
+        const z = -1.55 - b * 1.15;
+        plane(this.s, `z1_opening_pinboard_${side}_${b}`, 0.68, 0.42, [x, 1.0, z], mat(0x6f4c2b, 0.9), [0, rotY, 0]);
+        for (let nnote = 0; nnote < 3; nnote++) {
+          plane(this.s, `z1_opening_pin_note_${side}_${b}_${nnote}`, 0.09, 0.11, [x - side * 0.006, 0.93 + (nnote % 2) * 0.13, z - 0.19 + nnote * 0.17], nnote % 2 ? paper : mat(0xd8c84e, 0.82), [0, rotY, (hash(b * 7 + nnote) - 0.5) * 0.28]);
+        }
+      }
+    }
 
     // Run-lane island workstations are deliberately close to the camera path so chase frames remain spatially dressed.
     const runPods: [number, number][] = [[-2.3, 1.7], [0.4, 3.6], [1.0, 5.8], [0.7, 8.0], [2.2, 10.4], [0.8, 12.4]];
