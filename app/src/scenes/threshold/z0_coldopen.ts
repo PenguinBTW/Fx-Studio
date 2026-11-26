@@ -2,7 +2,7 @@
 // This is W1's integration scene; W3's finished cathedral assets replace the blockout dressing later.
 import * as THREE from 'three';
 import { Scene, type Frame, type PostOverrides } from '../../engine/scene';
-import { GLTFManager } from '../../engine/gltf';
+import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
 import { resolveAsset } from '../../engine/assets';
 import { evalFirstPerson, applyFirstPersonCamera, type FPKey, type FPPose } from './fp_cam';
 import { FlashlightRig, beamStateAt } from './flashlight';
@@ -43,6 +43,7 @@ export default class Z0ColdOpen extends Scene {
   private cam = new THREE.PerspectiveCamera(82, 16 / 9, 0.04, 240);
   private flash = new FlashlightRig();
   private arm!: THREE.Group;
+  private tenantInst!: GLTFInstance;
   private machines!: THREE.InstancedMesh;
   private machineData: { x: number; z: number; h: number; hue: number }[] = [];
   private machineMat!: THREE.MeshStandardMaterial;
@@ -105,9 +106,9 @@ export default class Z0ColdOpen extends Scene {
     }
 
     // Hero arm-only Tenant LOD: real shared GLB rather than primitive scaffolding.
-    const tenant = await GLTFManager.instantiate(resolveAsset('tenant_arm', this.ctx.project ?? 'threshold').url, {});
+    this.tenantInst = await GLTFManager.instantiate(resolveAsset('tenant_arm', this.ctx.project ?? 'threshold').url, {});
     this.arm = new THREE.Group();
-    this.arm.add(tenant.root);
+    this.arm.add(this.tenantInst.root);
     this.arm.visible = false;
     this.scene3d.add(this.arm);
     this.scene3d.add(this.flash.group);
@@ -158,6 +159,7 @@ export default class Z0ColdOpen extends Scene {
   }
 
   override dispose() {
+    this.tenantInst.dispose();
     this.flash.dispose();
     this.machines.dispose();
     this.panels.dispose();
