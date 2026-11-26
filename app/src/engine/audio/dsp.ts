@@ -242,19 +242,36 @@ export function applyLookaheadLimiter(
   const totalFrames = isStereo ? totalSamples / 2 : totalSamples;
   const output = new Float32Array(totalSamples);
 
-  const ceilingLin = Math.pow(10, ceilingDb / 20); // e.g. ~0.841395 at -1.5 dBTP
+  const ceilingLin = Math.pow(10, ceilingDb / 20) * 0.982; // small reconstruction margin below the requested dBTP ceiling
   const lookaheadFrames = Math.max(1, Math.round((lookaheadMs / 1000) * sampleRate));
 
-  // 1. Extract peak envelope per frame (including 4-point Hermite inter-sample peak estimation)
+  // 1. Extract peak envelope per frame, including Catmull-Rom inter-sample peaks.
+  // Sample-value limiting alone is not true-peak limiting: a reconstructed DAC waveform
+  // can peak between samples even when every sample is below ceiling.
+  const channelAt = (ch: number, frame: number): number => {
+    const ff = Math.max(0, Math.min(totalFrames - 1, frame));
+    return pcm[isStereo ? ff * 2 + ch : ff] ?? 0;
+  };
+  const cr = (p0: number, p1: number, p2: number, p3: number, x: number): number => {
+    const x2 = x * x;
+    const x3 = x2 * x;
+    return 0.5 * ((2 * p1) + (-p0 + p2) * x + (2 * p0 - 5 * p1 + 4 * p2 - p3) * x2 + (-p0 + 3 * p1 - 3 * p2 + p3) * x3);
+  };
   const framePeaks = new Float32Array(totalFrames);
   for (let f = 0; f < totalFrames; f++) {
-    if (isStereo) {
-      const absL = Math.abs(pcm[f * 2] ?? 0);
-      const absR = Math.abs(pcm[f * 2 + 1] ?? 0);
-      framePeaks[f] = Math.max(absL, absR);
-    } else {
-      framePeaks[f] = Math.abs(pcm[f] ?? 0);
+    let peak = 0;
+    const channels = isStereo ? 2 : 1;
+    for (let ch = 0; ch < channels; ch++) {
+      const p0 = channelAt(ch, f - 1);
+      const p1 = channelAt(ch, f);
+      const p2 = channelAt(ch, f + 1);
+      const p3 = channelAt(ch, f + 2);
+      peak = Math.max(peak, Math.abs(p1));
+      // Quarter-phase checks are sufficient for the 4x-oversampled true-peak detector
+      // used by ffmpeg while keeping the O(N) mastering pass bounded.
+      peak = Math.max(peak, Math.abs(cr(p0, p1, p2, p3, 0.25)), Math.abs(cr(p0, p1, p2, p3, 0.5)), Math.abs(cr(p0, p1, p2, p3, 0.75)));
     }
+    framePeaks[f] = peak;
   }
 
   // 2. Sliding window maximum over lookahead window [f, f + lookaheadFrames]
