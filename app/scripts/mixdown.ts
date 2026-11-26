@@ -602,7 +602,8 @@ export async function mixdown(o: MixOptions): Promise<MixReport> {
         measuredTp = Number.parseFloat(tpMs.input_tp);
         report.measuredTruePeakPreTrim = tpMs.input_tp;
         const measuredI = Number.parseFloat(tpMs.input_i);
-        const loudnessError = Number.isFinite(measuredI) ? targetLufs - measuredI : 0;
+        const normalizationEnabled = (m as any).normalize !== false;
+        const loudnessError = normalizationEnabled && Number.isFinite(measuredI) ? targetLufs - measuredI : 0;
         const tpError = Number.isFinite(measuredTp) ? measuredTp - tpCeiling : 0;
         const tpCompliant = !Number.isFinite(measuredTp) || tpError <= 0;
         const loudnessConverged = Math.abs(loudnessError) < 0.12 || Math.abs(loudnessMakeupDb + loudnessError) > 8;
