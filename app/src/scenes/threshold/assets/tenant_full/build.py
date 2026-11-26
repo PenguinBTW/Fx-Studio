@@ -302,13 +302,13 @@ for ob in list(bpy.data.objects):
     if zc <= 1.85:
         continue
     u = max(0.0, min(1.0, (zc - 1.85) / 1.9))
-    forward_sag = 0.58 * (u ** 1.45)
-    downward_sag = 0.30 * (u ** 1.7)
+    forward_sag = 0.86 * (u ** 1.35)
+    downward_sag = 0.38 * (u ** 1.6)
     ob.matrix_world = mathutils.Matrix.Translation((0, forward_sag, -downward_sag)) @ ob.matrix_world
     # Pull the head and felt neck down into the torso silhouette. A hunched predator's
     # head is carried low in front of the ribcage, not balanced upright like a balloon.
     if ob.name.startswith('head_'):
-        ob.matrix_world = mathutils.Matrix.Translation((0, 0.24, -0.44)) @ ob.matrix_world
+        ob.matrix_world = mathutils.Matrix.Translation((0, 0.34, -0.56)) @ ob.matrix_world
     elif ob.name.startswith('neck_'):
         ob.matrix_world = mathutils.Matrix.Translation((0, 0.14, -0.24)) @ ob.matrix_world
 bpy.context.view_layer.update()

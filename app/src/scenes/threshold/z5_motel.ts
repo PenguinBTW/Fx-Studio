@@ -56,11 +56,11 @@ function z5Gait(t: number): GaitName {
   return 'still';
 }
 
-const CORRIDOR_X: ScalarKey[] = KEYS.slice(0, 6).map((k) => [k.t, k.p[0]]);
-const CORRIDOR_Z: ScalarKey[] = KEYS.slice(0, 6).map((k) => [k.t, k.p[2]]);
-function z5PoseAt(t: number, gait?: GaitName) {
+const CORRIDOR_X: ScalarKey[] = KEYS.slice(0, 7).map((k) => [k.t, k.p[0]]);
+const CORRIDOR_Z: ScalarKey[] = KEYS.slice(0, 7).map((k) => [k.t, k.p[2]]);
+export function z5PoseAt(t: number, gait?: GaitName) {
   const pose = poseAt(t, gait);
-  if (t < KEYS[0]!.t || t > KEYS[5]!.t) return pose;
+  if (t < KEYS[0]!.t || t > KEYS[6]!.t) return pose;
   const pos: [number, number, number] = [hermite1D(t, CORRIDOR_X), pose.pos[1], hermite1D(t, CORRIDOR_Z)];
   return {
     ...pose,

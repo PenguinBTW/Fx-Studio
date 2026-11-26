@@ -72,14 +72,14 @@ function replayPoseAt(t: number) {
   };
 }
 
-const JOIN_POSE = coldOpenPose(0);
+const JOIN_POSE = coldOpenPose(COLD_OPEN_REPLAY.z0Start);
 const JOIN_Z = JOIN_POSE.pos[2] + REPLAY_Z_OFFSET;
 const SPRINT_T0 = 168.0;
-const SPRINT_T1 = REPLAY_T_OFFSET;
+const SPRINT_T1 = COLD_OPEN_REPLAY.z7Start;
 let SPRINT_SPEED = 8;
 const SPRINT_SAMPLES = 160;
 const SPRINT_RAMP = 0.2;
-const SPRINT_WEAVE = 1.58;
+const SPRINT_WEAVE = 0.22;
 const sprintTable: { u: number; x: number; z: number; d: number }[] = [];
 {
   let d = 0;
@@ -87,7 +87,7 @@ const sprintTable: { u: number; x: number; z: number; d: number }[] = [];
   let pz = -13;
   for (let i = 0; i <= SPRINT_SAMPLES; i++) {
     const u = i / SPRINT_SAMPLES;
-    const x = SPRINT_WEAVE * Math.sin(Math.PI * 4 * u) + JOIN_POSE.pos[0] * u;
+    const x = SPRINT_WEAVE * Math.sin(Math.PI * 4 * u) * Math.sin(Math.PI * u) + JOIN_POSE.pos[0] * u;
     const z = lerp(-13, JOIN_Z, u);
     if (i) d += Math.hypot(x - px, z - pz);
     sprintTable.push({ u, x, z, d });
@@ -96,12 +96,12 @@ const sprintTable: { u: number; x: number; z: number; d: number }[] = [];
   SPRINT_SPEED = sprintTable[SPRINT_SAMPLES]!.d / (SPRINT_T1 - SPRINT_T0 - 0.5 * SPRINT_RAMP);
 }
 function sprintDistanceAt(t: number) {
-  const e = Math.max(0, t - SPRINT_T0);
-  if (e < SPRINT_RAMP) {
-    const u = e / SPRINT_RAMP;
-    return SPRINT_SPEED * SPRINT_RAMP * (u ** 3 - 0.5 * u ** 4);
-  }
-  return SPRINT_SPEED * (e - 0.5 * SPRINT_RAMP);
+  // Shaped arc-length ramp: fast through the body of the sprint, then continuous
+  // into the finite-difference speed of the exact replay at local z0=1.2. The
+  // replay itself is immutable, so the custom approach absorbs its run-up shape.
+  const u = clamp((t - SPRINT_T0) / (SPRINT_T1 - SPRINT_T0));
+  const shaped = u - 0.1264 * Math.sin(Math.PI * 2 * u);
+  return sprintTable[SPRINT_SAMPLES]!.d * shaped;
 }
 function sprintPoint(t: number) {
   const targetD = clamp(sprintDistanceAt(t), 0, sprintTable[SPRINT_SAMPLES]!.d);
@@ -119,9 +119,9 @@ function poseFromYawPitch(base: ReturnType<typeof poseAt>, pos: [number, number,
   return { ...base, pos, forward, right, up: base.up, roll, fov, target: [pos[0] + forward[0], pos[1] + forward[1], pos[2] + forward[2]] as [number, number, number] };
 }
 
-function z7PoseAt(t: number) {
-  if (t >= REPLAY_T_OFFSET && t <= COLD_OPEN_REPLAY.z7BeamDead) return replayPoseAt(t);
-  if (t >= SPRINT_T0 && t < REPLAY_T_OFFSET) {
+export function z7PoseAt(t: number) {
+  if (t >= COLD_OPEN_REPLAY.z7Start && t <= COLD_OPEN_REPLAY.z7BeamDead) return replayPoseAt(t);
+  if (t >= SPRINT_T0 && t < SPRINT_T1) {
     const base = poseAt(t, z7Gait(t));
     const sp = sprintPoint(t);
     const u = clamp((t - SPRINT_T0) / (SPRINT_T1 - SPRINT_T0));
@@ -175,6 +175,7 @@ export default class ThresholdZ7Cathedral extends Scene {
   private rift!: THREE.Mesh;
   private riftEdges: THREE.Mesh[] = [];
   private shaftLights: THREE.MeshBasicMaterial[] = [];
+  private fallDebris: { mesh: THREE.Mesh; seed: number; baseY: number }[] = [];
   private z7DetailObjects: THREE.Object3D[] = [];
   private disposables: { dispose(): void }[] = [];
   private tmpM = new THREE.Matrix4();
@@ -353,7 +354,24 @@ export default class ThresholdZ7Cathedral extends Scene {
     const bodyGeo = new THREE.BoxGeometry(0.86, 2.2, 2.55);
     const frontGeo = new THREE.BoxGeometry(0.08, 1.65, 1.9);
     const bodyMat = new THREE.MeshStandardMaterial({ color: 0x161b22, roughness: 0.38, metalness: 0.6 });
-    const frontMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.58, depthWrite: false });
+    const frontCanvas = document.createElement('canvas');
+    frontCanvas.width = 64; frontCanvas.height = 128;
+    const fg = frontCanvas.getContext('2d')!;
+    fg.fillStyle = '#d8eef7'; fg.fillRect(0, 0, 64, 128);
+    for (let shelf = 0; shelf < 5; shelf++) {
+      const y = 16 + shelf * 23;
+      fg.fillStyle = 'rgba(18,35,48,0.72)'; fg.fillRect(3, y + 11, 58, 3);
+      for (let col = 0; col < 5; col++) {
+        const h = hash(shelf * 17 + col * 5);
+        fg.fillStyle = h > 0.72 ? 'rgba(178,73,38,0.72)' : h > 0.42 ? 'rgba(44,126,128,0.7)' : 'rgba(224,210,154,0.68)';
+        fg.fillRect(6 + col * 11, y + 2 + Math.floor(h * 3), 6, 8);
+      }
+    }
+    fg.fillStyle = 'rgba(255,255,255,0.25)'; fg.fillRect(5, 0, 7, 128);
+    const frontTex = new THREE.CanvasTexture(frontCanvas);
+    frontTex.colorSpace = THREE.SRGBColorSpace;
+    const frontMat = new THREE.MeshBasicMaterial({ color: 0xffffff, map: frontTex, transparent: true, opacity: 0.58, depthWrite: false });
+    this.disposables.push(frontTex);
     this.disposables.push(bodyGeo, frontGeo, bodyMat, frontMat);
     this.machineBodies = new THREE.InstancedMesh(bodyGeo, bodyMat, count);
     this.machineFronts = new THREE.InstancedMesh(frontGeo, frontMat, count);
@@ -365,7 +383,11 @@ export default class ThresholdZ7Cathedral extends Scene {
     this.machineFrames = new THREE.InstancedMesh(frameGeo, frameMat, count * 7);
     let k = 0;
     let frameIndex = 0;
-    const wallX = (side: number, r: number, lev: number) => side * (14.05 + 1.05 * hash(lev * 13 + r) + 0.55 * Math.sin(r * 0.73 + lev * 0.19));
+    const wallX = (side: number, r: number, lev: number) => {
+      const depthBand = r % 14 < 2 ? 0.9 : r % 14 < 6 ? 0.3 : r % 14 < 10 ? -0.15 : 0.45;
+      return side * (14.05 + 1.05 * hash(lev * 13 + r) + 0.55 * Math.sin(r * 0.73 + lev * 0.19) - depthBand);
+    };
+    const structuralVoid = (r: number, lev: number) => (r % 16 === 7 || r % 16 === 8) && lev > 1 && lev < 11;
     const wallZ = (r: number, lev: number) => -2.5 - r * 3.25 + (hash(r * 7 + lev) - 0.5) * 0.34;
     const setFramePiece = (x: number, y: number, z: number, sx: number, sy: number, sz: number, hidden: boolean) => {
       this.tmpP.set(x, y, z);
@@ -385,7 +407,7 @@ export default class ThresholdZ7Cathedral extends Scene {
           const missing = hash(k * 23.1 + 4.7) > 0.948;
           const damaged = hash(k * 17.9 + 1.3) > 0.86;
           const ajar = !heroCovered && !missing && lev < 4 && hash(k * 31.7 + 2.4) > 0.86;
-          const hidden = heroCovered || missing;
+          const hidden = heroCovered || missing || structuralVoid(r, lev);
           this.tmpS.set(hidden ? 0.0001 : (1 + 0.05 * hash(k)) * (damaged ? 0.93 : 1), hidden ? 0.0001 : damaged ? 0.86 : 1, hidden ? 0.0001 : 0.9 + 0.14 * hash(k * 2));
           this.tmpM.compose(this.tmpP, this.tmpQ, this.tmpS);
           this.machineBodies.setMatrixAt(k, this.tmpM);
@@ -432,10 +454,10 @@ export default class ThresholdZ7Cathedral extends Scene {
           const missing = hash(machineIndex * 23.1 + 4.7) > 0.948;
           const damaged = hash(machineIndex * 17.9 + 1.3) > 0.86;
           const z0 = wallZ(r, lev);
-          const x0 = wallX(side, r, lev) - side * 0.36;
+          const x0 = wallX(side, r, lev) - side * 0.455;
           const y0 = 1.1 + lev * 2.45;
           for (let shelf = 0; shelf < 3; shelf++) for (let col = 0; col < 5; col++) {
-            const empty = heroCovered || missing || damaged || hash(machineIndex * 7.3 + shelf * 5 + col) > 0.9;
+            const empty = heroCovered || missing || damaged || structuralVoid(r, lev) || hash(machineIndex * 7.3 + shelf * 5 + col) > 0.9;
             this.tmpP.set(x0, y0 - 0.48 + shelf * 0.43, z0 - 0.62 + col * 0.31 + (hash(machineIndex + col) - 0.5) * 0.035);
             this.tmpQ.setFromEuler(new THREE.Euler(0, (hash(machineIndex + shelf + col * 3) - 0.5) * 0.18, 0));
             this.tmpS.setScalar(empty ? 0.0001 : 0.75 + hash(machineIndex + col * 11) * 0.55);
@@ -597,9 +619,28 @@ export default class ThresholdZ7Cathedral extends Scene {
       this.box(this.s, [0.9, 1.15, 0.045], [x - side * 0.43, y + 0.05, z], fm, [0.08 * hash(i), 0.15 * side, 0.05 * side]);
     }
 
+    // Falling environmental consequence: product cans, cartons, glass shards and small
+    // machine fragments tumble in the shaft with the viewer instead of the fall reading as empty void.
+    const debrisMats = [productRed, productTeal, paper, chrome, this.mat(0x6db7d8, 0.22, 0.08, 0x1b4c68, 0.5)];
+    for (let i = 0; i < 42; i++) {
+      const seed = hash(i * 12.73);
+      const mat = debrisMats[i % debrisMats.length]!;
+      const x = (hash(i * 3.1) - 0.5) * 3.6;
+      const y = -2.5 - hash(i * 5.7) * 26.0;
+      const z = -95.5 - hash(i * 7.9) * 9.0;
+      const mesh = i % 5 === 0
+        ? this.cyl(this.s, 0.045, 0.045, 0.14, [x, y, z], mat, 10)
+        : this.box(this.s, [0.09 + seed * 0.12, 0.025 + hash(i) * 0.06, 0.12 + hash(i * 2) * 0.16], [x, y, z], mat, [hash(i) * 2, hash(i * 4) * 2, hash(i * 6) * 2]);
+      mesh.visible = false;
+      this.fallDebris.push({ mesh, seed, baseY: y });
+    }
+
     const warmGlow = this.mat(0xffbd65, 0.6, 0, 0xff9b38, 2.8);
     this.box(this.s, [7.5, 0.08, 7.5], [0, -30.05, -101.5], warmGlow);
     this.box(this.s, [5.5, 0.025, 5.5], [0, -29.98, -101.5], this.mat(0x8a5b35, 0.7));
+    for (let i = 0; i < 9; i++) this.box(this.s, [5.3, 0.012, 0.025], [0, -29.94, -103.8 + i * 0.58], this.mat(0x3a2115, 0.82));
+    this.box(this.s, [1.05, 0.018, 4.3], [0, -29.91, -101.4], this.mat(0x6f2521, 0.9));
+    for (let i = 0; i < 5; i++) this.box(this.s, [0.86, 0.012, 0.055], [0, -29.89, -103.0 + i * 0.78], this.mat(i % 2 ? 0x28434a : 0xa56b34, 0.9));
 
     // Cathedral dressing: coin piles, toppled machine, cables/chains, receipt strips, altar-like change machine.
     for (let i = 0; i < 9; i++) {
@@ -910,6 +951,9 @@ export default class ThresholdZ7Cathedral extends Scene {
     this.lintInst = await GLTFManager.instantiate(lintUrl, { castShadow: true, receiveShadow: true });
     this.lint.add(this.lintInst.root);
     this.lint.visible = false;
+    const lintLight = new THREE.PointLight(0xffa65a, 1.35, 2.4, 1.45);
+    lintLight.position.set(0.08, 0.18, 0.18);
+    this.lint.add(lintLight);
     this.s.add(this.lint);
 
     this.s.add(this.flash.group);
@@ -1016,8 +1060,8 @@ export default class ThresholdZ7Cathedral extends Scene {
       const chaseK = smooth((t - 168.05) / 0.45);
       let z = -16.6;
       let x = 0.15 * Math.sin(t * 1.7);
-      if (t >= 168) {
-        const pursuitZ = this.cam.position.z + 8.6 + 0.4 * Math.sin(Math.floor(t * 3.3) * 2.1);
+      if (t >= 168.1) {
+        const pursuitZ = this.cam.position.z + 8.6 + 0.4 * Math.sin(t * 3.3 * 2.1);
         z = pursuitZ;
         x = lerp(1.2, -1.25 + 0.22 * Math.sin(t * 1.9), chaseK);
       }
@@ -1041,10 +1085,6 @@ export default class ThresholdZ7Cathedral extends Scene {
       const gallopShape = lerp(beatNow, beatNext, smooth(beatFrac / 0.35));
       const gallop = t >= 168 ? gallopShape : 0;
       this.tenant.position.set(x, t >= 168 ? 0.035 * Math.abs(gallop) : 0, z);
-      if (this.tenantPursuitLight) {
-        this.tenantPursuitLight.position.set(x + 0.35, 2.3, z - 1.35);
-        this.tenantPursuitLight.intensity = 6.8 * smooth((t - 168.02) / 0.18) * (1 - smooth((t - 170.05) / 0.85));
-      }
       this.tenant.rotation.x = t >= 168 ? -0.08 + 0.025 * gallop : 0;
       this.tenant.rotation.z = 0.045 * heldPose + (t >= 168 ? 0.018 * gallop : 0);
       this.tenant.rotation.y = t >= 168 ? lerp(Math.PI - 0.55, 0, chaseK) : Math.PI - 0.55;
@@ -1061,6 +1101,12 @@ export default class ThresholdZ7Cathedral extends Scene {
 
     if (this.assemblyShadowMat) {
       this.assemblyShadowMat.opacity = 0.46 * smooth((t - 163.2) / 0.65) * (1 - smooth((t - 168.02) / 0.2));
+    }
+    if (this.tenantPursuitLight) {
+      const pursuitLightOn = tenantVisible && t >= 168 && t < 170.9;
+      this.tenantPursuitLight.visible = pursuitLightOn;
+      this.tenantPursuitLight.intensity = pursuitLightOn ? 6.8 * smooth((t - 168.02) / 0.18) * (1 - smooth((t - 170.05) / 0.85)) : 0;
+      if (pursuitLightOn) this.tenantPursuitLight.position.set(this.tenant.position.x + 0.35, 2.3, this.tenant.position.z - 1.35);
     }
     const revealLight = smooth((t - 165.45) / 0.25) * (1 - smooth((t - 168.02) / 0.22));
     if (this.tenantRevealKey) {
@@ -1094,9 +1140,9 @@ export default class ThresholdZ7Cathedral extends Scene {
     const lintOn = t >= 174.0 && t < 176.2;
     this.lint.visible = lintOn;
     if (lintOn) {
-      const lp = this.cam.position.clone().add(dir.clone().multiplyScalar(0.7)).add(new THREE.Vector3(0.08, -0.12, 0));
+      const lp = this.cam.position.clone().add(dir.clone().multiplyScalar(0.48)).add(new THREE.Vector3(0.07, -0.09, 0));
       this.lint.position.copy(lp);
-      this.lint.scale.setScalar(1.55);
+      this.lint.scale.setScalar(2.8);
       const flap = Math.sign(Math.sin(t * Math.PI * 12)) * 0.42;
       const wl = this.lintInst?.parts.get('wing_l');
       const wr = this.lintInst?.parts.get('wing_r');
@@ -1105,6 +1151,15 @@ export default class ThresholdZ7Cathedral extends Scene {
     }
 
     // Rift opens ahead after the relit run, with edge slabs tipping outward.
+    const debrisFalling = t >= 186 && t < 193.8;
+    for (const d of this.fallDebris) {
+      d.mesh.visible = debrisFalling;
+      if (!debrisFalling) continue;
+      const fallT = t - 186;
+      d.mesh.position.y = d.baseY - fallT * (0.35 + d.seed * 0.45);
+      d.mesh.rotation.x += 0.0; // orientation is rewritten below as a pure function of t
+      d.mesh.rotation.set((d.seed * 4 + t * (0.8 + d.seed)) % (Math.PI * 2), (d.seed * 7 + t * (0.45 + d.seed * 0.4)) % (Math.PI * 2), (d.seed * 3 + t * 0.7) % (Math.PI * 2));
+    }
     const riftOpen = smooth((t - 176) / 7.5);
     this.rift.visible = riftOpen > 0;
     this.rift.scale.x = Math.max(0.02, riftOpen * 7.5);

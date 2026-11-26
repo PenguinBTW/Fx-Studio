@@ -28,8 +28,8 @@ const KEYS: PoseKey[] = [
   { t: 210.0, p: [0.35, 1.65, -5.3], yaw: 38, pitch: 0, fov: 66 },
   { t: 212.0, p: [0.58, 1.65, -5.75], yaw: 74, pitch: -7, fov: 66 },
   { t: 214.0, p: [0.68, 1.65, -5.9], yaw: 54, pitch: -10, fov: 60 },
-  { t: 216.0, p: [0.66, 1.65, -5.95], yaw: 74, pitch: -5, fov: 64 },
-  { t: 218.0, p: [0.66, 1.65, -5.95], yaw: 68, pitch: 0, fov: 70 },
+  { t: 216.0, p: [0.56, 1.65, -5.65], yaw: 76, pitch: -10, fov: 66 },
+  { t: 218.0, p: [0.56, 1.65, -5.65], yaw: 75, pitch: -7, fov: 72 },
   { t: 220.0, p: [0.7, 1.65, -6.1], yaw: 76, pitch: 0, fov: 74 },
   { t: 222.0, p: [0.95, 1.65, -6.45], yaw: 88, pitch: 0, fov: 74 },
   { t: 223.5, p: [2.4, 1.65, -6.8], yaw: 90, pitch: 0, fov: 74 },
@@ -53,10 +53,10 @@ function z8Gait(t: number): GaitName {
   return (t >= 199 && t < 210) || t >= 222 ? 'walk' : 'still';
 }
 
-const APPROACH_KEYS = KEYS.slice(7, 15);
+const APPROACH_KEYS = KEYS.slice(0, 16);
 const APPROACH_X: ScalarKey[] = APPROACH_KEYS.map((k) => [k.t, k.p[0]]);
 const APPROACH_Z: ScalarKey[] = APPROACH_KEYS.map((k) => [k.t, k.p[2]]);
-function z8PoseAt(t: number, gait?: GaitName) {
+export function z8PoseAt(t: number, gait?: GaitName) {
   const pose = poseAt(t, gait);
   if (t < APPROACH_KEYS[0]!.t || t > APPROACH_KEYS[APPROACH_KEYS.length - 1]!.t) return pose;
   const pos: [number, number, number] = [hermite1D(t, APPROACH_X), pose.pos[1], hermite1D(t, APPROACH_Z)];
@@ -80,6 +80,7 @@ export default class ThresholdZ8Home extends Scene {
   private receiverHome = new THREE.Vector3();
   private payoffReceiver = new THREE.Group();
   private lampGlow!: THREE.MeshStandardMaterial;
+  private lampLight?: THREE.PointLight;
   private officeTubeMats: THREE.MeshStandardMaterial[] = [];
   private disposables: { dispose(): void }[] = [];
 
@@ -274,6 +275,7 @@ export default class ThresholdZ8Home extends Scene {
     this.disposables.push(lampPoolMat);
     this.sphere(this.s, 0.62, [1.92, 0.045, -4.04], lampPoolMat, [1.45, 0.035, 0.9]);
     const lampLight = new THREE.PointLight(0xffa957, 1.25, 6, 1.7);
+    this.lampLight = lampLight;
     lampLight.intensity = 1.75;
     lampLight.position.set(2.0, 1.45, -4.05);
     this.s.add(lampLight);
@@ -312,17 +314,20 @@ export default class ThresholdZ8Home extends Scene {
     const plaqueMat = new THREE.MeshStandardMaterial({ map: plaqueTex, roughness: 0.42, metalness: 0.08, emissive: 0x1a1208, emissiveIntensity: 0.18 });
     this.disposables.push(plaqueTex, plaqueMat);
     this.box(this.doorGroup, [0.018, 0.16, 0.32], [-0.055, 1.52, 0.43], plaqueMat);
-    const wallTrim = this.mat(0x4a3122, 0.72);
-    const wallScuff = this.mat(0x6f452e, 0.9);
-    this.box(this.s, [0.018, 0.055, 4.6], [1.335, 0.86, -5.55], wallTrim);
-    for (let i = 0; i < 6; i++) this.box(this.s, [0.016, 1.75, 0.018], [1.332, 1.42, -3.6 - i * 0.72], i % 2 ? wallTrim : wallScuff);
-    for (let i = 0; i < 5; i++) this.box(this.s, [0.017, 0.08 + hash(i) * 0.16, 0.08 + hash(i * 2) * 0.22], [1.329, 0.55 + hash(i * 3) * 1.2, -4.1 - i * 0.58], wallScuff, [0, 0, (hash(i) - 0.5) * 0.25]);
+    const wallTrim = this.mat(0x745039, 0.78);
+    const wallScuff = this.mat(0xa88465, 0.9);
+    for (const [zNear, zFar] of [[2.1, -3.15], [-4.65, -6.28], [-7.42, -8.3]] as const) {
+      const len = zNear - zFar;
+      this.box(this.s, [0.010, 0.032, len], [1.292, 0.86, (zNear + zFar) / 2], wallTrim);
+    }
+    for (let i = 0; i < 2; i++) this.box(this.s, [0.006, 1.75, 0.007], [1.291, 1.42, -4.92 - i * 0.62], wallScuff);
+    for (let i = 0; i < 7; i++) this.box(this.s, [0.007, 0.12 + hash(i) * 0.24, 0.012 + hash(i * 2) * 0.018], [1.289, 0.62 + hash(i * 3) * 1.25, -4.78 - i * 0.2], wallScuff, [0, 0, (hash(i) - 0.5) * 0.18]);
 
     // Production beige phone as the wall-mounted final variant. The desk-phone axes are
     // remapped so the face/receiver point into the hallway and the keypad descends vertically.
     const phoneMount = cloneHomePart('wall_phone_mount');
     if (phoneMount) {
-      phoneMount.position.set(1.27, 1.39, -5.85);
+      phoneMount.position.set(1.27, 1.39, -6.02);
       phoneMount.rotation.y = -Math.PI / 2;
       this.s.add(phoneMount);
     }
@@ -334,36 +339,61 @@ export default class ThresholdZ8Home extends Scene {
       new THREE.Vector3(0, 1, 0),
     );
     phone.quaternion.setFromRotationMatrix(basis);
-    phone.position.set(1.22, 1.34, -5.85);
+    phone.position.set(1.22, 1.34, -6.02);
     this.s.add(phone);
     this.receiver = this.phoneInst.parts.get('receiver');
     if (this.receiver) this.receiverHome.copy(this.receiver.position);
 
 
-    // Explicit close-range payoff geometry: the GLB receiver is correct at hallway scale,
-    // but at 210-214 the handset needs a dark-edged dangling silhouette and a legible curly cord.
-    const handsetMat = this.mat(0x7d6248, 0.68, 0, 0x1f1209, 0.08);
-    const handsetEdge = this.mat(0x4b341f, 0.72);
-    this.payoffReceiver.position.set(1.06, 1.3, -5.84);
-    this.payoffReceiver.scale.setScalar(1.28);
-    this.box(this.payoffReceiver, [0.075, 0.085, 0.31], [0, 0, 0], handsetMat);
+    // Explicit close-range payoff geometry at real handset scale: a 22cm curved
+    // banana receiver with flared cups, speaker grilles, seam line and worn edges.
+    const handsetMat = this.mat(0xc4b28d, 0.58, 0, 0x2a190b, 0.08);
+    const handsetEdge = this.mat(0x4b341f, 0.74);
+    const handsetDark = this.mat(0x17100b, 0.82);
+    this.payoffReceiver.position.set(1.11, 1.31, -6.02);
+    this.payoffReceiver.scale.setScalar(1);
+    const gripPts = [
+      new THREE.Vector3(0, 0.034, -0.085),
+      new THREE.Vector3(0, 0.014, -0.045),
+      new THREE.Vector3(0, 0.0, 0),
+      new THREE.Vector3(0, 0.014, 0.045),
+      new THREE.Vector3(0, 0.034, 0.085),
+    ];
+    const gripCurve = new THREE.CatmullRomCurve3(gripPts);
+    const gripGeo = new THREE.TubeGeometry(gripCurve, 24, 0.018, 10);
+    const grip = new THREE.Mesh(gripGeo, handsetMat);
+    grip.castShadow = grip.receiveShadow = true;
+    this.payoffReceiver.add(grip);
+    this.disposables.push(gripGeo);
+    const seamPts = gripPts.map((p) => new THREE.Vector3(p.x - 0.0185, p.y - 0.001, p.z));
+    const seamGeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(seamPts), 20, 0.0024, 6);
+    const seam = new THREE.Mesh(seamGeo, handsetEdge);
+    this.payoffReceiver.add(seam);
+    this.disposables.push(seamGeo);
     for (const side of [-1, 1]) {
-      const cap = this.cyl(this.payoffReceiver, 0.072, 0.072, 0.105, [0, -0.015, side * 0.17], handsetMat, 16);
-      cap.rotation.x = Math.PI / 2;
-      const rim = this.cyl(this.payoffReceiver, 0.074, 0.074, 0.012, [0, -0.015, side * 0.225], handsetEdge, 16);
+      const cup = this.cyl(this.payoffReceiver, side < 0 ? 0.041 : 0.034, side < 0 ? 0.034 : 0.041, 0.05, [0, 0.035, side * 0.087], handsetMat, 20);
+      cup.rotation.x = Math.PI / 2;
+      const rim = this.cyl(this.payoffReceiver, 0.042, 0.042, 0.006, [0, 0.035, side * 0.113], handsetEdge, 20);
       rim.rotation.x = Math.PI / 2;
+      const grille = this.cyl(this.payoffReceiver, 0.026, 0.026, 0.003, [-0.001, 0.035, side * 0.117], handsetDark, 20);
+      grille.rotation.x = Math.PI / 2;
+      for (let hole = 0; hole < 5; hole++) {
+        const a = hole / 5 * Math.PI * 2;
+        const dot = this.cyl(this.payoffReceiver, 0.0025, 0.0025, 0.004, [-0.003, 0.035 + Math.sin(a) * 0.012, side * 0.119 + Math.cos(a) * 0.004], handsetEdge, 8);
+        dot.rotation.x = Math.PI / 2;
+      }
     }
     const cordPts: THREE.Vector3[] = [];
-    for (let i = 0; i <= 52; i++) {
-      const u = i / 52;
-      const phase = u * Math.PI * 18;
+    for (let i = 0; i <= 64; i++) {
+      const u = i / 64;
+      const phase = u * Math.PI * 22;
       cordPts.push(new THREE.Vector3(
-        -0.015 + Math.cos(phase) * 0.018,
-        0.02 - u * 0.5,
-        -0.12 + Math.sin(phase) * 0.018 + u * 0.08,
+        -0.012 + Math.cos(phase) * 0.014,
+        0.026 - u * 0.48,
+        -0.087 + Math.sin(phase) * 0.014 + u * 0.055,
       ));
     }
-    const cordGeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(cordPts), 42, 0.007, 7);
+    const cordGeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(cordPts), 64, 0.0045, 7);
     const cordMesh = new THREE.Mesh(cordGeo, handsetEdge);
     cordMesh.castShadow = cordMesh.receiveShadow = true;
     this.payoffReceiver.add(cordMesh);
@@ -410,14 +440,15 @@ export default class ThresholdZ8Home extends Scene {
       this.receiver.rotation.z = 0.04 + lift * (0.28 + 0.08 * Math.sin((t - 210) * 5));
       this.receiver.rotation.x = lift * 0.12 * Math.sin((t - 210) * 4);
       this.receiver.scale.setScalar(1);
+      this.receiver.visible = t < 210;
     }
 
     this.payoffReceiver.visible = t >= 210 && t < 218;
     if (this.payoffReceiver.visible) {
       const swing = Math.sin((t - 210) * 4.4) * (0.18 + 0.1 * (1 - drop));
-      this.payoffReceiver.position.y = 1.31 - drop * 0.18 + 0.012 * Math.sin((t - 210) * 8);
-      this.payoffReceiver.position.z = -5.84 + drop * 0.06;
-      this.payoffReceiver.rotation.x = 0.2 + drop * 0.52 + swing;
+      this.payoffReceiver.position.y = 1.35 - drop * 0.04 + 0.010 * Math.sin((t - 210) * 8);
+      this.payoffReceiver.position.z = -6.02 + drop * 0.04;
+      this.payoffReceiver.rotation.x = 0.16 + drop * 0.42 + swing * 0.65;
       this.payoffReceiver.rotation.z = 0.08 * Math.sin((t - 210) * 3.1);
     }
 
@@ -426,7 +457,9 @@ export default class ThresholdZ8Home extends Scene {
     this.doorGroup.rotation.y = smooth((t - 217.5) / 2.0) * 1.65;
 
     // Warm lamp is deliberately shadowless; its glow is steady and wrong.
-    this.lampGlow.emissiveIntensity = 2.2 + 0.15 * Math.sin(t * 2.1);
+    const lampLevel = lerp(1.75, 0.46, smooth((t - 209.5) / 1.2));
+    if (this.lampLight) this.lampLight.intensity = lampLevel;
+    this.lampGlow.emissiveIntensity = (2.2 + 0.15 * Math.sin(t * 2.1)) * (0.55 + 0.45 * lampLevel / 1.75);
     this.officeTubeMats.forEach((m, i) => { m.emissiveIntensity = 1.65 + (i === 2 ? 0.5 * hash(Math.floor(t * 7) + i) : 0.12 * hash(Math.floor(t * 3) + i)); });
 
     // Shared beam adapter: weak 25% battery in daylight, with the low-battery stutter.
