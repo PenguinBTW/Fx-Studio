@@ -134,7 +134,7 @@ const BODY: Record<ThresholdTransitionMode, string> = {
     // a small scale/eye-height jump rather than a flat lateral wipe.
     float settle = smoothstep(0.30, 0.92, u);
     float zoom = mix(1.075, 1.0, settle);
-    vec2 buv = (vUv - vec2(0.5, 0.52)) / zoom + vec2(0.5, mix(0.535, 0.5, settle));
+    vec2 buv = (vUv - vec2(0.5, 0.5)) / zoom + vec2(0.5, mix(0.535, 0.5, settle));
     vec3 cb = texture(texB, clamp(buv, 0.0, 1.0)).rgb;
     float whip = smoothstep(0.0, 0.30, u);
     float edgePos = mix(1.18, -0.16, whip);
