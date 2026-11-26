@@ -262,7 +262,8 @@ export default class ThresholdZ4Library extends Scene {
     const ledgerSpine = this.s.getObjectByName('ledger_spine') as THREE.Mesh | undefined;
     if (ledgerSpine) {
       ledgerSpine.scale.x *= 0.46;
-      const lm = ledgerSpine.material as THREE.MeshStandardMaterial;
+      const lm = (ledgerSpine.material as THREE.MeshStandardMaterial).clone();
+      ledgerSpine.material = lm;
       lm.color.lerp(new THREE.Color(0xd8cdb5), 0.55); lm.roughness = 0.9;
     }
     this.cloneProp(this.paperProps, 'fountain_pen_root', [0.34, 0.91, 5.78], -0.35, 1, 'z4_fountain_pen_asset');
