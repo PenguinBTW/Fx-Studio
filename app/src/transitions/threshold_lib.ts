@@ -32,17 +32,22 @@ const BODY: Record<ThresholdTransitionMode, string> = {
     float height = mix(0.24, 0.86, smoothstep(0.08, 0.92, u));
     float rect = max(abs(q.x) / width, abs(q.y) / height);
     float doorway = 1.0 - smoothstep(0.88, 1.04, rect);
-    float eyeAdapt = smoothstep(0.30, 0.88, u);
+    float eyeAdapt = smoothstep(0.12, 0.55, u);
     float centerLead = doorway * smoothstep(0.28, 0.64, u);
     float revealB = clamp(eyeAdapt * (0.52 + 0.48 * doorway) + centerLead * 0.48, 0.0, 1.0);
-    revealB = max(revealB, smoothstep(0.78, 0.94, u));
-    vec3 daylight = vec3(5.8, 5.45, 4.8) * (0.32 + 0.68 * blast);
+    revealB = max(revealB, smoothstep(0.38, 0.48, u));
+    // The adaptation whiteout is optically uneven: skylit haze has granular density
+    // and edge falloff rather than becoming a uniform milk layer over the playroom.
+    float hazeN = fbm(vUv * vec2(7.0, 5.0) + vec2(u * 0.19, -u * 0.11), 4);
+    float hazeGrain = hash12(floor(vUv * vec2(180.0, 100.0)) + floor(u * 24.0));
+    float edgeHaze = 1.0 - 0.34 * smoothstep(0.32, 0.88, length(q));
+    vec3 daylight = vec3(5.8, 5.45, 4.8) * (0.32 + 0.68 * blast) * (0.48 + 0.58 * hazeN + 0.22 * hazeGrain) * edgeHaze;
     vec3 c = mix(daylight, cb, revealB);
     // After the fire-door peak the mean white level decays exponentially in
     // absolute seconds; z2's exposure envelope continues the same eye-adapt tail
     // after the spec-fixed 0.8 s shader seam ends.
     float adaptT = max(0.0, u * 0.8 - 0.07);
-    float whiteK = 0.84 * exp(-9.7 * adaptT);
+    float whiteK = 0.84 * exp(-9.7 * adaptT) * (1.0 - smoothstep(0.38, 0.48, u));
     vec3 adaptC = mix(cb, vec3(5.8, 5.45, 4.8), whiteK);
     c = mix(c, adaptC, smoothstep(0.0, 0.08, adaptT));
     c = mix(ca, c, smoothstep(0.0, 0.10, u));

@@ -126,19 +126,19 @@ for fi in range(8):
         yy+=curl_dir*(.042+.018*j)*math.sin((j+1)*math.pi/4)+math.cos(fi*1.1+j*.7)*(.026+.006*(fi%3))
         pts.append((xx,yy,zz))
     for j in range(4):
-        r0=(.074-j*.013)*thick_scale
-        r1=(.060-j*.015)*thick_scale
+        r0=(.070-j*.016)*thick_scale
+        r1=(.052-j*.015)*thick_scale
         seg=taper_between(f'finger_{fi+1}_segment_{j+1}',pts[j],pts[j+1],r0,r1,skin,f'finger_{fi+1}',24)
         seg.parent=rootE; seg.matrix_parent_inverse=rootE.matrix_world.inverted()
-        jr=max(.016,(.044-j*.009)*thick_scale)
-        joint=sphere(f'finger_{fi+1}_joint_{j+1}',pts[j+1],(jr*(1+.08*((fi+j)%3)),jr*.86,jr*.78),skin,f'finger_{fi+1}',22,11)
+        jr=max(.014,(.034-j*.0065)*thick_scale)
+        joint=sphere(f'finger_{fi+1}_joint_{j+1}',pts[j+1],(jr*(1+.16*((fi+j)%3)),jr*.66,jr*.58),skin,f'finger_{fi+1}',22,11)
         joint.parent=rootE; joint.matrix_parent_inverse=rootE.matrix_world.inverted()
         # irregular skin-fold bulges replace detached-looking mechanical rings
         for wr in range(2):
             uu=.28+wr*.34
             pp=Vector(pts[j]).lerp(Vector(pts[j+1]),uu)
             off=Vector(((-side)*(0.012+wr*.003),-.026+wr*.004,0))
-            fold=sphere(f'finger_{fi+1}_skin_fold_{j+1}_{wr}',pp+off,(.018-j*.001,.008,.011),skin_hi,f'finger_{fi+1}',14,7)
+            fold=sphere(f'finger_{fi+1}_skin_fold_{j+1}_{wr}',pp+off,(.023-j*.0015,.0065,.013),skin_hi,f'finger_{fi+1}',14,7)
             fold.rotation_euler[2]=curl_dir*(.35+wr*.22); fold.parent=rootE; fold.matrix_parent_inverse=rootE.matrix_world.inverted()
         # fine veins sit close to the skin surface instead of reading as separate wires
         for vi,off in enumerate(((-.006,-.023),(0.008,-.021))):

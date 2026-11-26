@@ -261,8 +261,8 @@ export default class ThresholdZ1Office extends Scene {
       if (fingerHit && !Array.isArray(mesh.material)) {
         const bi = Number(fingerHit[1]);
         const fm = (mesh.material as THREE.MeshStandardMaterial).clone();
-        fm.roughness = 0.30 + hash(bi * 3.7) * 0.25;
-        fm.color.offsetHSL((hash(bi * 5.1) - 0.5) * 0.025, (hash(bi * 2.3) - 0.5) * 0.08, (hash(bi * 7.9) - 0.5) * 0.09);
+        fm.roughness = 0.48 + hash(bi * 3.7) * 0.22;
+        fm.color.offsetHSL((hash(bi * 5.1) - 0.5) * 0.025, (hash(bi * 2.3) - 0.5) * 0.08, (hash(bi * 7.9) - 0.5) * 0.09); fm.envMapIntensity = 0.45;
         fm.needsUpdate = true; mesh.material = fm;
       }
     });
@@ -856,7 +856,7 @@ export default class ThresholdZ1Office extends Scene {
 
     return {
       ...thresholdPost(t, { darkness: 0.58, stress: t > 19.3 && t < 30 ? 0.7 : 0.12, fade: 1 - smooth(4.0, 5.0, t) }),
-      flash: smooth(29.35, 30.0, t) * 1.8,
+      flash: smooth(29.35, 29.72, t) * 1.8 * (1 - smooth(29.72, 30.02, t)),
       shake: t > 19.3 && t < 30 ? [1.2 * Math.sin(t * 37), 1.0 * Math.cos(t * 31)] : [0, 0],
     };
   }

@@ -31,12 +31,12 @@ function playGrimeTexture() {
     const n = hash(x * 0.37 + y * 2.13) * 34 + hash(Math.floor(x / 9) * 4.1 + Math.floor(y / 9)) * 24;
     const stain = Math.max(0, Math.sin(x * 0.025 + y * 0.016) + Math.sin(y * 0.041) - 1.22) * 62;
     const scuff = hash(x * 5.7 + y * 0.71) > 0.978 ? 44 : 0;
-    const v = 218 + n - stain - scuff;
+    const v = 132 + n * 2.0 - stain * 1.8 - scuff;
     const id = (y * size + x) * 4;
     img.data[id] = img.data[id + 1] = img.data[id + 2] = Math.max(86, Math.min(255, v)); img.data[id + 3] = 255;
   }
   g.putImageData(img, 0, 0);
-  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(2.5, 2.5);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(12.0, 12.0);
   return tex;
 }
 
@@ -109,11 +109,12 @@ export default class ThresholdZ2Playroom extends Scene {
     this.s.background = new THREE.Color(0x202a31);
     this.s.fog = new THREE.Fog(0x202a31, 13, 42);
     this.flash = addFlashlight(this.s);
-    this.s.add(new THREE.HemisphereLight(0xc7d6df, 0x151c24, 0.24));
-    this.sun = new THREE.DirectionalLight(0xffffff, 0.68); this.sun.position.set(-4, 9, 2); this.s.add(this.sun);
+    this.s.add(new THREE.HemisphereLight(0xd8e2e6, 0x1d2428, 0.38));
+    this.sun = new THREE.DirectionalLight(0xfff0d2, 1.35); this.sun.position.set(-4, 9, 2); this.s.add(this.sun);
     this.swimmerLight = new THREE.PointLight(0xffe0a8, 0, 4.2, 1.8); this.s.add(this.swimmerLight);
 
     const foam = mat(0xf1efe8, 0.55);
+    const floorFoam = mat(0x554f46, 0.92);
     const red = mat(0xe63b2e, 0.28);
     const yellow = mat(0xf6c83b, 0.25);
     const blue = mat(0x2e6fe6, 0.25);
@@ -125,13 +126,13 @@ export default class ThresholdZ2Playroom extends Scene {
     const submergedRidgeMat = mat(0x3f4b4e, 0.30, 0, 0x101a1c, 0.10);
     const grimeTex = playGrimeTexture();
     const lightPoolTex = lightPoolTexture();
-    for (const m of [foam, red, yellow, blue, green, plasticDark, ...mats]) {
+    for (const m of [foam, floorFoam, red, yellow, blue, green, plasticDark, ...mats]) {
       const sm = m as THREE.MeshStandardMaterial;
       sm.map = grimeTex; sm.roughnessMap = grimeTex; sm.bumpMap = grimeTex; sm.bumpScale = 0.008;
       sm.color.multiplyScalar((0.78 + hash(sm.color.getHex() * 0.001) * 0.12) * (m === foam ? 0.58 : 0.86)); sm.roughness = Math.max(sm.roughness, 0.42); sm.needsUpdate = true;
     }
 
-    box(this.s, 'z2_floor', [31, 0.1, 21], [0, -0.05, 0], foam);
+    box(this.s, 'z2_floor', [31, 0.1, 21], [0, -0.05, 0], floorFoam);
     box(this.s, 'z2_wall_n', [31, 6, 0.16], [0, 3, -10.5], foam);
     box(this.s, 'z2_wall_s', [31, 6, 0.16], [0, 3, 10.5], foam);
     box(this.s, 'z2_wall_w', [0.16, 6, 21], [-15.5, 3, 0], foam);
@@ -215,20 +216,27 @@ export default class ThresholdZ2Playroom extends Scene {
       box(this.s, `z2_skylight_frame_e_${i}`, [0.10, 0.09, 3.02], [sx + 2.47, 5.94, -2], mat(0x252a2a, 0.7));
     }
     for (let i = 0; i < 3; i++) {
-      const sl = new THREE.PointLight(0x9fc5d8, 1.8, 9.5, 1.55);
+      const sl = new THREE.PointLight(0xb8d7e5, 3.4, 12.5, 1.25);
       sl.position.set(-6 + i * 6, 5.25, -2); this.s.add(sl);
+      // Warm dusk shafts/pools under the skylights: broad, soft, motivated light that
+      // keeps the pit and floor planes legible without returning to uniform ambient.
+      const warm = new THREE.PointLight(0xffc37a, 3.1, 11.5, 1.18);
+      warm.position.set(-6 + i * 6 + (i - 1) * 0.35, 4.65, -1.75); this.s.add(warm);
+      const shaftMat = new THREE.MeshBasicMaterial({ map: lightPoolTex, color: 0xffbd73, transparent: true, opacity: 0.20, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+      const shaft = plane(this.s, `z2_skylight_volume_pool_${i}`, 4.7, 3.4, [-6 + i * 6, 0.018 + i * 0.0005, -1.7], shaftMat, [-Math.PI / 2, 0, -0.18 + i * 0.16]);
+      shaft.renderOrder = 3;
     }
     // Motivated abandoned-play-place practicals: colored spot pools, emergency strips and sagging string lights.
     const practicals: Array<[string, number, number, number, number, number]> = [
-      ['amber_climber', -5.8, 4.65, -4.9, 0xff9b42, 4.2],
-      ['cyan_ballpit', 4.6, 4.55, 1.7, 0x79c9ff, 3.5],
-      ['magenta_shelf', 10.8, 3.6, -7.8, 0xff5d8d, 2.8],
-      ['green_exit_side', -11.6, 3.3, 7.4, 0x8aff8c, 2.3],
+      ['amber_climber', -5.8, 4.65, -4.9, 0xff9b42, 6.2],
+      ['cyan_ballpit', 4.6, 4.55, 1.7, 0x79c9ff, 5.4],
+      ['magenta_shelf', 10.8, 3.6, -7.8, 0xff5d8d, 4.2],
+      ['green_exit_side', -11.6, 3.3, 7.4, 0x8aff8c, 8.5],
     ];
     practicals.forEach(([label, x, y, z, color, intensity], i) => {
       box(this.s, `z2_practical_fixture_${label}`, [0.42, 0.11, 0.22], [x, y + 0.08, z], mat(0x1d2020, 0.62), [0, hash(i) * 0.8, 0]);
       box(this.s, `z2_practical_lens_${label}`, [0.31, 0.025, 0.14], [x, y, z], mat(color, 0.24, 0, color, 1.8), [0, hash(i) * 0.8, 0]);
-      const pl = new THREE.PointLight(color, intensity, 10.5, 1.45); pl.position.set(x, y - 0.08, z); this.s.add(pl);
+      const pl = new THREE.PointLight(color, intensity, 13.5, 1.22); pl.position.set(x, y - 0.08, z); this.s.add(pl);
     });
     practicals.forEach(([label, x, y, z, color], i) => {
       const floorPool = new THREE.MeshBasicMaterial({ map: lightPoolTex, color, transparent: true, opacity: 0.24, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
@@ -244,9 +252,21 @@ export default class ThresholdZ2Playroom extends Scene {
     for (let i = 0; i < 9; i++) cyl(this.s, `z2_ceiling_cable_conduit_${i}`, 0.018, 20.0, [-12 + i * 3.0, 5.73, -0.5], mat(0x1f2424, 0.58, 0.25), [Math.PI / 2, 0, 0], 8);
     for (let i = 0; i < 8; i++) {
       const warm = i % 2 === 0, z = warm ? -6.4 : 5.8;
-      const pl = new THREE.PointLight(warm ? 0xff9d55 : 0x78c9ff, 0.85, 4.2, 1.35);
+      const pl = new THREE.PointLight(warm ? 0xff9d55 : 0x78c9ff, 1.45, 5.8, 1.2);
       pl.position.set(-10.5 + i * 3.0, 5.05, z); this.s.add(pl);
     }
+    // South-wall emergency lights throw red-orange pools across the route into the tunnel.
+    for (let ei = 0; ei < 3; ei++) {
+      const ex = -5.5 + ei * 5.2;
+      const em = new THREE.PointLight(ei === 1 ? 0xff9b55 : 0xff4a32, 6.2, 11.5, 1.12);
+      em.position.set(ex, 2.35, 9.35); this.s.add(em);
+    }
+    // Low service lights around the crawl tunnel keep the 50-55 s approach readable
+    // as a manufactured tunnel throat rather than a void.
+    box(this.s, 'z2_tunnel_service_fixture', [0.34, 0.09, 0.16], [-4.35, 1.72, 5.48], mat(0x1d2020, 0.62));
+    box(this.s, 'z2_tunnel_service_lens', [0.24, 0.025, 0.10], [-4.35, 1.66, 5.48], mat(0xffb26b, 0.24, 0, 0xff9d45, 1.7));
+    const tunnelService = new THREE.PointLight(0xffad62, 4.8, 8.5, 1.15); tunnelService.position.set(-4.55, 1.55, 6.1); this.s.add(tunnelService);
+    const tunnelThroat = new THREE.PointLight(0x78c9ff, 5.2, 8.0, 1.05); tunnelThroat.position.set(-5.0, 1.05, 8.4); this.s.add(tunnelThroat);
     for (const [side, z] of [[-1, -10.34], [1, 10.34]] as const) {
       for (let i = 0; i < 5; i++) {
         const x = -10 + i * 5.0;
@@ -265,12 +285,25 @@ export default class ThresholdZ2Playroom extends Scene {
     // ball pit padded rim and dense instanced ball surface
     box(this.s, 'z2_pit_n', [12.6, 0.8, 0.35], [0, 0.4, -4.2], blue);
     box(this.s, 'z2_pit_s', [12.6, 0.8, 0.35], [0, 0.4, 4.2], red);
+    // Front-rim vinyl seams, impact scuffs and worn patches keep the large foreground
+    // pad from reading as one featureless slab in the opening wide shot.
+    for (let rs = 0; rs < 13; rs++) {
+      const x = -5.9 + rs * 0.98 + (hash(rs * 2.1) - 0.5) * 0.08;
+      plane(this.s, `z2_pit_front_vinyl_seam_${rs}`, 0.025, 0.70, [x, 0.40, 4.386], basic(0x2a1512, 0.50), [0, 0, (hash(rs) - 0.5) * 0.025]);
+      if (rs % 2 === 0) plane(this.s, `z2_pit_front_scuff_${rs}`, 0.34 + hash(rs) * 0.52, 0.055 + hash(rs + 1) * 0.09, [x + 0.32, 0.27 + hash(rs + 2) * 0.34, 4.389], basic(0x1d1210, 0.30 + hash(rs + 3) * 0.25), [0, 0, (hash(rs + 4) - 0.5) * 0.35]);
+    }
     box(this.s, 'z2_pit_w', [0.35, 0.8, 8.4], [-6.2, 0.4, 0], yellow);
     box(this.s, 'z2_pit_e', [0.35, 0.8, 8.4], [6.2, 0.4, 0], green);
     box(this.s, 'z2_ballpit_dark_substrate', [12.0, 0.035, 8.0], [0, 0.515, 0], mat(0x2d241e, 0.92));
     for (let fg = 0; fg < 18; fg++) {
       plane(this.s, `z2_floor_ground_in_grime_${fg}`, 1.0 + hash(fg) * 2.4, 0.7 + hash(fg + 3) * 1.8, [-13 + hash(fg * 2.1) * 26, 0.006, -8.5 + hash(fg * 4.7) * 17], basic(0x241b14, 0.22 + hash(fg + 5) * 0.15), [-Math.PI / 2, 0, hash(fg + 7) * Math.PI]);
     }
+    // Foreground safety-mat seams and scuff lanes break the otherwise continuous
+    // pale floor plane in the entry frames without changing the camera path.
+    const seamMat = basic(0x241d17, 0.46);
+    for (let zi = 0; zi < 6; zi++) plane(this.s, `z2_floor_mat_cross_seam_${zi}`, 29.0, 0.035 + (zi % 2) * 0.018, [0, 0.014 + zi * 0.0002, 3.9 + zi * 1.12], seamMat, [-Math.PI / 2, 0, (hash(zi) - 0.5) * 0.035]);
+    for (let xi = 0; xi < 5; xi++) plane(this.s, `z2_floor_mat_long_seam_${xi}`, 0.035, 7.2, [-8.8 + xi * 4.4 + (hash(xi * 3) - 0.5) * 0.5, 0.015 + xi * 0.0002, 6.6], seamMat, [-Math.PI / 2, 0, (hash(xi * 5) - 0.5) * 0.06]);
+    for (let sc = 0; sc < 20; sc++) plane(this.s, `z2_floor_entry_scuff_${sc}`, 0.28 + hash(sc) * 0.9, 0.035 + hash(sc + 1) * 0.08, [-10 + hash(sc * 2.3) * 20, 0.017 + sc * 0.0001, 4.2 + hash(sc * 4.1) * 5.3], basic(0x16110d, 0.28 + hash(sc + 2) * 0.22), [-Math.PI / 2, 0, hash(sc * 7) * Math.PI]);
     const geom = new THREE.SphereGeometry(0.075, 12, 8);
     const inst = new THREE.InstancedMesh(geom, new THREE.MeshStandardMaterial({ roughness: 0.78, metalness: 0, map: grimeTex, roughnessMap: grimeTex }), 4900);
     inst.castShadow = false; inst.receiveShadow = true;
@@ -501,7 +534,7 @@ export default class ThresholdZ2Playroom extends Scene {
     const t = f.t;
     applyFpCamera(this.cam, KEYS, t, out.width / out.height);
     const closeBeam = 1 - 0.68 * smooth(44.0, 45.0, t) * (1 - smooth(49.0, 50.0, t));
-    updateFlashlight(this.flash.light, this.flash.target, this.cam, t, closeBeam * 0.24, t > 40.5 && t < 49.5 ? 0.3 : 0.05);
+    updateFlashlight(this.flash.light, this.flash.target, this.cam, t, closeBeam * (0.24 + smooth(48.8, 50.0, t) * 0.9), t > 40.5 && t < 49.5 ? 0.3 : 0.05);
     // clouded skylight dimming after 40s
     const dim = 1 - smooth(39.5, 41.5, t) * 0.5;
     this.sun.intensity = 1.15 * dim;
@@ -600,7 +633,7 @@ export default class ThresholdZ2Playroom extends Scene {
     const gl = this.ctx.renderer;
     gl.setRenderTarget(out); gl.setClearColor(0xcfe8ff, 1); gl.clear(true, true, true); gl.render(this.s, this.cam); gl.resetState();
     return {
-      ...thresholdPost(t, { darkness: 0.12, exposure: 0.26 + (t >= 29.6 ? 0.75 * Math.exp(-Math.max(0, t - 29.7) / 0.25) : 0), stress: t > 40.5 && t < 49.5 ? 0.22 : 0.02 }),
+      ...thresholdPost(t, { darkness: 0.12, exposure: 0.95, stress: t > 40.5 && t < 49.5 ? 0.22 : 0.02 }),
       // T1 now owns the eye-adaptation bridge. Do not re-impose a zone-local whiteout
       // after the seam or the exposure decay reverses when transition post is unsuppressed.
       flash: 0,
