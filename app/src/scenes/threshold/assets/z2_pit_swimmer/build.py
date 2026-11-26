@@ -85,6 +85,10 @@ for i in range(54):
 
 # Deep mouth cavity facing negative Y.
 sphere('mouth_cavity',(0,-.48,-.02),(.42,.20,.28),mouthdark,seg=32,rings=16).parent=root
+# thick folded vinyl gum/lip rim; the mouth is a soft-toy anatomical opening, not a flat black oval
+gum=torus('mouth_gum_lip',(0,-.505,-.02),.33,.035,mouthdark,rot=(math.pi/2,0,0)); gum.scale=(1.22,.72,.72); gum.parent=root
+for side,x in [('l',-.31),('r',.31)]:
+    sphere(f'mouth_corner_fold_{side}',(x,-.50,-.02),(.075,.045,.09),yellow,seg=20,rings=10).parent=root
 # Hinged yellow slide jaws, assembled from overlapping curved chute sections.
 upper=empty('slide_mouth_upper_root',(0,-.38,.13)); upper.parent=root
 lower=empty('slide_mouth_lower_root',(0,-.38,-.16)); lower.parent=root
@@ -101,8 +105,8 @@ for side,rootobj,zsign in [('upper',upper,1),('lower',lower,-1)]:
 # Twenty stopper teeth, ten upper and ten lower, irregularly worn.
 for i in range(10):
     x=-.25+i*.055
-    up=cone(f'tooth_upper_{i+1:02d}',(x,-.70,-.015+(i%2)*.012),.018,.006,.11,toothmat,rot=(math.pi,0,0),vertices=16); up.parent=upper
-    lo=cone(f'tooth_lower_{i+1:02d}',(x+.018,-.69,-.12-(i%2)*.009),.018,.006,.10,toothmat,vertices=16); lo.parent=lower
+    up=cone(f'tooth_upper_{i+1:02d}',(x,-.70,-.015+(i%2)*.012),.014+random.uniform(0,.009),.004,.085+random.uniform(0,.055),toothmat,rot=(math.pi+random.uniform(-.08,.08),random.uniform(-.06,.06),random.uniform(-.05,.05)),vertices=16); up.parent=upper
+    lo=cone(f'tooth_lower_{i+1:02d}',(x+.018,-.69,-.12-(i%2)*.009),.014+random.uniform(0,.008),.004,.08+random.uniform(0,.05),toothmat,rot=(random.uniform(-.07,.07),random.uniform(-.05,.05),random.uniform(-.05,.05)),vertices=16); lo.parent=lower
     if i in (2,7):
         # chipped dark notch
         cube(f'tooth_chip_{i+1}',(x,-.715,.035),(0.018,.012,.018),seammat,bevel=.002).parent=upper
@@ -115,8 +119,14 @@ for side,x in [('l',-.27),('r',.27)]:
     iris=finish(bpy.context.object,f'eye_iris_{side}',f'eye_iris_{side}',white); smooth(iris); iris.parent=root
     bpy.ops.mesh.primitive_cylinder_add(vertices=24,radius=.029,depth=.014,location=(x+(.012 if side=='l' else -.012),-.525,.35),rotation=(math.pi/2,0,0))
     pup=finish(bpy.context.object,f'eye_pupil_{side}',f'eye_pupil_{side}',black); smooth(pup); pup.parent=root
+    sphere(f'eye_wet_catchlight_{side}',(x+(.018 if side=='l' else -.018),-.535,.382),(.014,.005,.014),white,seg=12,rings=6).parent=root
     torus(f'eye_pressure_seam_{side}',(x,-.42,.34),.115,.012,seammat,rot=(math.pi/2,0,0)).parent=root
 
+# asymmetric vinyl abrasion stickers/scuffs across the fused skull
+for i in range(18):
+    cx,cy,cz=skull_centers[(i*7)%len(skull_centers)]
+    sc=cube(f'vinyl_scuff_patch_{i+1:02d}',(cx,cy-.105,cz+random.uniform(-.035,.035)),(.055+random.uniform(0,.05),.006,.008+random.uniform(0,.012)),seammat,bevel=.001,rot=(random.uniform(-.3,.3),random.uniform(-.2,.2),random.uniform(-1.2,1.2)))
+    sc.parent=root
 # Inflated vinyl cheeks, crease dimples, and asymmetric scuffed patches.
 for side,x in [('l',-.43),('r',.43)]:
     sphere(f'cheek_{side}',(x,-.31,.02),(.20,.14,.18),red if side=='l' else orange,seg=32,rings=16).parent=root

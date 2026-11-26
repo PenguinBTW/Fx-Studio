@@ -54,13 +54,19 @@ export default class ThresholdZ2Playroom extends Scene {
     this.playroomKit = await GLTFManager.instantiate(kitResolved.url, { ...kitResolved.manifest.load, castShadow: true, receiveShadow: true });
     this.toyPack = await GLTFManager.instantiate(toyResolved.url, { ...toyResolved.manifest.load, castShadow: true, receiveShadow: true });
     const corpse = new THREE.Color(0xb8b2a2);
+    const swimmerSeenMats = new Set<THREE.Material>();
     this.swimmerAsset.root.traverse((o) => {
       const mesh = o as THREE.Mesh;
       if (!mesh.isMesh) return;
       const mm = mesh.material as THREE.MeshStandardMaterial;
+      if (swimmerSeenMats.has(mm)) return;
+      swimmerSeenMats.add(mm);
+      if (/painted_eye_white|painted_pupil_black/.test(mm.name)) {
+        mm.roughness = 0.08; mm.envMapIntensity = 1.1;
+      }
       if (/ball_.*vinyl|slide_yellow|vinyl_seam/.test(mm.name)) {
-        mm.color.lerp(corpse, /slide_yellow/.test(mm.name) ? 0.34 : 0.58);
-        mm.roughness = Math.min(mm.roughness, 0.22);
+        mm.color.lerp(corpse, /slide_yellow/.test(mm.name) ? 0.18 : 0.30);
+        mm.roughness = Math.min(mm.roughness, 0.2);
       }
     });
     this.swimmerAsset.root.position.set(0,0.58,2.35); this.swimmerAsset.root.visible = false; this.s.add(this.swimmerAsset.root);
