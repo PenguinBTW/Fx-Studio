@@ -19,7 +19,7 @@ const KEYS: PoseKey[] = [
   { t: 111.5, p: [0, 1.65, -7.2], yaw: 18, pitch: 0, fov: 72 },
   { t: 113.0, p: [0, 1.65, -10.4], yaw: -34, pitch: 1, fov: 72 },
   { t: 114.5, p: [0.55, 1.65, -17.75], yaw: 86, pitch: -9, fov: 62 },
-  { t: 117.0, p: [0.55, 1.65, -18.9], yaw: 118, pitch: -12, fov: 62 },
+  { t: 117.0, p: [0.55, 1.65, -18.9], yaw: 86, pitch: -10, fov: 62 },
   { t: 120.0, p: [0.35, 1.65, -19.0], yaw: 180, pitch: -13, fov: 66 },
   { t: 120.2, p: [0.35, 1.65, -19.0], yaw: 120, pitch: -7, fov: 68 },
   { t: 120.4, p: [0.35, 1.65, -19.0], yaw: 60, pitch: -3, fov: 68 },
@@ -134,19 +134,17 @@ export default class ThresholdZ5Motel extends Scene {
       // Critical feed semantics: the viewer is the foreground silhouette and the Tenant
       // is the impossible tall thin figure behind them. This is structural storytelling,
       // not texture polish.
-      g.fillStyle = '#c8e2dc';
-      g.fillRect(cx - 10, 82, 20, 28);
-      g.fillStyle = '#111315';
-      g.fillRect(cx - 8, 76, 16, 12);
+      g.fillStyle = '#d6f0e8';
+      g.fillRect(cx - 18, 78, 36, 34);
       g.fillStyle = '#050607';
-      g.fillRect(cx + 19, 48, 7, 8);
-      g.fillRect(cx + 21, 56, 4, 38);
-      g.fillRect(cx + 14, 62, 4, 29);
-      g.fillRect(cx + 29, 62, 4, 29);
-      g.fillRect(cx + 18, 94, 4, 16);
-      g.fillRect(cx + 26, 94, 4, 16);
-      g.fillStyle = '#b9d9d7';
-      g.fillRect(cx + 19, 48, 7, 5);
+      g.fillRect(cx - 14, 68, 28, 16);
+      g.fillStyle = '#020304';
+      g.fillRect(cx + 27, 38, 11, 12);
+      g.fillRect(cx + 30, 50, 6, 50);
+      g.fillRect(cx + 19, 58, 5, 39);
+      g.fillRect(cx + 39, 58, 5, 39);
+      g.fillStyle = '#c7e4df';
+      g.fillRect(cx + 28, 39, 9, 6);
     } else {
       g.fillStyle = '#d9f0ee';
       g.fillRect(cx - 1.5, 70, 3, 12);
@@ -345,8 +343,10 @@ export default class ThresholdZ5Motel extends Scene {
     this.disposables.push(glass);
     // Lanky upper-body silhouette first: too-small tile head, thin neck, narrow vending ribcage,
     // long downward-hanging collage arms, and only a hint of legs disappearing into darkness.
-    const silhouette = this.mat(0x050607, 0.88, 0, 0x071116, 0.34);
+    const silhouette = this.mat(0x11181b, 0.82, 0, 0x0b252c, 0.72);
     this.box(this.tenant, [0.34, 1.08, 0.12], [0, 1.42, -0.08], silhouette);
+    this.box(this.tenant, [0.42, 1.5, 0.055], [0, 1.48, 0.18], silhouette);
+    this.box(this.tenant, [0.13, 1.48, 0.11], [-0.52, 1.25, 0.15], silhouette, [0, 0, 0.04]);
     this.box(this.tenant, [0.09, 1.22, 0.09], [-0.48, 1.25, -0.04], silhouette, [0, 0, 0.08]);
     this.box(this.tenant, [0.09, 1.22, 0.09], [0.48, 1.25, -0.04], silhouette, [0, 0, -0.08]);
     this.box(this.tenant, [0.12, 0.92, 0.1], [-0.18, 0.46, -0.06], silhouette);
