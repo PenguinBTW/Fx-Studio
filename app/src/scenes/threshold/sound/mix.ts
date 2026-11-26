@@ -37,6 +37,7 @@ export default defineMix({
     { id: 'z0_coldopen_arm_reference', file: 'generated/coldopen_arm_replay.wav', bus: 'sfx', at: 1.20, gainDb: -1.0 },
     { id: 'z8_home_events', file: 'generated/z8_home_events.wav', bus: 'sfx', at: 194.40, gainDb: -2.5 },
     { id: 'end_office_events', file: 'generated/end_office_events.wav', bus: 'sfx', at: 225.00, gainDb: -3.0 },
+    { id: 'z1_fluorescent_ticks', file: 'generated/z1_fluorescent_ticks.wav', bus: 'sfx', at: 4.0, gainDb: -7.0 },
     { id: 'z1_phone_ring', file: 'generated/z1_phone_ring.wav', bus: 'sfx', at: 8.28, gainDb: 2.5 },
     { id: 'z1_receiver_breath', file: 'generated/z1_receiver_breath.wav', bus: 'sfx', at: 11.05, gainDb: -1.5 },
     { id: 'z1_ceiling_breath', file: 'generated/z1_ceiling_breath.wav', bus: 'sfx', at: 12.75, gainDb: -1.0 },

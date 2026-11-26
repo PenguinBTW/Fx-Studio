@@ -55,18 +55,25 @@ let z1AirL = 0, z1AirR = 0;
 wav('z1_fluorescent_bed.wav', stem(27, (t) => {
   const hum = Math.sin(t * Math.PI * 120) * 0.027 + Math.sin(t * Math.PI * 240) * 0.010 + Math.sin(t * Math.PI * 360) * 0.006;
   const hiss = noise() * 0.012 * (0.75 + 0.25 * Math.sin(t * 0.31));
-  const tickA = t > 2.42 && t < 2.49 ? noise() * 0.09 : 0;
-  const tickB = t > 8.72 && t < 8.78 ? noise() * 0.07 : 0;
   const fade = Math.max(0, Math.min(1, t / 1.15, (27 - t) / 1.4));
-  const center = hum + hiss * 0.45 + tickA + tickB;
+  const center = hum + hiss * 0.45;
   const si = Math.floor(t * SR + 0.5);
   z1AirL = z1AirL * 0.935 + (hash01(si, 3.1) - 0.5) * 0.065;
   z1AirR = z1AirR * 0.935 + (hash01(si, 4.7) - 0.5) * 0.065;
   return [(center * 0.96 + z1AirL * 0.34) * fade, (center + z1AirR * 0.34) * fade];
 }));
 
+// Failing-tube ticks are discrete events, kept outside the bed so negative-space
+// bed dips cannot suppress them.
+wav('z1_fluorescent_ticks.wav', stem(27, (t) => {
+  const tickA = t > 2.42 && t < 2.49 ? noise() * 0.09 : 0;
+  const tickB = t > 8.72 && t < 8.78 ? noise() * 0.07 : 0;
+  const v = tickA + tickB;
+  return [v * 0.96, v];
+}));
+
 // Two old mechanical bell bursts.
-wav('z1_phone_ring.wav', stem(2.8, (t) => {
+wav('z1_phone_ring.wav' , stem(2.8, (t) => {
   let v = 0;
   for (const start of [0.02, 1.18]) {
     const u = t - start;
