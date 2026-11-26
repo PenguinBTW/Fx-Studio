@@ -37,6 +37,9 @@ export default class ThresholdZ4Library extends Scene {
   private motes: THREE.Mesh[] = [];
   private gapGlow!: THREE.MeshStandardMaterial;
   private lamps: THREE.PointLight[] = [];
+  private moths: THREE.Group[] = [];
+  private mothWings: THREE.Mesh[] = [];
+  private ledgerLines: THREE.Mesh[] = [];
 
   private archivistAsset!: GLTFInstance;
 
@@ -96,6 +99,37 @@ export default class ThresholdZ4Library extends Scene {
       sph(this.s, `z4_lamp_shade_${x}`, 0.16, [x, 1.42, 5.75], mat(0x245c37, 0.35, 0.1, 0x1d5c31, 0.7), 18).scale.y = 0.55;
       const l = new THREE.PointLight(0xffd68a, 1.4, 5, 1.8); l.position.set(x, 1.35, 5.75); this.s.add(l); this.lamps.push(l);
     }
+    // Diegetic ledger ink: each line exists only in the paper and appears at its storyboard cue.
+    const inkLines = [
+      ['step. step. step.', 84.0],
+      ['it stopped.', 86.4],
+      ['it is reading this.', 88.0],
+      ['it is behind you.', 91.7],
+    ] as const;
+    inkLines.forEach(([txt], li) => {
+      const c = document.createElement('canvas'); c.width = 512; c.height = 72;
+      const g = c.getContext('2d')!; g.clearRect(0, 0, c.width, c.height);
+      g.fillStyle = '#17130e'; g.font = '42px serif'; g.textBaseline = 'middle'; g.fillText(txt, 12, 38);
+      const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+      const mm = new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.9, polygonOffset: true, polygonOffsetFactor: -1 });
+      const line = new THREE.Mesh(new THREE.PlaneGeometry(0.29, 0.042), mm);
+      line.position.set(0.01, 0.932 + li * 0.002, 5.88 + li * 0.07); line.rotation.x = -Math.PI / 2;
+      line.name = line.userData.fx_entity = `z4_ledger_ink_line_${li}`; line.visible = false; this.s.add(line); this.ledgerLines.push(line);
+    });
+
+    // Folded paper moths around the lamp light; the first brown one is Lint's brief felt wrongness.
+    for (let i = 0; i < 9; i++) {
+      const moth = new THREE.Group();
+      const brown = i === 0;
+      const mm = brown ? mat(0x6b4a2e, 0.96) : mat(0xe9dfc5, 0.86);
+      const wl = plane(moth, `z4_moth_wing_l_${i}`, 0.09, 0.055, [-0.035, 0, 0], mm, [0, 0, -0.3]);
+      const wr = plane(moth, `z4_moth_wing_r_${i}`, 0.09, 0.055, [0.035, 0, 0], mm, [0, 0, 0.3]);
+      box(moth, `z4_moth_body_${i}`, [0.018, 0.015, 0.065], [0, 0, 0], brown ? mat(0x3a2517, 0.95) : mat(0x8a7a5e, 0.9));
+      moth.position.set((i % 2 ? 0.7 : -0.7) + (hash(i) - 0.5) * 0.25, 1.35 + hash(i + 2) * 0.35, 5.75 + (hash(i + 4) - 0.5) * 0.5);
+      moth.userData.basePos = moth.position.clone(); moth.name = moth.userData.fx_entity = brown ? 'z4_lint_felt_moth' : `z4_paper_moth_${i}`;
+      this.s.add(moth); this.moths.push(moth); this.mothWings.push(wl, wr);
+    }
+
     // folded phone on lectern
     box(this.s, 'z4_lectern', [0.55, 1.0, 0.45], [0.8, 0.5, 7.0], wood, [0, -0.25, 0]);
     this.phone = new THREE.Group(); this.phone.position.set(0.8, 1.08, 7.0); this.phone.rotation.y = -0.25; this.s.add(this.phone);
@@ -168,6 +202,18 @@ export default class ThresholdZ4Library extends Scene {
       const bp = m.userData.basePos as THREE.Vector3;
       m.position.y = bp.y + Math.sin(t * 0.35 + i) * 0.055;
       m.position.x = bp.x + Math.cos(t * 0.27 + i * 2) * 0.04;
+    });
+    this.ledgerLines.forEach((l, i) => { l.visible = t > ([84.0, 86.4, 88.0, 91.7][i] ?? 99); });
+    this.moths.forEach((m, i) => {
+      const bp = m.userData.basePos as THREE.Vector3;
+      const active = i === 0 ? (t > 80.4 && t < 82.2) : t < 94;
+      m.visible = active;
+      m.position.set(bp.x + Math.sin(t * 1.1 + i) * 0.12, bp.y + Math.sin(t * 1.7 + i * 2) * 0.07, bp.z + Math.cos(t * 0.9 + i) * 0.1);
+      m.rotation.y = t * 0.35 + i;
+      const wl = this.mothWings[i * 2], wr = this.mothWings[i * 2 + 1];
+      const flap = Math.sin(t * 10 + i) * 0.55;
+      if (wl) wl.rotation.z = -0.3 - flap;
+      if (wr) wr.rotation.z = 0.3 + flap;
     });
     // ledger writes itself: pages lift one by one, ink lines emerge as thin dark strips
     this.ledgerPages.forEach((p, i) => {
