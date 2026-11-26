@@ -26,6 +26,8 @@ const KEYS: PoseKey[] = [
   { t: 163.0, p: [-10.9, 1.65, -9.2], yaw: -28, pitch: 0, roll: 0, fov: 68 },
   { t: 165.5, p: [-3.6, 1.65, -11.0], yaw: 18, pitch: 0, roll: 0, fov: 70 },
   { t: 168.0, p: [0, 1.6, -13.0], yaw: 0, pitch: 0, roll: 0, fov: 84 },
+  { t: 168.5, p: [0, 1.6, -14.7], yaw: 64, pitch: -1, roll: 3, fov: 84 },
+  { t: 169.1, p: [0, 1.6, -19.3], yaw: 0, pitch: 0, roll: 3, fov: 84 },
   { t: 170.0, p: [0, 1.6, -24.0], yaw: 0, pitch: 0, roll: 2, fov: 84 },
   { t: 172.0, p: [0, 1.15, -33.5], yaw: 163, pitch: -12, roll: 12, fov: 86 },
   { t: 173.4, p: [0, 0.35, -34.6], yaw: 184, pitch: -5, roll: 70, fov: 90 },
@@ -781,7 +783,10 @@ export default class ThresholdZ7Cathedral extends Scene {
     this.tenant.visible = tenantVisible;
     if (tenantVisible) {
       let z = -18;
-      if (t >= 168) z = this.cam.position.z + 4.8 + 0.4 * Math.sin(Math.floor(t * 3.3) * 2.1);
+      if (t >= 168) {
+        const pursuitZ = this.cam.position.z + 4.8 + 0.4 * Math.sin(Math.floor(t * 3.3) * 2.1);
+        z = lerp(-18, pursuitZ, smooth((t - 168.05) / 0.45));
+      }
       const burst = hash(Math.floor(t * 3.3)) > 0.45 ? 1 : 0;
       this.tenant.position.set(0.15 * Math.sin(t * 1.7), 0, z);
       this.tenant.rotation.z = 0.12 * burst + 0.05 * Math.sin(t * 2.2);
