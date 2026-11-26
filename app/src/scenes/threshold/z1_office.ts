@@ -333,7 +333,7 @@ export default class ThresholdZ1Office extends Scene {
     box(this.s, 'z1_wall_right', [0.16, 2.7, 34], [13, 1.35, 3], wallDark);
     box(this.s, 'z1_wall_fire', [26, 2.7, 0.16], [0, 1.35, 16], wall);
     const partitions: [number, number, number, number, number][] = [
-      [-2.2, -2.5, 0.12, 1.45, 4.5], [2.2, -2.2, 0.12, 1.45, 4.2], [-4.8, 0.5, 4.2, 1.45, 0.12], [4.7, 1.2, 4.8, 1.45, 0.12],
+      [-2.2, -2.5, 0.12, 1.45, 4.5], [2.2, -2.2, 0.12, 1.45, 4.2], [-4.8, 0.5, 4.2, 1.45, 0.12], [6.05, 1.2, 2.1, 1.45, 0.12], [2.72, 1.2, 0.84, 1.45, 0.12],
       [-6.4, -4.6, 0.12, 1.45, 5.4], [6.5, -4.7, 0.12, 1.45, 5.5], [-1.4, 4.2, 0.12, 1.45, 4.5], [6.3, 7.2, 0.12, 1.45, 5.2],
       [-6.1, 7.4, 0.12, 1.45, 5.6], [1.6, 11.4, 5.0, 1.45, 0.12], [-6.8, 12.2, 4.5, 1.45, 0.12], [8.8, 3.3, 0.12, 1.45, 8],
     ];
@@ -384,7 +384,7 @@ export default class ThresholdZ1Office extends Scene {
       const z = -10.4 + zi * 2.35;
       for (const side of [-1, 1]) {
         // Keep the camera/run corridors open while filling both sides of the maze.
-        if (z > 0.5 && z < 10.5 && side === 1 && zi % 2 === 0) continue;
+        if (z > 0.5 && z < 10.5 && side === 1) continue;
         if (z > 8.5 && side === -1 && zi % 2 === 1) continue;
         const lane = z < 0 ? (zi % 3 === 0 ? 5.2 : 3.65) : (zi % 3 === 0 ? 6.7 : 4.15);
         const x = side * lane;
@@ -692,7 +692,14 @@ export default class ThresholdZ1Office extends Scene {
     }
     for (let i = 0; i < 6; i++) {
       const z = 1.8 + i * 2.0;
-      const m = box(this.s, `z1_chase_drop_tile_${i}`, [1.1, 0.03, 1.1], [i % 2 ? 2.8 : 0.2, 2.68, z], ceiling);
+      const m = box(this.s, `z1_chase_drop_tile_${i}`, [1.1, 0.065, 1.1], [i % 2 ? 2.8 : 0.2, 2.68, z], ceiling);
+      // Dark fracture lines are parented to the falling panel so the piece reads as damaged ceiling tile, not a clean card.
+      for (let c = 0; c < 3; c++) {
+        const cx = (hash(i + c) - 0.5) * 0.48, cz = (hash(i * 3 + c) - 0.5) * 0.48, cw = 0.18 + hash(i * 5 + c) * 0.20, ca = hash(i * 9 + c) * Math.PI;
+        plane(m, `z1_drop_tile_crack_top_${i}_${c}`, cw, 0.006, [cx, 0.034 + c * 0.0004, cz], basic(0x241f18, 0.38), [-Math.PI / 2, 0, ca]);
+        plane(m, `z1_drop_tile_crack_bottom_${i}_${c}`, cw, 0.007, [cx, -0.034 - c * 0.0004, cz], basic(0x15120e, 0.46), [Math.PI / 2, 0, ca]);
+      }
+      for (let c = 0; c < 2; c++) box(m, `z1_drop_tile_edge_chip_${i}_${c}`, [0.16 + hash(i + c) * 0.16, 0.018, 0.055], [(c ? 0.48 : -0.48), 0.036, (hash(i * 7 + c) - 0.5) * 0.72], mat(0x8f8875, 0.9), [0, hash(i * 4 + c) * 0.6, 0]);
       this.fallingTiles.push({ m, z, t0: 20.1 + i * 1.05, y0: 2.68 });
     }
   }
