@@ -100,8 +100,8 @@ export function criticallyDampedTurn(x: number): number {
   return raw(clamp(x)) / raw(1);
 }
 
-export function keyAt(keys: FPKey[], t: number): Required<Omit<FPKey, 'gait'>> & { gait: GaitName } {
-  if (!keys.length) return { t, pos: [0, EYE_HEIGHT, 0], yaw: 0, pitch: 0, roll: 0, fov: 74, height: EYE_HEIGHT, gait: 'still' };
+export function keyAt(keys: FPKey[], t: number): Required<Omit<FPKey, 'gait'>> & { gait: GaitName; gaitA: GaitName; gaitB: GaitName; gaitK: number } {
+  if (!keys.length) return { t, pos: [0, EYE_HEIGHT, 0], yaw: 0, pitch: 0, roll: 0, fov: 74, height: EYE_HEIGHT, gait: 'still', gaitA: 'still', gaitB: 'still', gaitK: 0 };
   const sorted = [...keys].sort((a, b) => a.t - b.t);
   let i = 0;
   while (i + 1 < sorted.length && t >= sorted[i + 1]!.t) i++;
@@ -120,6 +120,9 @@ export function keyAt(keys: FPKey[], t: number): Required<Omit<FPKey, 'gait'>> &
     fov: lerp(a.fov ?? 74, b.fov ?? 74, turnK),
     height: lerp(a.height ?? EYE_HEIGHT, b.height ?? EYE_HEIGHT, moveK),
     gait: (u < 0.5 ? a.gait : b.gait) ?? a.gait ?? 'still' as GaitName,
+    gaitA: a.gait ?? 'still',
+    gaitB: b.gait ?? a.gait ?? 'still',
+    gaitK: moveK,
   };
   return base;
 }
@@ -131,7 +134,25 @@ export function keyAt(keys: FPKey[], t: number): Required<Omit<FPKey, 'gait'>> &
 export function evalFirstPerson(keys: FPKey[], t: number, gaitOverride?: GaitName): FPPose {
   const k = keyAt(keys, t);
   const gaitName = gaitOverride ?? k.gait;
-  const g = GAITS[gaitName];
+  const ga = GAITS[gaitOverride ?? k.gaitA];
+  const gb = GAITS[gaitOverride ?? k.gaitB];
+  const gm = gaitOverride ? 0 : k.gaitK;
+  const blend = (x: number, y: number) => lerp(x, y, gm);
+  const eyeA = ga.eyeHeight ?? k.height;
+  const eyeB = gb.eyeHeight ?? k.height;
+  const g: GaitSpec = {
+    eyeHeight: ga.eyeHeight === undefined && gb.eyeHeight === undefined ? undefined : blend(eyeA, eyeB),
+    stepHz: blend(ga.stepHz, gb.stepHz),
+    bob: blend(ga.bob, gb.bob),
+    sway: blend(ga.sway, gb.sway),
+    roll: blend(ga.roll, gb.roll),
+    fovAdd: blend(ga.fovAdd, gb.fovAdd),
+    breathAmp: blend(ga.breathAmp, gb.breathAmp),
+    breathHz: blend(ga.breathHz, gb.breathHz),
+    noiseAmp: blend(ga.noiseAmp, gb.noiseAmp),
+    tremorAmp: blend(ga.tremorAmp, gb.tremorAmp),
+    forwardLean: blend(ga.forwardLean, gb.forwardLean),
+  };
   const stepPhase = g.stepHz > 0 ? t * g.stepHz : 0;
   const stepWave = g.stepHz > 0 ? Math.sin(stepPhase * TAU) : 0;
   const stepImpulse = g.stepHz > 0 ? Math.max(0, Math.sin(stepPhase * TAU)) : 0;
