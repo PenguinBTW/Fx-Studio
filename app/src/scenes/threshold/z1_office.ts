@@ -257,6 +257,14 @@ export default class ThresholdZ1Office extends Scene {
       const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
       const mapped = mats.map(remap);
       mesh.material = Array.isArray(mesh.material) ? mapped : mapped[0]!;
+      const fingerHit = /^finger_(\d+)_/.exec(mesh.name);
+      if (fingerHit && !Array.isArray(mesh.material)) {
+        const bi = Number(fingerHit[1]);
+        const fm = (mesh.material as THREE.MeshStandardMaterial).clone();
+        fm.roughness = 0.30 + hash(bi * 3.7) * 0.25;
+        fm.color.offsetHSL((hash(bi * 5.1) - 0.5) * 0.025, (hash(bi * 2.3) - 0.5) * 0.08, (hash(bi * 7.9) - 0.5) * 0.09);
+        fm.needsUpdate = true; mesh.material = fm;
+      }
     });
     const phoneResolved = resolveAsset('threshold/beige_phone');
     this.phoneAsset = await GLTFManager.instantiate(phoneResolved.url, { ...phoneResolved.manifest.load, castShadow: true, receiveShadow: true });
@@ -782,16 +790,16 @@ export default class ThresholdZ1Office extends Scene {
         const spread = (bi - 4.5) / 3.5;
         fp.position.x = bp.x + spread * 0.12 * emerge + Math.sin(t * 0.31 + bi) * 0.008 * eyesOn;
         fp.position.z = bp.z + ((bi % 2) - 0.5) * 0.11 * emerge;
-        fp.rotation.x = (Math.sin(t * 0.9 + bi) * 0.24 - 0.06 * emerge + lash * (0.24 + (bi % 3) * 0.07) + (bi % 2 ? 0.09 : -0.04) * emerge) * eyesOn;
-        fp.rotation.z = side * (0.07 + (bi % 3) * 0.045 + Math.sin(t * 0.55 + bi * 1.7) * 0.085) * eyesOn + spread * 0.045 * emerge;
+        fp.rotation.x = (Math.sin(t * (0.72 + bi * 0.035) + bi) * 0.30 - 0.06 * emerge + lash * (0.24 + (bi % 3) * 0.07) + (bi % 2 ? 0.09 : -0.04) * emerge) * eyesOn;
+        fp.rotation.z = side * (0.07 + (bi % 3) * 0.045 + Math.sin(t * (0.46 + bi * 0.025) + bi * 1.7) * 0.12) * eyesOn + spread * 0.045 * emerge;
         fp.rotation.y = Math.sin(t * 0.42 + bi) * 0.16 * eyesOn + spread * 0.025 * emerge + (bi % 2 ? -0.08 : 0.06) * emerge;
         for (let sj = 1; sj <= 4; sj++) {
           const seg = this.breather.part(`finger_${bi}_segment_${sj}`);
           if (!seg) continue;
           if (!seg.userData.baseRot) seg.userData.baseRot = seg.rotation.clone();
           const br = seg.userData.baseRot as THREE.Euler;
-          const creep = Math.sin(t * 0.52 + bi * 0.9 + sj * 1.35) * 0.055 * eyesOn * (sj / 4);
-          const secondary = Math.sin(t * 0.23 + bi * 1.4 - sj) * 0.028 * eyesOn;
+          const creep = Math.sin(t * (0.43 + bi * 0.018) + bi * 0.9 + sj * 1.35) * 0.105 * eyesOn * (sj / 4);
+          const secondary = Math.sin(t * (0.21 + bi * 0.012) + bi * 1.4 - sj) * 0.052 * eyesOn;
           seg.rotation.set(br.x + creep, br.y + secondary * 0.45, br.z + secondary);
         }
       }

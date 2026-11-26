@@ -107,29 +107,31 @@ for side,x in [('l',-.35),('r',.35)]:
 # Eight curling four-segment fingers. Each phalanx is tapered and overlapped at the knuckle,
 # with asymmetrical curl rather than straight pipe runs.
 for fi in range(8):
-    x=-.72+fi*.205; side=-1 if fi<4 else 1
+    x=-.76+fi*.205+[-.035,.025,-.012,.044,-.028,.018,-.044,.032][fi]; side=-1 if fi<4 else 1
     rootE=empty(f'finger_{fi+1}_root',(x,.04,-.03),part=f'finger_{fi+1}_root'); rootE.parent=root
     pts=[]
-    curl_dir=(-1 if fi%2 else 1)
+    curl_dir=[1,-1,1,1,-1,1,-1,-1][fi]
     # articulated phalanx chain in the vertical plane: each joint changes angle enough
     # that the silhouette reads as a curling finger rather than a straight rod.
-    seg_lens=[.20+random.uniform(-.025,.025),.17+random.uniform(-.02,.02),.135+random.uniform(-.018,.018),.105+random.uniform(-.015,.015)]
+    length_scale=[1.18,.86,1.06,.74,1.28,.94,1.12,.78][fi]
+    thick_scale=[1.12,.82,1.0,.72,1.18,.88,1.04,.76][fi]
+    seg_lens=[(.20+random.uniform(-.025,.025))*length_scale,(.17+random.uniform(-.02,.02))*length_scale,(.135+random.uniform(-.018,.018))*length_scale,(.105+random.uniform(-.015,.015))*length_scale]
     xx=x; yy=.04; zz=-.03
     pts.append((xx,yy,zz))
     base_ang=side*(.08+.045*(fi%3))+random.uniform(-.035,.035)
     for j,sl in enumerate(seg_lens):
-        ang=base_ang+side*(j*.43+.12*math.sin(fi*1.3+j))
+        ang=base_ang+side*(j*(.34+.055*(fi%4))+.16*math.sin(fi*1.3+j*1.7))
         xx+=math.sin(ang)*sl
         zz-=math.cos(ang)*sl
-        yy+=curl_dir*(.032+.012*j)*math.sin((j+1)*math.pi/4)+math.cos(fi*1.1+j*.7)*.018
+        yy+=curl_dir*(.042+.018*j)*math.sin((j+1)*math.pi/4)+math.cos(fi*1.1+j*.7)*(.026+.006*(fi%3))
         pts.append((xx,yy,zz))
     for j in range(4):
-        r0=.072-j*.012
-        r1=.061-j*.013
+        r0=(.074-j*.013)*thick_scale
+        r1=(.060-j*.015)*thick_scale
         seg=taper_between(f'finger_{fi+1}_segment_{j+1}',pts[j],pts[j+1],r0,r1,skin,f'finger_{fi+1}',24)
         seg.parent=rootE; seg.matrix_parent_inverse=rootE.matrix_world.inverted()
-        jr=max(.019,.047-j*.0085)
-        joint=sphere(f'finger_{fi+1}_joint_{j+1}',pts[j+1],(jr,jr*.92,jr*.82),skin_hi,f'finger_{fi+1}',22,11)
+        jr=max(.016,(.044-j*.009)*thick_scale)
+        joint=sphere(f'finger_{fi+1}_joint_{j+1}',pts[j+1],(jr*(1+.08*((fi+j)%3)),jr*.86,jr*.78),skin,f'finger_{fi+1}',22,11)
         joint.parent=rootE; joint.matrix_parent_inverse=rootE.matrix_world.inverted()
         # irregular skin-fold bulges replace detached-looking mechanical rings
         for wr in range(2):
@@ -143,11 +145,11 @@ for fi in range(8):
             va=Vector(pts[j])+Vector((off[0],off[1],0)); vb=Vector(pts[j+1])+Vector((off[0]*.65,off[1],0))
             vein=cyl_between(f'finger_{fi+1}_vein_{j+1}_{vi+1}',va,vb,.0026,veinmat,f'finger_{fi+1}',vertices=8)
             vein.parent=rootE; vein.matrix_parent_inverse=rootE.matrix_world.inverted()
-        for wd in range(1):
+        for wd in range(1 + (1 if (fi+j)%3==0 else 0)):
             uu=.48+random.uniform(-.18,.18)
             pp=Vector(pts[j]).lerp(Vector(pts[j+1]),min(.92,max(.08,uu)))
             rr=max(.012,.052-j*.008)
-            drop=sphere(f'finger_{fi+1}_wet_bead_{j+1}_{wd+1}',pp+Vector((random.uniform(-.006,.006),-rr*.82,random.uniform(-.006,.006))),(.0048,.0026,.0038),wetdrop,f'finger_{fi+1}',10,5)
+            drop=sphere(f'finger_{fi+1}_wet_bead_{j+1}_{wd+1}',pp+Vector((random.uniform(-.006,.006),-rr*.82,random.uniform(-.006,.006))),(.0048*thick_scale,.0026,.0038),wetdrop,f'finger_{fi+1}',10,5)
             drop.parent=rootE; drop.matrix_parent_inverse=rootE.matrix_world.inverted()
     tip=Vector(pts[-1])
     # fleshy rounded fingertip under the cracked yellow nail
