@@ -54,6 +54,16 @@ def add(o, par, part=None):
         seen_parts.add(part)
     return o
 
+def group_local(name, par, part=None, loc=(0, 0, 0)):
+    # Unlike the world-preserving mesh parenting helper, control empties must use true
+    # parent-relative transforms so exported pivots land at shoulders/elbows/knees/wrists.
+    ob = empty(name, loc)
+    ob.parent = par
+    if part and part not in seen_parts:
+        ob['fx_part'] = part
+        seen_parts.add(part)
+    return ob
+
 # Head control: small smooth pool-tile ovoid, too small for the body, face reduced to one black slot.
 head_g = group('head_control', upper, 'head', (0, 0.08, 3.55))
 add(sphere('head_tile_ovoid', 0.16, (0, 0.16, 3.86), TILE, scale=(0.78, 0.68, 1.12), segments=48, rings=24), head_g)
@@ -132,8 +142,8 @@ for i in range(9):
 def build_ball_arm(side):
     sx = -1 if side == 'l' else 1
     arm_g = group(f'arm_{side}_control', upper, f'arm_{side}', (sx * 0.38, 0.02, 3.23))
-    upper_g = group(f'arm_{side}_upper_control', arm_g, f'arm_{side}_upper', (sx * 0.38, 0.02, 3.23))
-    lower_g = group(f'arm_{side}_lower_control', arm_g, f'arm_{side}_lower', (sx * 0.64, 0.11, 2.42))
+    upper_g = group_local(f'arm_{side}_upper_control', arm_g, f'arm_{side}_upper')
+    lower_g = group_local(f'arm_{side}_lower_control', arm_g, f'arm_{side}_lower', (sx * 0.26, 0.09, -0.81))
     centers = []
     for i in range(22):
         u = i / 21
@@ -154,13 +164,13 @@ def build_ball_arm(side):
         if i % 3 == 1:
             add(torus(f'arm_{side}_melted_seam_{i}', radius * 0.92, 0.006, c, RUBBER,
                       rot=(math.radians(90), 0, 0), major_segments=24, minor_segments=5), upper_g if i < 11 else lower_g, 'melted_seams')
-    return arm_g, centers[-1]
+    return arm_g, lower_g, centers[-1]
 
-arm_l_g, wrist_l = build_ball_arm('l')
-arm_r_g, wrist_r = build_ball_arm('r')
+arm_l_g, arm_l_lower_g, wrist_l = build_ball_arm('l')
+arm_r_g, arm_r_lower_g, wrist_r = build_ball_arm('r')
 
 # Left hand: one vending spiral coil splitting into curling metal fingers.
-hand_l_g = group('hand_l_control', arm_l_g, 'hand_l', wrist_l)
+hand_l_g = group_local('hand_l_control', arm_l_lower_g, 'hand_l', (wrist_l[0] + 0.64 if wrist_l[0] < 0 else wrist_l[0] - 0.64, wrist_l[1] - 0.11, wrist_l[2] - 2.42))
 add(sphere('hand_l_palm_cuff', 0.095, wrist_l, CHROME, scale=(1.1, 0.75, 0.9), segments=32, rings=16), hand_l_g, 'palm')
 for finger in range(5):
     spread = (finger - 2) / 2
@@ -175,7 +185,7 @@ for finger in range(5):
     add(sphere(f'hand_l_finger_tip_{finger}', 0.018, pts[-1], CHROME, scale=(0.75, 0.75, 1.35), segments=20, rings=10), hand_l_g, 'coil_fingers')
 
 # Right hand: folded paper strips, each finger curled and torn at the tip.
-hand_r_g = group('hand_r_control', arm_r_g, 'hand_r', wrist_r)
+hand_r_g = group_local('hand_r_control', arm_r_lower_g, 'hand_r', (wrist_r[0] - 0.64 if wrist_r[0] > 0 else wrist_r[0] + 0.64, wrist_r[1] - 0.11, wrist_r[2] - 2.42))
 add(box('hand_r_paper_palm', (0.18, 0.08, 0.16), wrist_r, PAPER, bev=0.012, rot=(0.1, 0.0, -0.08)), hand_r_g, 'paper_palm')
 for finger in range(5):
     spread = (finger - 2) / 2
@@ -191,8 +201,8 @@ for finger in range(5):
 def build_leg(side):
     sx = -1 if side == 'l' else 1
     leg_g = group(f'leg_{side}_control', lower, f'leg_{side}', (sx * 0.18, 0, 1.95))
-    upper_g = group(f'leg_{side}_upper_control', leg_g, f'leg_{side}_upper', (sx * 0.18, 0, 1.95))
-    lower_g = group(f'leg_{side}_lower_control', leg_g, f'leg_{side}_lower', (sx * 0.28, 0.04, 0.95))
+    upper_g = group_local(f'leg_{side}_upper_control', leg_g, f'leg_{side}_upper')
+    lower_g = group_local(f'leg_{side}_lower_control', leg_g, f'leg_{side}_lower', (sx * 0.10, 0.04, -1.0))
     for i in range(6):
         z = 1.84 - i * 0.16
         x = sx * (0.18 + 0.018 * i)
