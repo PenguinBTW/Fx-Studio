@@ -322,8 +322,13 @@ export default class ThresholdZ3Pool extends Scene {
     this.mirrorlingReflection.root.traverse((o) => {
       const m = o as THREE.Mesh;
       if (m.isMesh) {
+        // Small rigid fingers/rods are exactly what water refraction destroys first; left intact
+        // they read as white paper cut-outs pasted onto the surface at the look-down beat.
+        if (/^finger_[lr]_|^shoulder_bar$|^head_hairline_grout_/.test(m.name)) { m.visible = false; return; }
+        const dimRod = /^(?:arm|leg)_[lr]_(?:upper|lower)$/.test(m.name);
         const mm = (m.material as THREE.MeshStandardMaterial).clone();
-        mm.transparent = true; mm.opacity = 0.68; mm.emissive = new THREE.Color(0x1d7280); mm.emissiveIntensity = 0.32; mm.depthWrite = false;
+        mm.transparent = true; mm.opacity = dimRod ? 0.24 : 0.52; mm.emissive = new THREE.Color(0x1d7280); mm.emissiveIntensity = dimRod ? 0.08 : 0.20; mm.depthWrite = false;
+        if (dimRod) mm.color.lerp(new THREE.Color(0x07343c), 0.62);
         m.material = mm;
       }
     });
