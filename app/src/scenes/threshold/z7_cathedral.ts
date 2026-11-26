@@ -199,11 +199,13 @@ export default class ThresholdZ7Cathedral extends Scene {
   private assemblyShadowMat?: THREE.MeshBasicMaterial;
   private rift!: THREE.Mesh;
   private riftEdges: THREE.Mesh[] = [];
+  private riftTeeth: { mesh: THREE.Mesh; side: number; seed: number; z: number }[] = [];
   private shaftLights: THREE.MeshBasicMaterial[] = [];
   private fallDebris: { mesh: THREE.Mesh; seed: number; baseY: number }[] = [];
   private shaftMachines: { group: THREE.Group; seed: number; baseY: number; baseZ: number; baseX: number; speed: number; orient: number }[] = [];
   private shaftCamLight?: THREE.PointLight;
-  private topplingMachines: { group: THREE.Group; seed: number; start: number }[] = [];
+  private topplingMachines: { group: THREE.Group; seed: number; start: number; baseX: number; baseZ: number; baseYaw: number }[] = [];
+  private riftDebris: { mesh: THREE.Object3D; seed: number; start: number; baseX: number; baseY: number; baseZ: number }[] = [];
   private z7DetailObjects: THREE.Object3D[] = [];
   private disposables: { dispose(): void }[] = [];
   private tmpM = new THREE.Matrix4();
@@ -662,11 +664,23 @@ export default class ThresholdZ7Cathedral extends Scene {
     this.disposables.push(riftMat);
     this.rift = this.box(this.s, [1, 0.025, 92], [0, 0.04, -92], riftMat);
     this.rift.visible = false;
-    const edgeMat = this.mat(0x25313b, 0.28, 0.55, 0x365d78, 0.4);
+    const edgeMat = this.mat(0x151f27, 0.42, 0.55, 0x1f4d68, 0.42);
     for (const side of [-1, 1]) {
       const e = this.box(this.s, [0.18, 0.12, 92], [side * 0.55, 0.06, -92], edgeMat, [0, 0, side * 0.06]);
       e.visible = false;
       this.riftEdges.push(e);
+    }
+    // Broken concrete/metal lips make the widening crack read as torn floor rather
+    // than two continuous neon lane markings.
+    for (const side of [-1, 1]) {
+      for (let ti = 0; ti < 24; ti++) {
+        const seed = hash(ti * 17.3 + side * 5.1);
+        const z = -48 - ti * 3.8 - seed * 1.2;
+        const tooth = this.box(this.s, [0.34 + seed * 0.42, 0.09 + hash(ti * 3) * 0.08, 0.9 + hash(ti * 7) * 1.4], [side * 0.55, 0.08, z], edgeMat, [(seed - 0.5) * 0.08, (seed - 0.5) * 0.35, side * (0.04 + seed * 0.08)]);
+        tooth.visible = false;
+        this.z7DetailObjects.push(tooth);
+        this.riftTeeth.push({ mesh: tooth, side, seed, z });
+      }
     }
 
     // Vertical fall shaft below the rift: repeating machine-light streaks and warm home glow below.
@@ -825,22 +839,91 @@ export default class ThresholdZ7Cathedral extends Scene {
     this.box(this.s, [1.05, 0.018, 4.3], [0, -29.91, -101.4], this.mat(0x6f2521, 0.9));
     for (let i = 0; i < 5; i++) this.box(this.s, [0.86, 0.012, 0.055], [0, -29.89, -103.0 + i * 0.78], this.mat(i % 2 ? 0x28434a : 0xa56b34, 0.9));
 
-    // Rift-collapse machine sequence: multiple full cabinet volumes tip into the widening crack,
-    // staggered so collapse density continues through the fall rather than front-loading one crash.
-    for (let i = 0; i < 9; i++) {
+    // Rift-collapse machine sequence: hollow cabinets are staged as a traveling wave just
+    // ahead of the camera, then slide inward and drop through the widening floor crack.
+    const riftGlassMat = new THREE.MeshPhysicalMaterial({ color: 0xbfe8ff, roughness: 0.14, metalness: 0.03, transparent: true, opacity: 0.20, depthWrite: false, emissive: 0x12384e, emissiveIntensity: 0.48, side: THREE.DoubleSide });
+    const riftCarcassMat = this.mat(0x111923, 0.5, 0.58, 0x061522, 0.28);
+    const riftTopMat = this.mat(0x1b2731, 0.42, 0.64, 0x07131c, 0.22);
+    const riftInnerMat = this.mat(0x020509, 0.76, 0.18);
+    const riftWearMat = this.mat(0xb69b69, 0.84, 0.02, 0x160c04, 0.1);
+    this.disposables.push(riftGlassMat);
+    const riftProductMats = [productRed, productTeal, paper, chrome, warmGlow];
+    const collapsePlan: [number, number][] = [];
+    for (let pair = 0; pair < 12; pair++) {
+      const z = -48 - pair * 4.35;
+      const start = 176.35 + pair * 0.76;
+      collapsePlan.push([z, start], [z - 0.95 - hash(pair * 3.1) * 0.45, start + 0.18 + hash(pair * 5.7) * 0.12]);
+    }
+    collapsePlan.forEach(([z, start], i) => {
       const side = i % 2 ? -1 : 1;
       const g = new THREE.Group();
-      const z = -55 - i * 4.6;
-      g.position.set(side * (2.65 + hash(i * 4) * 0.55), 0, z);
-      const body = this.box(g, [0.9, 2.0, 1.05], [0, 1.0, 0], darkMetal);
-      const face = new THREE.MeshBasicMaterial({ color: i % 3 ? 0x77c9ff : 0xffb36a, transparent: true, opacity: 0.65 });
-      this.disposables.push(face);
-      this.box(g, [0.055, 1.45, 0.72], [-side * 0.47, 1.08, 0], face);
-      body.castShadow = true;
+      const baseX = side * (2.02 + hash(i * 4) * 0.38);
+      const baseYaw = (side > 0 ? 0 : Math.PI) + side * 0.24;
+      g.position.set(baseX, 0, z);
+      g.rotation.y = baseYaw;
+      g.scale.setScalar(1.1 + hash(i * 6.1) * 0.08);
+      const widthScale = 0.92 + hash(i * 2.3) * 0.18;
+      const heightScale = 0.94 + hash(i * 3.7) * 0.14;
+      // Open carcass: side walls, caps, rear skin and dark cavity are separate shaded volumes.
+      this.box(g, [0.78, 1.95 * heightScale, 0.075], [0, 0.98 * heightScale, -0.50 * widthScale], riftCarcassMat);
+      this.box(g, [0.78, 1.95 * heightScale, 0.075], [0, 0.98 * heightScale, 0.50 * widthScale], riftCarcassMat);
+      this.box(g, [0.78, 0.085, 1.02 * widthScale], [0, 1.91 * heightScale, 0], riftTopMat);
+      this.box(g, [0.78, 0.085, 1.02 * widthScale], [0, 0.06, 0], riftTopMat);
+      this.box(g, [0.07, 1.86 * heightScale, 0.96 * widthScale], [0.35, 0.98 * heightScale, 0], riftCarcassMat);
+      this.box(g, [0.035, 1.52 * heightScale, 0.78 * widthScale], [-0.28, 1.05 * heightScale, 0], riftInnerMat);
+      // Recessed shelves and physical product rows sit in the cavity behind the glass.
+      for (let shelf = 0; shelf < 3; shelf++) {
+        this.box(g, [0.44, 0.03, 0.75 * widthScale], [-0.12, 0.58 * heightScale + shelf * 0.43, 0], chrome);
+        for (let col = 0; col < 4; col++) {
+          if (hash(i * 31 + shelf * 7 + col) < 0.16) continue;
+          const mat = riftProductMats[(i + shelf + col) % riftProductMats.length]!;
+          this.box(g, [0.12, 0.11 + hash(i + col) * 0.055, 0.11], [-0.18 + hash(i + shelf * 13 + col) * 0.12, 0.66 * heightScale + shelf * 0.43, -0.28 + col * 0.18], mat, [0, hash(i + col) * 0.5, 0]);
+        }
+      }
+      // Glass front, edge rails, marquee and worn kick plate catch orientation-dependent light.
+      this.box(g, [0.025, 1.48 * heightScale, 0.78 * widthScale], [-0.43, 1.04 * heightScale, 0], riftGlassMat);
+      const edgeGlow = new THREE.MeshBasicMaterial({ color: i % 3 ? 0x9fdcff : 0xffb36a, transparent: true, opacity: 0.78 });
+      this.disposables.push(edgeGlow);
+      this.box(g, [0.035, 1.62 * heightScale, 0.035], [-0.455, 1.04 * heightScale, -0.43 * widthScale], edgeGlow);
+      this.box(g, [0.035, 1.62 * heightScale, 0.035], [-0.455, 1.04 * heightScale, 0.43 * widthScale], edgeGlow);
+      this.box(g, [0.04, 0.16, 0.72 * widthScale], [-0.46, 1.76 * heightScale, 0], edgeGlow);
+      // Full perimeter cage: even a rear/side-first tumble reads as a deep rectangular cabinet.
+      for (const x of [-0.455, 0.37]) {
+        for (const zz of [-0.51 * widthScale, 0.51 * widthScale]) this.box(g, [0.024, 1.9 * heightScale, 0.024], [x, 0.98 * heightScale, zz], edgeGlow);
+      }
+      for (const yy of [0.055, 1.91 * heightScale]) {
+        for (const zz of [-0.51 * widthScale, 0.51 * widthScale]) this.box(g, [0.82, 0.024, 0.024], [-0.04, yy, zz], edgeGlow);
+        for (const x of [-0.455, 0.37]) this.box(g, [0.024, 0.024, 1.02 * widthScale], [x, yy, 0], edgeGlow);
+      }
+      for (let wear = 0; wear < 4; wear++) {
+        this.box(g, [0.022, 0.025 + hash(i + wear) * 0.04, 0.12 + hash(i * 2 + wear) * 0.18], [-0.472, 0.22 + wear * 0.36, (hash(i * 5 + wear) - 0.5) * 0.56], riftWearMat);
+      }
+      // Rear service-panel cues keep the machine identifiable when the tumble exposes its back.
+      for (let vent = 0; vent < 5; vent++) {
+        this.box(g, [0.018, 0.018, 0.48 * widthScale], [0.392, 0.62 + vent * 0.11, 0], chrome);
+      }
+      this.box(g, [0.02, 0.22, 0.34], [0.397, 1.42, -0.16], i % 3 ? productTeal : productRed);
+      this.box(g, [0.021, 0.09, 0.28], [0.402, 1.16, 0.18], paper);
+      this.box(g, [0.022, 0.32, 0.08], [0.405, 0.98, -0.32], riftWearMat);
+      const cavityLight = new THREE.PointLight(i % 3 ? 0x8fd7ff : 0xffb06a, 4.2, 4.4, 1.25);
+      cavityLight.position.set(-0.16, 1.15, 0);
+      g.add(cavityLight);
       this.s.add(g);
       this.z7DetailObjects.push(g);
-      this.topplingMachines.push({ group: g, seed: hash(i * 9.7), start: 176.8 + i * 0.82 });
-    }
+      this.topplingMachines.push({ group: g, seed: hash(i * 9.7), start, baseX, baseZ: z, baseYaw });
+      // Loose product debris is independent of the carcass so each collapse visibly sheds contents.
+      for (let j = 0; j < 5; j++) {
+        const mat = riftProductMats[(i + j) % riftProductMats.length]!;
+        const dx = (hash(i * 19 + j) - 0.5) * 0.55;
+        const dz = (hash(i * 23 + j) - 0.5) * 0.75;
+        const debris = j % 2 === 0
+          ? this.cyl(this.s, 0.04, 0.04, 0.12, [baseX + dx, 0.12, z + dz], mat, 10)
+          : this.box(this.s, [0.11, 0.045, 0.15], [baseX + dx, 0.08, z + dz], mat, [hash(i + j), hash(j * 3) * 2, hash(i * 7 + j)]);
+        debris.visible = false;
+        this.z7DetailObjects.push(debris);
+        this.riftDebris.push({ mesh: debris, seed: hash(i * 41 + j * 7), start: start + 0.18 + j * 0.035, baseX: baseX + dx, baseY: 0.08 + hash(j) * 0.12, baseZ: z + dz });
+      }
+    });
 
     // Cathedral dressing: coin piles, toppled machine, cables/chains, receipt strips, altar-like change machine.
     for (let i = 0; i < 9; i++) {
@@ -1414,7 +1497,7 @@ export default class ThresholdZ7Cathedral extends Scene {
       d.mesh.rotation.x += 0.0; // orientation is rewritten below as a pure function of t
       d.mesh.rotation.set((d.seed * 4 + t * (0.8 + d.seed)) % (Math.PI * 2), (d.seed * 7 + t * (0.45 + d.seed * 0.4)) % (Math.PI * 2), (d.seed * 3 + t * 0.7) % (Math.PI * 2));
     }
-    const riftOpen = smooth((t - 176) / 7.5);
+    const riftOpen = smooth((t - 176) / 6.2);
     this.rift.visible = riftOpen > 0;
     this.rift.scale.x = Math.max(0.02, riftOpen * 7.5);
     this.riftEdges.forEach((e, i) => {
@@ -1422,14 +1505,38 @@ export default class ThresholdZ7Cathedral extends Scene {
       e.position.x = (i === 0 ? -1 : 1) * (0.4 + riftOpen * 3.7);
       e.rotation.z = (i === 0 ? 1 : -1) * riftOpen * 0.24;
     });
+    for (const tooth of this.riftTeeth) {
+      tooth.mesh.visible = riftOpen > 0.025;
+      tooth.mesh.position.x = tooth.side * (0.38 + riftOpen * 3.7 + (tooth.seed - 0.5) * (0.34 + riftOpen * 0.55));
+      tooth.mesh.position.y = 0.065 + tooth.seed * 0.05 + riftOpen * 0.025;
+      tooth.mesh.rotation.y = (tooth.seed - 0.5) * (0.3 + riftOpen * 0.45);
+      tooth.mesh.rotation.z = tooth.side * (0.05 + riftOpen * (0.18 + tooth.seed * 0.16));
+    }
 
     for (const m of this.topplingMachines) {
-      const u = smooth((t - m.start) / 1.35);
-      const side = Math.sign(m.group.position.x || 1);
-      m.group.rotation.z = side * u * (1.05 + m.seed * 0.35);
-      m.group.rotation.x = u * (0.18 + m.seed * 0.2);
-      m.group.position.y = -u * u * (1.2 + m.seed * 0.8);
-      m.group.position.x += 0; // position is otherwise static; rotation carries the topple read
+      const side = Math.sign(m.baseX || 1);
+      const topple = smooth((t - m.start) / 1.65);
+      const swallow = smooth((t - m.start - 0.38) / 1.55);
+      const dropT = Math.max(0, t - m.start - 1.38);
+      m.group.rotation.z = side * topple * (1.02 + m.seed * 0.38) + swallow * side * 0.34;
+      m.group.rotation.x = topple * (0.16 + m.seed * 0.22) + dropT * 0.09;
+      m.group.rotation.y = m.baseYaw + (m.seed - 0.5) * 0.12 * topple;
+      m.group.position.x = m.baseX * (1 - 0.82 * swallow);
+      m.group.position.z = m.baseZ - swallow * (0.45 + m.seed * 0.35);
+      m.group.position.y = -topple * topple * (0.12 + m.seed * 0.08) - dropT * dropT * (0.42 + m.seed * 0.28);
+    }
+    for (const d of this.riftDebris) {
+      const active = t >= d.start && t < 193.8;
+      d.mesh.visible = active;
+      if (!active) continue;
+      const u = smooth((t - d.start) / 1.05);
+      const dropT = Math.max(0, t - d.start - 1.0);
+      const bounce = Math.abs(Math.sin((t - d.start) * (8.5 + d.seed * 5) + d.seed * 4)) * Math.max(0, 1 - u) * 0.16;
+      d.mesh.position.x = d.baseX * (1 - 0.72 * u) + (d.seed - 0.5) * 0.28 * u;
+      d.mesh.position.z = d.baseZ - u * (0.3 + d.seed * 0.45);
+      d.mesh.position.y = d.baseY + bounce - dropT * dropT * (1.25 + d.seed * 0.8);
+      d.mesh.rotation.x = d.seed * 3 + (t - d.start) * (3.2 + d.seed * 4);
+      d.mesh.rotation.z = d.seed * 2 + (t - d.start) * (2.6 + d.seed * 3);
     }
 
     // Cabinets tumble as closed-form functions of fall time. They fall slower than the
