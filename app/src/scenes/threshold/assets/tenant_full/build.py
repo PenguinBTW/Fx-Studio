@@ -39,8 +39,8 @@ lower = empty('lower_body')
 lower['fx_part'] = 'lower_body'
 parent(lower, root)
 
-def group(name, par, part=None):
-    ob = empty(name)
+def group(name, par, part=None, loc=(0, 0, 0)):
+    ob = empty(name, loc)
     parent(ob, par)
     if part and part not in seen_parts:
         ob['fx_part'] = part
@@ -55,7 +55,7 @@ def add(o, par, part=None):
     return o
 
 # Head control: small smooth pool-tile ovoid, too small for the body, face reduced to one black slot.
-head_g = group('head_control', upper, 'head')
+head_g = group('head_control', upper, 'head', (0, 0.08, 3.55))
 add(sphere('head_tile_ovoid', 0.16, (0, 0.16, 3.86), TILE, scale=(0.78, 0.68, 1.12), segments=48, rings=24), head_g)
 # Grout lines are raised dark curves crossing the ovoid rather than texture noise.
 for i, z in enumerate((3.76, 3.86, 3.96)):
@@ -75,14 +75,14 @@ for i, x in enumerate((-0.055, 0.0, 0.055)):
 add(box('head_black_face_slot', (0.038, 0.012, 0.13), (0, 0.274, 3.87), BLACK, bev=0.004, rot=(math.radians(4), 0, 0)), head_g, 'face_slot')
 
 # Felt neck segments, deliberately visible as stacked wrong material.
-neck_g = group('neck_control', upper, 'neck')
+neck_g = group('neck_control', upper, 'neck', (0, 0.06, 3.02))
 for i in range(4):
     z = 3.58 - i * 0.14
     add(cyl(f'neck_{i+1}', 0.058 + i * 0.004, 0.15, (0, 0.08 - i * 0.012, z), FELT, verts=32, bev=0.006), neck_g, 'neck_segments')
     add(torus(f'neck_thread_{i+1}', 0.061 + i * 0.004, 0.004, (0, 0.08 - i * 0.012, z + 0.055), PAPER_DARK, major_segments=32, minor_segments=6), neck_g, 'neck_segments')
 
 # Ribcage: bent vending-machine glass front with visible coils, shelves, frames, and rattling coins.
-rib_g = group('ribcage_control', upper, 'ribcage')
+rib_g = group('ribcage_control', upper, 'ribcage', (0, 0, 2.78))
 add(box('ribcage_backplate', (0.68, 0.16, 1.08), (0, -0.02, 2.78), DARK_METAL, bev=0.035, rot=(math.radians(-4), 0, 0)), rib_g)
 add(box('ribcage_glass_front', (0.58, 0.025, 0.92), (0, 0.105, 2.79), GLASS, bev=0.018, rot=(math.radians(-4), 0, 0)), rib_g, 'glass_front')
 for x in (-0.33, 0.33):
@@ -111,7 +111,7 @@ for i in range(18):
             rot=(R.random() * math.pi, R.random() * math.pi, R.random() * math.pi), verts=20), rib_g, 'coins')
 
 # Spine is a exposed sequence of vending coils climbing the back.
-spine_g = group('spine_control', upper, 'spine')
+spine_g = group('spine_control', upper, 'spine', (0, -0.16, 2.75))
 for seg in range(8):
     z0 = 2.16 + seg * 0.15
     pts = []
@@ -121,7 +121,7 @@ for seg in range(8):
     add(curve(f'spine_{seg+1}', pts, 0.012, CHROME), spine_g, 'spine_coils')
 
 # Pelvis: folded card wedges and torn paper seams.
-pelvis_g = group('pelvis_control', lower, 'pelvis')
+pelvis_g = group('pelvis_control', lower, 'pelvis', (0, 0, 2.03))
 add(box('pelvis_folded_card', (0.5, 0.28, 0.34), (0, -0.02, 2.03), PAPER, bev=0.018, rot=(math.radians(-8), 0, math.radians(4))), pelvis_g)
 for i in range(9):
     add(box(f'pelvis_torn_seam_{i}', (0.025, 0.012, R.uniform(0.12, 0.28)),
@@ -131,9 +131,9 @@ for i in range(9):
 # Arms are longer than legs: fused toy balls over chrome coil cores. Controls let the scene burst/twitch them.
 def build_ball_arm(side):
     sx = -1 if side == 'l' else 1
-    arm_g = group(f'arm_{side}_control', upper, f'arm_{side}')
-    upper_g = group(f'arm_{side}_upper_control', arm_g, f'arm_{side}_upper')
-    lower_g = group(f'arm_{side}_lower_control', arm_g, f'arm_{side}_lower')
+    arm_g = group(f'arm_{side}_control', upper, f'arm_{side}', (sx * 0.38, 0.02, 3.23))
+    upper_g = group(f'arm_{side}_upper_control', arm_g, f'arm_{side}_upper', (sx * 0.38, 0.02, 3.23))
+    lower_g = group(f'arm_{side}_lower_control', arm_g, f'arm_{side}_lower', (sx * 0.64, 0.11, 2.42))
     centers = []
     for i in range(22):
         u = i / 21
@@ -160,7 +160,7 @@ arm_l_g, wrist_l = build_ball_arm('l')
 arm_r_g, wrist_r = build_ball_arm('r')
 
 # Left hand: one vending spiral coil splitting into curling metal fingers.
-hand_l_g = group('hand_l_control', arm_l_g, 'hand_l')
+hand_l_g = group('hand_l_control', arm_l_g, 'hand_l', wrist_l)
 add(sphere('hand_l_palm_cuff', 0.095, wrist_l, CHROME, scale=(1.1, 0.75, 0.9), segments=32, rings=16), hand_l_g, 'palm')
 for finger in range(5):
     spread = (finger - 2) / 2
@@ -175,7 +175,7 @@ for finger in range(5):
     add(sphere(f'hand_l_finger_tip_{finger}', 0.018, pts[-1], CHROME, scale=(0.75, 0.75, 1.35), segments=20, rings=10), hand_l_g, 'coil_fingers')
 
 # Right hand: folded paper strips, each finger curled and torn at the tip.
-hand_r_g = group('hand_r_control', arm_r_g, 'hand_r')
+hand_r_g = group('hand_r_control', arm_r_g, 'hand_r', wrist_r)
 add(box('hand_r_paper_palm', (0.18, 0.08, 0.16), wrist_r, PAPER, bev=0.012, rot=(0.1, 0.0, -0.08)), hand_r_g, 'paper_palm')
 for finger in range(5):
     spread = (finger - 2) / 2
@@ -190,9 +190,9 @@ for finger in range(5):
 # Legs: stacked pool tiles and folded card, thin enough that the arms dominate the silhouette.
 def build_leg(side):
     sx = -1 if side == 'l' else 1
-    leg_g = group(f'leg_{side}_control', lower, f'leg_{side}')
-    upper_g = group(f'leg_{side}_upper_control', leg_g, f'leg_{side}_upper')
-    lower_g = group(f'leg_{side}_lower_control', leg_g, f'leg_{side}_lower')
+    leg_g = group(f'leg_{side}_control', lower, f'leg_{side}', (sx * 0.18, 0, 1.95))
+    upper_g = group(f'leg_{side}_upper_control', leg_g, f'leg_{side}_upper', (sx * 0.18, 0, 1.95))
+    lower_g = group(f'leg_{side}_lower_control', leg_g, f'leg_{side}_lower', (sx * 0.28, 0.04, 0.95))
     for i in range(6):
         z = 1.84 - i * 0.16
         x = sx * (0.18 + 0.018 * i)
