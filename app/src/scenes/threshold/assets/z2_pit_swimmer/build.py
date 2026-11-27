@@ -7,12 +7,9 @@ HERE=os.path.dirname(os.path.abspath(__file__))
 def reset():
     bpy.ops.object.select_all(action='SELECT'); bpy.ops.object.delete(use_global=False)
 
-def material(name,color,rough=.45,metal=0.0,emission=None,estr=0.0):
+def material(name,color,rough=.62,metal=0.0):
     m=bpy.data.materials.new(name); m.diffuse_color=(*color,1); m.use_nodes=True
     bs=m.node_tree.nodes.get('Principled BSDF'); bs.inputs['Base Color'].default_value=(*color,1); bs.inputs['Roughness'].default_value=rough; bs.inputs['Metallic'].default_value=metal
-    if emission:
-        key='Emission Color' if 'Emission Color' in bs.inputs else 'Emission'
-        bs.inputs[key].default_value=(*emission,1); bs.inputs['Emission Strength'].default_value=estr
     return m
 
 def finish(o,name,part,mat=None):
@@ -24,211 +21,252 @@ def smooth(o):
     if hasattr(o.data,'polygons'):
         for p in o.data.polygons: p.use_smooth=True
 
-def sphere(name,loc,scale,mat,part=None,seg=28,rings=14):
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=seg,ring_count=rings,location=loc)
-    o=bpy.context.object; o.scale=scale; bpy.ops.object.transform_apply(location=False,rotation=False,scale=True); smooth(o)
+def organic(o,amt=.12,seed=0):
+    if not hasattr(o.data,'vertices'): return
+    # Multi-octave deterministic radial displacement baked into the mesh itself. The first
+    # octave breaks silhouette arcs; the second makes the surface leathery and collapsed;
+    # the third adds small diseased lumpiness. Noise is directional so seams do not tear.
+    for v in o.data.vertices:
+        x,y,z=v.co
+        rr=max((x*x+y*y+z*z)**.5,1e-6); nx,ny,nz=x/rr,y/rr,z/rr
+        low=(math.sin(nx*3.1+seed*.71)+math.sin(ny*4.3-seed*1.13)+math.sin(nz*3.7+seed*.37))/3.0
+        med=math.sin((nx*9.7+ny*6.1)+seed*.53)*math.sin((nz*11.9-nx*4.7)-seed*.29)
+        fine=math.sin(nx*29.0+seed)*math.sin(ny*31.0-seed*.7)*math.sin(nz*27.0+seed*.3)
+        k=1.0+amt*(low*.72+med*.48+fine*.16)
+        # radially collapse/expand the primitive, then skew it so no axis-aligned ellipsoid remains
+        v.co.x=x*k+ny*amt*.10*med
+        v.co.y=y*(1.0+amt*(low*.42+med*.20))
+        v.co.z=z*k+nx*amt*.09*low-amt*.16*max(0.0,z)*(.5+.5*math.sin(seed+nx*4.0))
+    o.data.update()
+
+def sphere(name,loc,scale,mat,part=None,seg=20,rings=10,rot=(0,0,0),deform=.12):
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=seg,ring_count=rings,location=loc,rotation=rot)
+    o=bpy.context.object; o.scale=scale; bpy.ops.object.transform_apply(location=False,rotation=False,scale=True); smooth(o); organic(o,deform*1.35,len(name)*.731)
     return finish(o,name,part or name,mat)
 
-def cube(name,loc,dims,mat,part=None,bevel=.02,rot=(0,0,0)):
-    bpy.ops.mesh.primitive_cube_add(location=loc,rotation=rot)
-    o=bpy.context.object; o.scale=(dims[0]/2,dims[1]/2,dims[2]/2); bpy.ops.object.transform_apply(location=False,rotation=False,scale=True)
-    if bevel:
-        mod=o.modifiers.new('moulded_rounding','BEVEL'); mod.width=bevel; mod.segments=3
-    return finish(o,name,part or name,mat)
-
-def cyl_between(name,a,b,r,mat,part=None,vertices=20):
+def cyl_between(name,a,b,r,mat,part=None,vertices=10):
     a,b=Vector(a),Vector(b); d=b-a; mid=(a+b)*.5
     bpy.ops.mesh.primitive_cylinder_add(vertices=vertices,radius=r,depth=d.length,location=mid)
     o=bpy.context.object; o.rotation_mode='QUATERNION'; o.rotation_quaternion=d.to_track_quat('Z','Y'); smooth(o)
     return finish(o,name,part or name,mat)
 
-def cone(name,loc,r1,r2,depth,mat,part=None,rot=(0,0,0),vertices=20):
+def cone(name,loc,r1,r2,depth,mat,part=None,rot=(0,0,0),vertices=9):
     bpy.ops.mesh.primitive_cone_add(vertices=vertices,radius1=r1,radius2=r2,depth=depth,location=loc,rotation=rot)
-    o=bpy.context.object; smooth(o); return finish(o,name,part or name,mat)
+    o=bpy.context.object; smooth(o); organic(o,.08,len(name)*.41); return finish(o,name,part or name,mat)
 
 def torus(name,loc,major,minor,mat,part=None,rot=(0,0,0)):
-    bpy.ops.mesh.primitive_torus_add(major_radius=major,minor_radius=minor,major_segments=32,minor_segments=10,location=loc,rotation=rot)
-    o=bpy.context.object; smooth(o); return finish(o,name,part or name,mat)
+    bpy.ops.mesh.primitive_torus_add(major_radius=major,minor_radius=minor,major_segments=24,minor_segments=7,location=loc,rotation=rot)
+    o=bpy.context.object; smooth(o); organic(o,.16,len(name)*.61); return finish(o,name,part or name,mat)
 
 def empty(name,loc=(0,0,0)):
     o=bpy.data.objects.new(name,None); bpy.context.collection.objects.link(o); o.location=loc; o['fx_part']=name; return o
 
 reset()
-red=material('ball_red_vinyl',(0.82,0.035,0.025),.2)
-yellow=material('slide_yellow_plastic',(1.0,0.65,0.025),.18)
-blue=material('ball_blue_vinyl',(0.025,0.19,0.85),.2)
-green=material('ball_green_vinyl',(0.03,0.62,0.16),.22)
-orange=material('ball_orange_vinyl',(1.0,0.25,0.025),.2)
-white=material('clouded_eye_sclera',(0.43,0.39,0.25),.74)
-black=material('clouded_pupil_black',(0.010,0.006,0.003),.52)
-mouthdark=material('mouth_deep_red_black',(0.055,0.002,0.004),.65)
-toothmat=material('slide_stopper_teeth',(0.76,0.64,0.40),.48)
-toothold=material('aged_stopper_teeth',(0.48,0.37,0.22),.62)
-toothdark=material('worn_tooth_edges',(0.28,0.19,0.10),.68)
-seammat=material('vinyl_seam_shadow',(0.08,0.025,0.02),.72)
+# Cold corpse-pallor flesh family: deliberately close in hue, with localized bruise/liver concentration.
+flesh=material('corpse_grey_pink_flesh',(0.055,0.043,0.040),.78)
+flesh2=material('cold_pallid_flesh',(0.070,0.064,0.052),.82)
+flesh3=material('grey_green_necrosis',(0.038,0.070,0.047),.86)
+bruise=material('liver_bruise_mass',(0.085,0.012,0.010),.88)
+deep=material('wet_mouth_black_red',(0.018,0.002,0.003),.28)
+gum=material('dark_gum_mass',(0.055,0.010,0.012),.42)
+bone=material('yellowed_translucent_bone',(0.12,0.085,0.038),.78)
+boneold=material('rotten_bone_edges',(0.045,0.022,0.010),.88)
+eyewhite=material('necrotic_eye_slit',(0.20,0.19,0.14),.90)
+eyedark=material('dead_eye_dark',(0.008,0.012,0.010),.84)
 root=empty('pit_swimmer_root')
 
-# Broad fused-ball skull, one metre-plus across. Balls overlap rather than merely touching.
-palette=[red,blue,green,orange,yellow]
-skull_centers=[]
-for i in range(54):
-    # deterministic low-discrepancy shell clustered into an ellipsoid
-    u=(i*0.61803398875)%1; v=((i*0.754877666)+.17)%1; w=((i*0.56984029)+.31)%1
-    theta=2*math.pi*u; phi=math.acos(2*v-1); rr=.48*(.42+.58*w)
-    x=math.sin(phi)*math.cos(theta)*rr*1.2
-    y=math.sin(phi)*math.sin(theta)*rr*.72-.02
-    z=math.cos(phi)*rr*.72+.08
-    # The skull is not a symmetrical inflatable egg: one side bulges outward and downward,
-    # the crown slumps, and the jaw-side mass pinches inward. This preserves the fused-ball
-    # construction while killing the bevelled-box/perfect-ellipsoid read at delivery distance.
-    if x > 0:
-        x *= 1.16 + .05*math.sin(i*1.7)
-        y -= .035*w
-    else:
-        x *= .91 + .04*math.cos(i*2.1)
-        z += .018*math.sin(i*.9)
-    if z > .08:
-        z += .045*math.sin(i*.73) - .025*max(0., x)
-    if y < -.16:
-        x *= .92
-        z -= .025
-    skull_centers.append((x,y,z))
-    r=.12+((i*37)%11)*.006
-    b=sphere(f'fused_skull_ball_{i+1:02d}',(x,y,z),(r,r,r),palette[i%len(palette)],seg=32,rings=16); b.parent=root
-    # visible vinyl highlight cap/seam on selected balls
-    if i%5==0:
-        torus(f'fused_skull_ball_{i+1:02d}_seam',(x,y,z),r*.78,r*.018,seammat,rot=(math.pi/2,0,theta)).parent=root
+# Asymmetric grub-cranium: overlapping sagging ellipsoid tissue masses, not balls.
+centers=[]
+for i in range(18):
+    u=(i*.61803398875)%1; v=((i*.754877666)+.17)%1; w=((i*.56984029)+.31)%1
+    th=math.tau*u; ph=math.acos(2*v-1); rr=.34*(.30+.70*w)
+    x=math.sin(ph)*math.cos(th)*rr*1.20; y=math.sin(ph)*math.sin(th)*rr*.69-.025; z=math.cos(ph)*rr*.72+.07
+    if x>0: x*=1.23+.04*math.sin(i); y-=.045*w
+    else: x*=.88; z+=.025*math.sin(i*.8)
+    if z>.08: z+=.055*math.sin(i*.73)-.035*max(0,x)
+    centers.append((x,y,z))
+    r=.175+((i*37)%9)*.012
+    mat=[flesh,flesh2,flesh3,flesh,bruise][i%5 if i%11==0 else i%3]
+    o=sphere(f'fused_skull_mass_{i+1:02d}',(x,y,z),(r*(.70+((i*13)%7)*.08),r*(.48+((i*17)%5)*.11),r*(1.00+((i*11)%6)*.10)),mat,seg=20,rings=10,rot=(math.sin(i*1.7)*.7,math.sin(i*.9)*.8,math.cos(i*1.3)*.7),deform=.16)
+    o.parent=root
 
-# Deep mouth cavity facing negative Y.
-sphere('mouth_cavity',(0,-.48,-.02),(.42,.20,.28),mouthdark,seg=32,rings=16).parent=root
-# thick folded vinyl gum/lip rim; the mouth is a soft-toy anatomical opening, not a flat black oval
-gum=torus('mouth_gum_lip',(0,-.505,-.02),.33,.035,mouthdark,rot=(math.pi/2,0,0)); gum.scale=(1.22,.72,.72); gum.parent=root
-for side,x in [('l',-.31),('r',.31)]:
-    sphere(f'mouth_corner_fold_{side}',(x,-.50,-.02),(.075,.045,.09),yellow,seg=20,rings=10).parent=root
-# Hinged yellow slide jaws, assembled from overlapping curved chute sections.
+
+# Dense crust relief inherited from the Tenant lesson: no large convex cranial surface is
+# allowed to remain clean. Low-frequency lobes are interrupted by sub-lobe scabs, ulcers,
+# raised vein knots, and brittle necrotic islands, concentrated at seams and underside.
+for k in range(126):
+    cx,cy,cz=centers[k%len(centers)]
+    band=(k*17)%5
+    ox=math.sin(k*1.91)*(.045+band*.012)
+    oz=math.cos(k*1.37)*(.045+(k%4)*.010)
+    # bias relief toward visible front/top and crease boundaries, with extra darkening low down
+    px=cx+ox
+    py=cy-.335-((k*13)%7)*.008
+    pz=cz+oz
+    underside=max(0.0,.10-pz)
+    cm=bruise if (k%4==0 or underside>0.03) else (flesh3 if k%3==0 else boneold)
+    sc=sphere(f'cranial_crust_relief_{k+1:03d}',(px,py,pz),(.034+(k%5)*.007,.012+(k%3)*.003,.020+(k%4)*.005),cm,seg=8,rings=4,rot=(k*.19,k*.11,k*.23),deform=.32)
+    sc.parent=root
+    if k%9==0:
+        # brittle raised spike breaking the lobe silhouette at close range
+        cone(f'cranial_crust_spike_{k+1:03d}',(px,py-.008,pz+.012),.009+(k%3)*.002,.001,.035+(k%4)*.008,boneold if k%2 else bruise,rot=(random.uniform(-.5,.5),random.uniform(-.5,.5),random.uniform(-.5,.5)),vertices=5).parent=root
+
+
+# Explicit front-carapace crust field placed on the camera-facing skin. Unlike the statistical
+# cluster pass, this guarantees no broad smooth convex region survives at the actual hero angle.
+for k in range(96):
+    col=k%12; row=k//12
+    x=-.36+col*.065+math.sin(k*1.7)*.012
+    z=.035+row*.065+math.cos(k*1.3)*.012
+    # approximate the convex front shell, leaving the large eye/nose focal area mostly clear
+    if -.03<x<.29 and .16<z<.43 and k%5!=0: continue
+    y=-.405-.035*math.cos(x*5.0)-.025*math.sin(z*8.0)-((k*7)%5)*.006
+    cm=bruise if (row+col)%4==0 else (flesh3 if (row+col)%3==0 else flesh2)
+    cr=sphere(f'front_carapace_crust_{k+1:03d}',(x,y,z),(.020+(k%5)*.004,.008+(k%3)*.002,.012+(k%4)*.003),cm,seg=8,rings=4,rot=(k*.13,k*.21,k*.31),deform=.34)
+    cr.parent=root
+    if k%13==0:
+        cone(f'front_carapace_brittle_spire_{k+1:03d}',(x,y-.006,z+.012),.007+(k%3)*.002,.001,.028+(k%4)*.007,boneold,rot=(random.uniform(-.45,.45),random.uniform(-.45,.45),random.uniform(-.45,.45)),vertices=5).parent=root
+
+# Deep irregular mouth wound facing negative Y.
+mc=sphere('mouth_cavity',(0,-.485,-.035),(.43,.19,.28),deep,seg=24,rings=12,deform=.28); mc.parent=root
+# Gum is multiple overlapping lumps rather than a clean oval lip.
+for i in range(16):
+    a=math.tau*i/16
+    x=math.cos(a)*.34*(1+.12*math.sin(i*2.2)); z=-.02+math.sin(a)*.22*(1+.14*math.cos(i*1.7)); y=-.505-.018*math.sin(i)
+    g=sphere(f'mouth_gum_mass_{i+1:02d}',(x,y,z),(.075,.045,.055),gum if i%4 else bruise,seg=14,rings=7,rot=(a*.2,a*.3,a),deform=.20); g.parent=root
+
+# Jaw control empties preserve the existing runtime rig exactly.
 upper=empty('slide_mouth_upper_root',(0,-.38,.13)); upper.parent=root
 lower=empty('slide_mouth_lower_root',(0,-.38,-.16)); lower.parent=root
+
+def parent_keep(o,p):
+    o.parent=p; o.matrix_parent_inverse=p.matrix_world.inverted()
+
+# Torn upper/lower flesh flaps: elongated ragged tissue lobes, no planar plates.
 for side,rootobj,zsign in [('upper',upper,1),('lower',lower,-1)]:
-    for j in range(6):
-        yy=-.34-j*.074; zz=zsign*(.12+j*.035+(j/5)**2*.12)
-        panel=cube(f'slide_mouth_{side}_panel_{j+1}',(((-1)**j)*(.008+j*.004)+(0.018 if side=='lower' else -0.010),yy,zz),(.50-j*.045,.15,.112),yellow,bevel=.035,rot=(zsign*(.12+j*.08),(-1 if side=='upper' else 1)*(.018+j*.009),(-1)**j*(.012+j*.006)))
-        panel.parent=rootobj; panel.matrix_parent_inverse=rootobj.matrix_world.inverted()
-    # side rails make the slide silhouette unmistakable
-    for x in (-.205,.235):
-        rail=cyl_between(f'slide_mouth_{side}_rail_{x}',(x,-.31,zsign*.08),(x,-.88,zsign*.34),.034,yellow,vertices=16)
-        rail.parent=rootobj; rail.matrix_parent_inverse=rootobj.matrix_world.inverted()
+    for j in range(7):
+        x=-.31+j*.103+math.sin(j*2.1)*.018
+        y=-.43-j*.026
+        z=zsign*(.115+j*.018+(j%3)*.012)
+        flap=sphere(f'{side}_torn_flesh_flap_{j+1}',(x,y,z),(.105+((j*7)%4)*.015,.085,.045+((j*5)%3)*.012),flesh if j%3 else flesh3,seg=16,rings=8,rot=(zsign*(.25+j*.07),math.sin(j)*.35,math.cos(j*1.3)*.4),deform=.24)
+        parent_keep(flap,rootobj)
+        # exposed bone splinter ridge along the flap, irregular and embedded
+        if j not in (1,5):
+            shard=cone(f'{side}_exposed_bone_plate_{j+1}',(x+.015,y-.045,z+zsign*.035),.018+((j*3)%4)*.004,.002,.11+((j*5)%5)*.018,bone if j%3 else boneold,rot=(math.pi/2+zsign*(.25+j*.08),math.sin(j*2)*.35,math.cos(j)*.25),vertices=7)
+            parent_keep(shard,rootobj)
 
-# Abrasion, faded paint and chipped slide-plastic edges across the cranium/jaw. Small dark
-# strips interrupt the clean yellow silhouette and read as wear rather than decoration.
-for k in range(16):
-    j=k%6
-    side='upper' if k<10 else 'lower'
-    rootobj=upper if side=='upper' else lower
-    zsign=1 if side=='upper' else -1
-    yy=-.36-j*.068+random.uniform(-.012,.012)
-    zz=zsign*(.135+j*.035+(j/5)**2*.12)+zsign*.060
-    xx=(-.24+(k*.061)%.48)+random.uniform(-.015,.015)
-    patch=cube(f'jaw_abrasion_patch_{k+1:02d}',(xx,yy,zz),(.035+random.uniform(0,.075),.012,.006+random.uniform(0,.008)),seammat if k%3 else toothold,bevel=.001,rot=(zsign*(.12+j*.08),0,random.uniform(-.65,.65)))
-    patch.parent=rootobj; patch.matrix_parent_inverse=rootobj.matrix_world.inverted()
-for k in range(14):
-    cx,cy,cz=skull_centers[(k*11+3)%len(skull_centers)]
-    scar=cube(f'cranium_scuffed_paint_{k+1:02d}',(cx,cy-.12,cz+random.uniform(-.03,.03)),(.045+random.uniform(0,.07),.007,.008+random.uniform(0,.016)),seammat,bevel=.001,rot=(random.uniform(-.3,.3),random.uniform(-.2,.2),random.uniform(-1.1,1.1)))
-    scar.parent=root
+# Needle/shard teeth embedded directly into dark gum. No capsules, no flanges, no even fence.
+tooth_x=[-.30,-.255,-.205,-.158,-.102,-.052,-.006,.045,.098,.151,.214,.275]
+for row,rootobj,zsign in [('upper',upper,-1),('lower',lower,1)]:
+    for i,x in enumerate(tooth_x):
+        if (i+(0 if row=='upper' else 3))%7==2: continue  # missing teeth
+        length=(.055+((i*37)%13)*.010)*(1.0 if row=='upper' else .82)
+        radius=.0065+((i*11)%5)*.0018
+        xx=x+math.sin(i*1.7)*.015
+        yy=-.585-(i%3)*.014
+        zz=(.035 if row=='upper' else -.100)+zsign*.015*math.sin(i)
+        mat=bone if i%4 else boneold
+        rot=(math.pi if row=='upper' else 0,0,0)
+        # lean in three axes; broken teeth are short and dark-tipped
+        t=cone(f'tooth_{row}_{i+1:02d}',(xx,yy,zz),radius,.0012,length,mat,rot=(rot[0]+random.uniform(-.48,.48),random.uniform(-.45,.45),random.uniform(-.50,.50)),vertices=7)
+        parent_keep(t,rootobj)
+        if i in (3,8):
+            darktip=cone(f'tooth_{row}_{i+1:02d}_broken_dark_tip',(xx,yy-.008,zz+zsign*.012),radius*.72,.001,length*.28,boneold,rot=(rot[0]+random.uniform(-.4,.4),random.uniform(-.3,.3),random.uniform(-.4,.4)),vertices=6)
+            parent_keep(darktip,rootobj)
 
-# Twenty stopper teeth, ten upper and ten lower. They are small rubber slide-stoppers:
-# irregular lengths, clustered spacing, leaned angles, worn yellowing, chips and base flanges
-# rather than a uniform white picket fence.
-tooth_x=[-.285,-.225,-.176,-.116,-.065,-.012,.046,.105,.168,.252]
-for i in range(10):
-    x=tooth_x[i]
-    um=toothold if i in (1,4,8) else toothmat
-    ul=.072+((i*37)%9)*.008+random.uniform(-.006,.012)
-    ur=.015+((i*19)%5)*.0025+random.uniform(0,.004)
-    uy=-.665-(i%3)*.018+random.uniform(-.008,.008)
-    up=cone(f'tooth_upper_{i+1:02d}',(x,uy,.005+(i%2)*.008),ur,.0035,ul,um,rot=(math.pi+random.uniform(-.30,.30),random.uniform(-.25,.25),random.uniform(-.26,.26)),vertices=14); up.parent=upper; up.matrix_parent_inverse=upper.matrix_world.inverted()
-    cyl_between(f'tooth_upper_{i+1:02d}_rubber_flange',(x,uy,.055),(x,uy,.038),ur*1.35,toothdark if i in (2,7) else um,vertices=14).parent=upper
-    ll=.060+((i*29)%8)*.009+random.uniform(-.004,.011)
-    lr=.014+((i*13)%5)*.0025+random.uniform(0,.004)
-    lx=x+.018+(-1)**i*.008
-    ly=-.655-(i%2)*.025+random.uniform(-.008,.008)
-    lm=toothold if i in (0,5,8) else toothmat
-    lo=cone(f'tooth_lower_{i+1:02d}',(lx,ly,-.105-(i%3)*.007),lr,.0035,ll,lm,rot=(random.uniform(-.30,.30),random.uniform(-.24,.24),random.uniform(-.26,.26)),vertices=14); lo.parent=lower; lo.matrix_parent_inverse=lower.matrix_world.inverted()
-    cyl_between(f'tooth_lower_{i+1:02d}_rubber_flange',(lx,ly,-.094),(lx,ly,-.075),lr*1.35,toothdark if i in (3,6) else lm,vertices=14).parent=lower
-    if i in (2,7):
-        # chipped dark notch biting into the upper tooth silhouette
-        cube(f'tooth_chip_{i+1}',(x,-.705,.012),(0.018,.012,.020),toothdark,bevel=.002,rot=(random.uniform(-.2,.2),0,random.uniform(-.4,.4))).parent=upper
+# Uncanny half-formed face: one stretched clouded slit-eye, one mostly swallowed vestigial eye.
+sphere('eye_socket_stretched',(.205,-.365,.405),(.205,.055,.095),flesh2,seg=20,rings=10,rot=(.12,-.25,-.18),deform=.20).parent=root
+sphere('eye_lid_upper',(.19,-.414,.435),(.175,.035,.046),flesh,seg=16,rings=8,rot=(.1,-.2,-.15),deform=.18).parent=root
+sphere('eye_lid_lower',(.20,-.412,.365),(.150,.030,.035),flesh3,seg=16,rings=8,rot=(.1,-.2,-.12),deform=.18).parent=root
+# runtime-required pupil parts, tiny and mostly occluded
+for side,x,z in [('l',-.19,.34),('r',.205,.395)]:
+    bpy.ops.mesh.primitive_cylinder_add(vertices=16,radius=.008 if side=='r' else .0045,depth=.008,location=(x,-.442,z),rotation=(math.pi/2,0,0))
+    pup=finish(bpy.context.object,f'eye_pupil_{side}',f'eye_pupil_{side}',eyedark); pup.parent=root
+    sphere(f'eye_ball_{side}',(x,-.435,z),(.025 if side=='r' else .012,.004,.010),eyewhite,seg=12,rings=6,deform=.06).parent=root
+# vestigial nose/mouth-like human feature in the wrong place
+sphere('vestigial_nose_bridge',(-.16,-.405,.29),(.055,.028,.105),flesh2,seg=16,rings=8,rot=(.25,0,-.28),deform=.18).parent=root
+for side in (-1,1): sphere(f'vestigial_nostril_{side}',(-.16+side*.027,-.438,.245),(.012,.005,.008),deep,seg=10,rings=5,deform=.04).parent=root
 
-# Cartoon painted eyes are embedded into the fused-ball skull, not pasted on top of it.
-# Asymmetric vinyl socket balls overlap the eye spheres; hand-painted irises sit flush on
-# the exposed front cap, with lids and pressure seams locking them into the head structure.
-eye_specs={
-    'l':dict(x=-.275,y=-.285,z=.405,sx=.124,sy=.082,sz=.132,base=red,lid=orange,irisr=.043,pupr=.020),
-    'r':dict(x=.295,y=-.265,z=.355,sx=.108,sy=.074,sz=.119,base=blue,lid=green,irisr=.027,pupr=.012),
-}
-for side,d in eye_specs.items():
-    x,y,z=d['x'],d['y'],d['z']
-    sphere(f'eye_ball_{side}',(x,y,z),(d['sx'],d['sy'],d['sz']),d['base'],seg=32,rings=16).parent=root
-    # socket cluster: fused balls partially swallow the eye ball edges
-    socket_cols=[d['lid'],yellow,palette[3 if side=='l' else 1],palette[0 if side=='l' else 2]]
-    socket_offsets=[(-.10,.025,.055),(.095,.015,.045),(-.075,.018,-.07),(.072,.018,-.075)]
-    for si,(ox,oy,oz) in enumerate(socket_offsets):
-        sr=.070+(si%2)*.012
-        sphere(f'eye_socket_{side}_{si+1}',(x+ox,y+oy,z+oz),(sr,sr*.72,sr),socket_cols[si],seg=24,rings=12).parent=root
-    # vinyl brow/lower lid pads overlap the ball physically and break the perfect sphere silhouette
-    # iris disc points roughly forward/down (-Y), scaled imperfectly like hand paint on vinyl
-    front=y-d['sy']-.010
-    # Heavy vinyl lids physically overlap the exposed eye cap. The right eye is nearly
-    # swollen shut; the left is a narrow clouded slit rather than a bright cartoon eye.
-    lid_close=1.0 if side=='l' else 1.35
-    sphere(f'eye_upper_lid_{side}',(x,front+.018,z+d['sz']*(.34 if side=='l' else .25)),(d['sx']*1.02,.047,.065*lid_close),d['lid'],seg=24,rings=12).parent=root
-    sphere(f'eye_lower_lid_{side}',(x,front+.014,z-d['sz']*(.36 if side=='l' else .25)),(d['sx']*.90,.040,.060*lid_close),d['lid'],seg=24,rings=12).parent=root
-    bpy.ops.mesh.primitive_cylinder_add(vertices=32,radius=d['irisr'],depth=.012,location=(x,front,z+.008),rotation=(math.pi/2,0,0))
-    iris=finish(bpy.context.object,f'eye_iris_{side}',f'eye_iris_{side}',white); smooth(iris); iris.scale.x=1.0+(0.10 if side=='l' else -0.06); iris.parent=root
-    bpy.ops.mesh.primitive_cylinder_add(vertices=24,radius=d['pupr'],depth=.014,location=(x+(.016 if side=='l' else -.013),front-.010,z+.006),rotation=(math.pi/2,0,0))
-    pup=finish(bpy.context.object,f'eye_pupil_{side}',f'eye_pupil_{side}',black); smooth(pup); pup.scale.x=.88 if side=='l' else 1.08; pup.parent=root
-    
-    # cloudy necrotic patches and cracked paint veins replace the clean toy catchlight
-    sphere(f'eye_cloud_patch_{side}',(x+(.020 if side=='l' else -.017),front-.006,z+.020),(.020 if side=='l' else .013,.004,.013),toothold,seg=12,rings=6).parent=root
-    for ci in range(4):
-        ang=-.8+ci*.48+(.12 if side=='r' else 0)
-        cx=x+math.sin(ang)*d['irisr']*.48
-        cz=z+math.cos(ang)*d['irisr']*.42
-        cube(f'eye_crack_{side}_{ci+1}',(cx,front-.012,cz),(.0024,.0022,.020+ci*.002),seammat,bevel=.0005,rot=(0,ang*.2,ang)).parent=root
-    # partial dark compression seam underneath the socket; small enough to read as pressure, not outline stickers
-    torus(f'eye_pressure_seam_{side}',(x,y+.004,z-.005),d['sx']*.68,.008,seammat,rot=(math.pi/2,0,0)).parent=root
 
-# asymmetric vinyl abrasion stickers/scuffs across the fused skull
-for i in range(18):
-    cx,cy,cz=skull_centers[(i*7)%len(skull_centers)]
-    sc=cube(f'vinyl_scuff_patch_{i+1:02d}',(cx,cy-.105,cz+random.uniform(-.035,.035)),(.055+random.uniform(0,.05),.006,.008+random.uniform(0,.012)),seammat,bevel=.001,rot=(random.uniform(-.3,.3),random.uniform(-.2,.2),random.uniform(-1.2,1.2)))
-    sc.parent=root
-# Inflated vinyl cheeks, crease dimples, and asymmetric scuffed patches.
-for side,x in [('l',-.43),('r',.43)]:
-    sphere(f'cheek_{side}',(x,-.31,.02),(.20,.14,.18),red if side=='l' else orange,seg=32,rings=16).parent=root
-    for k in range(3):
-        sphere(f'cheek_{side}_dimple_{k+1}',(x+(-.08 if side=='l' else .08),-.42,.02+k*.045),(.018,.009,.018),seammat,seg=16,rings=8).parent=root
+# Dominant half-formed face region: deliberately oversized so it reads at delivery distance.
+# One heavy brow, one clouded eye, a nasal cavity and malformed cheek plane form a single
+# uncanny focal feature rather than distributed decoration.
+sphere('face_brow_massive',(.02,-.455,.385),(.31,.075,.085),flesh2,seg=22,rings=11,rot=(.10,0,-.08),deform=.15).parent=root
+sphere('face_left_sunken_plane',(-.15,-.448,.245),(.19,.045,.19),flesh,seg=20,rings=10,rot=(.05,.12,.22),deform=.17).parent=root
+sphere('face_nasal_bridge',(-.015,-.495,.265),(.060,.035,.16),flesh2,seg=16,rings=8,rot=(.20,0,-.10),deform=.13).parent=root
+for side in (-1,1):
+    sphere(f'face_nasal_cavity_{side}',(-.015+side*.030,-.532,.195),(.024,.009,.038),deep,seg=12,rings=6,rot=(0,0,side*.18),deform=.04).parent=root
+# one large clouded eye, half-sunken under the brow; runtime pupil remains tiny inside it
+sphere('face_eye_socket_large',(.175,-.492,.335),(.145,.036,.088),bruise,seg=18,rings=9,rot=(.03,-.10,-.10),deform=.10).parent=root
+sphere('face_eye_cloud_large',(.172,-.523,.333),(.096,.012,.057),eyewhite,seg=18,rings=9,rot=(.02,0,-.08),deform=.05).parent=root
+sphere('face_eye_necrotic_center',(.171,-.532,.331),(.030,.004,.018),eyedark,seg=12,rings=6,deform=.03).parent=root
+# heavy lower lid cuts across the eye asymmetrically
+sphere('face_eye_lower_lid_heavy',(.18,-.525,.305),(.105,.022,.028),flesh,seg=16,rings=8,rot=(0,0,-.13),deform=.15).parent=root
 
-# Six-metre eel body: fused diminishing balls and ten dorsal ridge balls.
+# Wet throat depth: nested receding red-black rings and a glossier rear mass, visible inside
+# the mouth instead of a flat wooden-brown bowl.
+for k in range(4):
+    yy=-.43+k*.065
+    rr=.30-k*.045
+    ring=torus(f'throat_depth_ring_{k+1}',(0,yy,-.045-k*.012),rr,.018-(k*.002),deep if k<2 else gum,rot=(math.pi/2,0,0))
+    ring.scale.y=.72; ring.parent=root
+sphere('throat_rear_wet_mass',(0,-.19,-.07),(.20,.10,.17),deep,seg=18,rings=9,deform=.16).parent=root
+
+# Malformed finger-like appendages erupting from cheek/jaw tissue.
+for fi,(base,sgn) in enumerate([((-.42,-.25,.03),-1),((.43,-.22,.00),1),((.25,-.33,.22),1)]):
+    x0,y0,z0=base
+    p0=(x0,y0,z0); p1=(x0+sgn*.08,y0-.06,z0-.055); p2=(x0+sgn*.13,y0-.12,z0-.13)
+    cyl_between(f'finger_{fi+1}_proximal',p0,p1,.025,flesh2,vertices=10).parent=root
+    cyl_between(f'finger_{fi+1}_distal',p1,p2,.018,flesh,vertices=9).parent=root
+    sphere(f'finger_{fi+1}_knuckle',p1,(.032,.026,.030),bruise if fi==1 else flesh,seg=12,rings=6,deform=.12).parent=root
+    cone(f'finger_{fi+1}_vestigial_nail',p2,.010,.001,.035,boneold,rot=(math.pi/2,sgn*.3,.2),vertices=6).parent=root
+
+# Hanging tissue strands and fluid-heavy droplets break the compact outline below the jaw.
+for i in range(9):
+    x=-.28+i*.07+math.sin(i*1.8)*.018
+    top=(x,-.50,-.15+math.sin(i)*.03); bot=(x+math.sin(i*2.1)*.035,-.56-random.uniform(0,.07),-.34-random.uniform(0,.18))
+    strand=cyl_between(f'hanging_tissue_strand_{i+1}',top,bot,.006+(i%3)*.002,flesh3 if i%3 else gum,vertices=7)
+    parent_keep(strand,lower if i%2==0 else root)
+    drop=sphere(f'hanging_tissue_drop_{i+1}',bot,(.018+((i*5)%3)*.004,.012,.025+((i*7)%4)*.005),bruise if i%4==0 else flesh3,seg=10,rings=5,deform=.18)
+    parent_keep(drop,lower if i%2==0 else root)
+
+
+# Long root-level tendrils hang outside the compact head silhouette; they are independent
+# of jaw motion and remain visible even when the mouth is nearly closed.
+for i in range(12):
+    side=-1 if i<6 else 1
+    j=i%6
+    x0=side*(.43+j*.065); z0=.12-j*.045
+    top=(x0,-.34-j*.012,z0)
+    mid=(x0+side*(.05+random.uniform(0,.05)),-.48-random.uniform(0,.06),z0-.14-random.uniform(0,.08))
+    bot=(x0+side*(.02+random.uniform(0,.08)),-.58-random.uniform(0,.08),z0-.28-random.uniform(0,.14))
+    cyl_between(f'outer_face_tendril_{i+1}_a',top,mid,.003+(j%3)*.0008,flesh3 if i%3 else bruise,vertices=7).parent=root
+    cyl_between(f'outer_face_tendril_{i+1}_b',mid,bot,.002+(j%2)*.0006,flesh3 if i%4 else gum,vertices=6).parent=root
+    if i%3==0: sphere(f'outer_tendril_necrotic_drop_{i+1}',bot,(.018,.012,.028),bruise,seg=9,rings=5,deform=.15).parent=root
+
+# Grub body trailing backward: overlapping uneven sacs and compression folds, no toy beads.
 for i in range(24):
-    yy=.28+i*.22; taper=1-i/28; rr=.24*taper+.08
-    x=math.sin(i*.55)*.10*taper; z=-.03+math.sin(i*.42)*.04
-    body=sphere(f'body_fused_ball_{i+1:02d}',(x,yy,z),(rr*1.05,rr*1.28,rr*.88),palette[(i+2)%len(palette)],seg=24,rings=12); body.parent=root
-    if i%3==0: torus(f'body_seam_{i+1:02d}',(x,yy,z),rr*.75,rr*.045,seammat,rot=(math.pi/2,0,i*.2)).parent=root
-for i in range(10):
-    yy=.28+i*.52; rr=.16-(i*.008)
-    ridge=sphere(f'ridge_{i+1:02d}',(math.sin(i*.7)*.06,yy,.24+math.sin(i*.45)*.035),(rr,rr*1.1,rr),palette[(i+1)%len(palette)],seg=28,rings=14); ridge.parent=root
-    # small moulded plug/inflation valve on alternating ridge balls
-    if i%2==0: cyl_between(f'ridge_valve_{i+1:02d}',(0,yy,.31),(0,yy,.39),.018,seammat,vertices=12).parent=root
-# tapered tail cap and two small vinyl fin paddles
-sphere('tail_cap',(0,5.42,.02),(.09,.18,.08),blue,seg=24,rings=12).parent=root
-for side,x in [('l',-.13),('r',.13)]:
-    fin=cube(f'tail_fin_{side}',(x,4.85,-.02),(.28,.48,.035),green if side=='l' else orange,bevel=.04,rot=(0,(-.25 if side=='l' else .25),(.35 if side=='l' else -.35))); fin.parent=root
+    yy=.27+i*.22; taper=1-i/30; rr=.23*taper+.075
+    x=math.sin(i*.55)*.11*taper+(.025 if i>8 and i<13 else 0); z=-.035+math.sin(i*.42)*.045
+    mat=[flesh,flesh2,flesh3,bruise][i%4 if i%9==0 else i%3]
+    o=sphere(f'body_tissue_sac_{i+1:02d}',(x,yy,z),(rr*(.85+((i*5)%4)*.1),rr*1.32,rr*(.70+((i*7)%3)*.13)),mat,seg=16,rings=8,rot=(math.sin(i)*.35,math.cos(i*.7)*.45,math.sin(i*1.3)*.5),deform=.17)
+    o.parent=root
+    if i%3==0: torus(f'body_compression_fold_{i+1:02d}',(x,yy,z),rr*.72,rr*.035,gum if i%6==0 else bruise,rot=(math.pi/2,0,i*.2)).parent=root
+for i in range(9):
+    yy=.35+i*.52; rr=.13-(i*.006)
+    sphere(f'dorsal_necrotic_lump_{i+1:02d}',(math.sin(i*.7)*.08,yy,.22+math.sin(i*.45)*.04),(rr,rr*.9,rr*.75),flesh3 if i%2 else bruise,seg=16,rings=8,rot=(i*.2,i*.31,i*.17),deform=.20).parent=root
+sphere('tail_cap',(0,5.42,.02),(.10,.19,.075),flesh3,seg=16,rings=8,deform=.18).parent=root
 
-# Preserve authored world-space placement for jaw children while allowing the jaw control
-# empties to hinge them as one mechanism in the runtime.
-for o in bpy.data.objects:
-    if o.parent and o.parent.name in {'slide_mouth_upper_root','slide_mouth_lower_root'}:
-        o.matrix_parent_inverse=o.parent.matrix_world.inverted()
+# Dense necrosis/freckle geometry concentrated on visible front tissue.
+for k in range(42):
+    x=-.34+((k*.083)%.68)+math.sin(k)*.012; y=-.425-((k*.017)%.055); z=-.02+((k*.097)%.49)
+    mat=[bruise,flesh3,boneold][k%3]
+    sphere(f'necrotic_surface_fleck_{k+1:02d}',(x,y,z),(.014+(k%5)*.003,.0028,.007+(k%4)*.002),mat,seg=8,rings=4,rot=(0,0,(k%9-4)*.12),deform=.06).parent=root
+# Raised dark vessels on the face.
+for k in range(14):
+    x=-.30+((k*.071)%.60); z=.04+((k*.089)%.40); y=-.445-random.uniform(0,.02)
+    a=(x,y,z); b=(x+math.sin(k*1.9)*(.045+(k%4)*.012),y-.008,z+math.cos(k*1.3)*.025)
+    cyl_between(f'face_raised_vein_{k+1:02d}',a,b,.004+(k%2)*.001,bruise,vertices=6).parent=root
 
 bpy.ops.object.select_all(action='SELECT')
 out=os.path.join(HERE,'model.glb')

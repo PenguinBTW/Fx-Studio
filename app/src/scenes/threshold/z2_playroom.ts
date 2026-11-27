@@ -111,7 +111,7 @@ export default class ThresholdZ2Playroom extends Scene {
     this.flash = addFlashlight(this.s);
     this.s.add(new THREE.HemisphereLight(0xd8e2e6, 0x1d2428, 0.38));
     this.sun = new THREE.DirectionalLight(0xfff0d2, 1.35); this.sun.position.set(-4, 9, 2); this.s.add(this.sun);
-    this.swimmerLight = new THREE.PointLight(0xffe0a8, 0, 4.2, 1.8); this.s.add(this.swimmerLight);
+    this.swimmerLight = new THREE.PointLight(0xb8c0a0, 0, 4.2, 1.8); this.s.add(this.swimmerLight);
 
     const foam = mat(0xf1efe8, 0.55);
     const floorFoam = mat(0x554f46, 0.92);
@@ -626,8 +626,8 @@ export default class ThresholdZ2Playroom extends Scene {
     this.swimmerAsset.root.position.set(sx, sy, sz + 0.2);
     this.swimmerAsset.root.rotation.y = smooth(47.6, 48.4, t) * 0.7;
     this.swimmerLight.visible = swimmerVisible;
-    this.swimmerLight.intensity = swimmerVisible ? 0.95 : 0;
-    this.swimmerLight.position.set(sx + 0.25, sy + 0.55, sz + 1.15);
+    this.swimmerLight.intensity = swimmerVisible ? 0.24 : 0;
+    this.swimmerLight.position.set(sx + 0.85, sy + 0.38, sz + 0.55);
     for (const side of ['l', 'r'] as const) {
       const pupil = this.swimmerAsset.part(`eye_pupil_${side}`);
       if (pupil) {
