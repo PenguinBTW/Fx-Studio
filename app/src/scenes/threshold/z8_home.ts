@@ -82,6 +82,11 @@ export default class ThresholdZ8Home extends Scene {
   private lampGlow!: THREE.MeshStandardMaterial;
   private lampLight?: THREE.PointLight;
   private officeTubeMats: THREE.MeshStandardMaterial[] = [];
+  private officeTubeLights: THREE.PointLight[] = [];
+  private officeAmbientLight?: THREE.AmbientLight;
+  private houseSun?: THREE.DirectionalLight;
+  private houseAmbient?: THREE.AmbientLight;
+  private houseGrazeLights: THREE.PointLight[] = [];
   private disposables: { dispose(): void }[] = [];
 
   private mat(color: number, roughness = 0.72, metalness = 0, emissive = 0, emissiveIntensity = 0) {
@@ -698,19 +703,23 @@ export default class ThresholdZ8Home extends Scene {
     // forward axis runs through the right-hand front door. Crossing the threshold therefore
     // reveals the exact cubicle landscape/hero desk composition rather than a corridor proxy.
     this.officeLoop = await buildOfficeLoopSet();
-    this.officeLoop.root.position.set(1.38, 0, -6.8);
+    this.officeLoop.root.position.set(4.20, 0, -6.8);
     this.officeLoop.root.rotation.y = -Math.PI / 2;
     this.s.add(this.officeLoop.root);
     this.officeTubeMats = this.officeLoop.tubeMats;
+    this.officeTubeLights = this.officeLoop.tubeLights;
+    this.officeAmbientLight = this.officeLoop.ambientLight;
 
     this.s.add(this.flash.group);
 
-    const sun = new THREE.DirectionalLight(0xff9f4a, 0.9);
-    sun.position.set(-3.5, 4.2, -2.0);
-    this.s.add(sun, new THREE.AmbientLight(0x40301f, 0.16));
+    this.houseSun = new THREE.DirectionalLight(0xff9f4a, 0.9);
+    this.houseSun.position.set(-3.5, 4.2, -2.0);
+    this.houseAmbient = new THREE.AmbientLight(0x40301f, 0.16);
+    this.s.add(this.houseSun, this.houseAmbient);
     for (const z of [-2.2, -5.8]) {
       const graze = new THREE.PointLight(0xff9f4a, 0.38, 4.5, 1.65);
       graze.position.set(0.92, 1.55, z);
+      this.houseGrazeLights.push(graze);
       this.s.add(graze);
     }
   }
@@ -755,8 +764,23 @@ export default class ThresholdZ8Home extends Scene {
     const lampLevel = lerp(1.25, 0.20, smooth((t - 209.5) / 1.2));
     if (this.lampLight) this.lampLight.intensity = lampLevel;
     this.lampGlow.emissiveIntensity = (2.2 + 0.15 * Math.sin(t * 2.1)) * (0.55 + 0.45 * lampLevel / 1.25);
-    const tubeCap = t >= 218 ? 0.34 : 1;
-    this.officeTubeMats.forEach((m, i) => { m.emissiveIntensity = tubeCap * (1.65 + (i === 2 ? 0.5 * hash(Math.floor(t * 7) + i) : 0.12 * hash(Math.floor(t * 3) + i))); });
+    // The loop closes as the office power physically dies. Over the final 1.4 s the
+    // fluorescent tubes sag in stepped starter flicker rather than snapping to the
+    // endscreen grade at the timeline boundary.
+    const loopPowerSag = smooth((t - 223.55) / 1.4);
+    const baseTubeCap = t >= 218 ? 0.34 : 1;
+    this.officeTubeMats.forEach((m, i) => {
+      const starterFlicker = 0.74 + 0.26 * hash(Math.floor(t * 14) + i * 11);
+      const tubeCap = lerp(baseTubeCap, 0.065, loopPowerSag * starterFlicker);
+      m.emissiveIntensity = tubeCap * (1.65 + (i === 2 ? 0.5 * hash(Math.floor(t * 7) + i) : 0.12 * hash(Math.floor(t * 3) + i)));
+      if (this.officeTubeLights[i]) this.officeTubeLights[i].intensity = 1.45 * tubeCap;
+    });
+    if (this.officeAmbientLight) this.officeAmbientLight.intensity = lerp(0.38, 0.11, loopPowerSag);
+    // House daylight/spill falls away as the camera passes into the office volume;
+    // without this, non-office practicals pop off at the endscreen boundary.
+    if (this.houseSun) this.houseSun.intensity = lerp(0.9, 0.04, loopPowerSag);
+    if (this.houseAmbient) this.houseAmbient.intensity = lerp(0.16, 0.015, loopPowerSag);
+    this.houseGrazeLights.forEach((l) => { l.intensity = lerp(0.38, 0.015, loopPowerSag); });
 
     // Shared beam adapter: weak 25% battery in daylight, with the low-battery stutter.
     const threat = t >= 206 && t < 218 ? 0.55 : 0.1;
@@ -764,6 +788,9 @@ export default class ThresholdZ8Home extends Scene {
     // At the wall-phone payoff the beam is inches from the wall; soften only this close-range
     // adapter window so the handset/cord silhouette remains readable instead of washing to white.
     if (t >= 210 && t < 222.5) beam.intensity *= t >= 218 ? 0.012 : 0.028;
+    // The nearly-dead battery finally gives out as the loop closes, removing the
+    // handheld beam continuously instead of letting it vanish at the endscreen cut.
+    if (loopPowerSag > 0) beam.intensity *= (1 - loopPowerSag) * (0.68 + 0.32 * hash(Math.floor(t * 18) + 31));
     this.flash.update(pose, t, beam, (time) => z8PoseAt(time, z8Gait(time)).forward);
 
     const rr = this.ctx.renderer;
@@ -773,7 +800,7 @@ export default class ThresholdZ8Home extends Scene {
     rr.render(this.s, this.cam);
     rr.resetState();
 
-    return thresholdPost(t, { exposure: 0.72, darkness: 0.46, stress: threat * 0.25 });
+    return thresholdPost(t, { exposure: lerp(0.72, 0.24, loopPowerSag), darkness: lerp(0.46, 0.55, loopPowerSag), stress: threat * 0.25 });
   }
 
   override dispose() {

@@ -21,7 +21,12 @@ const BODY: Record<ThresholdTransitionMode, string> = {
     float starter = 0.68 + 0.32 * smoothstep(0.47, 0.60, u) + 0.10 * sin(u * 91.0) * (1.0 - broad);
     float spatialReveal = clamp(tubeLead * 1.18 + broad, 0.0, 1.0);
     vec3 incoming = cb * (0.10 + 0.90 * broad) * spatialReveal * ignite * starter;
-    vec3 c = u < 0.46 ? darkA : incoming;
+    // The office tube grid is the carrier throughout the blackout. Bright fluorescent
+    // fragments never vanish into a true black wipe; they stutter in early, then the
+    // broader office exposure grows continuously behind them.
+    float tubeFirst = tubeLead * smoothstep(0.10, 0.28, u) * (0.42 + 0.58 * starter);
+    vec3 carrier = darkA + cb * tubeFirst * (1.0 - ignite) * 0.72;
+    vec3 c = mix(carrier, incoming, smoothstep(0.43, 0.57, u));
     fragColor = vec4(c, 1.0);`,
   exposure: `
     // The fire-door aperture is the carrier. Scene A dollies through the narrowing
@@ -130,13 +135,25 @@ const BODY: Record<ThresholdTransitionMode, string> = {
     float inkSub = (1.0 - smoothstep(front - 0.02, front + 0.20, d)) * smoothstep(0.0, 0.04, u);
     vec3 drowned = mix(ca, vec3(0.010, 0.022, 0.026), sat(inkSub * 1.25));
     // Paper fibre field: long torn cellulose threads and small dry pinholes.
-    float fibreA = fbm(vec2(vUv.x * 42.0, vUv.y * 9.0), 5);
-    float fibreB = fbm(vec2(vUv.x * 150.0, vUv.y * 28.0) + 3.7, 3);
+    float angle = atan(q.y, q.x + 0.0001);
+    // Fibre is organised as a cylindrical membrane around the forward camera path:
+    // radial depth bands and tangential cellulose threads replace the flat screen-space
+    // paper print, so the middle of the seam reads as passing through a fibrous bore.
+    float fibreA = fbm(vec2(angle * 4.5, d * 32.0 - u * 5.2), 5);
+    float fibreB = fbm(vec2(angle * 13.0 + 3.7, d * 78.0 - u * 9.0), 3);
     float fibre = fibreA * 0.65 + fibreB * 0.35;
-    vec3 paper = vec3(0.34, 0.285, 0.20) * (0.48 + fibre * 0.55);
+    float depthRib = pow(0.5 + 0.5 * sin(d * 43.0 - u * 15.0 + fibre * 3.5), 5.0);
+    vec3 paper = vec3(0.34, 0.285, 0.20) * (0.34 + fibre * 0.50 + depthRib * 0.22);
     vec3 wetInk = vec3(0.018, 0.030, 0.034);
     float dryK = smoothstep(0.24, 0.78, u) * inside;
     vec3 membrane = mix(wetInk, paper, dryK * (0.35 + 0.65 * smoothstep(0.30, 0.66, fibre)));
+    // The bore physically opens ahead of the camera. Its rim has thickness and shadow;
+    // the membrane is a surrounding aperture rather than a flat full-frame texture.
+    float boreRadius = mix(0.018, 0.92, smoothstep(0.36, 0.94, u));
+    float boreOpen = 1.0 - smoothstep(boreRadius - 0.020, boreRadius + 0.020, d);
+    float boreRim = (1.0 - smoothstep(0.0, 0.075, abs(d - boreRadius))) * smoothstep(0.34, 0.46, u) * (1.0 - smoothstep(0.90, 1.0, u));
+    membrane *= 1.0 - boreOpen * 0.58 * smoothstep(0.36, 0.55, u);
+    membrane = mix(membrane, vec3(0.055, 0.034, 0.015), boreRim * 0.72);
     // Library visibility is peeled open as a second opaque cellulose front.
     float peelN = (fbm(vUv * vec2(6.0, 5.0) + vec2(8.2, -u * 0.27), 4) - 0.5) * 0.16;
     float peelD = d + peelN;
@@ -144,6 +161,7 @@ const BODY: Record<ThresholdTransitionMode, string> = {
     float peeled = 1.0 - smoothstep(peelFront - 0.018, peelFront + 0.018, peelD);
     float fibrousTears = 0.58 + 0.42 * smoothstep(0.26, 0.68, fibre);
     float reveal = inside * smoothstep(0.40, 0.50, u) * peeled * fibrousTears;
+    reveal = max(reveal, inside * smoothstep(0.38, 0.54, u) * boreOpen * fibrousTears);
     vec3 transformed = mix(membrane, cb, reveal);
     vec3 c = mix(drowned, transformed, inside);
     float lip = (1.0 - smoothstep(0.0, 0.024, abs(d - front))) * smoothstep(0.02, 0.10, u) * (1.0 - smoothstep(0.88, 1.0, u));

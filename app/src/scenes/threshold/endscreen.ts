@@ -7,6 +7,7 @@ import { buildOfficeLoopSet, type OfficeLoopSet } from './office_loop_set';
 const hash = (n: number) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
 const clamp = (x: number, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const smooth = (x: number) => { const u = clamp(x); return u * u * (3 - 2 * u); };
+const lerp = (a: number, b: number, u: number) => a + (b - a) * clamp(u);
 
 
 export default class ThresholdEndscreen extends Scene {
@@ -50,7 +51,12 @@ export default class ThresholdEndscreen extends Scene {
     // recovery to baseline; deliberately not a periodic flicker loop.
     const powerSag = Math.min(1, pulse(1.18, 0.24) * 0.82 + pulse(5.35, 0.34) * 0.96 + pulse(8.42, 0.27) * 0.72);
     const powerLevel = 1 - powerSag * 0.52;
-    this.office?.tubeMats.forEach((m, i) => { m.emissiveIntensity = (1.75 + 0.25 * hash(Math.floor(t * 4) + i * 7)) * (1 - fade * 0.38) * powerLevel; });
+    const loopRecovery = 0.07 + 0.68 * smooth(endT / 1.2);
+    this.office?.tubeMats.forEach((m, i) => {
+      m.emissiveIntensity = (1.75 + 0.25 * hash(Math.floor(t * 4) + i * 7)) * (1 - fade * 0.38) * powerLevel * loopRecovery;
+      if (this.office?.tubeLights[i]) this.office.tubeLights[i].intensity = 1.45 * powerLevel * loopRecovery;
+    });
+    if (this.office) this.office.ambientLight.intensity = lerp(0.11, 0.34, smooth(endT / 1.2)) * (1 - fade * 0.28);
 
     const rr = this.ctx.renderer;
     rr.setRenderTarget(out);

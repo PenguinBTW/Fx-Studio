@@ -16,6 +16,8 @@ export type OfficeLoopSet = {
   receiver?: THREE.Object3D;
   receiverHome?: THREE.Vector3;
   tubeMats: THREE.MeshStandardMaterial[];
+  tubeLights: THREE.PointLight[];
+  ambientLight: THREE.AmbientLight;
 };
 
 function surfaceTexture(color: string, dark: string, seed: number) {
@@ -138,6 +140,7 @@ export async function buildOfficeLoopSet(): Promise<OfficeLoopSet> {
     clone(officeKit, part, [x, 2.68, z], 0, 1);
   }
   const tubeMats: THREE.MeshStandardMaterial[] = [];
+  const tubeLights: THREE.PointLight[] = [];
   const tubePositions: [number, number][] = [[-3, -7], [0, -4], [3, -1], [-3, 2], [3, -9.8], [0, -12.4]];
   tubePositions.forEach(([x, z], i) => {
     clone(officeKit, 'troffer_root', [x, 2.64, z], 0, 1);
@@ -148,6 +151,7 @@ export async function buildOfficeLoopSet(): Promise<OfficeLoopSet> {
     const p = new THREE.PointLight(0xdfffd2, 1.45, 6.2, 1.55);
     p.position.set(x, 2.32, z);
     root.add(p);
+    tubeLights.push(p);
   });
 
   // Floor-level lived-in clutter and contact darkness in the opening lane.
@@ -161,8 +165,9 @@ export async function buildOfficeLoopSet(): Promise<OfficeLoopSet> {
     const z = -1.3 - hash(i * 5.2) * 8.5;
     box([0.35 + hash(i) * 0.55, 0.006, 0.035], [x, 0.018, z], dark, [0, hash(i) * Math.PI, 0]);
   }
-  root.add(new THREE.AmbientLight(0x746f5d, 0.38));
+  const ambientLight = new THREE.AmbientLight(0x746f5d, 0.38);
+  root.add(ambientLight);
 
   const receiver = phoneInst.part('receiver') ?? undefined;
-  return { root, phoneInst, officeKit, propPack, receiver, receiverHome: receiver?.position.clone(), tubeMats };
+  return { root, phoneInst, officeKit, propPack, receiver, receiverHome: receiver?.position.clone(), tubeMats, tubeLights, ambientLight };
 }
