@@ -317,6 +317,104 @@ export function plasticKnock(u: number, baseHz: number, seed: number, amp = 1): 
 
 
 
+
+
+/** Tiny clock escapement click: noise-dominated mechanical contact with no musical decay. */
+export function clockTick(u: number, seed: number, amp = 1): number {
+  if (u < 0 || u > 0.09) return 0;
+  const si = Math.floor(u * 48000 + 0.5);
+  const click = coloredNoise(si, seed, 9) * 0.20 * Math.exp(-u * 190);
+  const tooth = coloredNoise(si, seed + 2.3, 15) * 0.070 * Math.exp(-u * 90);
+  const body = modalRing(u, [
+    { hz: 520 + hash01(seed, 3.1) * 70, gain: 0.018, decay: 42 },
+  ]);
+  return (click + tooth + body) * amp * Math.min(1, u * 900);
+}
+
+/** Dry paper fibre movement: irregular crackle and drag, never a uniform noise bed. */
+export function paperRustle(u: number, dur: number, seed: number, amp = 1): number {
+  if (u < 0 || u > dur) return 0;
+  const si = Math.floor(u * 48000 + 0.5);
+  const x = u / dur;
+  const env = Math.sin(Math.PI * x) ** 0.72;
+  const uneven = 0.42 + slowNoise01(u, seed, 9.0) * 0.72;
+  const drag = coloredNoise(si, seed, 13) * env * uneven * 0.18;
+  // Sparse fibre snaps embedded in the drag. Gaps are real zeros because most cells gate off.
+  const cell = Math.floor(u * 29);
+  const cu = u - cell / 29;
+  let snap = 0;
+  if (hash01(cell, seed + 3.1) < 0.34 && cu < 0.018) {
+    snap = (hash01(si, seed + cell) - 0.5) * Math.exp(-cu * 180) * 0.22;
+  }
+  return (drag + snap) * amp;
+}
+
+/** Sheet tear as a sequence of separating fibre bundles with a low shear body. */
+export function paperTear(u: number, dur: number, seed: number, amp = 1): number {
+  if (u < 0 || u > dur) return 0;
+  const si = Math.floor(u * 48000 + 0.5);
+  const x = u / dur;
+  const env = Math.sin(Math.PI * x) ** 0.55;
+  const shear = coloredNoise(si, seed, 23) * env * (0.28 + slowNoise01(u, seed + 2, 5) * 0.32) * 0.20;
+  let snaps = 0;
+  for (let k = 0; k < 18; k++) {
+    const at = dur * (k + 0.35 + hash01(k, seed) * 0.35) / 18;
+    const uu = u - at;
+    if (uu > 0 && uu < 0.028) snaps += (hash01(si, seed + k * 4.7) - 0.5) * Math.exp(-uu * 150) * (0.20 + hash01(k, seed + 1) * 0.15);
+  }
+  const body = modalRing(u, [
+    { hz: 92 + hash01(seed, 4.4) * 42, gain: 0.045, decay: 9 },
+    { hz: 151 + hash01(seed, 5.4) * 38, gain: 0.022, decay: 13 },
+  ]) * env;
+  return (shear + snaps + body) * amp;
+}
+
+/** Heavy paper/stack impact: fibre compression plus a low wooden or floor body. */
+export function paperSlam(u: number, seed: number, amp = 1, close = 0): number {
+  if (u < 0 || u > 0.62) return 0;
+  const si = Math.floor(u * 48000 + 0.5);
+  const attack = Math.min(1, u / 0.012);
+  const fibre = coloredNoise(si, seed, 19) * (0.30 * Math.exp(-u * 23) + 0.11 * Math.exp(-u * 8));
+  const snap = coloredNoise(si, seed + 4.2, 9) * 0.08 * Math.exp(-u * 55);
+  const body = modalRing(u, [
+    { hz: 58 + close * 20, gain: 0.17 + close * 0.08, decay: 10 },
+    { hz: 103 + close * 28, gain: 0.09, decay: 15 },
+  ]);
+  return (fibre + snap + body) * amp * attack;
+}
+
+/** Wooden shelf stress as stick-slip friction pulses and low panel resonance. */
+export function woodCreak(u: number, dur: number, seed: number, amp = 1): number {
+  if (u < 0 || u > dur) return 0;
+  const si = Math.floor(u * 48000 + 0.5);
+  const x = u / dur;
+  const env = Math.sin(Math.PI * x) ** 0.8;
+  let stick = 0;
+  for (let k = 0; k < 9; k++) {
+    const at = dur * (k + hash01(k, seed) * 0.45) / 9;
+    const uu = u - at;
+    if (uu > 0 && uu < 0.045) stick += coloredNoise(si, seed + k * 3.1, 15) * Math.exp(-uu * 65) * (0.13 + hash01(k, seed + 2) * 0.09);
+  }
+  const panel = modalRing(u, [
+    { hz: 74 + hash01(seed, 6.1) * 20, gain: 0.075, decay: 6.5 },
+    { hz: 121 + hash01(seed, 7.1) * 26, gain: 0.035, decay: 8.5 },
+  ]) * env;
+  return (stick + panel) * amp;
+}
+
+/** Single distant human cough: turbulent glottal burst with chest resonance. */
+export function bodyCough(u: number, seed: number, amp = 1): number {
+  if (u < 0 || u > 0.32) return 0;
+  const si = Math.floor(u * 48000 + 0.5);
+  const attack = Math.min(1, u / 0.018);
+  const burst = coloredNoise(si, seed, 17) * (0.34 * Math.exp(-u * 28) + 0.12 * Math.exp(-u * 10));
+  const chest = modalRing(u, [
+    { hz: 118 + hash01(seed, 2.1) * 24, gain: 0.11, decay: 12 },
+    { hz: 210 + hash01(seed, 3.1) * 35, gain: 0.045, decay: 18 },
+  ]);
+  return (burst + chest) * amp * attack;
+}
+
 /** Water-damped ceramic contact: hard mineral attack without a sustained metallic ring. */
 export function ceramicImpact(u: number, baseHz: number, seed: number, amp = 1): number {
   if (u < 0 || u > 0.48) return 0;

@@ -3,7 +3,7 @@
 // generated WAVs are evidence/build products and are never committed.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { coloredNoise, impactStrike, musicBoxTine, plasticKnock, ceramicImpact, waterDrop, waterDisplace, wetScrape, muffledBellStrike, renderBellPhone, renderConvolutionRoom, slowNoise01, softImpact, tileClatter, type RoomOptions } from './threshold_audio_lib';
+import { coloredNoise, impactStrike, musicBoxTine, plasticKnock, ceramicImpact, clockTick, paperRustle, paperTear, paperSlam, woodCreak, bodyCough, waterDrop, waterDisplace, wetScrape, muffledBellStrike, renderBellPhone, renderConvolutionRoom, slowNoise01, softImpact, tileClatter, type RoomOptions } from './threshold_audio_lib';
 
 const SR = 48000;
 const OUT = path.join(import.meta.dir, '../src/scenes/threshold/sound/generated');
@@ -543,16 +543,14 @@ wavRoom('z3_pool_events.wav', stem(25.8, (t) => {
 }), z3PoolRoom);
 
 
-// Z4 paper-library cue pass from z2_z4_audio_cue_spec.md. Stem starts at 79.4;
-// `at` is project time. Conflicting rule-line duration is resolved conservatively:
-// writing stops dead when the clock stops at 88.0.
+// Z4 dry paper-canyon redesign: intimate fibre texture after the pool's wet scale.
+// Paper acoustics are absorbent and close; convolution is short and restrained.
+const z4LibraryRoom: RoomOptions = { size: 1.05, decaySec: 0.62, dampingHz: 1750, predelayMs: 10, earlyDb: -14, tailDb: -15, dryDb: 0 };
 const z4StepTimes = [81.0, 81.8, 82.6, 83.35, 84.05, 84.75, 85.45, 86.15, 86.85, 87.55, 95.65, 96.12, 96.59, 97.05, 97.51, 97.96, 98.40, 98.84, 99.27, 99.69, 100.10, 100.51, 100.91, 101.30, 101.68, 102.05, 102.41, 102.76, 103.10, 103.43];
 const z4ToppleTimes: number[] = [];
 for (let t = 95.5; t <= 103.7; t += 1.2) z4ToppleTimes.push(t);
-let z4PaperLp = 0;
-wav('z4_library_events.wav', stem(25.9, (t) => {
+wavRoom('z4_library_events.wav', stem(25.9, (t) => {
   const at = t + 79.4;
-  z4PaperLp = z4PaperLp * 0.88 + noise() * 0.12;
   let l = 0, r = 0;
   const add = (v: number, pan = 0) => {
     const a = (pan + 1) * Math.PI / 4;
@@ -560,130 +558,88 @@ wav('z4_library_events.wav', stem(25.9, (t) => {
     r += v * Math.sin(a);
   };
 
-  // Dead paper-room microtone: dry air, leaf-like rustles and clock teeth until 88.0.
-  if (at >= 80.0 && at < 94.0) {
-    const breath = 0.005 + 0.995 * ((1 - smoothstep(88.1, 88.35, at)) + smoothstep(89.45, 89.7, at));
-    add(z4PaperLp * 0.018 * breath, 0);
-    const leafCell = Math.floor((at - 80) * 3.0);
-    const lu = ((at - 80) * 3.0) - leafCell;
-    if (hash01(leafCell, 12.4) < 0.34 && lu < 0.22) {
-      add(noise() * 0.010 * Math.sin(Math.PI * lu / 0.22), hash01(leafCell, 2.9) - 0.5);
-    }
-  }
-  if (at >= 80.0 && at < 88.0) {
-    const u = (at - 80) % 1.0;
-    if (u < 0.035) add((noise() * 0.030 + Math.sin(u * Math.PI * 2 * 1600) * 0.012) * Math.exp(-u * 90), -0.24);
-  }
-
-  // One distant human cough, dry paper-room tail.
-  for (const [off, hz, amp] of [[0, 210, 0.088], [0.13, 160, 0.060]] as const) {
-    const u = at - 81.8 - off;
-    if (u > 0 && u < 0.18) add((z4PaperLp * 0.07 + Math.sin(u * Math.PI * 2 * hz) * amp) * Math.exp(-u * 18), 0.42);
-  }
-
-  // Folded paper moth flutters; one lower/fabric-like flutter voice for Lint.
-  for (const start of [80.4, 80.9, 81.45, 82.0]) {
-    const u = at - start;
-    if (u > 0 && u < 0.18) {
-      const wing = Math.abs(Math.sin(u * Math.PI * 2 * 24));
-      const fuzzy = start > 81.7 ? 0.55 : 1.0;
-      add((noise() * 0.020 * wing + Math.sin(u * Math.PI * 2 * 520 * fuzzy) * 0.008 * wing) * Math.exp(-u * 8), -0.28 + hash01(Math.floor(start * 10), 4.5) * 0.55);
-    }
-  }
-
-  // Fountain-pen `step.` scratches synchronized to footfalls and quieter continuous rule lines.
+  // Fountain-pen footnote marks: short dry fibre scratches synchronized to the walk.
   for (let i = 0; i < z4StepTimes.length; i++) {
     const hit = z4StepTimes[i]!;
-    const u = at - hit;
-    if (hit < 86.2 && u > 0 && u < 0.11) {
-      add((noise() * 0.044 + Math.sin(u * Math.PI * 2 * 2300) * 0.017) * Math.exp(-u * 32), i % 2 ? 0.09 : -0.09);
+    if (hit < 86.2) add(paperRustle(at - hit, 0.085 + hash01(i, 250.2) * 0.035, 250.7 + i, 0.20), i % 2 ? 0.09 : -0.09);
+    if (hit >= 95.5) {
+      const closeK = Math.max(0, Math.min(1, (hit - 95.5) / 8.0));
+      add(paperRustle(at - hit, 0.11, 254.7 + i, 0.24 + closeK * 0.12), i % 2 ? 0.11 : -0.11);
     }
-    if (hit >= 95.5 && u > 0 && u < 0.13) {
-      const crunch = z4PaperLp * 0.065 + noise() * 0.035;
-      add(crunch * Math.exp(-u * 20), i % 2 ? 0.11 : -0.11);
-    }
-  }
-  if (at >= 86.0 && at < 88.0) {
-    const scratch = noise() * 0.016 * (0.6 + 0.4 * Math.sin(at * 17));
-    add(scratch, -0.12);
-  }
-  // Final clock tooth-click and noticeable absence afterward.
-  {
-    const u = at - 88.0;
-    if (u > 0 && u < 0.08) add((noise() * 0.045 + Math.sin(u * Math.PI * 2 * 1350) * 0.018) * Math.exp(-u * 50), -0.24);
   }
 
-  // Tenant shadow crossing as a long paper sweep over the canyon wall.
+  // Rule-line writing is intermittent physical strokes with true gaps, not a continuous scratch bed.
+  for (const [j, hit, dur] of [[0, 86.15, 0.24], [1, 86.72, 0.18], [2, 87.35, 0.27]] as const) {
+    add(paperRustle(at - hit, dur, 260.2 + j, 0.13 - j * 0.015), -0.12);
+  }
+
+  // Faint mechanical clock teeth. No bright oscillator ping: only tiny escapement contacts.
+  for (let k = 0; k < 8; k++) {
+    const hit = 80.15 + k * 0.96 + (hash01(k, 263.2) - 0.5) * 0.018;
+    add(clockTick(at - hit, 265.3 + k, 0.040), -0.24);
+  }
+  add(clockTick(at - 88.0, 266.4, 0.070), -0.24);
+
+  // One distant human cough in the paper room.
+  add(bodyCough(at - 81.80, 267.2, 0.16), 0.42);
+  add(bodyCough(at - 81.94, 268.2, 0.10), 0.40);
+
+  // Folded paper moth flutters: dry fibre only, no wing-tone oscillator.
+  for (const [j, start] of [80.4, 80.9, 81.45, 82.0].entries()) {
+    for (let flap = 0; flap < 3; flap++) {
+      add(paperRustle(at - start - flap * 0.055, 0.042, 270.2 + j * 3 + flap, 0.085 - flap * 0.012), -0.28 + hash01(j, 271.5) * 0.55);
+    }
+  }
+
+  // Tenant shadow crossing: a long paper sweep built from irregular fibre surges and gaps.
   if (at >= 89.7 && at < 91.6) {
     const u = at - 89.7;
     const pan = -0.45 + (u / 1.9) * 0.9;
-    add((z4PaperLp * 0.11 + noise() * 0.016) * Math.sin(Math.PI * u / 1.9), pan);
+    const gates = Math.max(0, Math.sin(u * Math.PI * 2 * 1.45 + 0.5)) ** 1.6;
+    add(paperRustle(u, 1.9, 274.2, 0.22) * gates, pan);
   }
 
-  // Folded phone ring through a cardboard tube; each ring rattles brittle paper.
-  if (at >= 91.8 && at < 93.2) {
-    const cycle = (at - 91.8) % 0.62;
-    if (cycle < 0.28) {
-      const tubeHz = 390 + Math.sin(cycle * Math.PI * 2 * 5.5) * 55;
-      const e = Math.sin(Math.PI * cycle / 0.28);
-      add((Math.sin(cycle * Math.PI * 2 * tubeHz) * 0.060 + noise() * 0.025) * e, 0.38);
-    }
+  // Folded phone through a cardboard tube: muffled bell hits plus brittle paper rattle.
+  for (let k = 0; k < 10; k++) {
+    const hit = 91.86 + k * 0.055 + (hash01(k, 276.2) - 0.5) * 0.006;
+    add(muffledBellStrike(at - hit, k % 2 ? 440 : 365, 277.3 + k, 0.025), 0.38);
+    add(paperRustle(at - hit - 0.012, 0.055, 278.4 + k, 0.060), 0.32);
   }
 
-  // Archivist reveal: tearing sheet/page-riffle roar and segmented party-blower arms.
-  if (at >= 94.2 && at < 95.5) {
-    const u = at - 94.2;
-    const tear = z4PaperLp * 0.18 + noise() * 0.075;
-    const riffle = Math.sin(u * Math.PI * 2 * (180 + u * 420)) * 0.050;
-    add((tear + riffle) * Math.min(1, u / 0.16) * Math.exp(-u * 1.2), 0);
-    const tearCell=Math.floor(u*22),tq=(u*22-tearCell)/22;
-    if(tq<.028)add((noise()*.052+Math.sin(tq*Math.PI*2*(900+hash01(tearCell,14)*1300))*.014)*Math.exp(-tq*90),(hash01(tearCell,15)-.5)*.5);
-  }
-  if (at >= 95.0 && at < 96.2) {
-    const cell = Math.floor((at - 95.0) * 18);
-    const cu = ((at - 95.0) * 18 - cell) / 18;
-    if (cu < 0.022) {
-      add((noise() * 0.072 + Math.sin(cu * Math.PI * 2 * 1200) * 0.025) * Math.exp(-cu * 120), cell % 2 ? 0.45 : -0.45);
-    }
+  // Archivist reveal: one substantial sheet tear and segmented paper-arm unfurling.
+  add(paperTear(at - 94.20, 1.18, 281.2, 0.34), 0);
+  for (let k = 0; k < 7; k++) {
+    const hit = 94.75 + k * 0.105 + hash01(k, 282.3) * 0.025;
+    add(paperRustle(at - hit, 0.070, 283.4 + k, 0.16 - k * 0.008), (hash01(k, 284.5) - 0.5) * 0.70);
   }
 
-  // Repeated topple/unfold locomotion and giant canyon-stack slam chain approaching camera.
+  // Topple/unfold locomotion: paper-mass slams grow closer, with shelf stress between hits.
   for (let i = 0; i < z4ToppleTimes.length; i++) {
     const hit = z4ToppleTimes[i]!;
+    const closeK = i / Math.max(1, z4ToppleTimes.length - 1);
+    add(paperSlam(at - hit, 286.2 + i * 1.31, 0.25 + closeK * 0.22, closeK), (i % 2 ? 0.12 : -0.12) * (1 - closeK * 0.5));
+    if (hit >= 97.0) add(paperSlam(at - hit - 0.27, 288.5 + i, 0.14 + closeK * 0.13, closeK), 0);
+  }
+  for (const [j, hit, dur] of [[0, 95.85, 0.72], [1, 98.20, 0.55], [2, 101.15, 0.66]] as const) {
+    add(woodCreak(at - hit, dur, 292.2 + j, 0.28 + j * 0.055), -0.18 + j * 0.14);
+  }
+
+  // Loose sheets whip past intermittently; each is a discrete fibre event.
+  for (const [j, start] of [97.15, 98.05, 98.95, 99.9, 100.65, 101.45, 102.2, 103.0, 103.65].entries()) {
+    add(paperRustle(at - start, 0.18 + hash01(j, 295.2) * 0.08, 296.3 + j, 0.13 + hash01(j, 297.4) * 0.05), hash01(j, 298.5) * 1.1 - 0.55);
+  }
+
+  // Pressure before T4 arrives in separated swells with true air between them.
+  for (const [j, hit] of [102.72, 103.42, 104.05].entries()) {
     const u = at - hit;
-    if (u > 0 && u < 0.48) {
-      const closeK = i / Math.max(1, z4ToppleTimes.length - 1);
-      const slam = Math.sin(u * Math.PI * 2 * 72) * (0.060 + closeK * 0.050) * Math.exp(-u * 12);
-      const fibre = z4PaperLp * (0.070 + closeK * 0.040) * Math.exp(-u * 8);
-      const snap = noise() * (0.030 + closeK * 0.020) * Math.exp(-u * 30);
-      const fold=Math.sin(u*Math.PI*2*(240+closeK*180+i*13))*.018*Math.exp(-u*34);
-      add(slam + fibre + snap + fold, (i % 2 ? 0.12 : -0.12) * (1 - closeK * 0.5));
+    if (u > 0 && u < 0.30) {
+      const pressure = Math.sin(Math.PI * u / 0.30) ** 2;
+      add((Math.sin(u * Math.PI * 2 * (48 + j * 4)) * 0.018 + paperRustle(u, 0.30, 301.2 + j, 0.16)) * pressure, 0);
     }
-    if (hit >= 97.0) {
-      const bu = at - hit - 0.28;
-      if (bu > 0 && bu < 0.42) {
-        const closeK = i / Math.max(1, z4ToppleTimes.length - 1);
-        add((Math.sin(bu * Math.PI * 2 * 54) * 0.048 + z4PaperLp * 0.070 + noise() * 0.030) * Math.exp(-bu * 11) * (0.6 + closeK), 0);
-      }
-    }
-  }
-
-  // Loose sheets whip past the microphone intermittently as the canyon closes.
-  for (const start of [97.15, 98.05, 98.95, 99.9, 100.65, 101.45, 102.2, 103.0, 103.65]) {
-    const u = at - start;
-    if (u > 0 && u < 0.32) {
-      add((noise() * 0.034 + Math.sin(u * Math.PI * 2 * 720) * 0.010) * Math.sin(Math.PI * u / 0.32), hash01(Math.floor(start * 10), 7.1) * 1.1 - 0.55);
-    }
-  }
-
-  // Pre-silence pressure rise into T4's page-slam handoff.
-  if (at >= 102.5 && at < 104.7) {
-    const k = (at - 102.5) / 2.2;
-    add(z4PaperLp * (0.030 + k * 0.055) + Math.sin(at * Math.PI * 2 * (82 + k * 35)) * 0.012 * k, 0);
   }
 
   return [l, r];
-}));
+}), z4LibraryRoom);
 
 
 // Z5 motel cue pass from z5_z8_audio_cue_spec.md. Stem starts at 104.7; `at` is project time.
@@ -1130,14 +1086,14 @@ bed('z3_pool_room_tone.wav', 26.0, 0.75, 1.1, (t, lp) => {
 });
 
 bed('z4_library_room_tone.wav', 25.9, 0.9, 0.75, (t, lp) => {
-  const hush = lp() * 0.018;
-  const lamp = Math.sin(t * Math.PI * 2 * 118) * 0.004;
-  let flutter = 0;
-  for (const at of [4.4, 11.2, 18.8]) {
+  // Paper absorbs nearly everything: faint building pressure only, no constant lamp/hiss bed.
+  const hush = lp() * 0.0016;
+  let settle = 0;
+  for (const [j, at] of [6.8, 17.4].entries()) {
     const u = t - at;
-    if (u > 0 && u < 0.5) flutter += noise() * 0.025 * Math.sin(Math.PI * u / 0.5);
+    if (u > 0 && u < 0.14) settle += paperRustle(u, 0.14, 305.2 + j, 0.018);
   }
-  const v = hush + lamp + flutter;
+  const v = hush + settle;
   return [v * 0.9, v];
 });
 
