@@ -683,7 +683,8 @@ wavRoom('z5_motel_events.wav', stem(25.7, (t) => {
     {
       const idx = Math.floor((at - st) * SR + 0.5);
       const buf = z5NearTv[j]!;
-      if (idx >= 0 && idx < buf.length / 2) add((buf[idx * 2]! + buf[idx * 2 + 1]!) * 0.5 * 0.92, 0.31);
+      const limit = Math.min(buf.length / 2, Math.round(dur * SR));
+      if (idx >= 0 && idx < limit) add((buf[idx * 2]! + buf[idx * 2 + 1]!) * 0.5 * 0.92, 0.31);
     }
   }
 
