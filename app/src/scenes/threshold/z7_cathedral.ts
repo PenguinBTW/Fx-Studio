@@ -199,6 +199,8 @@ export default class ThresholdZ7Cathedral extends Scene {
   private assembly: { mesh: THREE.Object3D; start: THREE.Vector3; end: THREE.Vector3; seed: number; chain: 'spine' | 'rib' | 'limb' | 'head' }[] = [];
   private assemblyShadowMat?: THREE.MeshBasicMaterial;
   private rift!: THREE.Mesh;
+  private floorSolidObjects: THREE.Object3D[] = [];
+  private floorFallPanels: THREE.Object3D[] = [];
   private riftEdges: THREE.Mesh[] = [];
   private riftTeeth: { mesh: THREE.Mesh; side: number; seed: number; z: number }[] = [];
   private riftGlows: { mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial; seed: number; z: number }[] = [];
@@ -363,8 +365,20 @@ export default class ThresholdZ7Cathedral extends Scene {
     // Polished black nave floor and central aisle slab.
     const cathedralFloor = this.box(this.s, [31, 0.12, 210], [0, -0.06, -98], floorMat);
     this.z7DetailObjects.push(cathedralFloor);
-    const aisleSlab = this.box(this.s, [5.4, 0.025, 210], [0, 0.015, -98], this.mat(0x090c11, 0.12, 0.55));
+    const aisleMat = this.mat(0x090c11, 0.12, 0.55);
+    const aisleSlab = this.box(this.s, [5.4, 0.025, 210], [0, 0.015, -98], aisleMat);
     this.z7DetailObjects.push(aisleSlab);
+    this.floorSolidObjects.push(cathedralFloor, aisleSlab);
+    // Once the crack reaches full width the camera physically falls through it. The
+    // pre-fall floor is a single slab, so for the fall itself swap in side panels with
+    // a true central void rather than clipping through an illustrated opening.
+    for (const side of [-1, 1]) {
+      const panel = this.box(this.s, [13.4, 0.12, 210], [side * 8.8, -0.06, -98], floorMat);
+      const aisleLip = this.box(this.s, [0.6, 0.025, 210], [side * 2.4, 0.015, -98], aisleMat);
+      panel.visible = aisleLip.visible = false;
+      this.floorFallPanels.push(panel, aisleLip);
+      this.z7DetailObjects.push(panel, aisleLip);
+    }
 
     // Long fluorescent reflections in the polished black stone: raster lights cannot
     // self-reflect, so thin additive streaks mirror the machine-wall rhythm down the aisle.
@@ -892,7 +906,7 @@ export default class ThresholdZ7Cathedral extends Scene {
       const targetZ = pose.pos[2] + pose.forward[2] * ahead + (hash(i * 13.7) - 0.5) * 0.75;
       const baseY = targetY + (targetT - 186) * speed;
       const baseZ = targetZ;
-      const baseX = side * (lane === 0 ? 0.95 + hash(i * 3.7) * 0.85 : lane === 1 ? 1.35 + hash(i * 3.7) * 1.55 : 2.0 + hash(i * 3.7) * 2.4);
+      const baseX = side * (lane === 0 ? 2.15 + hash(i * 3.7) * 0.75 : lane === 1 ? 1.8 + hash(i * 3.7) * 1.35 : 2.35 + hash(i * 3.7) * 2.1);
       const orient = lane === 0 ? 0.05 + seed * 0.12 : lane === 1 ? 0.16 + seed * 0.28 : 0.3 + seed * 0.45;
       g.position.set(baseX, baseY, baseZ);
       g.rotation.set(seed * 2.4, side * orient, (seed - 0.5) * 1.5);
@@ -1559,21 +1573,22 @@ export default class ThresholdZ7Cathedral extends Scene {
       const preU = smooth((t - 167.2) / 0.8);
       const postU = smooth((t - 168.0) / 0.6);
       if (t >= 167.2 && t < 168.0) {
-        z = lerp(-16.6, -14.7, preU);
-        x = lerp(0.15 * Math.sin(t * 1.7), 0.0, preU);
+        const zU = smooth((t - 167.8) / 0.2);
+        z = lerp(-16.6, -14.7, zU);
+        x = lerp(0.15 * Math.sin(t * 1.7), 0.9, preU);
       }
       if (t >= 168.0 && t < 168.6) {
         z = lerp(-14.7, landingZ, postU);
-        x = lerp(0.0, 1.72, postU);
+        x = lerp(0.9, 2.8, postU);
       }
       if (t >= 168.6) {
         const gain = smooth((t - 168.6) / 2.2);
         const gap = lerp(4.25, 2.0, gain);
         z = this.cam.position.z + gap;
-        x = lerp(1.72, -0.42 + 0.16 * Math.sin(t * 1.9), smooth((t - 168.6) / 0.9));
+        x = lerp(2.8, -0.42 + 0.16 * Math.sin(t * 1.9), smooth((t - 168.6) / 0.9));
       }
       const overheadU = clamp((t - 167.55) / 1.05);
-      const overheadLift = Math.sin(Math.PI * overheadU) * (t >= 167.55 && t < 168.6 ? 0.78 : 0);
+      const overheadLift = Math.pow(Math.sin(Math.PI * overheadU), 0.55) * (t >= 167.55 && t < 168.6 ? 2.25 : 0);
       // Stop-start predator language: a 30 deg head-tilt tell, then one fast 0.3 s
       // burst into the next held pose. During pursuit the same pose steps become a
       // four-beat all-fours gallop rather than continuous toylike swaying.
@@ -1600,7 +1615,7 @@ export default class ThresholdZ7Cathedral extends Scene {
       this.tenant.rotation.y = t >= 168 ? lerp(Math.PI - 0.55, 0, chaseK) : Math.PI - 0.55;
       const reach = smooth((t - 172.4) / 0.8) * (1 - smooth((t - 174.0) / 0.5));
       const revealScale = t < 168 ? 1.18 : lerp(1.18, 1.26, chaseK);
-      this.tenant.scale.set(revealScale * (1 + reach * 0.12) * 1.08, revealScale * 0.78, revealScale * (1 + reach * 0.35) * 1.12);
+      this.tenant.scale.set(revealScale * (1 + reach * 0.12) * 0.92, revealScale * 0.78, revealScale * (1 + reach * 0.35) * 0.96);
       const head = this.tenantInst?.parts.get('head');
       const armL = this.tenantInst?.parts.get('arm_l');
       const armR = this.tenantInst?.parts.get('arm_r');
@@ -1683,8 +1698,11 @@ export default class ThresholdZ7Cathedral extends Scene {
       d.mesh.rotation.x += 0.0; // orientation is rewritten below as a pure function of t
       d.mesh.rotation.set((d.seed * 4 + t * (0.8 + d.seed)) % (Math.PI * 2), (d.seed * 7 + t * (0.45 + d.seed * 0.4)) % (Math.PI * 2), (d.seed * 3 + t * 0.7) % (Math.PI * 2));
     }
+    const shaftOpen = t >= 185.25;
+    for (const obj of this.floorSolidObjects) obj.visible = !shaftOpen;
+    for (const obj of this.floorFallPanels) obj.visible = shaftOpen;
     const riftOpen = smooth((t - 176) / 6.2);
-    this.rift.visible = riftOpen > 0;
+    this.rift.visible = riftOpen > 0 && !shaftOpen;
     this.rift.scale.x = Math.max(0.02, riftOpen * 4.2);
     for (const glow of this.riftGlows) {
       const wave = 0.24 + 0.76 * Math.max(0, Math.sin((t - 176) * 3.1 - (Math.abs(glow.z) - 50) * 0.19 + glow.seed));
@@ -1717,7 +1735,7 @@ export default class ThresholdZ7Cathedral extends Scene {
       m.group.rotation.z = m.toppleDir * topple * (1.02 + m.seed * 0.38) + swallow * m.toppleDir * 0.34;
       m.group.rotation.x = topple * (0.16 + m.seed * 0.22) + dropT * 0.09;
       m.group.rotation.y = m.baseYaw + (m.seed - 0.5) * 0.12 * topple;
-      m.group.position.x = m.baseX * (1 - 0.82 * swallow);
+      m.group.position.x = m.baseX * (1 - 0.16 * swallow) + Math.sign(m.baseX || 1) * Math.min(0.45, dropT * 0.25);
       m.group.position.z = m.baseZ - swallow * (0.45 + m.seed * 0.35);
       m.group.position.y = -topple * topple * (0.12 + m.seed * 0.08) - dropT * dropT * (0.42 + m.seed * 0.28);
     }
@@ -1743,7 +1761,7 @@ export default class ThresholdZ7Cathedral extends Scene {
       m.group.visible = active;
       if (!active) continue;
       m.group.position.set(
-        m.baseX + Math.sin((t - 186) * (0.33 + m.seed * 0.25) + m.seed * 7) * 0.28,
+        m.baseX + Math.sign(m.baseX || 1) * Math.abs(Math.sin((t - 186) * (0.33 + m.seed * 0.25) + m.seed * 7)) * 0.18,
         m.baseY - shaftFallT * m.speed,
         m.baseZ + Math.sin((t - 186) * 0.21 + m.seed * 5) * 0.18,
       );

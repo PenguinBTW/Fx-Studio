@@ -180,69 +180,73 @@ const BODY: Record<ThresholdTransitionMode, string> = {
     float starter = neonU <= 0.0 ? 0.0 : mix(0.22, 1.0, pulse) * smoothstep(0.0, 0.08, neonU);
     starter = max(starter, smoothstep(0.88, 1.0, neonU));
     vec3 neonScene = cb * (0.72 + 0.58 * starter) + vec3(0.55, 0.06, 0.025) * starter * 0.10;
-    vec3 c = mix(slammed, vec3(0.0), smoothstep(0.18, 0.20, u));
+    // No black reset: the slammed page falls away into a very dim, red-contaminated
+    // motel preview. The incoming sign bloom is therefore the continuous light that
+    // carries the eye across the seam.
+    vec3 dimMotel = cb * vec3(0.11, 0.030, 0.020) + vec3(0.018, 0.0015, 0.0006);
+    vec3 c = mix(slammed, dimMotel, smoothstep(0.18, 0.20, u));
+    float bloomK = smoothstep(0.16, 0.30, u) * (1.0 - smoothstep(0.72, 1.0, u));
+    vec3 nb = vec3(0.0);
+    for (int bi = 0; bi < 4; bi++) {
+      float a = float(bi) * 1.5708 + 0.785;
+      vec2 bo = vec2(cos(a), sin(a)) * (0.008 + 0.018 * u);
+      vec3 bt = texture(texB, clamp(vUv + bo, 0.0, 1.0)).rgb;
+      nb += bt * smoothstep(0.18, 0.85, dot(bt, vec3(0.2126, 0.7152, 0.0722)));
+    }
+    nb *= 0.25;
+    c += nb * bloomK * vec3(1.15, 0.22, 0.08) * 0.62;
+    vec2 signQ = (vUv - vec2(0.50, 0.45)) * vec2(1.7778, 1.0);
+    c += vec3(0.55, 0.055, 0.018) * exp(-dot(signQ, signQ) / 0.035) * bloomK * 0.19;
     c = mix(c, neonScene, smoothstep(0.333, 0.39, u) * starter);
     fragColor = vec4(c, 1.0);`,
   staticFelt: `
-    vec3 ca = texture(texA, vUv).rgb;
-    vec3 cb = texture(texB, vUv).rgb;
-    // CRT grain first enlarges into directional felt fibres; scanline/curvature
-    // structure dies away rather than surviving as a screen overlay.
-    float grainCell = mix(300.0, 34.0, smoothstep(0.0, 0.42, u));
-    vec2 id = floor(vUv * grainCell);
-    float n = hash12(id + floor(u * 18.0));
-    float scan = (0.5 + 0.5 * sin(vUv.y * 900.0)) * (1.0 - smoothstep(0.12, 0.48, u));
-    vec3 stat = vec3(n) * (0.13 + 0.24 * scan + 0.08 * (1.0 - scan));
-    vec3 a = mix(ca, stat, smoothstep(0.0, 0.36, u));
-    float fibreLong = fbm(vec2(vUv.x * 78.0, vUv.y * 18.0), 5) * 0.5 + 0.5;
-    float fibreFine = fbm(vec2(vUv.x * 190.0, vUv.y * 20.0), 3) * 0.5 + 0.5;
-    float strand = 0.5 + 0.5 * sin(vUv.x * 620.0 + fibreLong * 8.0);
-    vec3 felt = vec3(0.105, 0.027, 0.020) * (0.48 + fibreLong * 0.08 + fibreFine * 0.04 + strand * 0.035);
-    // Heavy drapery rather than a flat red noise field: broad vertical folds catch a
-    // warm house light, with valleys falling into brown shadow and a top/bottom falloff.
-    // Irregular heavy folds: cell-hashed ridge positions avoid even sine spacing, while
-    // broad shadow valleys and edge-biased sheen imply cloth occluding itself in depth.
-    float warp = (fbm(vec2(vUv.x * 3.4, vUv.y * 0.55), 4) - 0.5) * 0.035;
-    float foldX = (vUv.x + warp) * 8.0;
-    float foldCell = floor(foldX);
-    float localX = fract(foldX);
-    float ridgeCenter = 0.30 + 0.40 * hash12(vec2(foldCell, 19.7));
-    ridgeCenter += (vUv.y - 0.5) * (hash12(vec2(foldCell, 31.1)) - 0.5) * 0.18;
-    float ridgeWidth = 0.28 + 0.18 * hash12(vec2(foldCell, 43.3));
-    float ridgeDist = abs(localX - ridgeCenter);
-    ridgeDist = min(ridgeDist, 1.0 - ridgeDist);
-    float foldShape = clamp(1.0 - ridgeDist / max(ridgeWidth, 0.04), 0.0, 1.0);
-    float foldWide = pow(foldShape, 0.72);
-    float foldFine = 0.5 + 0.5 * sin(vUv.x * 137.0 + fibreFine * 1.7);
-    float valley = pow(1.0 - foldWide, 2.2);
-    float occlusion = pow(1.0 - foldShape, 3.2) * smoothstep(0.04, 0.48, ridgeDist);
-    float ridge = pow(foldWide, 18.0);
-    float verticalFalloff = smoothstep(0.0, 0.16, vUv.y) * (1.0 - smoothstep(0.82, 1.0, vUv.y) * 0.55);
-    float centerLight = 1.0 - abs(vUv.x - 0.5) * 0.72;
-    float hem = smoothstep(0.16, 0.025, vUv.y);
-    float pool = hem * (0.55 + 0.45 * sin(vUv.x * 61.0 + fibreLong * 4.0));
-    felt *= (0.31 + pow(foldWide, 1.45) * 0.72 + foldFine * 0.035) * (0.55 + verticalFalloff * 0.55) * centerLight;
-    felt *= 1.0 - occlusion * 0.30;
-    felt += vec3(0.38, 0.095, 0.032) * ridge * verticalFalloff * centerLight * 0.52;
-    felt -= vec3(0.045, 0.014, 0.008) * valley * 0.36;
-    felt -= vec3(0.040, 0.012, 0.008) * pool;
-    felt += vec3(0.09, 0.018, 0.008) * smoothstep(0.035, 0.0, vUv.y) * (0.4 + foldWide * 0.6);
-    vec3 m = mix(a, felt, smoothstep(0.22, 0.52, u));
-    // The curtain parts from the center outward, with an irregular fibrous leading edge.
-    float open = smoothstep(0.56, 0.98, u);
-    float ragged = (fbm(vUv * vec2(18.0, 5.0), 4) - 0.5) * 0.075;
-    float centerDist = abs(vUv.x - 0.5);
-    float part = 1.0 - smoothstep(open * 0.54 + ragged - 0.025, open * 0.54 + ragged + 0.025, centerDist);
-    part *= smoothstep(0.54, 0.62, u);
-    float edgeGlow = (1.0 - smoothstep(0.0, 0.045, abs(centerDist - open * 0.54))) * smoothstep(0.54, 0.68, u) * (1.0 - open);
-    vec3 c = mix(m, cb, part);
-    // Loose fibres overlap both sides of the parting line so the reveal keeps a physical
-    // textile fringe instead of cutting directly into the theatre's geometric seat grid.
-    float fringeBand = 1.0 - smoothstep(0.0, 0.085, abs(centerDist - open * 0.54 + ragged * 0.55));
-    float strandLines = 0.5 + 0.5 * sin(vUv.x * 430.0 + fibreLong * 24.0 + vUv.y * 18.0);
-    float fringe = fringeBand * smoothstep(0.56, 0.72, u) * (1.0 - smoothstep(0.91, 1.0, u)) * (0.35 + strandLines * 0.65);
-    c = mix(c, felt * 1.35 + vec3(0.055, 0.008, 0.004), fringe * 0.48);
-    c += vec3(0.24, 0.055, 0.025) * edgeGlow;
+    vec3 ca0 = texture(texA, vUv).rgb;
+    // The CRT is the spatial carrier: the camera pushes into its phosphor glass,
+    // and the theatre is first visible inside that aperture before the glass/curtain
+    // edge expands past the lens. No full-screen noise insert.
+    vec2 screenC = vec2(0.68, 0.27);
+    float push = smoothstep(0.0, 0.44, u);
+    float zoomA = mix(1.0, 1.72, push);
+    vec2 auv = clamp((vUv - screenC) / zoomA + screenC, 0.0, 1.0);
+    vec3 ca = texture(texA, auv).rgb;
+    float lumA = dot(ca0, vec3(0.2126, 0.7152, 0.0722));
+    float phosphorMask = smoothstep(0.30, 1.15, lumA + ca0.b * 0.42);
+    float scan = 0.5 + 0.5 * sin((auv.y + u * 0.018) * 720.0);
+    vec3 phosphor = vec3(0.08, 0.34, 0.48) * phosphorMask * (0.18 + scan * 0.10) * (1.0 - smoothstep(0.46, 0.78, u));
+    float vignette = smoothstep(1.15, 0.28, length((vUv - screenC) * vec2(1.7778, 1.0)));
+    vec3 glass = ca * mix(1.0, 0.34, smoothstep(0.18, 0.62, u)) + phosphor * (0.35 + vignette * 0.65);
+
+    vec2 q = (vUv - screenC) * vec2(1.7778, 1.0);
+    float r = length(q);
+    vec2 radialDir = q / max(r, 0.001);
+    float apertureK = smoothstep(0.10, 0.88, u);
+    float apertureW = mix(0.11, 1.55, apertureK);
+    float apertureH = mix(0.075, 0.92, apertureK);
+    float ragged = (fbm(vUv * vec2(11.0, 7.0) + vec2(u * 0.19, -u * 0.11), 4) - 0.5) * 0.075;
+    float rectD = max(abs(q.x) / apertureW, abs(q.y) / apertureH);
+    float reveal = 1.0 - smoothstep(1.0 + ragged - 0.035, 1.0 + ragged + 0.035, rectD);
+
+    // Incoming theatre is scale/motion continuous: initially seen as if already beyond
+    // the CRT glass, then settling into the authored camera as the aperture opens.
+    float zoomB = mix(1.38, 1.0, smoothstep(0.34, 1.0, u));
+    vec2 buv = clamp((vUv - screenC) / zoomB + screenC, 0.0, 1.0);
+    float fringeBand = 1.0 - smoothstep(0.0, 0.075, abs(rectD - 1.0 + ragged));
+    vec2 refractUv = clamp(buv - radialDir * fringeBand * (0.014 + 0.010 * (1.0 - u)), 0.0, 1.0);
+    vec3 cb = texture(texB, refractUv).rgb;
+
+    // A narrow textile/glass fringe carries material thickness. It remains at the
+    // expanding edge rather than becoming a full-frame red curtain plate.
+    float fibreLong = fbm(vec2(vUv.x * 92.0, vUv.y * 18.0), 4) * 0.5 + 0.5;
+    float fibreFine = fbm(vec2(vUv.x * 210.0, vUv.y * 28.0) + 2.7, 3) * 0.5 + 0.5;
+    float strand = 0.5 + 0.5 * sin(vUv.x * 520.0 + fibreLong * 15.0 + vUv.y * 21.0);
+    float edge = fringeBand * smoothstep(0.20, 0.34, u) * (1.0 - smoothstep(0.91, 1.0, u));
+    vec3 feltEdge = vec3(0.035, 0.014, 0.012) * (0.55 + fibreLong * 0.16 + strand * 0.10);
+    vec3 cyanLip = vec3(0.045, 0.20, 0.27) * (0.18 + fibreFine * 0.22);
+    vec3 edgeCol = mix(cyanLip, feltEdge, smoothstep(0.34, 0.68, u));
+
+    vec3 c = mix(glass, cb, reveal);
+    c = mix(c, edgeCol, edge * 0.20);
+    c += vec3(0.08, 0.32, 0.42) * edge * (1.0 - smoothstep(0.42, 0.70, u)) * 0.025;
     fragColor = vec4(c, 1.0);`,
   doorPush: `
     vec3 ca = texture(texA, vUv).rgb;
@@ -251,8 +255,10 @@ const BODY: Record<ThresholdTransitionMode, string> = {
     float settle = smoothstep(0.10, 1.00, u);
     float zoom = mix(1.075, 1.0, settle);
     vec2 buv = (vUv - vec2(0.5, 0.5)) / zoom + vec2(0.5, mix(0.535, 0.5, settle));
-    vec3 cb = texture(texB, clamp(buv, 0.0, 1.0)).rgb;
-    float whip = smoothstep(0.0, 0.62, u);
+    vec3 cb = texture(texB, clamp(buv, 0.0, 1.0)).rgb * 0.52;
+    cb += texture(texB, clamp((buv - vec2(0.5, 0.5)) / 1.025 + vec2(0.5, 0.5), 0.0, 1.0)).rgb * 0.28;
+    cb += texture(texB, clamp((buv - vec2(0.5, 0.5)) / 1.055 + vec2(0.5, 0.5), 0.0, 1.0)).rgb * 0.20;
+    float whip = smoothstep(0.0, 0.92, u);
     float edgePos = mix(1.18, -0.16, whip);
     float open = 1.0 - smoothstep(edgePos - 0.018, edgePos + 0.018, vUv.x);
     float blur = 0.018 * (1.0 - whip);
@@ -263,8 +269,8 @@ const BODY: Record<ThresholdTransitionMode, string> = {
     float shadow = smoothstep(edgePos, edgePos + 0.24, vUv.x) * (1.0 - smoothstep(0.42, 0.66, u));
     vec3 edgeCol = vec3(0.09, 0.018, 0.012) * (0.65 + fibre * 0.5);
     vec3 c = mix(cb, aa, open);
-    c = mix(c, edgeCol, edgeBand * 0.92);
-    c *= 1.0 - shadow * 0.38;
+    c = mix(c, edgeCol, edgeBand * 0.58);
+    c *= 1.0 - shadow * 0.24;
     fragColor = vec4(c, 1.0);`,
   lightFall: `
     vec3 ca = texture(texA, vUv).rgb;
@@ -276,17 +282,20 @@ const BODY: Record<ThresholdTransitionMode, string> = {
     for (int i = 0; i < 4; i++) {
       float fi = float(i);
       float lane = -0.34 + fi * 0.23 + (hash12(vec2(fi, 3.7)) - 0.5) * 0.08;
+      float drift = fbm(vec2(vUv.y * 1.7 + fi * 3.1, u * 0.8 + fi), 3) - 0.5;
       float travel = fract(vUv.y * 0.32 + u * (1.0 - 0.32 * u) * 0.42 + fi * 0.29);
-      float x = vUv.x - 0.5 - lane - (vUv.y - 0.5) * mix(0.11, 0.28, warm);
-      float core = pow(max(0.0, 1.0 - abs(x) * mix(11.0, 5.0, warm)), 2.1) * 0.58;
-      core += pow(max(0.0, 1.0 - abs(x) * mix(5.5, 2.6, warm)), 1.15) * 0.26;
-      float lengthMask = smoothstep(0.0, 0.12 * lenBoost, travel) * (1.0 - smoothstep(0.52 * lenBoost, 0.92 * lenBoost, travel));
-      lengthMask *= smoothstep(0.0, 0.035, travel) * (1.0 - smoothstep(0.965, 1.0, travel));
-      streakCol += mix(vec3(0.28, 0.56, 1.25), vec3(1.35, 0.73, 0.31), warm) * core * lengthMask;
+      float x = vUv.x - 0.5 - lane - (vUv.y - 0.5) * mix(0.11, 0.28, warm) + drift * 0.045;
+      float width = mix(0.028, 0.105, warm) * (0.78 + 0.44 * hash12(vec2(fi, 9.2)));
+      float core = exp(-x * x / max(width * width, 0.0001));
+      float halo = exp(-x * x / max(width * width * 9.0, 0.0001)) * 0.24;
+      float lengthMask = smoothstep(0.0, 0.18 * lenBoost, travel) * (1.0 - smoothstep(0.48 * lenBoost, 0.96 * lenBoost, travel));
+      float density = 0.58 + 0.42 * fbm(vec2(vUv.x * 5.0 + fi * 8.0, vUv.y * 2.4 - u * 0.37), 4);
+      float verticalFade = smoothstep(0.0, 0.10, vUv.y) * (1.0 - smoothstep(0.90, 1.0, vUv.y));
+      streakCol += mix(vec3(0.20, 0.43, 0.95), vec3(1.15, 0.58, 0.22), warm) * (core * 0.34 + halo) * lengthMask * density * verticalFade;
     }
     float sustain = smoothstep(0.02, 0.18, u) * (1.0 - smoothstep(0.58, 0.88, u));
     vec3 c = mix(ca, cb, smoothstep(0.22, 0.90, u));
-    c += streakCol * max(0.0, sustain) * 0.43;
+    c += streakCol * max(0.0, sustain) * 0.30;
     fragColor = vec4(c, 1.0);`,
 };
 

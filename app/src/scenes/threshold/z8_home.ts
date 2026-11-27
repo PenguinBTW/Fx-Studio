@@ -705,11 +705,11 @@ export default class ThresholdZ8Home extends Scene {
 
     this.s.add(this.flash.group);
 
-    const sun = new THREE.DirectionalLight(0xffb36b, 2.2);
+    const sun = new THREE.DirectionalLight(0xff9f4a, 0.9);
     sun.position.set(-3.5, 4.2, -2.0);
-    this.s.add(sun, new THREE.AmbientLight(0x604632, 0.36));
+    this.s.add(sun, new THREE.AmbientLight(0x40301f, 0.16));
     for (const z of [-2.2, -5.8]) {
-      const graze = new THREE.PointLight(0xffb36b, 0.9, 4.5, 1.65);
+      const graze = new THREE.PointLight(0xff9f4a, 0.38, 4.5, 1.65);
       graze.position.set(0.92, 1.55, z);
       this.s.add(graze);
     }
@@ -752,9 +752,9 @@ export default class ThresholdZ8Home extends Scene {
     this.doorGroup.rotation.y = smooth((t - 217.5) / 2.0) * 1.65;
 
     // Warm lamp is deliberately shadowless; its glow is steady and wrong.
-    const lampLevel = lerp(1.75, 0.24, smooth((t - 209.5) / 1.2));
+    const lampLevel = lerp(1.25, 0.20, smooth((t - 209.5) / 1.2));
     if (this.lampLight) this.lampLight.intensity = lampLevel;
-    this.lampGlow.emissiveIntensity = (2.2 + 0.15 * Math.sin(t * 2.1)) * (0.55 + 0.45 * lampLevel / 1.75);
+    this.lampGlow.emissiveIntensity = (2.2 + 0.15 * Math.sin(t * 2.1)) * (0.55 + 0.45 * lampLevel / 1.25);
     const tubeCap = t >= 218 ? 0.34 : 1;
     this.officeTubeMats.forEach((m, i) => { m.emissiveIntensity = tubeCap * (1.65 + (i === 2 ? 0.5 * hash(Math.floor(t * 7) + i) : 0.12 * hash(Math.floor(t * 3) + i))); });
 
@@ -773,7 +773,7 @@ export default class ThresholdZ8Home extends Scene {
     rr.render(this.s, this.cam);
     rr.resetState();
 
-    return thresholdPost(t, { exposure: 0.86, darkness: 0.38, stress: threat * 0.25 });
+    return thresholdPost(t, { exposure: 0.72, darkness: 0.46, stress: threat * 0.25 });
   }
 
   override dispose() {
