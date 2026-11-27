@@ -315,6 +315,77 @@ export function plasticKnock(u: number, baseHz: number, seed: number, amp = 1): 
   return (shell + contact) * amp * Math.min(1, u * 240);
 }
 
+
+
+/** Water-damped ceramic contact: hard mineral attack without a sustained metallic ring. */
+export function ceramicImpact(u: number, baseHz: number, seed: number, amp = 1): number {
+  if (u < 0 || u > 0.48) return 0;
+  const si = Math.floor(u * 48000 + 0.5);
+  const contact = coloredNoise(si, seed, 21) * 0.12 * Math.exp(-u * 120);
+  const mineral = modalRing(u, [
+    { hz: baseHz * 0.58, gain: 0.18, decay: 17 },
+    { hz: baseHz, gain: 0.24, decay: 22 },
+    { hz: baseHz * 1.37, gain: 0.060, decay: 31 },
+  ]);
+  return (contact + mineral) * amp * Math.min(1, u * 300);
+}
+
+/** Water droplet impact: dark cavity/bubble resonance with a very short splash contact. */
+export function waterDrop(u: number, baseHz: number, seed: number, amp = 1): number {
+  if (u < 0 || u > 0.72) return 0;
+  const si = Math.floor(u * 48000 + 0.5);
+  const contact = coloredNoise(si, seed, 29) * (0.22 * Math.exp(-u * 72) + 0.070 * Math.exp(-u * 24));
+  const cavity = modalRing(u, [
+    { hz: baseHz * (0.92 + hash01(seed, 2.2) * 0.12), gain: 0.21, decay: 19 },
+    { hz: baseHz * (1.43 + hash01(seed, 3.4) * 0.18), gain: 0.040, decay: 29 },
+    { hz: baseHz * 0.51, gain: 0.055, decay: 11 },
+  ]);
+  return (contact + cavity) * amp * Math.min(1, u * 300);
+}
+
+/** Knee-deep water displacement: lowpassed turbulent wash plus weak cavity pressure. */
+export function waterDisplace(u: number, seed: number, amp = 1, bodyHz = 118): number {
+  if (u < 0 || u > 0.78) return 0;
+  const si = Math.floor(u * 48000 + 0.5);
+  const attack = Math.min(1, u / 0.018);
+  const wash = coloredNoise(si, seed, 95) * (0.34 * Math.exp(-u * 16) + 0.16 * Math.exp(-u * 5.5));
+  const detail = coloredNoise(si, seed + 5.7, 43) * 0.014 * Math.exp(-u * 42);
+  const cavity = modalRing(u, [
+    { hz: bodyHz * 0.55, gain: 0.12, decay: 10 },
+    { hz: bodyHz, gain: 0.15, decay: 13 },
+    { hz: bodyHz * 1.53, gain: 0.045, decay: 18 },
+  ]);
+  return (wash + detail + cavity) * amp * attack;
+}
+
+/** Short wet ceramic scrape: fibrous/dark friction with no rising electronic sweep. */
+export function wetScrape(u: number, dur: number, seed: number, amp = 1): number {
+  if (u < 0 || u > dur) return 0;
+  const si = Math.floor(u * 48000 + 0.5);
+  const x = u / dur;
+  const env = Math.sin(Math.PI * x) ** 0.8;
+  const irregular = 0.62 + slowNoise01(u, seed, 11) * 0.48;
+  const friction = coloredNoise(si, seed, 23) * env * irregular * 0.24;
+  const mineral = modalRing(u, [
+    { hz: 132 + hash01(seed, 1.5) * 34, gain: 0.055, decay: 11 },
+    { hz: 214 + hash01(seed, 2.5) * 28, gain: 0.025, decay: 17 },
+  ]) * env;
+  return (friction + mineral) * amp;
+}
+
+/** Heavily muffled mechanical bell strike for a phone heard through water/foam. */
+export function muffledBellStrike(u: number, baseHz: number, seed: number, amp = 1): number {
+  if (u < 0 || u > 0.58) return 0;
+  const si = Math.floor(u * 48000 + 0.5);
+  const contact = coloredNoise(si, seed, 17) * 0.065 * Math.exp(-u * 150);
+  const bell = modalRing(u, [
+    { hz: baseHz * 0.50, gain: 0.15, decay: 13 },
+    { hz: baseHz, gain: 0.35, decay: 10 },
+    { hz: baseHz * 1.49, gain: 0.11, decay: 15 },
+  ]);
+  return (bell + contact) * amp * Math.min(1, u * 500);
+}
+
 /** Low metal/wood object impact for bars, doors, rails, and structural contact. */
 export function impactStrike(u: number, baseHz: number, seed: number, amp = 1): number {
   if (u < 0 || u > 1.0) return 0;

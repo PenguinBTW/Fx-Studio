@@ -3,7 +3,7 @@
 // generated WAVs are evidence/build products and are never committed.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { coloredNoise, impactStrike, musicBoxTine, plasticKnock, renderBellPhone, renderConvolutionRoom, slowNoise01, softImpact, tileClatter, type RoomOptions } from './threshold_audio_lib';
+import { coloredNoise, impactStrike, musicBoxTine, plasticKnock, ceramicImpact, waterDrop, waterDisplace, wetScrape, muffledBellStrike, renderBellPhone, renderConvolutionRoom, slowNoise01, softImpact, tileClatter, type RoomOptions } from './threshold_audio_lib';
 
 const SR = 48000;
 const OUT = path.join(import.meta.dir, '../src/scenes/threshold/sound/generated');
@@ -455,21 +455,9 @@ wavRoom('z2_playroom_events.wav', stem(25.8, (t) => {
 }), z2PlayroomRoom);
 
 
-// Z3 tiled pool cue pass from z2_z4_audio_cue_spec.md. The stem starts at 54.6;
-// `at` is project time. Viewer water steps use broad gait windows from z3_pool.ts,
-// while Mirrorling landings follow its exact 0.9 s late-step cycle at 72.5/73.4/74.3.
-const z3HumPhase = (at: number): number => {
-  const F = 51.5;
-  const q = 1 - Math.pow(2, -1 / 12);
-  const a = 62.7, b = 63.2, D = b - a;
-  if (at < a) return F * (at - 55.0);
-  if (at < b) {
-    const u = at - a;
-    const x = u / D;
-    return F * (a - 55.0) + F * u - F * q * D * (x ** 3 - 0.5 * x ** 4);
-  }
-  return F * (b - 55.0) - F * q * D * 0.5 + F * (1 - q) * (at - b);
-};
+// Z3 tiled pool redesign: huge wet darkness, sparse physical water movement, and
+// long tiled convolution tails. No interface tones, sonar pings, sweeps, or bright chimes.
+const z3PoolRoom: RoomOptions = { size: 1.8, decaySec: 2.35, dampingHz: 1450, predelayMs: 17, earlyDb: -9, tailDb: -9, dryDb: -1 };
 const z3ViewerSteps: number[] = [];
 {
   for (let t = 55.05; t < 62.5; t += 0.72) z3ViewerSteps.push(t);
@@ -482,13 +470,10 @@ const z3ViewerSteps: number[] = [];
   }
 }
 const z3MirrorlingSteps = [72.50, 73.40, 74.30];
-const z3Drips = [55.8, 57.4, 60.2, 63.6, 66.1, 69.4, 71.7, 75.2, 77.6];
-let z3NoiseLp = 0;
-let z3AirLp = 0;
-wav('z3_pool_events.wav', stem(25.8, (t) => {
+const z3Drips = [56.20, 64.15, 67.15, 69.75, 76.20];
+wavRoom('z3_pool_events.wav', stem(25.8, (t) => {
   const at = t + 54.6;
-  z3NoiseLp = z3NoiseLp * 0.86 + noise() * 0.14;
-  z3AirLp = z3AirLp * 0.94 + noise() * 0.06;
+  const si = Math.floor(t * SR + 0.5);
   let l = 0, r = 0;
   const add = (v: number, pan = 0) => {
     const a = (pan + 1) * Math.PI / 4;
@@ -496,104 +481,66 @@ wav('z3_pool_events.wav', stem(25.8, (t) => {
     r += v * Math.sin(a);
   };
 
-  // Reverberant pool-hall pressure bed: low hum, tiled air, sparse distant drips.
-  if (at >= 55.0 && at < 79.4) {
-    const phase = z3HumPhase(at);
-    const hum = Math.sin(phase * Math.PI * 2) * 0.018 + Math.sin(phase * Math.PI * 2 * 1.99) * 0.007;
-    const air = z3AirLp * 0.028;
-    const breath = 0.005 + 0.995 * ((1 - smoothstep(63.4, 63.7, at)) + smoothstep(67.0, 67.3, at));
-    add((hum + air) * breath, 0);
-  }
-  for (const drip of z3Drips) {
-    const u = at - drip;
-    if (u > 0 && u < 0.34) {
-      const hz = 980 - u * 1300;
-      const ping = Math.sin(u * Math.PI * 2 * Math.max(360, hz)) * 0.012 * Math.exp(-u * 12);
-      add(ping, hash01(Math.floor(drip * 10), 3.3) * 0.9 - 0.45);
-    }
+  // Rare droplets from the tiled ceiling. Their length comes from the room, not a tonal tail.
+  for (const [j, drip] of z3Drips.entries()) {
+    add(waterDrop(at - drip, 235 + hash01(j, 181.2) * 105, 181.7 + j, 0.078 + hash01(j, 182.5) * 0.024), -0.36 + hash01(j, 183.4) * 0.70);
   }
 
-  // Knee-deep viewer steps: close splash transient plus tiled-hall repeats.
-  const waterStep = (hit: number, amp: number, pan: number, alien = false) => {
-    for (const [echo, mul, width] of [[0, 1, 0], [0.48, 0.42, 0.25], [1.08, 0.24, -0.35], [1.82, 0.13, 0.42], [2.72, 0.07, -0.2]] as const) {
-      const u = at - hit - echo;
-      if (u > 0 && u < 0.34) {
-        const splash = noise() * 0.070 * amp * Math.exp(-u * 24) + z3NoiseLp * 0.045 * amp * Math.exp(-u * 10);
-        const cavity = Math.sin(u * Math.PI * 2 * (alien ? 164 : 132)) * 0.030 * amp * Math.exp(-u * 16);
-        add((splash + cavity) * mul, pan + width);
-      }
-    }
-  };
+  // First-person knee-deep movement: lowpassed displaced water and cavity pressure.
+  // Steps are close but deliberately dark; the tiled room carries the fear.
   for (let i = 0; i < z3ViewerSteps.length; i++) {
     const hit = z3ViewerSteps[i]!;
-    const retreat = hit > 74.5 ? 1.18 : 0.82;
-    waterStep(hit, retreat, (i % 2 ? 0.13 : -0.13));
+    const retreat = hit > 74.5 ? 0.085 : (hit < 62.5 ? 0.026 : 0.038);
+    add(waterDisplace(at - hit, 190.2 + i * 1.43, retreat, hit > 74.5 ? 104 : 124), (i % 2 ? 0.12 : -0.12));
   }
 
-  // Reflection mismatch: nearly subliminal air/lap delayed after the viewer movement.
-  if (at >= 58.5 && at < 61.0) {
-    const lagged = Math.max(0, Math.sin((at - 58.5 - 0.4) * Math.PI * 2 * 0.7));
-    add(z3NoiseLp * 0.012 * lagged + Math.sin(at * Math.PI * 2 * 210) * 0.004 * lagged, -0.18);
+  // Reflection mismatch: after the viewer stops, two small laps arrive late and too far left.
+  for (const [j, hit] of [63.08, 63.58].entries()) {
+    add(waterDisplace(at - hit, 205.2 + j, 0.028 - j * 0.006, 92), -0.32);
   }
 
-  // One isolated step that is not ours, ahead/right.
-  waterStep(64.8, 1.05, 0.36, true);
+  // One isolated step that is not ours, ahead/right: heavier, lower, and out of cadence.
+  add(waterDisplace(at - 64.82, 211.4, 0.105, 88), 0.35);
 
-  // Very low submerged Tenant pressure swell.
-  if (at >= 68.0 && at < 68.5) {
+  // Distant submerged pressure impact: felt through the pool mass more than heard.
+  if (at >= 68.0 && at < 68.65) {
     const u = at - 68.0;
-    add((Math.sin(u * Math.PI * 2 * 37) * 0.055 + z3NoiseLp * 0.024) * Math.sin(Math.PI * u / 0.5), 0);
+    const pressure = Math.sin(Math.PI * Math.min(1, u / 0.28)) ** 2;
+    add((Math.sin(u * Math.PI * 2 * 39) * 0.020 + coloredNoise(si, 214.5, 31) * 0.020) * pressure, 0.04);
   }
 
-  // Wet/muffled beige-phone ring, right side, recognizable but distorted through water and foam.
-  if (at >= 70.0 && at < 72.0) {
-    const u0 = at - 70.0;
-    const cycle = u0 % 0.68;
-    if (cycle < 0.34) {
-      const wet = 470 + Math.sin(cycle * Math.PI * 2 * 6.5) * 70;
-      const e = Math.sin(Math.PI * cycle / 0.34);
-      add((Math.sin(cycle * Math.PI * 2 * wet) * 0.044 + Math.sin(cycle * Math.PI * 2 * wet * 0.51) * 0.019 + noise() * 0.006) * e, 0.38);
-    }
+  // The submerged beige phone: a few muffled mechanical clapper strikes, never an electronic ringtone.
+  for (let k = 0; k < 16; k++) {
+    const hit = 70.05 + k * 0.052 + (hash01(k, 217.2) - 0.5) * 0.006;
+    add(muffledBellStrike(at - hit, k % 2 ? 505 : 418, 218.3 + k, 0.026 * (0.75 + hash01(k, 219.4) * 0.35)), 0.35);
   }
 
-  // Mirrorling emergence: wet tile scrape and a sheet of water shedding off chrome.
-  if (at >= 72.0 && at < 72.5) {
-    const u = at - 72.0;
-    const scrape = z3NoiseLp * 0.18 * Math.min(1, u / 0.08) + Math.sin(u * Math.PI * 2 * (260 + u * 720)) * 0.044;
-    const sheet = noise() * 0.105 * Math.exp(-u * 4.2) + Math.sin(u * Math.PI * 2 * (1150 + u * 900)) * 0.014 * Math.exp(-u * 7);
-    add((scrape + sheet) * Math.exp(-u * 1.8), -0.04);
-  }
+  // Mirrorling emergence: wet ceramic friction and a sheet of water shedding from metal.
+  add(wetScrape(at - 72.02, 0.46, 221.2, 0.105), -0.05);
+  add(waterDisplace(at - 72.20, 222.6, 0.125, 96), -0.03);
 
-  // Discrete late wet-tile Mirrorling landings with a circular splash under each.
+  // Discrete late Mirrorling landings: ceramic contact plus circular water displacement.
   for (let i = 0; i < z3MirrorlingSteps.length; i++) {
     const hit = z3MirrorlingSteps[i]!;
-    const u = at - hit;
-    if (u > 0 && u < 0.42) {
-      const ceramic = Math.sin(u * Math.PI * 2 * 420) * 0.052 * Math.exp(-u * 22);
-      const ringSplash = noise() * 0.055 * Math.exp(-u * 9) + z3NoiseLp * 0.045 * Math.exp(-u * 7);
-      add(ceramic + ringSplash, -0.08 + i * 0.08);
-    }
+    add(ceramicImpact(at - hit, 205 - i * 14, 225.1 + i, 0.040), -0.08 + i * 0.08);
+    add(waterDisplace(at - hit - 0.018, 226.4 + i, 0.070, 110), -0.08 + i * 0.08);
   }
 
-  // Heel catches the submerged step; cloth and water rise before the full fall.
-  if (at >= 78.0 && at < 78.5) {
-    const u = at - 78.0;
-    const knock = u < 0.12 ? Math.sin(u * Math.PI * 2 * 640) * 0.070 * Math.exp(-u * 34) : 0;
-    const cloth = noise() * 0.035 * Math.sin(Math.PI * u / 0.5);
-    add(knock + cloth + z3NoiseLp * 0.035 * u, 0.08);
-  }
+  // Heel catches the submerged step; cloth and water rise before the fall.
+  add(ceramicImpact(at - 78.02, 190, 231.2, 0.060), 0.08);
+  add(waterDisplace(at - 78.10, 232.5, 0.080, 112), 0.08);
 
-  // Frame-filling splash, cut quickly into underwater low-pass pressure for T3 ink.
-  if (at >= 78.4 && at < 80.0) {
-    const u = at - 78.4;
-    const cut = smoothstep(0.06, 0.30, u);
-    const splash = (noise() * 0.20 + Math.sin(u * Math.PI * 2 * (1350 - u * 500)) * 0.028) * Math.exp(-u * 3.4) * (1 - cut);
-    const submerged = z3NoiseLp * 0.18 * cut + Math.sin(u * Math.PI * 2 * 58) * 0.042 * cut;
-    add(splash + submerged, 0);
+  // Frame-filling splash, then immediate underwater pressure. The impact is loud but brief;
+  // no sustained broadband roar is allowed to become static.
+  add(waterDisplace(at - 78.42, 235.8, 0.22, 72), 0);
+  if (at >= 78.72 && at < 79.55) {
+    const u = at - 78.72;
+    const pressure = Math.sin(Math.PI * Math.min(1, u / 0.72)) ** 1.4;
+    add((Math.sin(u * Math.PI * 2 * 43) * 0.026 + coloredNoise(si, 236.5, 35) * 0.028) * pressure, 0);
   }
 
   return [l, r];
-}));
+}), z3PoolRoom);
 
 
 // Z4 paper-library cue pass from z2_z4_audio_cue_spec.md. Stem starts at 79.4;
@@ -1170,15 +1117,16 @@ bed('z2_playroom_room_tone.wav', 25.8, 0.65, 0.85, (t, lp) => {
 });
 
 bed('z3_pool_room_tone.wav', 26.0, 0.75, 1.1, (t, lp) => {
-  const wet = lp() * 0.042;
-  const water = Math.sin(t * Math.PI * 2 * 0.53) * 0.006 + Math.sin(t * Math.PI * 2 * 1.17) * 0.003;
-  let drip = 0;
-  for (const at of [3.2, 8.9, 14.4, 21.7]) {
+  // Tiled water space is not a hiss bed: only deep building pressure and two tiny settling laps.
+  const deepAir = lp() * 0.0015;
+  const waterMass = Math.sin(t * Math.PI * 2 * 0.43) * 0.0003;
+  let settle = 0;
+  for (const [j, at] of [9.8, 20.6].entries()) {
     const u = t - at;
-    if (u > 0 && u < 0.28) drip += Math.sin(u * Math.PI * 2 * 930) * 0.035 * Math.exp(-u * 22);
+    if (u > 0 && u < 0.32) settle += coloredNoise(Math.floor(t * SR), 241.2 + j, 27) * 0.003 * Math.exp(-u * 16);
   }
-  const v = wet * 0.55 + water + drip;
-  return [v, v * 0.82];
+  const v = deepAir + waterMass + settle;
+  return [v * 0.9, v];
 });
 
 bed('z4_library_room_tone.wav', 25.9, 0.9, 0.75, (t, lp) => {
