@@ -1020,7 +1020,7 @@ wavRoom('z7_cathedral_events.wav', stem(45.8, (t) => {
 // and the exact bell-phone language returning home. No birds, mower loop, fluorescent
 // drone, continuous kettle noise, electronic ring imitation, or closure music.
 const z8HomeRoom: RoomOptions = { size: 0.68, decaySec: 0.48, dampingHz: 2100, predelayMs: 8, earlyDb: -14, tailDb: -15, dryDb: 0 };
-const z8ExactPhone = renderBellPhone(4.8, SR);
+const z8ExactPhone = renderBellPhone(4.8, SR, false);
 const endExactPhone = renderBellPhone(2.8, SR);
 wavRoom('z8_home_events.wav', stem(30.8, (t) => {
   const at = t + 194.4;

@@ -683,7 +683,7 @@ export function musicBoxTine(u: number, hz: number, seed: number, amp = 1): numb
  * is injected into banks of narrowly damped resonators, so the bell partials are
  * energized differently on every hit instead of replaying clean oscillator tones.
  */
-export function renderBellPhone(durationSec: number, sampleRate = 48000): Float32Array {
+export function renderBellPhone(durationSec: number, sampleRate = 48000, cradleKnock = true): Float32Array {
   const frames = Math.round(durationSec * sampleRate);
   const out = new Float32Array(frames * 2);
   interface Resonator { hz: number; r: number; c: number; z1: number; z2: number; gain: number; pan: number; bell: number }
@@ -761,7 +761,7 @@ export function renderBellPhone(durationSec: number, sampleRate = 48000): Float3
 
     // Cradle/receiver knock near the cutoff, also filtered through the room rather than dry click.
     const cu = t - 2.38;
-    if (cu >= 0 && cu < 0.09) {
+    if (cradleKnock && cu >= 0 && cu < 0.09) {
       const knock = impactStrike(cu, 390, 8.2, 0.15);
       l += knock * 0.9;
       r += knock * 0.78;
