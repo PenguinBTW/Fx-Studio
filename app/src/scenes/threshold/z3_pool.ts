@@ -821,6 +821,9 @@ export default class ThresholdZ3Pool extends Scene {
     wp.needsUpdate = true; this.water.geometry.computeVertexNormals();
     if (this.waterMat.map) { this.waterMat.map.offset.set((t * 0.012) % 1, (t * 0.018) % 1); }
     if (this.waterGlintMat.map) { this.waterGlintMat.map.offset.set((t * 0.006) % 1, (t * 0.010) % 1); this.waterGlintMat.opacity = (0.25 + Math.sin(t * 0.9) * 0.05) * (1 - smooth(79.15, 80, t)); }
+    const waterClearance = Math.abs(this.cam.position.y - this.water.position.y);
+    const waterNearFade = smooth(0.035, 0.18, waterClearance);
+    this.waterMat.opacity = 0.78 * (0.08 + 0.92 * waterNearFade);
     this.waterMat.emissiveIntensity = 0.18 + Math.sin(t * 2.4) * 0.025;
     this.surfaceLeaves.forEach((l, i) => {
       const bp = l.userData.basePos as THREE.Vector3;

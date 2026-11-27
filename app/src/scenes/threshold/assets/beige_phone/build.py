@@ -7,10 +7,10 @@ sys.path.insert(0, os.path.dirname(HERE))
 from _bl import *
 
 reset()
-BEIGE = mat('BeigeBakelite', (0.58, 0.49, 0.34), 0.48)
+BEIGE = mat('BeigeBakelite', (0.54, 0.445, 0.30), 0.56)
 BEIGE_LIGHT = mat('BeigeWornEdges', (0.72, 0.63, 0.46), 0.42)
 BEIGE_DARK = mat('BeigeShadow', (0.31, 0.24, 0.15), 0.62)
-KEY = mat('KeyIvory', (0.80, 0.74, 0.60), 0.46)
+KEY = mat('KeyIvory', (0.64, 0.56, 0.40), 0.58)
 INK = mat('KeyInk', (0.035, 0.03, 0.025), 0.55)
 RUBBER = mat('CordRubber', (0.10, 0.075, 0.05), 0.76)
 METAL = mat('BellMetal', (0.38, 0.31, 0.19), 0.34, metal=0.7)
@@ -28,10 +28,22 @@ def add(o, part=None):
 
 # Low rectangular underside, deeper sloped shell, front lip and rear cradle plinth.
 # The base is visually substantial rather than a flat card: about 8cm tall at the rear.
-add(box('base_lower', (0.130, 0.102, 0.026), (0, 0, 0.026), BEIGE, bev=0.010, seg=2), 'base')
-add(box('base_shell', (0.126, 0.097, 0.031), (0, 0.001, 0.066), BEIGE, bev=0.013, seg=3, rot=(math.radians(-6), 0, 0)), 'base')
+add(box('base_lower', (0.130, 0.102, 0.026), (0, 0, 0.026), BEIGE, bev=0.0045, seg=1), 'base')
+# Angular molded shell: a real wedge/trapezoid rather than a softened bar of soap.
+xh, yf, yb = 0.126, -0.096, 0.098
+zb, ztf, ztb = 0.046, 0.066, 0.099
+verts = [
+    (-xh, yf, zb), (xh, yf, zb), (xh, yb, zb), (-xh, yb, zb),
+    (-xh, yf, ztf), (xh, yf, ztf), (xh, yb, ztb), (-xh, yb, ztb),
+]
+faces = [(0,1,2,3),(4,7,6,5),(0,4,5,1),(1,5,6,2),(2,6,7,3),(3,7,4,0)]
+me = bpy.data.meshes.new('base_shell_mesh')
+me.from_pydata(verts, [], faces); me.update()
+shell_ob = bpy.data.objects.new('base_shell', me); bpy.context.collection.objects.link(shell_ob)
+assign(shell_ob, BEIGE); bevel(shell_ob, 0.0022, 1); smooth(shell_ob, 42)
+add(shell_ob, 'base')
 add(box('front_lip', (0.124, 0.011, 0.018), (0, -0.096, 0.045), BEIGE_DARK, bev=0.005), 'base')
-add(box('rear_cradle_plinth', (0.112, 0.043, 0.025), (0, 0.047, 0.101), BEIGE, bev=0.010, seg=2), 'cradle')
+add(box('rear_cradle_plinth', (0.112, 0.043, 0.025), (0, 0.047, 0.101), BEIGE, bev=0.0065, seg=2), 'cradle')
 # thin shadow seam around the shell makes the two-piece molded construction legible
 add(box('base_shell_shadow_seam', (0.127, 0.098, 0.0025), (0, -0.001, 0.043), GRIME, bev=0.001), 'base')
 
@@ -76,17 +88,17 @@ for side in (-1, 1):
 
 # Recessed keypad field on the forward sloped face. Keys sit inside the base footprint,
 # raised only slightly, with tiny printed marks rather than loose floating tablets.
-add(box('keypad_recess', (0.060, 0.043, 0.004), (0, -0.044, 0.098), BEIGE_DARK, bev=0.006, seg=2, rot=(math.radians(-6), 0, 0)), 'keypad')
+add(box('keypad_recess', (0.060, 0.043, 0.004), (0, -0.044, 0.078), BEIGE_DARK, bev=0.006, seg=2, rot=(math.radians(-6), 0, 0)), 'keypad')
 digits = ['1','2','3','4','5','6','7','8','9','*','0','#']
 for i, digit in enumerate(digits):
     col = i % 3
     row = i // 3
-    x = (col - 1) * 0.030
-    y = -0.027 - row * 0.0145
-    z = 0.104 - row * 0.0017
-    key = add(box(f'key_{digit}', (0.0108, 0.0060, 0.0028), (x, y, z), KEY, bev=0.0022, seg=1, rot=(math.radians(-6), 0, 0)), 'keypad')
+    x = (col - 1) * 0.024
+    y = -0.027 - row * 0.0170
+    z = 0.0805 - row * 0.0029
+    key = add(box(f'key_{digit}', (0.0105, 0.0055, 0.0022), (x, y, z), KEY, bev=0.0012, seg=1, rot=(math.radians(-6), 0, 0)), 'keypad')
     key['digit'] = digit
-    add(box(f'key_mark_{digit}', (0.0048 if digit != '0' else 0.0068, 0.0007, 0.0005), (x, y - 0.0061, z + 0.0018), INK, bev=0.0003, rot=(math.radians(-6), 0, 0)), 'keypad')
+    add(box(f'key_mark_{digit}', (0.0048 if digit != '0' else 0.0068, 0.0007, 0.0005), (x, y - 0.0061, z + 0.0025), INK, bev=0.0003, rot=(math.radians(-6), 0, 0)), 'keypad')
 
 # Bell holes and metal bells partly visible through the underside.
 for side in (-1, 1):
