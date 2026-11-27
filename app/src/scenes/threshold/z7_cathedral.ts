@@ -1609,7 +1609,10 @@ export default class ThresholdZ7Cathedral extends Scene {
       const gallopShape = lerp(beatNow, beatNext, smooth(beatFrac / 0.35));
       const gallop = t >= 168 ? gallopShape : 0;
       const exitU = smooth((t - 174.65) / 0.55);
-      this.tenant.position.set(x + exitU * 4.2, overheadLift + (t >= 168 ? 0.035 * Math.abs(gallop) : 0) + exitU * 2.2, z);
+      // The exit is an ease-out overhead clearance: slow smoothstep initiation left
+      // the long foreground limb inside the lens for several frames at 174.85.
+      const exitMove = 1 - (1 - exitU) * (1 - exitU);
+      this.tenant.position.set(x + exitMove * 4.2, overheadLift + (t >= 168 ? 0.035 * Math.abs(gallop) : 0) + exitMove * 2.2, z + exitMove * 0.65);
       this.tenant.rotation.x = t >= 168 ? -0.42 + 0.025 * gallop : -0.28;
       this.tenant.rotation.z = 0.045 * heldPose + (t >= 168 ? 0.018 * gallop : 0);
       this.tenant.rotation.y = t >= 168 ? lerp(Math.PI - 0.55, 0, chaseK) : Math.PI - 0.55;
