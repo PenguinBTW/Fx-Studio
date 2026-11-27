@@ -305,7 +305,7 @@ export function bellStrike(u: number, baseHz: number, seed: number, amp = 1): nu
 export function plasticKnock(u: number, baseHz: number, seed: number, amp = 1): number {
   if (u < 0 || u > 0.55) return 0;
   const si = Math.floor(u * 48000 + 0.5);
-  const contact = coloredNoise(si, seed, 9) * 0.11 * Math.exp(-u * 120);
+  const contact = coloredNoise(si, seed, 9) * 0.070 * Math.exp(-u * 145);
   const shell = modalRing(u, [
     { hz: baseHz * 0.72, gain: 0.30, decay: 18 },
     { hz: baseHz, gain: 0.36, decay: 24 },

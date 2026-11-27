@@ -328,12 +328,12 @@ const z2CascadeEvents: Array<{ at: number; hz: number; amp: number; pan: number;
   for (let i = 0; tt < 45.32; i++) {
     z2CascadeEvents.push({
       at: tt,
-      hz: 230 + hash01(i, 76.2) * 430,
-      amp: 0.035 + hash01(i, 77.3) * 0.045,
+      hz: 135 + hash01(i, 76.2) * 150,
+      amp: 0.026 + hash01(i, 77.3) * 0.034,
       pan: 0.02 + hash01(i, 78.4) * 0.42,
       seed: 130.2 + i * 2.03,
     });
-    tt += 0.035 + hash01(i, 79.5) * 0.075;
+    tt += 0.16 + hash01(i, 79.5) * 0.18;
   }
 }
 
@@ -394,13 +394,13 @@ wavRoom('z2_playroom_events.wav', stem(25.8, (t) => {
   }
 
   // Hollow tube breath in two uneven efforts, mostly turbulent air inside vinyl.
-  for (const [j, start, dur, scale] of [[0, 44.72, 0.92, 0.82]] as const) {
+  for (const [j, start, dur, scale] of [[0, 44.70, 0.38, 0.82], [1, 45.26, 0.30, 0.58]] as const) {
     const u = at - start;
     if (u >= 0 && u < dur) {
       const x = u / dur;
       const envb = Math.sin(Math.PI * x) ** 1.35;
       const organic = 0.64 + slowNoise01(u, 141.2 + j, 1.5) * 0.26 + slowNoise01(u, 149.4 + j, 8.7) * 0.34;
-      const air = coloredNoise(si, 142.5 + j, 25) * envb * organic * 0.070;
+      const air = coloredNoise(si, 142.5 + j, 19) * envb * organic * 0.038;
       const tube = Math.sin(u * Math.PI * 2 * (128 + j * 14 + Math.sin(u * 2.1) * 5)) * envb * 0.005;
       add((air + tube) * scale, 0.14);
     }
