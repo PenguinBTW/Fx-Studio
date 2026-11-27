@@ -128,7 +128,7 @@ for k in range(96):
         cone(f'front_carapace_brittle_spire_{k+1:03d}',(x,y-.006,z+.012),.007+(k%3)*.002,.001,.028+(k%4)*.007,boneold,rot=(random.uniform(-.45,.45),random.uniform(-.45,.45),random.uniform(-.45,.45)),vertices=5).parent=root
 
 # Deep irregular mouth wound facing negative Y.
-mc=sphere('mouth_cavity',(0,-.485,-.035),(.43,.19,.28),deep,seg=24,rings=12,deform=.28); mc.parent=root
+mc=sphere('mouth_cavity',(0,-.235,-.045),(.40,.085,.25),deep,seg=24,rings=12,deform=.22); mc.parent=root
 # Gum is multiple overlapping lumps rather than a clean oval lip.
 for i in range(16):
     a=math.tau*i/16

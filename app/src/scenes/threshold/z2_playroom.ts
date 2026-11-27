@@ -628,15 +628,22 @@ export default class ThresholdZ2Playroom extends Scene {
     this.swimmerLight.visible = swimmerVisible;
     this.swimmerLight.intensity = swimmerVisible ? 0.24 : 0;
     this.swimmerLight.position.set(sx + 0.85, sy + 0.38, sz + 0.55);
+    const scan = smooth(44.8, 45.6, t) * (1 - smooth(48.7, 49.2, t));
     for (const side of ['l', 'r'] as const) {
       const pupil = this.swimmerAsset.part(`eye_pupil_${side}`);
       if (pupil) {
         if (!pupil.userData.basePos) pupil.userData.basePos = pupil.position.clone();
         const bp = pupil.userData.basePos as THREE.Vector3;
-        const scan = smooth(44.8, 45.6, t) * (1 - smooth(48.7, 49.2, t));
         pupil.position.x = bp.x + Math.sin(t * 0.82 + (side === 'l' ? 0 : 0.9)) * 0.014 * scan;
         pupil.position.y = bp.y + Math.cos(t * 0.67 + (side === 'l' ? 0.4 : 1.1)) * 0.009 * scan;
       }
+    }
+    const heroEyeCenter = this.swimmerAsset.part('face_eye_necrotic_center');
+    if (heroEyeCenter) {
+      if (!heroEyeCenter.userData.basePos) heroEyeCenter.userData.basePos = heroEyeCenter.position.clone();
+      const bp = heroEyeCenter.userData.basePos as THREE.Vector3;
+      heroEyeCenter.position.x = bp.x + Math.sin(t * 0.82 + 0.45) * 0.006 * scan;
+      heroEyeCenter.position.y = bp.y + Math.cos(t * 0.67 + 0.85) * 0.004 * scan;
     }
     const upperJaw = this.swimmerAsset.part('slide_mouth_upper_root');
     const lowerJaw = this.swimmerAsset.part('slide_mouth_lower_root');
