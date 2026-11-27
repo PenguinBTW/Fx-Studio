@@ -708,10 +708,10 @@ wavRoom('z5_motel_events.wav', stem(25.7, (t) => {
   add(clockTick(at - 119.35, 330.2, 0.014), -0.18);
 
   // Tenant reveal as a sparse physical material collage: paper, plastic, ceramic, wood stress.
-  add(paperTear(at - 120.48, 0.62, 332.2, 0.24), -0.04);
-  add(plasticKnock(at - 120.82, 170, 333.3, 0.11), 0.05);
-  add(ceramicImpact(at - 121.04, 190, 334.4, 0.09), -0.03);
-  add(woodCreak(at - 121.12, 0.46, 335.5, 0.28), 0);
+  add(paperTear(at - 120.48, 0.62, 332.2, 0.20), -0.04);
+  add(plasticKnock(at - 120.82, 150, 333.3, 0.085), 0.05);
+  add(ceramicImpact(at - 121.04, 165, 334.4, 0.065), -0.03);
+  add(woodCreak(at - 121.12, 0.46, 335.5, 0.34), 0);
 
   // Door 217 slam, latch, and body against panel: physical wood mass.
   add(impactStrike(at - 121.82, 92, 337.2, 0.27), 0.28);
@@ -1111,83 +1111,57 @@ wavRoom('end_office_events.wav', stem(10.0, (t) => {
   // END is almost nothing: one return ring, one distant repetition, then room silence.
   addEndPhone(225.15, 0.16);
   addEndPhone(230.55, 0.085);
-  const endFade = 1 - smoothstep(234.15, 235, at);
+  const endFade = 1 - smoothstep(231.15, 235, at);
   return [l * endFade, r * endFade];
 }), { ...z1OfficeRoom, decaySec: 0.82, tailDb: -13, earlyDb: -16 });
 
 // Transition-specific sound continuity. These short cues bind the material handoffs together;
 // zone beds underneath already crossfade, so these stems carry only the physical seam events.
-wav('t2_plastic_to_water.wav', stem(1.4, (t) => {
-  let plastic = 0;
-  for (const at of [0.10, 0.25, 0.42, 0.58]) {
-    const u = t - at;
-    if (u > 0 && u < 0.11) plastic += (noise() * 0.06 + Math.sin(u * Math.PI * 2 * 620) * 0.045) * Math.exp(-u * 34) * (1 - t / 1.2);
-  }
-  let water = 0;
-  for (const at of [0.55, 0.82, 1.08]) {
-    const u = t - at;
-    if (u > 0 && u < 0.42) water += noise() * 0.075 * Math.exp(-u * 9) * Math.min(1, u / 0.035);
-  }
-  const wetness = Math.min(1, Math.max(0, (t - 0.45) / 0.65));
-  const hollow = (Math.sin(t * Math.PI * 2 * (92 - wetness * 28)) * 0.022 + noise() * 0.010) * (1 - wetness);
-  const v = plastic * (1 - wetness) + water * wetness + hollow;
-  return [v, v * 0.82];
-}));
-
-let inkLp = 0;
-wav('t3_ink_to_paper.wav', stem(1.6, (t) => {
-  inkLp = inkLp * 0.9 + noise() * 0.1;
-  const submerge = inkLp * 0.18 * Math.sin(Math.PI * Math.min(1, t / 0.72)) ** 1.2;
-  const pressure = Math.sin(t * Math.PI * 2 * (54 - t * 9)) * 0.028 * Math.exp(-t * 1.8);
-  const paperAt = t - 0.78;
-  let paper = 0;
-  if (paperAt > 0) {
-    paper = noise() * 0.045 * Math.min(1, paperAt / 0.12) * Math.exp(-paperAt * 1.3);
-    for (const at of [0.92, 1.18]) {
-      const u = t - at;
-      if (u > 0 && u < 0.16) paper += noise() * 0.055 * Math.exp(-u * 18);
-    }
-  }
-  const v = submerge * (1 - Math.min(1, paperAt / 0.3)) + pressure + paper;
-  return [v * 0.92, v];
-}));
-
-wav('t4_page_slam_neon.wav', stem(1.0, (t) => {
+wavRoom('t2_plastic_to_water.wav', stem(1.4, (t) => {
+  // Playroom shells give way to pool water as discrete material contacts.
   let v = 0;
-  if (t < 0.115) {
-    const k = t / 0.115;
-    v += noise() * 0.065 * Math.sin(Math.PI * k) + Math.sin(t * Math.PI * 2 * 190) * 0.012 * k;
-  }
-  const u = t - 0.108;
-  if (u > 0 && u < 0.10) {
-    v += noise() * 0.16 * Math.exp(-u * 42) + Math.sin(u * Math.PI * 2 * 72) * 0.16 * Math.exp(-u * 28);
-  }
-  // 0.12-0.20 stays deliberately empty: the master mute guarantees true black silence.
-  for (const at of [0.23, 0.39, 0.57]) {
-    const q = t - at;
-    if (q > 0 && q < 0.07) {
-      v += noise() * 0.045 * Math.exp(-q * 65) + Math.sin(q * Math.PI * 2 * 118) * 0.035 * Math.exp(-q * 28);
-    }
-  }
-  const neonOn = Math.max(0, Math.min(1, (t - 0.57) / 0.1));
-  v += (Math.sin(t * Math.PI * 2 * 119) * 0.022 + Math.sin(t * Math.PI * 2 * 238) * 0.006) * neonOn;
-  return [v, v * 0.9];
-}));
+  for (const [j, at] of [0.10,0.28,0.46].entries()) v += plasticKnock(t - at, 240 - j * 28, 626.2 + j, 0.055) * (1 - t / 1.3);
+  v += waterDrop(t - 0.62, 155, 629.2, 0.12);
+  v += waterDrop(t - 0.92, 132, 630.3, 0.10);
+  v += waterDisplace(t - 1.02, 631.4, 0.09, 105);
+  return [v, v * 0.82];
+}), { size: 1.35, decaySec: 1.35, dampingHz: 1500, predelayMs: 13, earlyDb: -10, tailDb: -9, dryDb: -1 });
 
-let staticLp = 0;
-wav('t5_static_to_felt.wav', stem(1.4, (t) => {
-  staticLp = staticLp * 0.74 + noise() * 0.26;
-  const staticAmt = Math.max(0, 1 - t / 0.78);
-  const staticNoise = noise() * 0.09 * staticAmt + Math.sin(t * Math.PI * 2 * 60) * 0.012 * staticAmt;
-  const felt = staticLp * 0.16 * Math.min(1, Math.max(0, (t - 0.38) / 0.5));
-  let brush = 0;
-  for (const at of [0.66, 0.88, 1.08]) {
-    const u = t - at;
-    if (u > 0 && u < 0.24) brush += staticLp * 0.11 * Math.sin(Math.PI * u / 0.24);
+wavRoom('t3_ink_to_paper.wav', stem(1.6, (t) => {
+  // Submerged pressure dries into the first paper fibres; no tonal dive or noise sweep.
+  let v = waterDisplace(t - 0.04, 634.2, 0.10, 96) * Math.max(0, 1 - t / 0.85);
+  v += waterDrop(t - 0.42, 128, 635.3, 0.075);
+  v += paperRustle(t - 0.82, 0.24, 636.4, 0.16);
+  v += paperRustle(t - 1.10, 0.18, 637.5, 0.13);
+  v += paperTear(t - 1.25, 0.22, 638.6, 0.055);
+  return [v * 0.92, v];
+}), { size: 0.9, decaySec: 0.72, dampingHz: 1700, predelayMs: 9, earlyDb: -13, tailDb: -13, dryDb: 0 });
+
+wavRoom('t4_page_slam_neon.wav', stem(1.0, (t) => {
+  // Paper mass slams to true-black silence; two small exterior relay contacts re-open the motel.
+  let v = paperSlam(t - 0.105, 641.2, 0.25, 0.5);
+  v += paperRustle(t - 0.01, 0.12, 642.3, 0.10);
+  // 0.12-0.20 remains deliberately empty under the exact master mute.
+  v += clockTick(t - 0.24, 643.4, 0.045);
+  v += clockTick(t - 0.43, 644.5, 0.035);
+  if (t > 0.57 && t < 0.86) {
+    const u = t - 0.57;
+    v += coloredNoise(Math.floor(t * SR + 0.5), 645.6, 57) * Math.sin(Math.PI * u / 0.29) ** 2 * 0.008;
   }
-  const v = staticNoise + felt + brush;
+  return [v, v * 0.9];
+}), { size: 0.85, decaySec: 0.58, dampingHz: 1550, predelayMs: 8, earlyDb: -13, tailDb: -13, dryDb: 0 });
+
+wavRoom('t5_static_to_felt.wav', stem(1.4, (t) => {
+  // The motel TV collapses into handmade felt: small-speaker fragment, then cloth absorption.
+  let v = 0;
+  const tv = z5FinalTv[1]!;
+  const idx = Math.floor((t - 0.03) * SR + 0.5);
+  if (idx >= 0 && idx * 2 + 1 < tv.length) v += (tv[idx * 2]! + tv[idx * 2 + 1]!) * 0.5 * 0.30 * Math.max(0, 1 - t / 0.55);
+  v += clothDrag(t - 0.48, 0.52, 648.2, 0.18);
+  v += clothDrag(t - 0.82, 0.36, 649.3, 0.13);
+  v += carpetStep(t - 1.02, 650.4, 0.055);
   return [v * 0.86, v];
-}));
+}), { size: 0.72, decaySec: 0.44, dampingHz: 1250, predelayMs: 7, earlyDb: -17, tailDb: -17, dryDb: 0 });
 
 wav('t6_felt_door_push.wav', stem(1.2, (t) => {
   let v = 0;
@@ -1195,8 +1169,6 @@ wav('t6_felt_door_push.wav', stem(1.2, (t) => {
   v += woodCreak(t - 0.08, 0.52, 441.3, 0.22);
   const u = t - 0.42;
   if (u > 0 && u < 0.30) v += impactStrike(u, 105, 442.4, 0.16);
-  const p = t - 0.64;
-  if (p > 0 && p < 0.42) v += Math.sin(p * Math.PI * 2 * 42) * 0.018 * Math.sin(Math.PI * p / 0.42) ** 2;
   return [v, v * 0.74];
 }));
 
@@ -1337,7 +1309,7 @@ bed('z8_home_room_tone.wav', 30.6, 0.8, 1.8, (t, lp) => {
 
 bed('end_office_afterimage_tone.wav', 10.0, 0.4, 2.4, (t, lp) => {
   // END is almost nothing: a trace of dark office air decaying toward silence.
-  const endFade = 1 - smoothstep(8.2, 10.0, t);
+  const endFade = 1 - smoothstep(6.1, 10.0, t);
   const v = lp() * 0.00045 * endFade;
   return [v, v * 0.94];
 }, (t) => 1 - smoothstep(9.15, 10.0, t));

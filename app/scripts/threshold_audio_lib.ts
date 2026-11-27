@@ -484,7 +484,7 @@ export function paperTear(u: number, dur: number, seed: number, amp = 1): number
   for (let k = 0; k < 18; k++) {
     const at = dur * (k + 0.35 + hash01(k, seed) * 0.35) / 18;
     const uu = u - at;
-    if (uu > 0 && uu < 0.028) snaps += (hash01(si, seed + k * 4.7) - 0.5) * Math.exp(-uu * 150) * (0.20 + hash01(k, seed + 1) * 0.15);
+    if (uu > 0 && uu < 0.028) snaps += (hash01(si, seed + k * 4.7) - 0.5) * Math.exp(-uu * 165) * (0.13 + hash01(k, seed + 1) * 0.10);
   }
   const body = modalRing(u, [
     { hz: 92 + hash01(seed, 4.4) * 42, gain: 0.045, decay: 9 },
@@ -498,11 +498,11 @@ export function paperSlam(u: number, seed: number, amp = 1, close = 0): number {
   if (u < 0 || u > 0.62) return 0;
   const si = Math.floor(u * 48000 + 0.5);
   const attack = Math.min(1, u / 0.012);
-  const fibre = coloredNoise(si, seed, 19) * (0.30 * Math.exp(-u * 23) + 0.11 * Math.exp(-u * 8));
+  const fibre = coloredNoise(si, seed, 19) * (0.36 * Math.exp(-u * 23) + 0.15 * Math.exp(-u * 8));
   const snap = coloredNoise(si, seed + 4.2, 9) * 0.08 * Math.exp(-u * 55);
   const body = modalRing(u, [
-    { hz: 58 + close * 20, gain: 0.17 + close * 0.08, decay: 10 },
-    { hz: 103 + close * 28, gain: 0.09, decay: 15 },
+    { hz: 58 + close * 20, gain: 0.11 + close * 0.055, decay: 12 },
+    { hz: 103 + close * 28, gain: 0.065, decay: 18 },
   ]);
   return (fibre + snap + body) * amp * attack;
 }
