@@ -409,7 +409,7 @@ wavRoom('z2_playroom_events.wav', stem(25.8, (t) => {
   // The toy phone is still a mechanical bell object, only smaller and further away.
   // No electronic warble or toy-bird chirp.
   {
-    const pi = Math.floor((at - 47.5) * SR);
+    const pi = Math.round((at - 47.5) * SR);
     if (pi >= 0 && pi * 2 + 1 < z2ToyPhone.length) {
       addStereo(z2ToyPhone[pi * 2]! * 0.22, z2ToyPhone[pi * 2 + 1]! * 0.20);
     }
