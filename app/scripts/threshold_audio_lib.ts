@@ -319,6 +319,102 @@ export function plasticKnock(u: number, baseHz: number, seed: number, amp = 1): 
 
 
 
+
+
+/**
+ * Offline tinny CRT/small-speaker program-audio renderer. Direct harmonic voice
+ * synthesis with moving vowel formants, syllabic pauses, breath noise, and a
+ * bandlimited nonlinear speaker cone. Nonverbal by design: television presence,
+ * not intelligible dialogue, static, or music.
+ */
+export function renderCrtProgram(durationSec: number, sampleRate = 48000, seed = 1): Float32Array {
+  const frames = Math.max(1, Math.round(durationSec * sampleRate));
+  const out = new Float32Array(frames * 2);
+  const vowels = [
+    [640, 1120, 2450],
+    [450, 880, 2350],
+    [510, 1760, 2600],
+    [360, 760, 2150],
+  ] as const;
+  let phase = 0.17;
+  let hpLp = 0;
+  let outLp = 0;
+  let noiseLp = 0;
+  for (let f = 0; f < frames; f++) {
+    const t = f / sampleRate;
+    const phrase = slowNoise01(t, seed + 1.2, 0.75);
+    const syll = Math.max(0, slowNoise01(t, seed + 2.2, 4.4) - 0.30) * 1.55;
+    const gate = phrase > 0.34 ? Math.min(1, syll) : 0;
+    const jitter = (hash01(f, seed + 9.2) - 0.5) * 1.8;
+    const f0 = 96 + slowNoise01(t, seed + 3.2, 0.55) * 34 + Math.sin(t * Math.PI * 2 * 1.35) * 3 + jitter;
+    phase += f0 / sampleRate;
+    if (phase >= 1) phase -= Math.floor(phase);
+
+    // Moving vowel tract. Adjacent phonemes crossfade rather than fixed synth ringing.
+    const pv = t * 3.2;
+    const cell = Math.floor(pv);
+    const frac = pv - cell;
+    const va = vowels[Math.floor(hash01(cell, seed + 11.2) * vowels.length) % vowels.length]!;
+    const vb = vowels[Math.floor(hash01(cell + 1, seed + 11.2) * vowels.length) % vowels.length]!;
+    const sm = frac * frac * (3 - 2 * frac);
+    const F = [0, 1, 2].map((i) => va[i]! * (1 - sm) + vb[i]! * sm);
+
+    let voice = 0;
+    for (let h = 1; h <= 15; h++) {
+      const hz = f0 * h;
+      if (hz > 3300) break;
+      const formantWeight =
+        Math.exp(-0.5 * ((hz - F[0]!) / 190) ** 2) * 1.0 +
+        Math.exp(-0.5 * ((hz - F[1]!) / 260) ** 2) * 0.58 +
+        Math.exp(-0.5 * ((hz - F[2]!) / 390) ** 2) * 0.22;
+      voice += Math.sin(Math.PI * 2 * h * phase) * formantWeight / Math.pow(h, 0.72);
+    }
+    voice *= 0.21 * gate;
+
+    const si = f;
+    noiseLp = noiseLp * 0.78 + coloredNoise(si, seed + 4.2, 13) * 0.22;
+    voice += noiseLp * 0.055 * gate;
+    const cellNoise = Math.floor(t * 6.1);
+    const cu = t - cellNoise / 6.1;
+    if (hash01(cellNoise, seed + 5.2) < 0.31 && cu < 0.030 && phrase > 0.36) {
+      voice += (hash01(si, seed + cellNoise * 0.37) - 0.5) * Math.exp(-cu * 105) * 0.12;
+    }
+
+    // Tinny small speaker: high-pass the chest low end, low-pass the top, mild cone compression.
+    hpLp += 0.045 * (voice - hpLp);
+    const highPassed = voice - hpLp;
+    outLp += 0.16 * (highPassed - outLp);
+    const v = Math.tanh(outLp * 3.4) * 0.36;
+    out[f * 2] = v;
+    out[f * 2 + 1] = v * 0.94;
+  }
+  let peak = 1e-9;
+  for (let i = 0; i < out.length; i++) peak = Math.max(peak, Math.abs(out[i]!));
+  const scale = 0.22 / peak;
+  for (let i = 0; i < out.length; i++) out[i] *= scale;
+  return out;
+}
+
+/** Muffled small-speaker program-audio fragment: syllabic, dark, and physically boxy. */
+export function crtSpeakerBurst(u: number, dur: number, seed: number, amp = 1): number {
+  if (u < 0 || u > dur) return 0;
+  const si = Math.floor(u * 48000 + 0.5);
+  const x = u / dur;
+  const env = Math.sin(Math.PI * x) ** 0.7;
+  const syllable = Math.max(0, slowNoise01(u, seed, 3.4) - 0.28) * 1.6;
+  const midNoise = coloredNoise(si, seed, 9) - coloredNoise(si, seed + 1.7, 37);
+  const voiceNoise = midNoise * env * syllable * 0.22;
+  const formants = modalRing(u, [
+    { hz: 225 + hash01(seed, 2.2) * 45, gain: 0.055, decay: 8 },
+    { hz: 610 + hash01(seed, 3.2) * 110, gain: 0.034, decay: 11 },
+    { hz: 1120 + hash01(seed, 4.2) * 180, gain: 0.014, decay: 16 },
+  ]) * env * syllable;
+  const cone = modalRing(u, [
+    { hz: 236 + hash01(seed, 5.2) * 38, gain: 0.026, decay: 9 },
+  ]) * env;
+  return (voiceNoise + formants + cone) * amp;
+}
+
 /** Tiny clock escapement click: noise-dominated mechanical contact with no musical decay. */
 export function clockTick(u: number, seed: number, amp = 1): number {
   if (u < 0 || u > 0.09) return 0;
@@ -329,6 +425,21 @@ export function clockTick(u: number, seed: number, amp = 1): number {
     { hz: 520 + hash01(seed, 3.1) * 70, gain: 0.018, decay: 42 },
   ]);
   return (click + tooth + body) * amp * Math.min(1, u * 900);
+}
+
+
+/** Dense carpet footstep dominated by fibrous compression/friction rather than floor thud. */
+export function carpetStep(u: number, seed: number, amp = 1): number {
+  if (u < 0 || u > 0.34) return 0;
+  const si = Math.floor(u * 48000 + 0.5);
+  const attack = Math.min(1, u / 0.014);
+  const pressure = Math.sin(Math.PI * Math.min(1, u / 0.050)) ** 2;
+  const fiber = coloredNoise(si, seed, 13);
+  const edge = coloredNoise(si, seed + 3.7, 7);
+  const friction = fiber * (0.36 * Math.exp(-u * 31) + 0.14 * Math.exp(-u * 10));
+  const textile = edge * 0.10 * Math.exp(-u * 74);
+  const weight = pressure * coloredNoise(si, seed + 7.1, 29) * 0.065;
+  return (friction + textile + weight) * amp * attack;
 }
 
 /** Dry paper fibre movement: irregular crackle and drag, never a uniform noise bed. */

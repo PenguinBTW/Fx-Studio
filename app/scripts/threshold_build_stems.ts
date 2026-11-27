@@ -3,7 +3,7 @@
 // generated WAVs are evidence/build products and are never committed.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { coloredNoise, impactStrike, musicBoxTine, plasticKnock, ceramicImpact, clockTick, paperRustle, paperTear, paperSlam, woodCreak, bodyCough, waterDrop, waterDisplace, wetScrape, muffledBellStrike, renderBellPhone, renderConvolutionRoom, slowNoise01, softImpact, tileClatter, type RoomOptions } from './threshold_audio_lib';
+import { coloredNoise, impactStrike, musicBoxTine, plasticKnock, ceramicImpact, carpetStep, clockTick, crtSpeakerBurst, paperRustle, paperTear, paperSlam, woodCreak, bodyCough, waterDrop, waterDisplace, wetScrape, muffledBellStrike, renderBellPhone, renderCrtProgram, renderConvolutionRoom, slowNoise01, softImpact, tileClatter, type RoomOptions } from './threshold_audio_lib';
 
 const SR = 48000;
 const OUT = path.join(import.meta.dir, '../src/scenes/threshold/sound/generated');
@@ -642,42 +642,111 @@ wavRoom('z4_library_events.wav', stem(25.9, (t) => {
 }), z4LibraryRoom);
 
 
-// Z5 motel cue pass from z5_z8_audio_cue_spec.md. Stem starts at 104.7; `at` is project time.
-let z5lp=0;
-wav('z5_motel_events.wav', stem(25.7,(t)=>{
- const at=t+104.7; z5lp=z5lp*.87+noise()*.13; let l=0,r=0;
- const add=(v:number,pan=0)=>{const a=(pan+1)*Math.PI/4;l+=v*Math.cos(a);r+=v*Math.sin(a)};
- // End-window rain and unstable neon/ice-machine electrical bed.
- if(at>=105&&at<130){const bedDuck=1-.5*smoothstep(114.48,114.55,at)*(1-smoothstep(115.85,116.05,at));const breath=0.005+0.995*((1-smoothstep(117.0,117.3,at))+smoothstep(119.9,120.2,at));const bedGain=bedDuck*breath;const rain=noise()*.009*(.55+.45*hash01(Math.floor(at*19),5));add(rain*bedGain,.18);add(Math.sin(at*Math.PI*2*120)*.004*(1+.25*Math.sin(at*19))*bedGain,.28);add(z5lp*.012*bedGain,-.32)}
- // occasional compressor relay ticks
- for(const hit of[107.2,113.8,121.4,126.9]){const u=at-hit;if(u>0&&u<.05)add((noise()*.028+Math.sin(u*Math.PI*2*900)*.01)*Math.exp(-u*70),-.32)}
- // wet shoes compressing dense carpet, gait windows broad and deterministic
- const steps=[105.3,106.0,106.75,107.5,108.25,109,109.75,110.5,111.25,112,112.75,113.5,114.25,115.0,115.65,116.3,116.95,117.6,118.25,118.9,119.55,120.2,120.9,121.55,122.2,122.85,123.5,124.15,124.8,125.45,126.1,126.75,127.4];
- for(let i=0;i<steps.length;i++){const hit=steps[i]!;const u=at-hit;if(at<122.4&&u>0&&u<.13){const stationary=hit>=115.5&&hit<121.2?.18:1;add((z5lp*.07+Math.sin(u*Math.PI*2*78)*.026+noise()*.008)*stationary*Math.exp(-u*24),i%2?.1:-.1)}}
- // muffled nonverbal TV murmurs alternating doors
- for(const [st,pan] of[[105.6,.36],[107.4,-.34],[109.4,.34],[111.1,-.36],[113.2,.3]] as const){const u=at-st;if(at<114.5&&u>0&&u<1.1){const syll=Math.max(0,Math.sin(u*Math.PI*2*3.2));add((Math.sin(u*Math.PI*2*(160+60*Math.sin(u*8)))*.009+z5lp*.012)*syll*Math.exp(-u*.8),pan)}}
- // passing CRT static and cheap delayed CCTV feeds; all cut dead at 114.5
- if(at>=108.5&&at<111.5)add(noise()*.018*(.4+.6*hash01(Math.floor(at*37),8)),.34);
- if(at>=111.5&&at<114.5){add((noise()*.006+Math.sin(at*Math.PI*2*700)*.0025)*(0.5+0.5*Math.sin(at*9)),.2);for(let i=0;i<steps.length;i++){const u=at-steps[i]!-.16;if(u>0&&u<.13)add((z5lp*.024+Math.sin(u*Math.PI*2*190)*.009)*Math.exp(-u*24),(i%2?.18:-.18)+.08)}}
- // Lint at the sconce: felt wing bats plus tiny warm chirp
- if(at>=112.1&&at<112.8){const u=at-112.1;const flap=Math.abs(Math.sin(u*Math.PI*2*8));add(z5lp*.06*flap+Math.sin(u*Math.PI*2*980)*.006*flap,-.38)}
- // held breath negative space: tiny cloth movement and sparse rear drips only
- for(const st of[117.1,117.7,118.35,119.2]){const u=at-st;if(u>0&&u<.12)add(z5lp*.025*Math.sin(Math.PI*u/.12),0)}
- for(const st of[117.25,118.1,118.85,119.55]){const u=at-st;if(u>0&&u<.28)add(Math.sin(u*Math.PI*2*760)*.009*Math.exp(-u*16),-.05)}
- // Tenant reveal material collage and composite neck creak
- if(at>=120.45&&at<121.65){const u=at-120.45;add((noise()*.035+z5lp*.07+Math.sin(u*Math.PI*2*(180+u*500))*.025)*Math.exp(-u*2.4),0)}
- if(at>=121&&at<121.5){const u=at-121;add((z5lp*.09+Math.sin(u*Math.PI*2*(92+u*45))*.02)*Math.sin(Math.PI*u/.5),0)}
- // door 217 slam/latch/body against panel
- if(at>=121.8&&at<122.4){const u=at-121.8;add((Math.sin(u*Math.PI*2*72)*.10+z5lp*.09+noise()*.025)*Math.exp(-u*10),.28)}
- // hiding breath and corridor footsteps outside door
- if(at>=124&&at<128){const cyc=(at-124)%1.8;const gate=Math.sin(Math.PI*cyc/1.8)**2;add(z5lp*.028*gate,.08)}
- for(const st of[125.2,126.6]){const u=at-st;if(u>0&&u<.2)add((z5lp*.09+Math.sin(u*Math.PI*2*66)*.035)*Math.exp(-u*15),.18)}
- // handle rotates, sticks, releases
- if(at>=126.8&&at<127.3){const u=at-126.8;add((Math.sin(u*Math.PI*2*(420+120*Math.sin(u*30)))*.018+noise()*.012)*Math.sin(Math.PI*u/.5),.22)}
- // TV self-static broadens and softens toward felt transition
- if(at>=128&&at<130){const u=(at-128)/2;add(noise()*(.028-u*.012)+z5lp*u*.045,.1)}
- return[l,r]
-}));
+// Z5 motel redesign: low dark rain pressure, intermittent weak neon, tactile carpet,
+// physical CRT/speaker fragments, and a nearly empty hiding beat. No static beds or chirps.
+const z5MotelRoom: RoomOptions = { size: 1.0, decaySec: 0.78, dampingHz: 1500, predelayMs: 10, earlyDb: -11, tailDb: -12, dryDb: 0 };
+const z5DoorTv = [0, 1, 2, 3, 4].map((j) => renderCrtProgram(1.05, SR, 360.2 + j));
+const z5NearTv = [0, 1, 2, 3, 4].map((j) => renderCrtProgram(0.72, SR, 370.2 + j));
+const z5FinalTv = [renderCrtProgram(0.78, SR, 380.2), renderCrtProgram(0.52, SR, 381.2)];
+wavRoom('z5_motel_events.wav', stem(25.7, (t) => {
+  const at = t + 104.7;
+  const si = Math.floor(t * SR + 0.5);
+  let l = 0, r = 0;
+  const add = (v: number, pan = 0) => {
+    const a = (pan + 1) * Math.PI / 4;
+    l += v * Math.cos(a);
+    r += v * Math.sin(a);
+  };
+
+  // Wet shoes compressing dense carpet: close, soft, and dark. Stationary hiding steps are almost absent.
+  const steps = [105.3,106.0,106.75,107.5,108.25,109,109.75,110.5,111.25,112,112.75,113.5,114.25,115.0,115.65,116.3,116.95,117.6,118.25,118.9,119.55,120.2,120.9,121.55,122.2,122.85,123.5,124.15,124.8,125.45,126.1,126.75,127.4];
+  for (let i = 0; i < steps.length; i++) {
+    const hit = steps[i]!;
+    if (at < 122.4) {
+      let stationary = hit >= 115.5 && hit < 121.2 ? 0.055 : 0.16;
+      if (hit >= 108.5 && hit < 113.2) stationary *= 0.55;
+      add(carpetStep(at - hit, 311.3 + i, stationary), i % 2 ? 0.10 : -0.10);
+    }
+  }
+
+  // Muffled program audio through alternating motel doors: physical small-speaker fragments,
+  // never a continuous TV-static bed. Each fragment has real silence around it.
+  for (const [j, st, pan] of [[0,105.6,0.36],[1,107.4,-0.34],[2,109.4,0.34],[3,111.1,-0.36],[4,113.2,0.30]] as const) {
+    {
+      const idx = Math.floor((at - st) * SR + 0.5);
+      const buf = z5DoorTv[j]!;
+      if (idx >= 0 && idx < buf.length / 2) add((buf[idx * 2]! + buf[idx * 2 + 1]!) * 0.5 * 0.72, pan);
+    }
+  }
+  // The passing CRT itself: tinny boxy fragments only when the camera is near it.
+  for (const [j, st, dur] of [[0,108.65,0.52],[1,109.55,0.64],[2,110.62,0.48],[3,111.50,0.58],[4,112.65,0.42]] as const) {
+    {
+      const idx = Math.floor((at - st) * SR + 0.5);
+      const buf = z5NearTv[j]!;
+      if (idx >= 0 && idx < buf.length / 2) add((buf[idx * 2]! + buf[idx * 2 + 1]!) * 0.5 * 0.92, 0.31);
+    }
+  }
+
+  // Weak neon/ice-machine relays: sparse mechanical contact ticks with true gaps.
+  for (const [j, hit] of [107.2,113.8,121.4,126.9].entries()) {
+    add(clockTick(at - hit, 322.2 + j, 0.060), -0.32);
+  }
+
+  // Lint at the sconce: felt/wing movement only; the warm chirp is removed.
+  for (const [j, st] of [112.14,112.31,112.49].entries()) {
+    add(paperRustle(at - st, 0.08, 325.2 + j, 0.12 - j * 0.015), -0.38);
+  }
+
+  // Hiding beat: nearly empty. Only two tiny cloth pressure movements and one distant pipe tick.
+  for (const [j, st] of [117.25,118.62].entries()) {
+    const u = at - st;
+    if (u > 0 && u < 0.24) {
+      const envb = Math.sin(Math.PI * u / 0.24) ** 1.6;
+      add(coloredNoise(si, 328.2 + j, 27) * envb * 0.012, 0.02);
+    }
+  }
+  add(clockTick(at - 119.35, 330.2, 0.014), -0.18);
+
+  // Tenant reveal as a sparse physical material collage: paper, plastic, ceramic, wood stress.
+  add(paperTear(at - 120.48, 0.62, 332.2, 0.24), -0.04);
+  add(plasticKnock(at - 120.82, 170, 333.3, 0.11), 0.05);
+  add(ceramicImpact(at - 121.04, 190, 334.4, 0.09), -0.03);
+  add(woodCreak(at - 121.12, 0.46, 335.5, 0.28), 0);
+
+  // Door 217 slam, latch, and body against panel: physical wood mass.
+  add(impactStrike(at - 121.82, 92, 337.2, 0.27), 0.28);
+  add(woodCreak(at - 121.96, 0.34, 338.3, 0.20), 0.25);
+  add(clockTick(at - 122.14, 339.4, 0.055), 0.24);
+
+  // Corridor footsteps outside the door: distant, soft, and few.
+  for (const [j, st] of [125.2,126.6].entries()) {
+    add(carpetStep(at - st, 341.2 + j, 0.12), 0.18);
+  }
+
+  // Handle rotates, sticks, releases: stick-slip metal/wood contact without tonal sweep.
+  add(woodCreak(at - 126.82, 0.42, 343.2, 0.26), 0.22);
+  add(ceramicImpact(at - 127.18, 260, 344.3, 0.10), 0.20);
+
+  // Final TV-in-room presence before the felt transition: two small-speaker fragments and
+  // one weak intermittent electrical pressure swell, then absence.
+  {
+    const idx = Math.floor((at - 128.12) * SR + 0.5);
+    const buf = z5FinalTv[0]!;
+    if (idx >= 0 && idx < buf.length / 2) add((buf[idx * 2]! + buf[idx * 2 + 1]!) * 0.5 * 0.68, 0.10);
+  }
+  {
+    const idx = Math.floor((at - 129.05) * SR + 0.5);
+    const buf = z5FinalTv[1]!;
+    if (idx >= 0 && idx < buf.length / 2) add((buf[idx * 2]! + buf[idx * 2 + 1]!) * 0.5 * 0.54, 0.08);
+  }
+  if (at >= 128.55 && at < 129.10) {
+    const u = at - 128.55;
+    const envn = Math.sin(Math.PI * u / 0.55) ** 2;
+    add(Math.sin(u * Math.PI * 2 * 59) * 0.006 * envn, 0.12);
+  }
+
+  return [l, r];
+}), z5MotelRoom);
 
 
 // Exact cold-open arm/beam recurrence. The same generated stem is placed at Z0 1.2s
@@ -1098,10 +1167,15 @@ bed('z4_library_room_tone.wav', 25.9, 0.9, 0.75, (t, lp) => {
 });
 
 bed('z5_motel_room_tone.wav', 25.9, 0.55, 1.0, (t, lp) => {
-  const rain = noise() * 0.014 + lp() * 0.023;
-  const neon = Math.sin(t * Math.PI * 2 * 119) * 0.009 + Math.sin(t * Math.PI * 2 * 238) * 0.003;
-  const pipe = Math.sin(t * Math.PI * 2 * 47) * 0.004 * (0.5 + 0.5 * Math.sin(t * 0.23));
-  const v = rain + neon + pipe;
+  // Exterior rain is pressure against the building, not a hiss/static bed. The weak neon
+  // appears only as two short unstable swells with silence around them.
+  const rainPressure = lp() * 0.016 * (0.65 + 0.35 * slowNoise01(t, 350.2, 0.7));
+  let neon = 0;
+  for (const [j, at] of [6.4, 18.2].entries()) {
+    const u = t - at;
+    if (u > 0 && u < 0.75) neon += Math.sin(u * Math.PI * 2 * (118 + j * 2)) * 0.0085 * Math.sin(Math.PI * u / 0.75) ** 2;
+  }
+  const v = rainPressure + neon;
   return [v, v * 0.9];
 });
 
