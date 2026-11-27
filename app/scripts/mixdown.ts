@@ -80,7 +80,7 @@ export interface MixManifest {
   vocalSanctuary?: { centerHz?: number; q?: number; cutDb?: number };
   mutes?: MixMute[];
   /** fadeOut: linear master fade over [at, at + dur] in project time (s), applied after loudnorm. */
-  master?: { lufs?: number; truePeak?: number; normalize?: boolean; limiterLookaheadMs?: number; limiter?: boolean; reconstructionLowpassHz?: number; fadeOut?: { at: number; dur: number }; lowLevelLift?: { thresholdDb?: number; ratio?: number; maxLiftDb?: number }; downwardCompress?: { thresholdDb?: number; ratio?: number } };
+  master?: { lufs?: number; truePeak?: number; normalize?: boolean; limiterLookaheadMs?: number; limiter?: boolean; reconstructionLowpassHz?: number; fadeOut?: { at: number; dur: number }; lowLevelLift?: { thresholdDb?: number; ratio?: number; maxLiftDb?: number }; downwardCompress?: { thresholdDb?: number; ratio?: number }; loudnessMakeup?: boolean };
   /** Optional second output: foley_guide bus only. */
   foleyGuide?: { out?: string };
 }
@@ -603,7 +603,7 @@ export async function mixdown(o: MixOptions): Promise<MixReport> {
         report.measuredTruePeakPreTrim = tpMs.input_tp;
         const measuredI = Number.parseFloat(tpMs.input_i);
         const normalizationEnabled = (m as any).normalize !== false;
-        const loudnessError = normalizationEnabled && Number.isFinite(measuredI) ? targetLufs - measuredI : 0;
+        const loudnessError = normalizationEnabled && (m as any).loudnessMakeup !== false && Number.isFinite(measuredI) ? targetLufs - measuredI : 0;
         const tpError = Number.isFinite(measuredTp) ? measuredTp - tpCeiling : 0;
         const tpCompliant = !Number.isFinite(measuredTp) || tpError <= 0;
         const loudnessConverged = Math.abs(loudnessError) < 0.12 || Math.abs(loudnessMakeupDb + loudnessError) > 8;

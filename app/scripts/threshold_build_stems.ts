@@ -3,6 +3,7 @@
 // generated WAVs are evidence/build products and are never committed.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { impactStrike, musicBoxTine, renderBellPhone, renderConvolutionRoom, softImpact, tileClatter, type RoomOptions } from './threshold_audio_lib';
 
 const SR = 48000;
 const OUT = path.join(import.meta.dir, '../src/scenes/threshold/sound/generated');
@@ -21,8 +22,7 @@ function roomize(input: Float32Array, wet = 0.12): Float32Array {
   return out;
 }
 
-function wav(file: string, pcmIn: Float32Array): void {
-  const pcm = roomize(pcmIn);
+function writeWav(file: string, pcm: Float32Array): void {
   const n = pcm.length, buf = Buffer.alloc(44 + n * 3);
   buf.write('RIFF', 0); buf.writeUInt32LE(36 + n * 3, 4); buf.write('WAVE', 8);
   buf.write('fmt ', 12); buf.writeUInt32LE(16, 16); buf.writeUInt16LE(1, 20);
@@ -35,6 +35,14 @@ function wav(file: string, pcmIn: Float32Array): void {
     buf.writeIntLE(q, o, 3); o += 3;
   }
   writeFileSync(path.join(OUT, file), buf);
+}
+
+function wav(file: string, pcmIn: Float32Array): void {
+  writeWav(file, roomize(pcmIn));
+}
+
+function wavRoom(file: string, pcmIn: Float32Array, room: RoomOptions): void {
+  writeWav(file, renderConvolutionRoom(pcmIn, SR, room));
 }
 const noise = (() => { let x = 0x5eed; return () => ((x = (x * 1664525 + 1013904223) >>> 0) / 0xffffffff) * 2 - 1; })();
 function stem(sec: number, fn: (t: number) => [number, number]): Float32Array {
@@ -50,141 +58,195 @@ const hashLike = (t: number, salt: number) => { const x = Math.sin(Math.floor(t 
 const hash01 = (n: number, salt: number) => { const x = Math.sin(n * 127.1 + salt * 311.7) * 43758.5453; return x - Math.floor(x); };
 const smoothstep = (a: number, b: number, x: number) => { const u = Math.max(0, Math.min(1, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
 
-// Fluorescent office bed: 60 Hz hum, odd harmonics, HVAC hiss, two failing-tube ticks.
-let z1AirL = 0, z1AirR = 0;
-wav('z1_fluorescent_bed.wav', stem(27, (t) => {
-  const hum = Math.sin(t * Math.PI * 120) * 0.027 + Math.sin(t * Math.PI * 240) * 0.010 + Math.sin(t * Math.PI * 360) * 0.006;
-  const hiss = noise() * 0.012 * (0.75 + 0.25 * Math.sin(t * 0.31));
-  if ((t > 2.42 && t < 2.49) || (t > 8.72 && t < 8.78)) noise();
+const z1OfficeRoom: RoomOptions = { size: 0.82, decaySec: 1.05, dampingHz: 1750, predelayMs: 10, earlyDb: -16, tailDb: -10, dryDb: 0 };
+const z1BedRoom: RoomOptions = { size: 0.72, decaySec: 0.65, dampingHz: 1250, predelayMs: 8, earlyDb: -38, tailDb: -34, dryDb: 0 };
+
+// Redesigned office bed: silence is the default. The fluorescent ballast is a low,
+// unstable electrical body rather than a bright hiss bed; most of the zone remains
+// below audibility until a discrete physical event earns attention.
+let z1AirL = 0, z1AirR = 0, z1HumWander = 0;
+wavRoom('z1_fluorescent_bed.wav', stem(27, (t) => {
+  z1HumWander = z1HumWander * 0.995 + Math.sin(t * 0.37) * 0.00012;
+  const hum = Math.sin(t * Math.PI * 120 + z1HumWander) * 0.0038 + Math.sin(t * Math.PI * 240) * 0.0012 + Math.sin(t * Math.PI * 360) * 0.00038;
+  const si = Math.floor(t * SR + 0.5);
+  z1AirL = z1AirL * 0.982 + (hash01(si, 3.1) - 0.5) * 0.018;
+  z1AirR = z1AirR * 0.982 + (hash01(si, 4.7) - 0.5) * 0.018;
   const fade = Math.max(0, Math.min(1, t / 1.15, (27 - t) / 1.4));
-  const center = hum + hiss * 0.45;
-  const si = Math.floor(t * SR + 0.5);
-  z1AirL = z1AirL * 0.935 + (hash01(si, 3.1) - 0.5) * 0.065;
-  z1AirR = z1AirR * 0.935 + (hash01(si, 4.7) - 0.5) * 0.065;
-  return [(center * 0.96 + z1AirL * 0.34) * fade, (center + z1AirR * 0.34) * fade];
-}));
+  // Rare transformer instability, felt as a sagging electrical mass rather than noise.
+  const sag = 1 - 0.22 * smoothstep(13.8, 14.1, t) * (1 - smoothstep(14.9, 15.3, t));
+  return [(hum * 0.92 + z1AirL * 0.020) * fade * sag, (hum + z1AirR * 0.020) * fade * sag];
+}), z1BedRoom);
 
-// Failing-tube ticks are discrete events, kept outside the bed so negative-space
-// bed dips cannot suppress them.
-wav('z1_fluorescent_ticks.wav', stem(27, (t) => {
-  const si = Math.floor(t * SR + 0.5);
-  const tickA = t > 2.42 && t < 2.49 ? (hash01(si, 6.1) * 2 - 1) * 0.09 : 0;
-  const tickB = t > 8.72 && t < 8.78 ? (hash01(si, 7.3) * 2 - 1) * 0.07 : 0;
-  const v = tickA + tickB;
-  return [v * 0.96, v];
-}));
-
-// Two old mechanical bell bursts.
-wav('z1_phone_ring.wav' , stem(2.8, (t) => {
+// Failing-tube ticks become small ballast/relay contacts in the ceiling metalwork.
+wavRoom('z1_fluorescent_ticks.wav', stem(27, (t) => {
   let v = 0;
-  for (const start of [0.02, 1.18]) {
-    const u = t - start;
-    if (u >= 0 && u < 0.88) {
-      const trem = 0.45 + 0.55 * (Math.sin(u * Math.PI * 40) > 0 ? 1 : 0);
-      v += (Math.sin(u * Math.PI * 2 * 1280) * 0.21 + Math.sin(u * Math.PI * 2 * 1735) * 0.13) * Math.exp(-u * 3.1) * trem;
+  for (const [start, seed] of [[2.42, 6.1], [8.72, 7.3]] as const) {
+    for (let k = 0; k < 3; k++) {
+      const u = t - start - k * 0.031;
+      v += impactStrike(u, 620 - k * 55, seed + k, 0.022 - k * 0.005);
     }
   }
-  return [v * 0.96, v];
-}));
+  return [v * 0.92, v];
+}), z1OfficeRoom);
 
-// Receiver silence/breathing: close, dry, delayed-feeling slow breath noise.
-wav('z1_receiver_breath.wav', stem(4.2, (t) => {
-  const cyc = Math.max(0, Math.sin(t * Math.PI * 0.72 - 0.6));
-  const breath = noise() * 0.055 * cyc * cyc;
-  const close = Math.sin(t * Math.PI * 2 * 92) * 0.008 * cyc;
-  return [breath + close, breath * 0.85 + close];
-}));
+// A real twin-bell telephone: noise-driven clapper excitation through damped metal
+// resonator banks, then office reflections. No periodic oscillator or gated ring tone.
+wavRoom('z1_phone_ring.wav', renderBellPhone(2.8, SR), { ...z1OfficeRoom, decaySec: 1.25, tailDb: -8, earlyDb: -13 });
+
+// Receiver breathing: band-limited airway noise through plastic, close but not crisp.
+let z1ReceiverLp = 0, z1ReceiverLp2 = 0;
+wavRoom('z1_receiver_breath.wav', stem(4.2, (t) => {
+  z1ReceiverLp = z1ReceiverLp * 0.968 + noise() * 0.032;
+  z1ReceiverLp2 = z1ReceiverLp2 * 0.91 + z1ReceiverLp * 0.09;
+  const cycle = (t % 2.35) / 2.35;
+  const inhale = smoothstep(0.08, 0.30, cycle) * (1 - smoothstep(0.48, 0.66, cycle));
+  const exhale = smoothstep(0.68, 0.78, cycle) * (1 - smoothstep(0.93, 1.0, cycle)) * 0.56;
+  const gate = inhale + exhale;
+  const breath = z1ReceiverLp2 * 0.115 * gate;
+  const throat = Math.sin(t * Math.PI * 2 * 74 + Math.sin(t * 1.9) * 0.4) * 0.006 * gate;
+  const receiverEnd = 1 - smoothstep(1.72, 2.12, t);
+  const v = (breath + throat) * Math.min(1, t / 0.35, (4.2 - t) / 0.55) * receiverEnd;
+  return [v, v * 0.82];
+}), { ...z1OfficeRoom, earlyDb: -24, tailDb: -20, predelayMs: 5 });
 
 // Wet overhead breathing, deliberately too slow and too large.
 let wetLp = 0;
-wav('z1_ceiling_breath.wav', stem(7.0, (t) => {
-  wetLp = wetLp * 0.86 + noise() * 0.14;
+wavRoom('z1_ceiling_breath.wav', stem(7.0, (t) => {
+  wetLp = wetLp * 0.965 + noise() * 0.035;
   const period = 2.65;
   const x = (t % period) / period;
   const gate = Math.sin(Math.PI * x) ** 1.8;
-  const closeFade = Math.min(1, t / 0.45, (7 - t) / 0.8);
-  const wet = wetLp * 0.19 * gate;
+  const stop = 1 - smoothstep(2.48, 2.82, t);
+  const closeFade = Math.min(1, t / 0.45, (7 - t) / 0.8) * stop;
+  const wet = wetLp * 0.105 * gate;
   const chest = Math.sin(t * Math.PI * 2 * 54 + Math.sin(t * 2.2) * 0.7) * 0.030 * gate;
   const gurgle = Math.sin(t * Math.PI * 2 * (37 + Math.sin(t * 1.1) * 8)) * 0.020 * gate * (x > 0.45 ? 1 : 0.35);
-  const lip = x > 0.82 && x < 0.86 ? noise() * 0.08 : 0;
+  const lip = x > 0.82 && x < 0.86 ? noise() * 0.018 : 0;
   const v = (wet + chest + gurgle + lip) * Math.max(0, closeFade);
   return [v, v * 0.78];
-}));
+}), z1OfficeRoom);
 
-// Grid creaks and cracking tile: pitched metal groans first, then short mineral cracks.
-wav('z1_ceiling_creaks.wav', stem(2.2, (t) => {
+// Grid creaks and cracking tile: strained painted metal, then small mineral fractures.
+wavRoom('z1_ceiling_creaks.wav', stem(2.2, (t) => {
   let v = 0;
   for (const [at, dur, f0, f1, amp] of [[0.10, 0.48, 118, 82, 0.11], [0.66, 0.38, 170, 126, 0.075], [1.20, 0.30, 96, 71, 0.10]] as const) {
     const u = t - at;
     if (u >= 0 && u < dur) {
       const k = u / dur;
       const hz = f0 + (f1 - f0) * k;
-      v += Math.sin(u * Math.PI * 2 * hz + Math.sin(u * 31) * 0.35) * amp * Math.sin(Math.PI * k) ** 1.4;
-      v += Math.sin(u * Math.PI * 2 * hz * 2.03) * amp * 0.24 * Math.sin(Math.PI * k);
+      const strain = Math.sin(u * Math.PI * 2 * hz + Math.sin(u * 31) * 0.55) * amp * Math.sin(Math.PI * k) ** 1.4;
+      const friction = noise() * amp * 0.09 * Math.sin(Math.PI * k) ** 2;
+      v += strain + friction + Math.sin(u * Math.PI * 2 * hz * 2.03) * amp * 0.18 * Math.sin(Math.PI * k);
     }
   }
-  for (const at of [1.38, 1.47, 1.61]) {
+  for (const [j, at] of [1.38, 1.47, 1.61].entries()) {
     const u = t - at;
-    if (u > 0 && u < 0.09) v += noise() * 0.24 * Math.exp(-u * 36) + Math.sin(u * Math.PI * 2 * 260) * 0.055 * Math.exp(-u * 24);
+    v += impactStrike(u, 310 - j * 38, 14.5 + j, 0.065 - j * 0.012);
   }
   return [v, v * 0.88];
-}));
+}), z1OfficeRoom);
 
-// Carpet run, ceiling rasp, and a separate escalating tile-slam chain behind.
-let carpetLp = 0, slamLp = 0;
-wav('z1_run_carpet.wav', stem(8.4, (t) => {
-  carpetLp = carpetLp * 0.82 + noise() * 0.18;
-  slamLp = slamLp * 0.68 + noise() * 0.32;
-  let l = carpetLp * 0.075, r = carpetLp * 0.075;
-  const rate = 3.05;
-  const idx = Math.floor(t * rate);
-  const step = t - idx / rate;
-  if (step < 0.075) {
-    const k = 1 - step / 0.075;
-    // Keep the low footstep weight, but shave the noisy attack crest that otherwise
-    // makes the master limiter pump throughout the first chase.
-    const stepVar = 0.82 + hash01(idx, 5.1) * 0.36;
-    const thud = (noise() * 0.03 + carpetLp * 0.16 + Math.sin(step * Math.PI * 2 * 58) * 0.22) * k * stepVar;
-    if (idx % 2) r += thud * 1.2, l += thud * 0.72;
-    else l += thud * 1.2, r += thud * 0.72;
+// Carpet run, ceiling rasp, and irregular tile impacts behind. Footsteps are event-based
+// rather than a loop: stride interval, weight, pitch, pan, and surface noise vary step to step.
+const z1StepEvents: Array<{ at: number; hz: number; amp: number; pan: number; seed: number; toe: number; drag: number }> = [];
+{
+  let tt = 0.05;
+  for (let i = 0; tt < 8.15; i++) {
+    z1StepEvents.push({
+      at: tt,
+      hz: 49 + hash01(i, 51.2) * 18,
+      amp: 0.13 + hash01(i, 52.3) * 0.085,
+      pan: (i % 2 ? 0.22 : -0.20) + (hash01(i, 53.4) - 0.5) * 0.18,
+      seed: 60.1 + i * 1.73,
+      toe: 0.026 + hash01(i, 55.6) * 0.022,
+      drag: 0.45 + hash01(i, 56.7) * 0.9,
+    });
+    tt += 0.295 + hash01(i, 54.5) * 0.12;
   }
-  let slam = 0;
-  for (const [i, at] of [0.85, 1.55, 2.2, 2.85, 3.45, 4.05, 4.65, 5.2, 5.8, 6.35, 6.9].entries()) {
+}
+const z1SlamEvents: Array<{ at: number; hz: number; amp: number; pan: number; seed: number }> = [];
+{
+  let tt = 0.72;
+  for (let i = 0; tt < 7.65; i++) {
+    z1SlamEvents.push({
+      at: tt,
+      hz: 76 + hash01(i, 61.2) * 48,
+      amp: 0.10 + hash01(i, 62.3) * 0.13,
+      pan: -0.42 + hash01(i, 63.4) * 0.84,
+      seed: 80.2 + i * 2.11,
+    });
+    tt += 0.43 + hash01(i, 64.5) * 0.34;
+  }
+}
+const z1Colored = (si: number, seed: number) => (hash01(si, seed) * 0.46 + hash01(si - 1, seed) * 0.31 + hash01(si - 2, seed) * 0.23 - 0.5) * 2;
+wavRoom('z1_run_carpet.wav', stem(8.4, (t) => {
+  let l = 0, r = 0;
+  const si = Math.floor(t * SR + 0.5);
+  const add = (v: number, pan: number) => {
+    const a = (pan + 1) * Math.PI / 4;
+    l += v * Math.cos(a);
+    r += v * Math.sin(a);
+  };
+
+  for (const e of z1StepEvents) {
+    const u = t - e.at;
+    if (u >= 0 && u < 0.14) {
+      const heel = softImpact(u, e.hz, e.seed, e.amp * 0.74);
+      const toeU = u - e.toe;
+      const toe = toeU >= 0 ? softImpact(toeU, e.hz * 1.31, e.seed + 2.4, e.amp * 0.31) : 0;
+      const sole = z1Colored(si, e.seed) * Math.exp(-u * 72) * e.amp * 0.13;
+      const carpetDrag = z1Colored(si, e.seed + 4.0) * Math.exp(-u * 12) * e.amp * 0.09 * e.drag;
+      add(heel + toe + sole + carpetDrag, e.pan);
+    }
+  }
+
+  for (const e of z1SlamEvents) {
+    const u = t - e.at;
+    if (u >= 0 && u < 0.72) {
+      const mineral = z1Colored(si, e.seed + 8.0) * Math.exp(-u * 105) * e.amp * 0.30;
+      const body = tileClatter(u, e.hz, e.seed, e.amp) + mineral;
+      add(body, e.pan);
+    }
+  }
+
+  // The breather moves overhead in separate wet bursts rather than a continuous noise bed.
+  for (const [j, at, dur, pan] of [[0, 1.28, 0.62, -0.24], [1, 3.18, 0.74, 0.08], [2, 5.36, 0.68, 0.31], [3, 6.92, 0.55, -0.12]] as const) {
     const u = t - at;
-    if (u > 0 && u < 0.24) {
-      const size = 0.65 + i * 0.055;
-      // Keep the low tile-slam body intact but shave the noise/top-edge transient crest;
-      // otherwise the master lookahead limiter pumps the whole chase underneath it.
-      const slamBody = Math.sin(u * Math.PI * 2 * (88 - i * 2)) * 0.24;
-      const slamEdge = noise() * 0.036 + slamLp * 0.095 + Math.sin(u * Math.PI * 2 * 244) * 0.020;
-      slam += (slamBody + slamEdge) * Math.exp(-u * 8) * size * 0.58;
+    if (u >= 0 && u < dur) {
+      const gate = Math.sin(Math.PI * u / dur) ** 1.7;
+      const rasp = z1Colored(si, 96.5 + j) * gate * 0.030 + Math.sin(u * Math.PI * 2 * (47 + j * 5)) * gate * 0.012;
+      add(rasp, pan);
     }
   }
-  const rasp = (noise() * 0.016 + carpetLp * 0.025) * (0.5 + 0.5 * Math.sin(t * Math.PI * 0.8));
-  const fade = Math.min(1, t / 0.18, (8.4 - t) / 0.35);
-  return [(l + slam + rasp) * fade, (r + slam * 0.93 + rasp * 1.08) * fade];
-}));
 
-// Music-box approach, metal push-bar clank, door burst, then the jingle blooms in daylight.
-const notes = [880, 1046.5, 1318.5, 1046.5, 880, 783.99, 1046.5, 1318.5, 1568, 1318.5];
-wav('z1_door_jingle_hit.wav', stem(3.0, (t) => {
-  let v = 0;
-  for (const [i, hz] of notes.entries()) {
-    const u = t - i * 0.16;
-    if (u > 0 && u < 0.9) {
-      const bloom = t < 2.08 ? 0.20 + t * 0.08 : 1.05;
-      v += (Math.sin(u * Math.PI * 2 * hz) * 0.105 + Math.sin(u * Math.PI * 2 * hz * 2.01) * 0.026) * Math.exp(-u * 4.2) * bloom;
-    }
+  const fade = Math.min(1, t / 0.18, (8.4 - t) / 0.35);
+  return [l * fade, r * fade];
+}), { ...z1OfficeRoom, size: 0.95, decaySec: 0.92, tailDb: -8, earlyDb: -13 });
+
+// Broken toy mechanism behind the fire door, then a physical push-bar impact.
+// The music box is detuned metal tines with irregular wind-up spacing, muffled by the
+// door until the bar opens it; no electronic arpeggio or clean sine melody.
+const z1MusicNotes = [659.25, 783.99, 987.77, 783.99, 659.25, 587.33, 783.99, 987.77, 1174.7, 987.77];
+const z1MusicTimes = [0.05, 0.29, 0.50, 0.75, 0.96, 1.22, 2.10, 2.28, 2.49, 2.72];
+let z1JingleLpL = 0, z1JingleLpR = 0;
+wavRoom('z1_door_jingle_hit.wav', stem(3.0, (t) => {
+  let music = 0;
+  for (const [i, hz] of z1MusicNotes.entries()) {
+    const u = t - z1MusicTimes[i]!;
+    const detune = 1 + (hash01(i, 17.2) - 0.5) * 0.025;
+    const behindDoor = z1MusicTimes[i]! < 2.0 ? 0.28 : 0.72;
+    music += musicBoxTine(u, hz * detune, 21.4 + i, 0.105 * behindDoor);
   }
-  const u = t - 1.98;
-  if (u > 0 && u < 0.55) {
-    const transient = noise() * 0.20 * Math.exp(-u * 30);
-    const metal = Math.sin(u * Math.PI * 2 * 214) * 0.18 + Math.sin(u * Math.PI * 2 * 517) * 0.12 + Math.sin(u * Math.PI * 2 * 893) * 0.055;
-    const burst = noise() * 0.09 * Math.exp(-u * 8);
-    v += (transient + metal + burst) * Math.exp(-u * 6.5);
-  }
-  return [v, v * 0.94];
-}));
+  const bar = impactStrike(t - 1.98, 218, 29.1, 0.34) + impactStrike(t - 2.035, 91, 31.4, 0.20);
+  const doorWood = impactStrike(t - 2.08, 132, 33.9, 0.13);
+  const rawL = music * 0.90 + bar + doorWood * 0.85;
+  const rawR = music + bar * 0.82 + doorWood;
+  const open = smoothstep(2.0, 2.35, t);
+  const alpha = 0.055 + open * 0.16;
+  z1JingleLpL += alpha * (rawL - z1JingleLpL);
+  z1JingleLpR += alpha * (rawR - z1JingleLpR);
+  return [z1JingleLpL, z1JingleLpR];
+}), { ...z1OfficeRoom, size: 0.92, decaySec: 1.15, tailDb: -13 });
 
 
 
