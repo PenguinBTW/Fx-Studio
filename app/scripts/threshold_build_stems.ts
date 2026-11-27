@@ -3,7 +3,7 @@
 // generated WAVs are evidence/build products and are never committed.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { coloredNoise, impactStrike, musicBoxTine, renderBellPhone, renderConvolutionRoom, slowNoise01, softImpact, tileClatter, type RoomOptions } from './threshold_audio_lib';
+import { coloredNoise, impactStrike, musicBoxTine, plasticKnock, renderBellPhone, renderConvolutionRoom, slowNoise01, softImpact, tileClatter, type RoomOptions } from './threshold_audio_lib';
 
 const SR = 48000;
 const OUT = path.join(import.meta.dir, '../src/scenes/threshold/sound/generated');
@@ -238,7 +238,7 @@ wavRoom('z1_run_carpet.wav', stem(8.4, (t) => {
 // Broken toy mechanism behind the fire door, then a physical push-bar impact.
 // The music box is detuned metal tines with irregular wind-up spacing, muffled by the
 // door until the bar opens it; no electronic arpeggio or clean sine melody.
-const z1MusicNotes = [659.25, 783.99, 987.77, 783.99, 659.25, 587.33, 783.99, 987.77, 1174.7, 987.77];
+const z1MusicNotes = [523.25, 659.25, 783.99, 659.25, 523.25, 493.88, 659.25, 783.99, 880.0, 783.99];
 const z1MusicTimes = [0.05, 0.29, 0.50, 0.75, 0.96, 1.22, 2.10, 2.28, 2.49, 2.72];
 let z1JingleLpL = 0, z1JingleLpR = 0;
 wavRoom('z1_door_jingle_hit.wav', stem(3.0, (t) => {
@@ -254,7 +254,7 @@ wavRoom('z1_door_jingle_hit.wav', stem(3.0, (t) => {
   const rawL = music * 0.90 + bar + doorWood * 0.85;
   const rawR = music + bar * 0.82 + doorWood;
   const open = smoothstep(2.0, 2.35, t);
-  const alpha = 0.055 + open * 0.16;
+  const alpha = 0.045 + open * 0.085;
   z1JingleLpL += alpha * (rawL - z1JingleLpL);
   z1JingleLpR += alpha * (rawR - z1JingleLpR);
   return [z1JingleLpL, z1JingleLpR];
@@ -266,8 +266,11 @@ wavRoom('z1_door_jingle_hit.wav', stem(3.0, (t) => {
 // never audible in the master.
 wav('z2_freeze_duck_key.wav', stem(0.5, () => [0, 0]));
 
-// Z2 playroom cue pass from z2_z4_audio_cue_spec.md. Local stem time starts at 29.6;
-// `at` is project time so every event matches the sheet exactly.
+// Z2 playroom redesign: the cartoon room is almost silent except for physical plastic,
+// foam, ball-shell, and broken toy-mechanism events. Birds/child loops and electronic
+// warbles are deliberately removed; they read as cute/digital rather than eerie.
+const z2PlayroomRoom: RoomOptions = { size: 1.05, decaySec: 0.55, dampingHz: 2350, predelayMs: 13, earlyDb: -11, tailDb: -18, dryDb: 0 };
+
 const z2HeartTimes: number[] = [];
 {
   let t = 40.8;
@@ -278,170 +281,169 @@ const z2HeartTimes: number[] = [];
     t += 60 / bpm;
   }
 }
+
+const z2MusicEvents: Array<{ at: number; hz: number; amp: number; seed: number }> = [];
+{
+  const melody = [523.25, 659.25, 783.99, 659.25, 587.33, 0, 659.25, 493.88];
+  for (let cycle = 0; cycle < 2; cycle++) {
+    const start = cycle === 0 ? 30.25 : 36.15;
+    const spacing = cycle === 0 ? 0.62 : 0.72;
+    for (let i = 0; i < melody.length; i++) {
+      const hz = melody[i]!;
+      // Note six physically fails after 36s: the mechanism skips rather than playing a digital gap.
+      if (!hz || (cycle === 1 && i !== 0 && i !== 1)) continue;
+      const at = start + i * spacing + (hash01(i + cycle * 8, 63.1) - 0.5) * 0.055;
+      if (at < 40.35) z2MusicEvents.push({ at, hz: hz * (1 + (hash01(i, 64.2 + cycle) - 0.5) * 0.025), amp: cycle === 0 ? 0.025 : 0.018, seed: 90.1 + i * 1.37 + cycle * 11 });
+    }
+  }
+}
+
+const z2BallEvents: Array<{ at: number; hz: number; amp: number; pan: number; seed: number }> = [];
+{
+  let tt = 38.05;
+  for (let i = 0; tt < 40.44; i++) {
+    const k = (tt - 38.05) / 2.39;
+    z2BallEvents.push({
+      at: tt,
+      hz: 260 + hash01(i, 70.2) * 410,
+      amp: 0.025 + k * 0.055 + hash01(i, 71.3) * 0.018,
+      pan: -0.18 + k * 0.30 + (hash01(i, 72.4) - 0.5) * 0.18,
+      seed: 100.2 + i * 1.71,
+    });
+    tt += 0.48 - k * 0.15 + hash01(i, 73.5) * 0.10;
+  }
+}
+const z2CascadeEvents: Array<{ at: number; hz: number; amp: number; pan: number; seed: number }> = [];
+{
+  let tt = 44.48;
+  for (let i = 0; tt < 45.32; i++) {
+    z2CascadeEvents.push({
+      at: tt,
+      hz: 230 + hash01(i, 76.2) * 430,
+      amp: 0.035 + hash01(i, 77.3) * 0.045,
+      pan: 0.02 + hash01(i, 78.4) * 0.42,
+      seed: 130.2 + i * 2.03,
+    });
+    tt += 0.035 + hash01(i, 79.5) * 0.075;
+  }
+}
+
+const z2ToyPhone = renderBellPhone(2.35, SR);
 let z2NoiseLp = 0;
-let z2FrictionLp = 0;
-wav('z2_playroom_events.wav', stem(25.8, (t) => {
+wavRoom('z2_playroom_events.wav', stem(25.8, (t) => {
   const at = t + 29.6;
-  z2NoiseLp = z2NoiseLp * 0.82 + noise() * 0.18;
-  z2FrictionLp = z2FrictionLp * 0.9 + noise() * 0.1;
+  z2NoiseLp = z2NoiseLp * 0.90 + noise() * 0.10;
+  const si = Math.floor(t * SR + 0.5);
   let l = 0, r = 0;
   const add = (v: number, pan = 0) => {
     const a = (pan + 1) * Math.PI / 4;
     l += v * Math.cos(a);
     r += v * Math.sin(a);
   };
+  const addStereo = (vl: number, vr: number) => { l += vl; r += vr; };
 
-  // Music-box bed: bright, slightly too slow, note 6 drops out only after 36.0,
-  // then the whole jingle is removed into the freeze vacuum at 40.5.
-  if (at >= 30.0 && at < 40.46) {
-    const pos = at - 30.0;
-    const noteLen = 0.34;
-    const idx = Math.floor(pos / noteLen) % 8;
-    const u = pos % noteLen;
-    const scale = [880, 1046.5, 1318.5, 1568, 1318.5, 1174.7, 1046.5, 987.8];
-    const missing = at >= 36.0 && idx === 5;
-    if (!missing && u < 0.31) {
-      const hz = scale[idx]!;
-      const e = Math.min(1, u / 0.008) * Math.exp(-u * 5.8);
-      const tone = (Math.sin(u * Math.PI * 2 * hz) * 0.028 + Math.sin(u * Math.PI * 2 * hz * 2.72) * 0.009) * e;
-      add(tone, -0.08);
-    }
+  // A broken wind-up mechanism, distant in the playroom. Notes are irregular and mute
+  // quickly; there is no bright looping electronic arpeggio.
+  for (const e of z2MusicEvents) {
+    add(musicBoxTine(at - e.at, e.hz, e.seed, e.amp), -0.18);
+  }
+  for (const [j, atc] of [31.15, 35.05, 37.65, 39.85].entries()) {
+    add(plasticKnock(at - atc, 310 - j * 28, 84.2 + j, 0.018), -0.16);
   }
 
-  // Sparse distant child-like laugh pulses and skylight birds, deliberately faint.
-  for (const start of [30.8, 36.55]) {
-    for (let k = 0; k < 5; k++) {
-      const u = at - start - k * 0.105;
-      if (u > 0 && u < 0.065) {
-        const hz = 690 + k * 55 - u * 620;
-        add(Math.sin(u * Math.PI * 2 * hz) * 0.006 * Math.sin(Math.PI * u / 0.065), -0.25);
-      }
-    }
-  }
-  for (const [start, pan] of [[30.35, -0.5], [32.75, 0.35], [35.65, -0.2], [37.35, 0.5]] as const) {
-    const u = at - start;
-    if (u > 0 && u < 0.16) {
-      const hz = 2450 + Math.sin(u * 42) * 420 + u * 900;
-      add(Math.sin(u * Math.PI * 2 * hz) * 0.0038 * Math.sin(Math.PI * u / 0.16), pan);
-    }
+  // Stepped hard-plastic shelf animals: small shell rotations, not high electronic clicks.
+  for (const [j, hit, pan] of [[0, 33.2, 0.18], [1, 34.1, 0.08], [2, 35.0, 0.28]] as const) {
+    add(plasticKnock(at - hit, 330 - j * 24, 86.1 + j, 0.040 - j * 0.006), pan);
   }
 
-  // Stepped hard-plastic shelf-animal clicks.
-  for (const [hit, pan] of [[33.2, 0.18], [34.1, 0.08], [35.0, 0.28]] as const) {
-    const u = at - hit;
-    if (u > 0 && u < 0.075) {
-      add((noise() * 0.10 + Math.sin(u * Math.PI * 2 * 2140) * 0.032) * Math.exp(-u * 58), pan);
-    }
+  // Slow foam-mat contacts during the first careful walk.
+  for (const [j, step] of [32.8, 33.45, 34.1, 34.75, 35.4].entries()) {
+    add(softImpact(at - step, 46 + hash01(j, 87.2) * 18, 88.3 + j, 0.045 + hash01(j, 88.4) * 0.024), j % 2 ? 0.12 : -0.12);
   }
 
-  // Slow foam-mat footfalls during the first careful walk.
-  for (const step of [32.8, 33.45, 34.1, 34.75, 35.4]) {
-    const u = at - step;
-    if (u > 0 && u < 0.11) {
-      add((z2NoiseLp * 0.06 + Math.sin(u * Math.PI * 2 * 72) * 0.035) * Math.exp(-u * 24), step % 2 ? 0.12 : -0.12);
-    }
+  // Ball-shell displacement as the submerged bulge approaches: irregular hollow plastic
+  // knocks and low rolling friction, increasing in density but never becoming static.
+  for (const e of z2BallEvents) {
+    add(plasticKnock(at - e.at, e.hz, e.seed, e.amp), e.pan);
   }
-
-  // Ball micro-rattle approach, swelling as the bulge closes.
-  if (at >= 38.0 && at < 40.5) {
-    const k = (at - 38.0) / 2.5;
-    // Granular plastic-ball micro-impacts: many short bright clicks, not generic noise.
-    const cell = (at - 38.0) * 30.0;
-    const idx = Math.floor(cell);
-    const u = (cell - idx) / 30.0;
-    const density = 0.42 + k * 0.38;
-    let grit = noise() * (0.004 + 0.009 * k);
-    if (hash01(idx, 8.2) < density && u < 0.018) {
-      const bright = noise() * (0.055 + k * 0.055) + Math.sin(u * Math.PI * 2 * (1700 + hash01(idx, 2.4) * 900)) * 0.018;
-      grit += bright * Math.exp(-u * 150);
-    }
-    add(grit, -0.15 + k * 0.25);
-  }
-
-  // Freeze heartbeat: accelerating low thump with a smaller second valve-like thud.
+  // Freeze heartbeat: dull internal pressure contacts with a smaller second valve motion.
   for (const hit of z2HeartTimes) {
-    for (const [off, mul] of [[0, 1], [0.16, 0.55]] as const) {
+    for (const [off, mul] of [[0, 1], [0.16, 0.50]] as const) {
       const u = at - hit - off;
-      if (u > 0 && u < 0.13) {
-        const swell = 0.65 + Math.max(0, Math.min(1, (at - 40.8) / 6.7)) * 0.8;
-        add((Math.sin(u * Math.PI * 2 * 54) * 0.088 + Math.sin(u * Math.PI * 2 * 108) * 0.024 + z2NoiseLp * 0.012) * Math.exp(-u * 24) * mul * swell, 0);
+      if (u > 0 && u < 0.16) {
+        const swell = 0.62 + Math.max(0, Math.min(1, (at - 40.8) / 6.7)) * 0.72;
+        const pressure = Math.sin(Math.PI * Math.min(1, u / 0.052)) ** 2;
+        const body = coloredNoise(si, 116.2 + hit, 29) * pressure * 0.040 + Math.sin(u * Math.PI * 2 * 48) * 0.006 * Math.exp(-u * 44);
+        add(body * mul * swell, 0);
       }
     }
   }
 
-  // Pit Swimmer surface cascade and hollow vinyl/tube breath.
-  if (at >= 44.5 && at < 45.2) {
-    const u = at - 44.5;
-    add((noise() * 0.038 + Math.sin(u * Math.PI * 2 * 1150) * 0.014) * Math.exp(-u * 6.5) * Math.min(1, u / 0.06), 0.18);
-    const cell = Math.floor(u * 24);
-    const cu = (u * 24 - cell) / 24;
-    if (cu < 0.026 && hash01(cell, 16.2) < 0.52) {
-      const hz = 190 + hash01(cell, 16.4) * 360;
-      const knock = Math.sin(cu * Math.PI * 2 * hz) * 0.019 + noise() * 0.011;
-      add(knock * Math.exp(-cu * 72) * (1 - u / 0.9), 0.10 + (hash01(cell, 16.6) - 0.5) * 0.34);
-    }
-  }
-  if (at >= 44.6 && at < 47.5) {
-    const period = 0.86;
-    const x = ((at - 44.6) % period) / period;
-    const gate = Math.sin(Math.PI * x) ** 1.5;
-    // Hollow resonance first, noise second: the breath should read as air inside a
-    // ribbed vinyl tube rather than undifferentiated low rumble.
-    const tubeHz = 164 + Math.sin(at * 1.7) * 18;
-    const breathVar = 0.86 + hash01(Math.floor((at - 44.6) / period), 17.1) * 0.24;
-    const ribbed = 0.86 + 0.14 * Math.sin(at * Math.PI * 2 * 7.3);
-    const resonance = (Math.sin(at * Math.PI * 2 * tubeHz) * 0.034 + Math.sin(at * Math.PI * 2 * tubeHz * 2.01) * 0.015) * gate * breathVar * ribbed;
-    const breath = z2NoiseLp * 0.045 * gate + resonance;
-    const vinyl = Math.sin(at * Math.PI * 2 * (118 + Math.sin(at * 3.1) * 12)) * 0.010 * gate;
-    add(breath + vinyl, 0.12);
+  // Pit Swimmer surface cascade: many hollow plastic shells shifting under weight.
+  for (const e of z2CascadeEvents) {
+    add(plasticKnock(at - e.at, e.hz, e.seed, e.amp), e.pan);
   }
 
-  // Toy-phone electronic warble, right side, then the Swimmer dives toward it.
-  if (at >= 47.5 && at < 49.5) {
-    const u0 = at - 47.5;
-    const cycle = u0 % 0.7;
-    if (cycle < 0.36) {
-      const warble = 980 + Math.sin(cycle * Math.PI * 2 * 9) * 210;
-      const e = Math.sin(Math.PI * cycle / 0.36);
-      add((Math.sin(cycle * Math.PI * 2 * warble) * 0.055 + Math.sin(cycle * Math.PI * 2 * warble * 1.51) * 0.018) * e, 0.42);
-    }
-  }
-  if (at >= 48.4 && at < 49.3) {
-    const u = at - 48.4;
-    const sweep = noise() * 0.044 * Math.sin(Math.PI * u / 0.9) + z2NoiseLp * 0.026;
-    const gulp = u > 0.68 ? Math.sin((u - 0.68) * Math.PI * 2 * 210) * 0.038 * Math.exp(-(u - 0.68) * 18) : 0;
-    add(sweep + gulp, 0.28 - u * 0.25);
-    const cell = Math.floor(u * 18);
-    const cu = (u * 18 - cell) / 18;
-    if (u > 0.12 && cu < 0.032 && hash01(cell, 18.2) < 0.44) {
-      const hz = 150 + hash01(cell, 18.4) * 270;
-      const roll = Math.sin(cu * Math.PI * 2 * hz) * 0.016 + noise() * 0.010;
-      add(roll * Math.exp(-cu * 58) * Math.sin(Math.PI * u / 0.9), 0.20 - u * 0.18 + (hash01(cell, 18.6) - 0.5) * 0.22);
+  // Hollow tube breath in two uneven efforts, mostly turbulent air inside vinyl.
+  for (const [j, start, dur, scale] of [[0, 44.72, 0.92, 0.82]] as const) {
+    const u = at - start;
+    if (u >= 0 && u < dur) {
+      const x = u / dur;
+      const envb = Math.sin(Math.PI * x) ** 1.35;
+      const organic = 0.64 + slowNoise01(u, 141.2 + j, 1.5) * 0.26 + slowNoise01(u, 149.4 + j, 8.7) * 0.34;
+      const air = coloredNoise(si, 142.5 + j, 25) * envb * organic * 0.070;
+      const tube = Math.sin(u * Math.PI * 2 * (128 + j * 14 + Math.sin(u * 2.1) * 5)) * envb * 0.005;
+      add((air + tube) * scale, 0.14);
     }
   }
 
-  // Crawl friction inside the ribbed plastic tunnel, then watery squeaks as the material turns.
-  if (at >= 49.5 && at < 55.0) {
-    const crawl = Math.max(0, Math.sin((at - 49.5) * Math.PI * 2 * 1.18)) ** 1.8;
-    const rib = 0.5 + 0.5 * Math.sin((at - 49.5) * Math.PI * 2 * 9.5);
-    const ribScratch = Math.sin((at - 49.5) * Math.PI * 2 * (620 + rib * 170)) * 0.014 * crawl;
-    add((z2FrictionLp * (0.022 + crawl * 0.034) + noise() * crawl * 0.010) * (0.6 + rib * 0.4) + ribScratch, -0.05);
-    if (at >= 53.4) {
-      const wet = Math.min(1, (at - 53.4) / 1.2);
-      add(Math.sin(at * Math.PI * 2 * (420 + Math.sin(at * 5) * 90)) * 0.014 * wet * crawl, 0.12);
+  // The toy phone is still a mechanical bell object, only smaller and further away.
+  // No electronic warble or toy-bird chirp.
+  {
+    const pi = Math.floor((at - 47.5) * SR);
+    if (pi >= 0 && pi * 2 + 1 < z2ToyPhone.length) {
+      addStereo(z2ToyPhone[pi * 2]! * 0.22, z2ToyPhone[pi * 2 + 1]! * 0.20);
     }
   }
 
-  // Tenant crossing the far light: brief pressure dip plus distant plastic scrape.
+  // Swimmer dives toward the phone: hollow shell displacement and a vinyl pressure gulp.
+  if (at >= 48.35 && at < 49.25) {
+    const u = at - 48.35;
+    const envd = Math.sin(Math.PI * u / 0.9);
+    const sweep = coloredNoise(si, 154.8, 21) * envd * 0.050;
+    const gulp = u > 0.64 ? plasticKnock(u - 0.64, 190, 155.2, 0.12) : 0;
+    add(sweep + gulp, 0.25 - u * 0.22);
+  }
+
+  // Crawl friction inside the ribbed plastic tunnel: clothing and hands on plastic,
+  // irregular pressure rather than a tonal scratch loop.
+  for (const [j, start, dur, pan] of [[0, 49.85, 0.38, -0.05], [1, 51.05, 0.34, 0.02], [2, 52.45, 0.42, 0.08], [3, 53.80, 0.36, 0.14]] as const) {
+    const u = at - start;
+    if (u >= 0 && u < dur) {
+      const envc = Math.sin(Math.PI * u / dur) ** 1.25;
+      const micro = 0.70 + slowNoise01(u, 163.4 + j, 8.2) * 0.55;
+      add(coloredNoise(si, 164.5 + j, 29) * envc * micro * 0.075, pan);
+    }
+  }
+  for (const [j, hit] of [50.05, 51.36, 52.88, 54.28].entries()) {
+    add(plasticKnock(at - hit, 250 + hash01(j, 165.1) * 130, 166.2 + j, 0.024 + hash01(j, 166.8) * 0.020), -0.03 + j * 0.04);
+  }
+
+  // Tenant crossing the far light: air pressure drops and distant plastic is displaced.
   if (at >= 52.2 && at < 52.7) {
     const u = at - 52.2;
-    const pressure = -Math.sin(Math.PI * u / 0.5) * 0.018;
-    const scrape = u > 0.18 ? z2FrictionLp * 0.06 * Math.exp(-(u - 0.18) * 5) : 0;
+    const pressure = -Math.sin(Math.PI * u / 0.5) * 0.007;
+    const scrape = u > 0.18 ? coloredNoise(si, 171.4, 25) * 0.022 * Math.exp(-(u - 0.18) * 5) : 0;
     add(pressure + scrape, 0);
   }
 
+  // First wet evidence at the tube end: two low physical drips, no bright chime.
+  for (const [j, hit] of [53.85, 54.55].entries()) {
+    add(impactStrike(at - hit, 420 - j * 55, 176.2 + j, 0.028 - j * 0.007), 0.15);
+  }
+
   return [l, r];
-}));
+}), z2PlayroomRoom);
 
 
 // Z3 tiled pool cue pass from z2_z4_audio_cue_spec.md. The stem starts at 54.6;
@@ -1130,7 +1132,7 @@ function bed(file: string, dur: number, fadeIn: number, fadeOut: number, fn: (t:
     airR = airR * 0.935 + (hash01(si, seed + 19.7) - 0.5) * 0.065;
     const e = edgeFade(t, dur, fadeIn, fadeOut);
     const wm = widthMod(t);
-    return [(bl + airL * 0.18 * wm) * e, (br + airR * 0.18 * wm) * e];
+    return [(bl + airL * 0.035 * wm) * e, (br + airR * 0.035 * wm) * e];
   });
   wav(file, pcm);
 }
@@ -1146,10 +1148,15 @@ bed('z0_machine_room_tone.wav', 4.2, 0.18, 0.42, (t, lp) => {
 });
 
 bed('z2_playroom_room_tone.wav', 25.8, 0.65, 0.85, (t, lp) => {
-  const air = noise() * 0.009 + lp() * 0.018;
-  const plastic = Math.sin(t * Math.PI * 2 * 310) * 0.0022 * Math.max(0, Math.sin(t * 0.71));
-  const balls = (hashLike(t, 3.1) > 0.988 ? noise() * 0.032 : 0);
-  const v = air + plastic + balls;
+  // Padded plastic rooms are acoustically dead: only deep building air and two tiny
+  // ball-settling events remain. No continuous static, birds, or cute loop.
+  const deepAir = lp() * 0.0045;
+  let settle = 0;
+  for (const [j, at] of [9.4, 18.7].entries()) {
+    const u = t - at;
+    if (u > 0 && u < 0.18) settle += coloredNoise(Math.floor(t * SR), 190.2 + j, 19) * 0.012 * Math.exp(-u * 24);
+  }
+  const v = deepAir + settle;
   return [v * 0.92, v];
 });
 

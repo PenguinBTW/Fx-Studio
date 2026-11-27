@@ -10,7 +10,7 @@ export default defineMix({
     // so overlapping transition windows crossfade physical spaces rather than hard-cutting them.
     { id: 'z0_machine_room_tone', file: 'generated/z0_machine_room_tone.wav', bus: 'ambient', at: 0.0, gainDb: -7.0 },
     { id: 'z1_fluorescent_bed', file: 'generated/z1_fluorescent_bed.wav', bus: 'ambient', at: 4.0, gainDb: -5.5, automation: [{ t: 5.0, gainDb: 0 }, { t: 5.3, gainDb: -60 }, { t: 7.35, gainDb: -60 }, { t: 7.65, gainDb: 0 }, ], },
-    { id: 'z2_playroom_room_tone', file: 'generated/z2_playroom_room_tone.wav', bus: 'ambient', at: 29.6, gainDb: -6.5, automation: [{ t: 40.9, gainDb: 0 }, { t: 41.2, gainDb: -60 }, { t: 43.2, gainDb: -60 }, { t: 43.5, gainDb: 0 }, ], },
+    { id: 'z2_playroom_room_tone', file: 'generated/z2_playroom_room_tone.wav', bus: 'ambient', at: 29.6, gainDb: -10.0, automation: [{ t: 40.9, gainDb: 0 }, { t: 41.2, gainDb: -60 }, { t: 43.2, gainDb: -60 }, { t: 43.5, gainDb: 0 }, ], },
     { id: 'z3_pool_room_tone', file: 'generated/z3_pool_room_tone.wav', bus: 'ambient', at: 54.6, gainDb: -6.0, automation: [{ t: 63.1, gainDb: 0 }, { t: 63.4, gainDb: -60 }, { t: 67.0, gainDb: -60 }, { t: 67.3, gainDb: 0 }, ], },
     { id: 'z4_library_room_tone', file: 'generated/z4_library_room_tone.wav', bus: 'ambient', at: 79.4, gainDb: -6.5, automation: [{ t: 87.8, gainDb: 0 }, { t: 88.1, gainDb: -60 }, { t: 89.45, gainDb: -60 }, { t: 89.75, gainDb: 0 }, ], },
     { id: 'z5_motel_room_tone', file: 'generated/z5_motel_room_tone.wav', bus: 'ambient', at: 104.7, gainDb: -6.0, automation: [{ t: 116.7, gainDb: 0 }, { t: 117.0, gainDb: -60 }, { t: 119.9, gainDb: -60 }, { t: 120.2, gainDb: 0 }, ], },
@@ -21,7 +21,7 @@ export default defineMix({
     // Material/event cues localized to each spatial seam. They sit on sfx so the ambient
     // crossfade remains continuous while the physical transition object is unmistakable.
     { id: 'z2_freeze_duck_key', file: 'generated/z2_freeze_duck_key.wav', bus: 'foley_guide', at: 40.50, gainDb: 0.0 },
-    { id: 'z2_playroom_events', file: 'generated/z2_playroom_events.wav', bus: 'sfx', at: 29.60, gainDb: -3.5 },
+    { id: 'z2_playroom_events', file: 'generated/z2_playroom_events.wav', bus: 'sfx', at: 29.60, gainDb: 5.0 },
     { id: 't2_plastic_to_water', file: 'generated/t2_plastic_to_water.wav', bus: 'sfx', at: 54.60, gainDb: -1.0 },
     { id: 'z3_pool_events', file: 'generated/z3_pool_events.wav', bus: 'sfx', at: 54.60, gainDb: -2.5 },
     { id: 't3_ink_to_paper', file: 'generated/t3_ink_to_paper.wav', bus: 'sfx', at: 79.40, gainDb: -1.5 },

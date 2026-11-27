@@ -300,6 +300,21 @@ export function bellStrike(u: number, baseHz: number, seed: number, amp = 1): nu
   return (v * tremolo + contact) * amp * Math.min(1, u * 1500);
 }
 
+
+/** Hollow plastic object contact: damped shell modes with very little metallic edge. */
+export function plasticKnock(u: number, baseHz: number, seed: number, amp = 1): number {
+  if (u < 0 || u > 0.55) return 0;
+  const si = Math.floor(u * 48000 + 0.5);
+  const contact = coloredNoise(si, seed, 9) * 0.11 * Math.exp(-u * 120);
+  const shell = modalRing(u, [
+    { hz: baseHz * 0.72, gain: 0.30, decay: 18 },
+    { hz: baseHz, gain: 0.36, decay: 24 },
+    { hz: baseHz * 1.43, gain: 0.15, decay: 34 },
+    { hz: baseHz * 2.08, gain: 0.035, decay: 48 },
+  ]);
+  return (shell + contact) * amp * Math.min(1, u * 240);
+}
+
 /** Low metal/wood object impact for bars, doors, rails, and structural contact. */
 export function impactStrike(u: number, baseHz: number, seed: number, amp = 1): number {
   if (u < 0 || u > 1.0) return 0;
@@ -321,7 +336,7 @@ export function musicBoxTine(u: number, hz: number, seed: number, amp = 1): numb
   const modes: Mode[] = [
     { hz: hz * wobble, gain: 0.60, decay: 4.6 },
     { hz: hz * 2.017, gain: 0.16, decay: 8.5 },
-    { hz: hz * 3.31, gain: 0.045, decay: 13.5 },
+    { hz: hz * 3.31, gain: 0.016, decay: 18.5 },
   ];
   const si = Math.floor(u * 48000 + 0.5);
   const pluck = (hash01(si, seed + 4.1) - 0.5) * 0.09 * Math.exp(-u * 310);
@@ -354,14 +369,18 @@ export function renderBellPhone(durationSec: number, sampleRate = 48000): Float3
 
   interface Hit { at: number; bell: number; amp: number; seed: number }
   const hits: Hit[] = [];
-  for (const [burst, start] of [[0, 0.02], [1, 1.18]] as const) {
-    for (let k = 0; k < 15; k++) {
-      const jitter = (hash01(k + burst * 19, 41.2) - 0.5) * 0.006;
+  // Mechanical bells are bursted rather than continuous. For short phone cues (the
+  // receiver is lifted before a second ring) this yields one full ~1.5s burst followed
+  // by true source silence; longer uses get the normal ~4.8s ring cycle.
+  for (let burst = 0, start = 0.02; start < durationSec - 0.4; burst++, start += 4.8) {
+    for (let k = 0; k < 29; k++) {
+      const jitter = (hash01(k + burst * 29, 41.2) - 0.5) * 0.006;
+      const engage = Math.min(1, k / 3) * Math.min(1, (28 - k) / 4);
       hits.push({
         at: start + k * (0.0495 + (hash01(k, 44.2) - 0.5) * 0.003) + jitter,
         bell: k % 2,
-        amp: (k % 2 ? 0.72 : 1.0) * (0.86 + hash01(k + burst * 31, 45.3) * 0.24),
-        seed: 71.3 + k * 2.17 + burst * 19.1,
+        amp: engage * (k % 2 ? 0.72 : 1.0) * (0.82 + hash01(k + burst * 31, 45.3) * 0.30),
+        seed: 71.3 + k * 2.17 + burst * 31.1,
       });
     }
   }
