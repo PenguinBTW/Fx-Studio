@@ -110,7 +110,7 @@ export function renderConvolutionRoom(input: Float32Array, sampleRate = 48000, o
   const earlyTaps = [13.7, 21.9, 31.7, 47.3, 67.9].map((x) => Math.max(1, Math.round(x * size * sampleRate / 1000)));
   const earlyGains = [0.56, 0.42, 0.31, 0.22, 0.15];
   const earlyPans = [-0.55, 0.48, -0.25, 0.34, -0.12];
-  for (let f = 0; f < frames; f++) {
+  for (let f = 0; f < outFrames; f++) {
     const dryL = input[f * 2] ?? 0;
     const dryR = input[f * 2 + 1] ?? 0;
     let wetL = 0, wetR = 0;
