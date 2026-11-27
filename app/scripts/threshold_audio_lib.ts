@@ -428,6 +428,19 @@ export function clockTick(u: number, seed: number, amp = 1): number {
 }
 
 
+
+/** Soft cloth/felt drag: dark fibrous friction with irregular pressure, never a noise bed. */
+export function clothDrag(u: number, dur: number, seed: number, amp = 1): number {
+  if (u < 0 || u > dur) return 0;
+  const si = Math.floor(u * 48000 + 0.5);
+  const x = u / dur;
+  const env = Math.sin(Math.PI * x) ** 0.8;
+  const uneven = 0.50 + slowNoise01(u, seed, 7.0) * 0.55;
+  const fibre = coloredNoise(si, seed, 25) * env * uneven * 0.20;
+  const edge = coloredNoise(si, seed + 3.2, 11) * env * 0.035;
+  return (fibre + edge) * amp;
+}
+
 /** Dense carpet footstep dominated by fibrous compression/friction rather than floor thud. */
 export function carpetStep(u: number, seed: number, amp = 1): number {
   if (u < 0 || u > 0.34) return 0;

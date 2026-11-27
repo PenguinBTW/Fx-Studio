@@ -3,7 +3,7 @@
 // generated WAVs are evidence/build products and are never committed.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { coloredNoise, impactStrike, musicBoxTine, plasticKnock, ceramicImpact, carpetStep, clockTick, crtSpeakerBurst, paperRustle, paperTear, paperSlam, woodCreak, bodyCough, waterDrop, waterDisplace, wetScrape, muffledBellStrike, renderBellPhone, renderCrtProgram, renderConvolutionRoom, slowNoise01, softImpact, tileClatter, type RoomOptions } from './threshold_audio_lib';
+import { coloredNoise, impactStrike, musicBoxTine, plasticKnock, ceramicImpact, carpetStep, clothDrag, clockTick, crtSpeakerBurst, paperRustle, paperTear, paperSlam, woodCreak, bodyCough, waterDrop, waterDisplace, wetScrape, muffledBellStrike, renderBellPhone, renderCrtProgram, renderConvolutionRoom, slowNoise01, softImpact, tileClatter, type RoomOptions } from './threshold_audio_lib';
 
 const SR = 48000;
 const OUT = path.join(import.meta.dir, '../src/scenes/threshold/sound/generated');
@@ -764,47 +764,98 @@ wav('coldopen_arm_replay.wav', stem(2.1,(t)=>{
  v=torque+servo+coil+mass+beam+die; return [v*.9,v*.86];
 }));
 
-// Z6 felt theatre cue pass from z5_z8_audio_cue_spec.md. Stem starts at 129.4.
-let z6lp=0;
-wav('z6_theatre_events.wav', stem(21.2,(t)=>{
- const at=t+129.4; z6lp=z6lp*.90+noise()*.10; let l=0,r=0;
- const add=(v:number,pan=0)=>{const a=(pan+1)*Math.PI/4;l+=v*Math.cos(a);r+=v*Math.sin(a)};
- // absorbent felt room tone: very little high air or reflection
- if(at>=130&&at<150){const breath=0.005+0.995*((1-smoothstep(141.75,142.05,at))+smoothstep(143.55,143.85,at));add(z6lp*.010*breath,0)}
- // slowed music box, missing note restored; after 139 it stumbles and dies by 141.5
- if(at>=130&&at<141.5){
-   const slow=at<139?1:Math.max(0,1-(at-139)/2.5); const pos=at-130; const nl=.52; const idx=Math.floor(pos/nl)%8; const u=pos%nl;
-   const scale=[704,837,1055,1254,1055,940,837,790];
-   if(u<.46&&slow>0&&!(at>=139&&idx===5)&&at<141.1){const e=Math.min(1,u/.012)*Math.exp(-u*4.2)*slow;add((Math.sin(u*Math.PI*2*scale[idx]!)*.020+Math.sin(u*Math.PI*2*scale[idx]!*2.71)*.006)*e,-.08)}
- }
- // stepped heavy curtains opening at a 12fps stop-motion feel
- if(at>=130.2&&at<132.8){const cell=Math.floor((at-130.2)*12);const cu=((at-130.2)*12-cell)/12;if(cu<.28)add((z6lp*.09+noise()*.012)*Math.sin(Math.PI*cu/.28),0)}
- // viewer settling into seat
- if(at>=130&&at<130.8){const u=at-130;add((z6lp*.10+Math.sin(u*Math.PI*2*92)*.024)*Math.exp(-u*4),0)}
- // backdrop roller knocks and cloth unrolls
- for(const hit of[134,135.5,137,138.5]){const u=at-hit;if(u>0&&u<.55)add((Math.sin(u*Math.PI*2*110)*.035*Math.exp(-u*20)+z6lp*.075*Math.exp(-u*5)+noise()*.012*Math.exp(-u*8)),0)}
- // miniature recap props/material transformations
- if(at>=133&&at<135){const tap=Math.max(0,Math.sin((at-133)*Math.PI*2*2.2));add((noise()*.008+Math.sin(at*Math.PI*2*1800)*.003)*tap,-.05)}
- if(at>=135&&at<136.8){const cell=Math.floor((at-135)*7);const u=((at-135)*7-cell)/7;if(hash01(cell,14)<.55&&u<.12)add(noise()*.012*Math.exp(-u*25),.03)}
- if(at>=136.5&&at<138){const u=(at-136.5)%0.7;if(u<.05)add(Math.sin(u*Math.PI*2*620)*.007*Math.exp(-u*35),.12)}
- if(at>=138&&at<139){const u=at-138;add((z6lp*.13+Math.sin(u*Math.PI*2*86)*.045)*Math.exp(-u*6),0)}
- // tiny puppet squeaks/foot taps across recap and chase
- for(const st of[133.2,133.8,134.35,135.2,136.1,136.9,137.6,138.35,139.1,139.35,139.62,139.9,140.16,140.42,140.7,140.98,141.24]){const u=at-st;if(u>0&&u<.12){const pan=(hash01(Math.floor(st*10),4)-.5)*.4;const hz=700+hash01(Math.floor(st*10),3)*300;add((noise()*.014+Math.sin(u*Math.PI*2*hz)*.006)*Math.exp(-u*30),pan);add((Math.sin(u*Math.PI*2*(120+hash01(Math.floor(st*10),5)*70))*.012+z6lp*.026)*Math.exp(-u*22),pan*.8)}}
- // rapid long-arm fabric swipes in puppet chase
- if(at>=139&&at<141.5){const u=at-139;const scurry=Math.max(0,Math.sin(u*Math.PI*2*4));add(z6lp*(.030+.045*scurry)+noise()*(.005+.007*scurry),0);const cell=Math.floor(u*8);const cu=(u*8-cell)/8;if(cu<.055)add((Math.sin(cu*Math.PI*2*(150+hash01(cell,12)*90))*.018+z6lp*.028)*Math.exp(-cu*38),(hash01(cell,13)-.5)*.45)}
- // Lint armrest landing and warm close chirps
- if(at>=141.5&&at<142){const u=at-141.5;add(z6lp*.08*Math.sin(Math.PI*u/.5)+Math.sin(u*Math.PI*2*1120)*.008*Math.exp(-u*10),.38)}
- for(const st of[142.3,142.65,143.0]){const u=at-st;if(u>0&&u<.18)add(Math.sin(u*Math.PI*2*(880+Math.sin(u*20)*120))*.012*Math.sin(Math.PI*u/.18),.34)}
- // viewer follows: carpet then hollow wooden stage steps
- for(let i=0;i<8;i++){const hit=143.5+i*.46;const u=at-hit;if(at<147&&u>0&&u<.12){const wood=hit>145.7?1:0;add((z6lp*.055+Math.sin(u*Math.PI*2*(wood?118:72))*(wood?.038:.025))*Math.exp(-u*22),i%2?.09:-.09)}}
- // backstage hand-built mechanics
- for(const st of[145.2,146.1,146.8,147.7,148.4]){const u=at-st;if(u>0&&u<.16)add((noise()*.012+Math.sin(u*Math.PI*2*520)*.006)*Math.exp(-u*20),(hash01(Math.floor(st*10),8)-.5)*.7)}
- // exit door compressed felt/fabric/wood push
- if(at>=147.2&&at<150){const u=at-147.2;add((z6lp*.085+noise()*.010)*Math.min(1,u/.5)*(1-smoothstep(2.2,2.8,u)),0)}
- // cold organ precue swelling through the gap into cathedral scale
- if(at>=148.5&&at<150.5){const u=at-148.5;const sw=smoothstep(0,2,u);add((Math.sin(at*Math.PI*2*64)*.018+Math.sin(at*Math.PI*2*96)*.010+Math.sin(at*Math.PI*2*128)*.006)*sw,0)}
- return[l,r]
-}));
+// Z6 felt-theatre redesign: extreme quiet, absorbent acoustics, small handmade motion,
+// and a broken sparse music box. No chiptune loop, puppet squeak melody, or organ synth swell.
+const z6TheatreRoom: RoomOptions = { size: 0.82, decaySec: 0.48, dampingHz: 1150, predelayMs: 8, earlyDb: -18, tailDb: -17, dryDb: 0 };
+wavRoom('z6_theatre_events.wav', stem(21.2, (t) => {
+  const at = t + 129.4;
+  let l = 0, r = 0;
+  const add = (v: number, pan = 0) => {
+    const a = (pan + 1) * Math.PI / 4;
+    l += v * Math.cos(a);
+    r += v * Math.sin(a);
+  };
+
+  // Broken theatre music box: isolated flattened teeth, wide wrongness gaps, octave sag,
+  // and a spring dying after 139. No melodic run, no chiptune arpeggio.
+  const fragments = [
+    [130.35, 523.25, -55, 0.75, 0.036],
+    [132.10, 659.25, -118, 0.75, 0.031],
+    [134.25, 493.88, -82, 0.75, 0.027],
+    [136.75, 587.33, -166, 0.5, 0.023],
+    [139.15, 523.25, -218, 0.5, 0.018],
+    [140.55, 659.25, -264, 0.5, 0.012],
+  ] as const;
+  for (const [j, spec] of fragments.entries()) {
+    const [hit, hz, cents, octave, amp] = spec;
+    add(musicBoxTine(at - hit - (hash01(j, 390.2) - 0.5) * 0.10, hz * Math.pow(2, cents / 1200) * octave, 391.3 + j, amp), -0.08);
+  }
+  for (const [j, hit] of [131.2, 135.4, 139.7].entries()) {
+    add(plasticKnock(at - hit, 250 - j * 25, 394.2 + j, 0.012), -0.12);
+  }
+
+  // Heavy curtain opening in sparse stop-motion cloth drags, not a continuous noise loop.
+  for (const [j, hit, dur] of [[0,130.35,0.34],[1,131.05,0.28],[2,131.95,0.38],[3,132.55,0.24]] as const) {
+    add(clothDrag(at - hit, dur, 397.2 + j, 0.16 - j * 0.015), -0.04 + j * 0.025);
+  }
+
+  // Viewer settling into seat: felt compression and a small wooden frame response.
+  add(clothDrag(at - 130.08, 0.52, 401.2, 0.17), 0);
+  add(woodCreak(at - 130.35, 0.36, 402.3, 0.12), 0.02);
+
+  // Backdrop roller knocks and cloth unrolling: separated physical events.
+  for (const [j, hit] of [134.0,135.5,137.0,138.5].entries()) {
+    add(ceramicImpact(at - hit, 150 - j * 8, 404.2 + j, 0.035), 0);
+    add(clothDrag(at - hit - 0.08, 0.42, 405.3 + j, 0.11), 0.02);
+  }
+
+  // Miniature recap props: tiny wood, paper, and ceramic handling at intimate scale.
+  for (const [j, hit] of [133.25,134.15,135.35,136.55,137.75].entries()) {
+    add(j % 2 ? paperRustle(at - hit, 0.08, 408.2 + j, 0.07) : plasticKnock(at - hit, 210 + j * 12, 409.3 + j, 0.024), (hash01(j, 410.4) - 0.5) * 0.32);
+  }
+
+  // Puppet chase: small soft foot taps and fabric swipes; handmade, close, and not cute.
+  for (const [j, hit] of [139.10,139.42,139.78,140.15,140.48,140.86,141.18].entries()) {
+    add(softImpact(at - hit, 64 + hash01(j, 412.2) * 18, 413.3 + j, 0.028), (hash01(j, 414.4) - 0.5) * 0.38);
+  }
+  for (const [j, hit] of [139.32,140.32,141.05].entries()) {
+    add(clothDrag(at - hit, 0.18, 416.2 + j, 0.10), (j - 1) * 0.16);
+  }
+
+  // Lint armrest landing: soft felt weight only. No warm chirp voice.
+  add(clothDrag(at - 141.52, 0.36, 418.2, 0.14), 0.36);
+  add(softImpact(at - 141.66, 58, 419.3, 0.035), 0.34);
+
+  // Viewer follows: carpet then hollow wooden stage steps.
+  for (let i = 0; i < 8; i++) {
+    const hit = 143.5 + i * 0.46;
+    const wood = hit > 145.7;
+    if (wood) add(ceramicImpact(at - hit, 150 + i * 4, 421.2 + i, 0.040), i % 2 ? 0.08 : -0.08);
+    else add(carpetStep(at - hit, 422.3 + i, 0.070), i % 2 ? 0.08 : -0.08);
+  }
+
+  // Backstage hand-built mechanics: sparse wooden pegs and small metal escapement contacts.
+  for (const [j, hit] of [145.2,146.1,146.8,147.7,148.4].entries()) {
+    add(j % 2 ? clockTick(at - hit, 425.2 + j, 0.035) : plasticKnock(at - hit, 190 + j * 14, 426.3 + j, 0.032), (hash01(j, 427.4) - 0.5) * 0.55);
+  }
+
+  // Exit door compressed felt/fabric/wood push, in separated strains with air.
+  for (const [j, hit, dur] of [[0,147.35,0.46],[1,148.20,0.40],[2,149.05,0.52]] as const) {
+    add(clothDrag(at - hit, dur, 430.2 + j, 0.14 + j * 0.02), 0);
+    add(woodCreak(at - hit - 0.04, dur * 0.8, 431.3 + j, 0.13), 0);
+  }
+
+  // Cathedral pressure precue: two separated low air swells, not an organ chord.
+  for (const [j, hit] of [148.8,149.75].entries()) {
+    const u = at - hit;
+    if (u > 0 && u < 0.42) {
+      const envp = Math.sin(Math.PI * u / 0.42) ** 2;
+      add(Math.sin(u * Math.PI * 2 * (38 + j * 5)) * 0.010 * envp, 0);
+    }
+  }
+
+  return [l, r];
+}), z6TheatreRoom);
 
 
 // Z7 vending cathedral cue pass. Stem starts at 149.5; `at` is project time.
@@ -1065,16 +1116,12 @@ wav('t5_static_to_felt.wav', stem(1.4, (t) => {
 
 wav('t6_felt_door_push.wav', stem(1.2, (t) => {
   let v = 0;
-  if (t < 0.42) {
-    const k = t / 0.42;
-    v += noise() * 0.045 * Math.sin(Math.PI * k) + Math.sin(t * Math.PI * 2 * (86 + k * 42)) * 0.022 * k;
-  }
-  const u = t - 0.38;
-  if (u > 0 && u < 0.16) {
-    v += noise() * 0.13 * Math.exp(-u * 24) + Math.sin(u * Math.PI * 2 * 142) * 0.08 * Math.exp(-u * 18);
-  }
-  const bloom = Math.max(0, Math.min(1, (t - 0.55) / 0.35));
-  v += (Math.sin(t * Math.PI * 2 * 58) * 0.028 + Math.sin(t * Math.PI * 2 * 116) * 0.008) * bloom;
+  v += clothDrag(t, 0.58, 440.2, 0.20);
+  v += woodCreak(t - 0.08, 0.52, 441.3, 0.22);
+  const u = t - 0.42;
+  if (u > 0 && u < 0.30) v += impactStrike(u, 105, 442.4, 0.16);
+  const p = t - 0.64;
+  if (p > 0 && p < 0.42) v += Math.sin(p * Math.PI * 2 * 42) * 0.018 * Math.sin(Math.PI * p / 0.42) ** 2;
   return [v, v * 0.74];
 }));
 
@@ -1180,14 +1227,14 @@ bed('z5_motel_room_tone.wav', 25.9, 0.55, 1.0, (t, lp) => {
 });
 
 bed('z6_theatre_room_tone.wav', 21.1, 0.95, 0.9, (t, lp) => {
-  const feltAir = lp() * 0.014;
-  const cloth = Math.sin(t * Math.PI * 2 * 36) * 0.004;
-  let creak = 0;
-  for (const at of [5.1, 12.6, 17.4]) {
+  // Felt swallows the room: almost no continuous air, only two tiny settling cloth noises.
+  const feltAir = lp() * 0.0014;
+  let settle = 0;
+  for (const [j, at] of [6.8, 15.9].entries()) {
     const u = t - at;
-    if (u > 0 && u < 0.65) creak += Math.sin(u * Math.PI * 2 * (112 - u * 35)) * 0.022 * Math.sin(Math.PI * u / 0.65);
+    if (u > 0 && u < 0.16) settle += clothDrag(u, 0.16, 435.2 + j, 0.014);
   }
-  const v = feltAir + cloth + creak;
+  const v = feltAir + settle;
   return [v * 0.86, v];
 });
 
