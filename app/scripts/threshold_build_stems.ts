@@ -199,7 +199,7 @@ wavRoom('z1_run_carpet.wav', stem(8.4, (t) => {
 
   for (const e of z1StepEvents) {
     const u = t - e.at;
-    if (u >= 0 && u < 0.14) {
+    if (u >= 0 && u < 0.24) {
       const heel = softImpact(u, e.hz, e.seed, e.amp * 0.86);
       const toeU = u - e.toe;
       const toe = toeU >= 0 ? softImpact(toeU, e.hz * 1.18, e.seed + 2.4, e.amp * 0.16) : 0;
