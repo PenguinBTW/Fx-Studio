@@ -130,7 +130,6 @@ export async function buildOfficeLoopSet(): Promise<OfficeLoopSet> {
   phoneInst.root.scale.setScalar(1.2);
   phoneInst.root.traverse((o) => {
     if (/^(base_|bell_|cradle_|front_lip|hook_|key_|vent_|wear_nick_)/.test(o.name)) { o.scale.x = 1.55; o.scale.z = 1.22; }
-    if (/^key_(mark_)?/.test(o.name)) { o.position.y -= 0.012; o.position.z -= 0.018; }
   });
   root.add(phoneInst.root);
 
