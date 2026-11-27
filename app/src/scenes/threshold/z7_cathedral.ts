@@ -1702,8 +1702,8 @@ export default class ThresholdZ7Cathedral extends Scene {
       d.mesh.rotation.set((d.seed * 4 + t * (0.8 + d.seed)) % (Math.PI * 2), (d.seed * 7 + t * (0.45 + d.seed * 0.4)) % (Math.PI * 2), (d.seed * 3 + t * 0.7) % (Math.PI * 2));
     }
     const shaftOpen = t >= 185.25;
-    for (const obj of this.floorSolidObjects) obj.visible = !shaftOpen;
-    for (const obj of this.floorFallPanels) obj.visible = shaftOpen;
+    for (const obj of this.floorSolidObjects) obj.visible = !shaftOpen && !replayWindow;
+    for (const obj of this.floorFallPanels) obj.visible = shaftOpen && !replayWindow;
     const riftOpen = smooth((t - 176) / 6.2);
     this.rift.visible = riftOpen > 0 && !shaftOpen;
     this.rift.scale.x = Math.max(0.02, riftOpen * 4.2);

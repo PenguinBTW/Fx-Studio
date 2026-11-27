@@ -101,7 +101,7 @@ const BODY: Record<ThresholdTransitionMode, string> = {
     vec3 ahead = mix(ca, wetPlastic, smoothstep(0.0, 0.24, stretch));
     // Water contact lives mostly along the lower arc of the aperture, rippling the first
     // revealed pool surface where hot plastic meets liquid.
-    float lowerArc = smoothstep(-0.15, -0.70, q.y);
+    float lowerArc = 1.0 - smoothstep(-0.70, -0.15, q.y);
     float contactBand = lipWide * lowerArc * smoothstep(0.08, 0.24, u);
     vec2 contactRipple = radial * sin(angle * 17.0 + u * 29.0) * 0.006 * contactBand;
     vec3 pool = texture(texB, clamp(bUv + contactRipple, 0.0, 1.0)).rgb;
@@ -231,7 +231,7 @@ const BODY: Record<ThresholdTransitionMode, string> = {
     float phosphorMask = smoothstep(0.30, 1.15, lumA + ca0.b * 0.42);
     float scan = 0.5 + 0.5 * sin((auv.y + u * 0.018) * 720.0);
     vec3 phosphor = vec3(0.08, 0.34, 0.48) * phosphorMask * (0.18 + scan * 0.10) * (1.0 - smoothstep(0.46, 0.78, u));
-    float vignette = smoothstep(1.15, 0.28, length((vUv - screenC) * vec2(1.7778, 1.0)));
+    float vignette = 1.0 - smoothstep(0.28, 1.15, length((vUv - screenC) * vec2(1.7778, 1.0)));
     vec3 glass = ca * mix(1.0, 0.34, smoothstep(0.18, 0.62, u)) + phosphor * (0.35 + vignette * 0.65);
 
     vec2 q = (vUv - screenC) * vec2(1.7778, 1.0);
