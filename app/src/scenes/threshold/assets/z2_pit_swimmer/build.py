@@ -59,8 +59,8 @@ yellow=material('slide_yellow_plastic',(1.0,0.65,0.025),.18)
 blue=material('ball_blue_vinyl',(0.025,0.19,0.85),.2)
 green=material('ball_green_vinyl',(0.03,0.62,0.16),.22)
 orange=material('ball_orange_vinyl',(1.0,0.25,0.025),.2)
-white=material('painted_eye_white',(0.95,0.92,0.82),.26)
-black=material('painted_pupil_black',(0.006,0.004,0.003),.18)
+white=material('clouded_eye_sclera',(0.43,0.39,0.25),.74)
+black=material('clouded_pupil_black',(0.010,0.006,0.003),.52)
 mouthdark=material('mouth_deep_red_black',(0.055,0.002,0.004),.65)
 toothmat=material('slide_stopper_teeth',(0.76,0.64,0.40),.48)
 toothold=material('aged_stopper_teeth',(0.48,0.37,0.22),.62)
@@ -162,8 +162,8 @@ for i in range(10):
 # Asymmetric vinyl socket balls overlap the eye spheres; hand-painted irises sit flush on
 # the exposed front cap, with lids and pressure seams locking them into the head structure.
 eye_specs={
-    'l':dict(x=-.275,y=-.285,z=.405,sx=.124,sy=.082,sz=.132,base=red,lid=orange,irisr=.055,pupr=.026),
-    'r':dict(x=.295,y=-.265,z=.355,sx=.108,sy=.074,sz=.119,base=blue,lid=green,irisr=.049,pupr=.023),
+    'l':dict(x=-.275,y=-.285,z=.405,sx=.124,sy=.082,sz=.132,base=red,lid=orange,irisr=.043,pupr=.020),
+    'r':dict(x=.295,y=-.265,z=.355,sx=.108,sy=.074,sz=.119,base=blue,lid=green,irisr=.027,pupr=.012),
 }
 for side,d in eye_specs.items():
     x,y,z=d['x'],d['y'],d['z']
@@ -175,15 +175,25 @@ for side,d in eye_specs.items():
         sr=.070+(si%2)*.012
         sphere(f'eye_socket_{side}_{si+1}',(x+ox,y+oy,z+oz),(sr,sr*.72,sr),socket_cols[si],seg=24,rings=12).parent=root
     # vinyl brow/lower lid pads overlap the ball physically and break the perfect sphere silhouette
-    sphere(f'eye_upper_lid_{side}',(x,y-.035,z+d['sz']*.54),(d['sx']*.92,.040,.050),d['lid'],seg=24,rings=12).parent=root
-    sphere(f'eye_lower_lid_{side}',(x,y-.030,z-d['sz']*.55),(d['sx']*.82,.034,.043),d['lid'],seg=24,rings=12).parent=root
     # iris disc points roughly forward/down (-Y), scaled imperfectly like hand paint on vinyl
     front=y-d['sy']-.010
+    # Heavy vinyl lids physically overlap the exposed eye cap. The right eye is nearly
+    # swollen shut; the left is a narrow clouded slit rather than a bright cartoon eye.
+    lid_close=1.0 if side=='l' else 1.35
+    sphere(f'eye_upper_lid_{side}',(x,front+.018,z+d['sz']*(.34 if side=='l' else .25)),(d['sx']*1.02,.047,.065*lid_close),d['lid'],seg=24,rings=12).parent=root
+    sphere(f'eye_lower_lid_{side}',(x,front+.014,z-d['sz']*(.36 if side=='l' else .25)),(d['sx']*.90,.040,.060*lid_close),d['lid'],seg=24,rings=12).parent=root
     bpy.ops.mesh.primitive_cylinder_add(vertices=32,radius=d['irisr'],depth=.012,location=(x,front,z+.008),rotation=(math.pi/2,0,0))
     iris=finish(bpy.context.object,f'eye_iris_{side}',f'eye_iris_{side}',white); smooth(iris); iris.scale.x=1.0+(0.10 if side=='l' else -0.06); iris.parent=root
     bpy.ops.mesh.primitive_cylinder_add(vertices=24,radius=d['pupr'],depth=.014,location=(x+(.016 if side=='l' else -.013),front-.010,z+.006),rotation=(math.pi/2,0,0))
     pup=finish(bpy.context.object,f'eye_pupil_{side}',f'eye_pupil_{side}',black); smooth(pup); pup.scale.x=.88 if side=='l' else 1.08; pup.parent=root
-    sphere(f'eye_wet_catchlight_{side}',(x+(.020 if side=='l' else -.017),front-.006,z+.025),(.011,.004,.011),white,seg=12,rings=6).parent=root
+    
+    # cloudy necrotic patches and cracked paint veins replace the clean toy catchlight
+    sphere(f'eye_cloud_patch_{side}',(x+(.020 if side=='l' else -.017),front-.006,z+.020),(.020 if side=='l' else .013,.004,.013),toothold,seg=12,rings=6).parent=root
+    for ci in range(4):
+        ang=-.8+ci*.48+(.12 if side=='r' else 0)
+        cx=x+math.sin(ang)*d['irisr']*.48
+        cz=z+math.cos(ang)*d['irisr']*.42
+        cube(f'eye_crack_{side}_{ci+1}',(cx,front-.012,cz),(.0024,.0022,.020+ci*.002),seammat,bevel=.0005,rot=(0,ang*.2,ang)).parent=root
     # partial dark compression seam underneath the socket; small enough to read as pressure, not outline stickers
     torus(f'eye_pressure_seam_{side}',(x,y+.004,z-.005),d['sx']*.68,.008,seammat,rot=(math.pi/2,0,0)).parent=root
 
@@ -202,7 +212,7 @@ for side,x in [('l',-.43),('r',.43)]:
 for i in range(24):
     yy=.28+i*.22; taper=1-i/28; rr=.24*taper+.08
     x=math.sin(i*.55)*.10*taper; z=-.03+math.sin(i*.42)*.04
-    body=sphere(f'body_fused_ball_{i+1:02d}',(x,yy,z),(rr*1.05,rr*1.28,rr*.88),palette[(i+2)%len(palette)],seg=28,rings=14); body.parent=root
+    body=sphere(f'body_fused_ball_{i+1:02d}',(x,yy,z),(rr*1.05,rr*1.28,rr*.88),palette[(i+2)%len(palette)],seg=24,rings=12); body.parent=root
     if i%3==0: torus(f'body_seam_{i+1:02d}',(x,yy,z),rr*.75,rr*.045,seammat,rot=(math.pi/2,0,i*.2)).parent=root
 for i in range(10):
     yy=.28+i*.52; rr=.16-(i*.008)
