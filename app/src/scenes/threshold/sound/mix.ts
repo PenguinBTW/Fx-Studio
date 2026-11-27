@@ -16,8 +16,8 @@ export default defineMix({
     { id: 'z5_motel_room_tone', file: 'generated/z5_motel_room_tone.wav', bus: 'ambient', at: 104.7, gainDb: -11.0, automation: [{ t: 116.7, gainDb: 0 }, { t: 117.0, gainDb: -60 }, { t: 119.9, gainDb: -60 }, { t: 120.2, gainDb: 0 }, ], },
     { id: 'z6_theatre_room_tone', file: 'generated/z6_theatre_room_tone.wav', bus: 'ambient', at: 129.4, gainDb: -11.0, automation: [{ t: 141.45, gainDb: 0 }, { t: 141.75, gainDb: -60 }, { t: 143.55, gainDb: -60 }, { t: 143.85, gainDb: 0 }, ], },
     { id: 'z7_cathedral_room_tone', file: 'generated/z7_cathedral_room_tone.wav', bus: 'ambient', at: 149.5, gainDb: -11.0, automation: [{ t: 149.95, gainDb: 0 }, { t: 150.25, gainDb: -60 }, { t: 152.0, gainDb: -60 }, { t: 152.3, gainDb: 0 }, { t: 165.62, gainDb: 0 }, { t: 165.85, gainDb: -60 }, { t: 166.55, gainDb: -60 }, { t: 166.85, gainDb: 0 }, ], },
-    { id: 'z8_home_room_tone', file: 'generated/z8_home_room_tone.wav', bus: 'ambient', at: 194.4, gainDb: -6.5, automation: [{ t: 198.0, gainDb: 0 }, { t: 198.3, gainDb: -60 }, { t: 199.8, gainDb: -60 }, { t: 200.1, gainDb: 0 }, { t: 214.5, gainDb: 0 }, { t: 214.8, gainDb: -60 }, { t: 217.15, gainDb: -60 }, { t: 217.35, gainDb: 0 }, ], },
-    { id: 'end_office_afterimage_tone', file: 'generated/end_office_afterimage_tone.wav', bus: 'ambient', at: 225.0, gainDb: -7.0 },
+    { id: 'z8_home_room_tone', file: 'generated/z8_home_room_tone.wav', bus: 'ambient', at: 194.4, gainDb: -11.0, automation: [{ t: 198.0, gainDb: 0 }, { t: 198.3, gainDb: -60 }, { t: 199.8, gainDb: -60 }, { t: 200.1, gainDb: 0 }, { t: 214.5, gainDb: 0 }, { t: 214.8, gainDb: -60 }, { t: 217.15, gainDb: -60 }, { t: 217.35, gainDb: 0 }, ], },
+    { id: 'end_office_afterimage_tone', file: 'generated/end_office_afterimage_tone.wav', bus: 'ambient', at: 225.0, gainDb: -16.0 },
     // Material/event cues localized to each spatial seam. They sit on sfx so the ambient
     // crossfade remains continuous while the physical transition object is unmistakable.
     { id: 'z2_freeze_duck_key', file: 'generated/z2_freeze_duck_key.wav', bus: 'foley_guide', at: 40.50, gainDb: 0.0 },
@@ -35,8 +35,8 @@ export default defineMix({
     { id: 'z7_coldopen_exact_replay', file: 'generated/coldopen_arm_replay.wav', bus: 'sfx', at: 171.30, gainDb: -1.0 },
     { id: 't7_lightfall_home', file: 'generated/t7_lightfall_home.wav', bus: 'sfx', at: 194.40, gainDb: -1.0 },
     { id: 'z0_coldopen_arm_reference', file: 'generated/coldopen_arm_replay.wav', bus: 'sfx', at: 1.20, gainDb: -1.0 },
-    { id: 'z8_home_events', file: 'generated/z8_home_events.wav', bus: 'sfx', at: 194.40, gainDb: -2.5 },
-    { id: 'end_office_events', file: 'generated/end_office_events.wav', bus: 'sfx', at: 225.00, gainDb: -3.0 },
+    { id: 'z8_home_events', file: 'generated/z8_home_events.wav', bus: 'sfx', at: 194.40, gainDb: 1.0 },
+    { id: 'end_office_events', file: 'generated/end_office_events.wav', bus: 'sfx', at: 225.00, gainDb: 1.0 },
     { id: 'z1_fluorescent_ticks', file: 'generated/z1_fluorescent_ticks.wav', bus: 'sfx', at: 4.0, gainDb: -7.0 },
     { id: 'z1_phone_ring', file: 'generated/z1_phone_ring.wav', bus: 'sfx', at: 8.28, gainDb: 2.5 },
     { id: 'z1_receiver_breath', file: 'generated/z1_receiver_breath.wav', bus: 'sfx', at: 11.05, gainDb: -1.5 },

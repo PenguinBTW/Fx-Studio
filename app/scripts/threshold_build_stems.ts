@@ -1016,54 +1016,104 @@ wavRoom('z7_cathedral_events.wav', stem(45.8, (t) => {
 }), z7NaveRoom);
 
 
-// Z8 home and end-office cue pass. Stems start at 194.4 and 225.0.
-let z8lp=0;
-wav('z8_home_events.wav', stem(30.8,(t)=>{
- const at=t+194.4; z8lp=z8lp*.90+noise()*.10; let l=0,r=0;
- const add=(v:number,pan=0)=>{const a=(pan+1)*Math.PI/4;l+=v*Math.cos(a);r+=v*Math.sin(a)};
- const z8Dip=(a:number,b:number,c:number,d:number)=>0.005+0.995*((1-smoothstep(a,b,at))+smoothstep(c,d,at));
- const z8BedBreath=Math.min(z8Dip(198.0,198.3,199.8,200.1),z8Dip(214.8,215.1,217.15,217.35));
- // warm clock tick, quiet domestic air, birds and distant mower; mower becomes an exact 2s loop at 203
- if(at>=195&&at<225){const u=(at-195)%1;if(u<.032)add((noise()*.018+Math.sin(u*Math.PI*2*320)*.009+Math.sin(u*Math.PI*2*1280)*.0015)*Math.exp(-u*85),.3);add(z8lp*.010*z8BedBreath,0)}
- if(at>=195&&at<206){for(const st of[195.4,197.2,199.7,202.1,204.8]){const u=at-st;if(u>0&&u<.16)add(Math.sin(u*Math.PI*2*(1650+Math.sin(u*40)*180))*.002*Math.sin(Math.PI*u/.16),-.34)};const loopT=at<203?at:203+((at-203)%2);const mowerNoise=at<203?z8lp*.012:(Math.sin(loopT*Math.PI*2*91)*.004+Math.sin(loopT*Math.PI*2*176)*.002);add((Math.sin(loopT*Math.PI*2*88)*.006+mowerNoise)*smoothstep(195,198,at)*z8BedBreath,-.28)}
- // kettle slowly rises then cuts dead at 214
- if(at>=195&&at<214){const k=smoothstep(200,210,at);add((noise()*.006+z8lp*.018)*(.15+.85*k)*z8BedBreath,.34)}
- // slow wood/rug footsteps, switching material by position and then carpet at office threshold
- for(let i=0;i<45;i++){const hit=195.2+i*.58;if(hit>222)break;const u=at-hit;if(u>0&&u<.12){const rug=(i%5===2||i%5===3)?1:0;const stationary=hit>=213.5?.22:1;add((z8lp*(rug?.075:.045)+noise()*.010+Math.sin(u*Math.PI*2*(rug?76:105))*(rug?.022:.032))*stationary*Math.exp(-u*24),i%2?.08:-.08)}}
- // nearly subliminal photo-frame glass ticks
- for(const st of[199.3,201.1,202.6]){const u=at-st;if(u>0&&u<.07)add((Math.sin(u*Math.PI*2*1800)*.003+noise()*.004)*Math.exp(-u*70),-.32)}
- // wrong-window fluorescent leak and shadowless lamp filament hiss
- if(at>=203&&at<206){add((Math.sin(at*Math.PI*2*120)*.006+noise()*.002),-.38);add(noise()*.004+z8lp*.008,.24)}
- // exact original beige-phone ring motif at the wall phone
- if(at>=206&&at<210){for(const base of[206,208.8])for(const off of[.02,1.18]){const u=at-base-off;if(u>=0&&u<.88){const trem=.45+.55*(Math.sin(u*Math.PI*40)>0?1:0);add((Math.sin(u*Math.PI*2*1280)*.003+Math.sin(u*Math.PI*2*1735)*.001+Math.sin(u*Math.PI*2*960)*.007+Math.sin(u*Math.PI*2*640)*.017+Math.sin(u*Math.PI*2*320)*.009+noise()*.012)*Math.exp(-u*3.1)*trem,.34)}}}
- // receiver lifts by itself, hook click, curled cord tension and small hollow tapping
- if(at>=210&&at<210.8){const u=at-210;add((noise()*.018+Math.sin(u*Math.PI*2*420)*.018)*Math.sin(Math.PI*u/.8),.34)}
- if(at>=210.8&&at<214){const u=at-210.8;add((Math.sin(u*Math.PI*2*(220+Math.sin(u*4)*30))*.010+z8lp*.028)*(.4+.6*Math.max(0,Math.sin(u*Math.PI*2*1.7))),.33)}
- // receiver earpiece carries Z1 fluorescent/tube material, band-limited in character
- if(at>=210&&at<214)add((Math.sin(at*Math.PI*2*120)*.010+Math.sin(at*Math.PI*2*240)*.004+noise()*.003),.36);
- // kettle whistle peak then hard cutoff
- if(at>=213.2&&at<214.0){const u=at-213.2;add((Math.sin((1250*u+150*u*u)*Math.PI*2)*(.004+u*.005)+noise()*.009)*Math.sin(Math.PI*u/.8),.34)}
- // front-door handle turns by itself, latch stress, then wooden door opens into office air
- if(at>=214&&at<216){const u=at-214;add((Math.sin(u*Math.PI*2*(360+70*Math.sin(u*18)))*.018+noise()*.010)*Math.sin(Math.PI*u/2),.32)}
- if(at>=217.5&&at<220){const u=at-217.5;add((z8lp*.07+Math.sin(u*Math.PI*2*(95+u*30))*.025)*Math.sin(Math.PI*u/2.5),.2)}
- // office loop reasserts: fluorescent swell and desk-phone ring returning to origin
- if(at>=218&&at<225){const sw=smoothstep(218,224,at);add((Math.sin(at*Math.PI*2*120)*(.008+sw*.018)+noise()*.002)*1,.18)}
- if(at>=218&&at<225){for(const base of[218,220.8,223.6])for(const off of[.02,1.18]){const u=at-base-off;if(u>=0&&u<.88){const trem=.45+.55*(Math.sin(u*Math.PI*40)>0?1:0);add((Math.sin(u*Math.PI*2*1280)*.0025+Math.sin(u*Math.PI*2*1735)*.0008+Math.sin(u*Math.PI*2*960)*.005+Math.sin(u*Math.PI*2*640)*.013+Math.sin(u*Math.PI*2*320)*.007+noise()*.010)*Math.exp(-u*3.1)*trem,.12)}}}
- // threshold steps cross warm wood into damp office carpet
- for(let i=0;i<6;i++){const hit=222+i*.48;const u=at-hit;if(u>0&&u<.13){const office=smoothstep(222.5,224,at);add((z8lp*(.045+office*.04)+noise()*.010+Math.sin(u*Math.PI*2*(102-office*35))*.030)*Math.exp(-u*24),i%2?.08:-.08)}}
- return[l,r]
-}));
-wav('end_office_events.wav', stem(10.0,(t)=>{
- const at=t+225;let l=0,r=0;const add=(v:number,pan=0)=>{const a=(pan+1)*Math.PI/4;l+=v*Math.cos(a);r+=v*Math.sin(a)};
- // beige phone repeats, each 2 dB quieter, while office air loses high-frequency content
- const idx=Math.floor((at-225)/2.8);for(const base of[225,227.8,230.6,233.4])for(const off of[.02,1.18]){if(base+off+.88>235)continue;const u=at-base-off;if(u>=0&&u<.88){const trem=.45+.55*(Math.sin(u*Math.PI*40)>0?1:0);const gain=Math.pow(.794,idx);add((Math.sin(u*Math.PI*2*1280)*.0025+Math.sin(u*Math.PI*2*1735)*.0008+Math.sin(u*Math.PI*2*960)*.005+Math.sin(u*Math.PI*2*640)*.013+Math.sin(u*Math.PI*2*320)*.007+noise()*.010)*Math.exp(-u*3.1)*trem*gain,.14)}}
- const airloss=1-smoothstep(225,235,at);add((Math.sin(at*Math.PI*2*60)*.0025+Math.sin(at*Math.PI*2*120)*.0008+noise()*.0022*airloss),.05);
- const si=Math.floor(at*SR+.5);
- l+=(hash01(si,41.1)*2-1)*.0012*airloss;
- r+=(hash01(si,42.7)*2-1)*.0012*airloss;
- const endFade=1-smoothstep(234.15,235,at);
- return[l*endFade,r*endFade]
-}));
+// Z8 homecoming and END redesign: warm domestic near-silence, small physical details,
+// and the exact bell-phone language returning home. No birds, mower loop, fluorescent
+// drone, continuous kettle noise, electronic ring imitation, or closure music.
+const z8HomeRoom: RoomOptions = { size: 0.68, decaySec: 0.48, dampingHz: 2100, predelayMs: 8, earlyDb: -14, tailDb: -15, dryDb: 0 };
+const z8ExactPhone = renderBellPhone(4.8, SR);
+const endExactPhone = renderBellPhone(2.8, SR);
+wavRoom('z8_home_events.wav', stem(30.8, (t) => {
+  const at = t + 194.4;
+  const si = Math.floor(t * SR + 0.5);
+  let l = 0, r = 0;
+  const add = (v: number, pan = 0) => {
+    const a = (pan + 1) * Math.PI / 4;
+    l += v * Math.cos(a);
+    r += v * Math.sin(a);
+  };
+  const addStereo = (vl: number, vr: number) => { l += vl; r += vr; };
+  const addPhone = (start: number, gain: number) => {
+    const pi = Math.floor((at - start) * SR + 0.5);
+    if (pi >= 0 && pi * 2 + 1 < z8ExactPhone.length) addStereo(z8ExactPhone[pi * 2]! * gain, z8ExactPhone[pi * 2 + 1]! * gain * 0.94);
+  };
+
+  // Domestic clock as tiny mechanical tooth noise; sparse enough to preserve silence.
+  for (const [j, hit] of [195.25,196.25,197.25,198.25,199.25,200.25,201.25,202.25,203.25,204.25,205.25].entries()) {
+    add(clockTick(at - hit, 570.2 + j, 0.014), 0.30);
+  }
+
+  // Slow warm-wood/rug walk. Steps are separated contacts, with occasional floor stress.
+  for (let i = 0; i < 34; i++) {
+    const hit = 195.2 + i * 0.76 + (hash01(i, 573.2) - 0.5) * 0.08;
+    if (hit > 222.0) break;
+    const rug = i % 5 === 2 || i % 5 === 3;
+    const pan = i % 2 ? 0.08 : -0.08;
+    if (rug) add(carpetStep(at - hit, 574.3 + i, 0.045), pan);
+    else add(naveMassHit(at - hit, 104 + hash01(i, 575.4) * 24, 576.5 + i, 0.026), pan);
+    if (i % 7 === 4) add(woodCreak(at - hit - 0.04, 0.20, 577.6 + i, 0.035), pan);
+  }
+
+  // Nearly subliminal photo-frame glass ticks.
+  for (const [j, hit] of [199.3,201.1,202.6].entries()) add(glassShard(at - hit, 1500 + j * 130, 580.2 + j, 0.009), -0.32);
+
+  // Kettle restraint: separated small bubbles and pressure swells, then a brief physical
+  // whistle thread that cuts dead. It never becomes a continuous noise bed.
+  for (const [j, hit] of [201.4,204.0,207.2,210.1,212.6].entries()) {
+    add(waterDrop(at - hit, 145 + j * 8, 583.2 + j, 0.020), 0.34);
+    const u = at - hit - 0.18;
+    if (u > 0 && u < 0.42) add(coloredNoise(si, 584.3 + j, 73) * Math.sin(Math.PI * u / 0.42) ** 2 * 0.007, 0.34);
+  }
+  if (at >= 213.45 && at < 214.0) {
+    const u = at - 213.45;
+    const e = Math.sin(Math.PI * u / 0.55) ** 1.4;
+    add((Math.sin(u * Math.PI * 2 * (720 + u * 80)) * 0.006 + coloredNoise(si, 588.2, 31) * 0.006) * e, 0.34);
+  }
+
+  // The wall-phone payoff: the same generated mechanical twin-bell object as z1, now close
+  // in the small domestic room. One full burst, then true silence before the receiver lifts.
+  addPhone(206.0, 0.34);
+
+  // Receiver lifts by itself: hollow plastic contact, hook click, curled-cord tension.
+  add(plasticKnock(at - 210.02, 260, 591.2, 0.075), 0.34);
+  add(clockTick(at - 210.22, 592.3, 0.060), 0.34);
+  add(clothDrag(at - 210.82, 0.58, 593.4, 0.11), 0.33);
+  for (const [j, hit] of [211.55,212.35,213.12].entries()) add(plasticKnock(at - hit, 220 - j * 18, 594.5 + j, 0.025), 0.33);
+
+  // Front-door handle rotates slowly: small latch contacts and wood stress, no voice.
+  for (const [j, hit] of [214.10,214.55,215.05,215.55].entries()) {
+    add(clockTick(at - hit, 597.2 + j, 0.050), 0.32);
+    if (j === 2) add(woodCreak(at - hit - 0.03, 0.28, 598.3 + j, 0.10), 0.32);
+  }
+
+  // Wooden front door opens into the office return: dry hinge stress, then restrained air.
+  add(woodCreak(at - 217.55, 1.15, 601.2, 0.28), 0.18);
+  add(naveMassHit(at - 218.65, 88, 602.3, 0.050), 0.12);
+
+  // The office phone returns once at the threshold, recognizably the same bell mechanism.
+  addPhone(218.0, 0.22);
+
+  // Threshold steps cross from wood/rug into damp office carpet.
+  for (let i = 0; i < 6; i++) {
+    const hit = 222.0 + i * 0.48;
+    add(carpetStep(at - hit, 606.2 + i, 0.055 + i * 0.004), i % 2 ? 0.08 : -0.08);
+  }
+  return [l, r];
+}), z8HomeRoom);
+
+wavRoom('end_office_events.wav', stem(10.0, (t) => {
+  const at = t + 225;
+  let l = 0, r = 0;
+  const addStereo = (vl: number, vr: number) => { l += vl; r += vr; };
+  const addEndPhone = (start: number, gain: number) => {
+    const pi = Math.floor((at - start) * SR + 0.5);
+    if (pi >= 0 && pi * 2 + 1 < endExactPhone.length) addStereo(endExactPhone[pi * 2]! * gain, endExactPhone[pi * 2 + 1]! * gain * 0.92);
+  };
+  // END is almost nothing: one return ring, one distant repetition, then room silence.
+  addEndPhone(225.15, 0.16);
+  addEndPhone(230.55, 0.085);
+  const endFade = 1 - smoothstep(234.15, 235, at);
+  return [l * endFade, r * endFade];
+}), { ...z1OfficeRoom, decaySec: 0.82, tailDb: -13, earlyDb: -16 });
 
 // Transition-specific sound continuity. These short cues bind the material handoffs together;
 // zone beds underneath already crossfade, so these stems carry only the physical seam events.
@@ -1151,18 +1201,16 @@ wav('t6_felt_door_push.wav', stem(1.2, (t) => {
 }));
 
 wav('t7_lightfall_home.wav', stem(1.4, (t) => {
+  // Lightfall resolves into home through material, not a descending synth whistle:
+  // falling grit passes overhead, then cloth and warm wood arrive close.
   let v = 0;
-  for (const [i, at] of [0.05, 0.28, 0.53, 0.82].entries()) {
+  for (const [i, at] of [0.08,0.31,0.56].entries()) {
     const u = t - at;
-    if (u > 0 && u < 0.38) {
-      const fallHz = 980 - i * 140 - u * 290;
-      const warmth = Math.min(1, t / 1.1);
-      v += Math.sin(u * Math.PI * 2 * fallHz) * (0.030 - i * 0.003) * Math.exp(-u * 4.5) * (0.8 + warmth * 0.35);
-    }
+    if (u > 0 && u < 0.18) v += glassShard(u, 760 + i * 130, 612.2 + i, 0.020);
   }
-  const air = noise() * 0.012 * Math.max(0, (t - 0.55) / 0.6);
-  const curtain = noise() * 0.026 * Math.max(0, Math.min(1, (t - 0.82) / 0.28)) * Math.exp(-Math.max(0, t - 1.1) * 2.2);
-  v += air + curtain;
+  v += clothDrag(t - 0.58, 0.42, 615.2, 0.12);
+  v += carpetStep(t - 0.86, 616.3, 0.10);
+  v += woodCreak(t - 1.02, 0.28, 617.4, 0.08);
   return [v * 0.9, v];
 }));
 
@@ -1276,27 +1324,22 @@ bed('z7_cathedral_room_tone.wav', 46.1, 0.8, 1.1, (t, lp) => {
 });
 
 bed('z8_home_room_tone.wav', 30.6, 0.8, 1.8, (t, lp) => {
-  const room = lp() * 0.017;
-  const clock = t % 1 < 0.025 ? noise() * 0.022 : 0;
-  const warm = Math.sin(t * Math.PI * 2 * 60) * 0.004;
+  // Warm domestic air is almost silent: no hum, birds, mower, kettle bed, or static.
+  const room = lp() * 0.0012;
   let settling = 0;
-  for (const at of [7.4, 18.9]) {
+  for (const [j, at] of [7.4, 18.9].entries()) {
     const u = t - at;
-    if (u > 0 && u < 0.22) settling += noise() * 0.028 * Math.exp(-u * 18);
+    if (u > 0 && u < 0.16) settling += clothDrag(u, 0.16, 620.2 + j, 0.010);
   }
-  const v = room + clock + warm + settling;
+  const v = room + settling;
   return [v * 0.94, v];
 });
 
 bed('end_office_afterimage_tone.wav', 10.0, 0.4, 2.4, (t, lp) => {
-  const hum = Math.sin(t * Math.PI * 2 * 60) * 0.0065 + Math.sin(t * Math.PI * 2 * 120) * 0.0006 + Math.sin(t * Math.PI * 2 * 180) * 0.0004;
-  const sharedHiss = noise() * 0.004 + lp() * 0.010;
-  const si = Math.floor(t * SR + 0.5);
-  const airL = (hash01(si, 51.3) * 2 - 1) * 0.006;
-  const airR = (hash01(si, 52.9) * 2 - 1) * 0.006;
-  const endFade = 1 - smoothstep(9.15, 10.0, t);
-  const v = (hum + sharedHiss) * endFade;
-  return [(v + airL * endFade) * 0.98, (v + airR * endFade) * 0.94];
+  // END is almost nothing: a trace of dark office air decaying toward silence.
+  const endFade = 1 - smoothstep(8.2, 10.0, t);
+  const v = lp() * 0.00045 * endFade;
+  return [v, v * 0.94];
 }, (t) => 1 - smoothstep(9.15, 10.0, t));
 
 console.log(`wrote procedural THRESHOLD stems to ${OUT}`);
