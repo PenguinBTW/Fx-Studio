@@ -625,6 +625,58 @@ export default class ThresholdZ2Playroom extends Scene {
     this.swimmerAsset.root.scale.setScalar(1.22);
     this.swimmerAsset.root.position.set(sx, sy, sz + 0.2);
     this.swimmerAsset.root.rotation.y = smooth(47.6, 48.4, t) * 0.7;
+
+    // Closed-form breaststroke/pulling motion. The emergence root path and timing stay fixed;
+    // only the continuous limb rig articulates around its Blender bind pivots.
+    const swimPower = smooth(44.55, 45.15, t) * (1 - smooth(48.85, 49.18, t));
+    const chaseDrive = smooth(47.55, 48.35, t);
+    const strokeTempo = 2.65 + chaseDrive * 1.55;
+    for (const sideNum of [-1, 1] as const) {
+      const key = sideNum < 0 ? '-1' : '1';
+      const shoulder = this.swimmerAsset.part(`arm_${key}_shoulder`);
+      const elbow = this.swimmerAsset.part(`arm_${key}_elbow`);
+      const wrist = this.swimmerAsset.part(`arm_${key}_wrist`);
+      const phase = t * strokeTempo + (sideNum < 0 ? 0 : 1.38);
+      const pull = Math.sin(phase);
+      const lift = Math.cos(phase);
+      for (const control of [shoulder, elbow, wrist]) {
+        if (!control.userData.baseRot) control.userData.baseRot = control.rotation.clone();
+      }
+      const shBase = shoulder.userData.baseRot as THREE.Euler;
+      const elBase = elbow.userData.baseRot as THREE.Euler;
+      const wrBase = wrist.userData.baseRot as THREE.Euler;
+      shoulder.rotation.set(
+        shBase.x + (0.10 * lift + 0.06 * pull) * swimPower,
+        shBase.y + sideNum * (0.30 * pull + 0.08) * swimPower,
+        shBase.z + sideNum * (0.20 * lift - 0.10 * pull) * swimPower,
+      );
+      elbow.rotation.set(
+        elBase.x + 0.08 * pull * swimPower,
+        elBase.y + sideNum * 0.15 * Math.sin(phase + 0.7) * swimPower,
+        elBase.z + sideNum * (0.24 + 0.25 * Math.sin(phase + 0.9)) * swimPower,
+      );
+      wrist.rotation.set(
+        wrBase.x + 0.22 * Math.sin(phase + 1.15) * swimPower,
+        wrBase.y + sideNum * 0.16 * Math.cos(phase + 0.4) * swimPower,
+        wrBase.z + sideNum * 0.10 * Math.sin(phase + 0.2) * swimPower,
+      );
+      for (let fi = 1; fi <= 5; fi++) {
+        const finger = this.swimmerAsset.part(`finger_${key}_${fi}_continuous`);
+        if (!finger.userData.baseRot) finger.userData.baseRot = finger.rotation.clone();
+        const fb = finger.userData.baseRot as THREE.Euler;
+        const grasp = Math.sin(phase + 1.45 + fi * 0.18);
+        finger.rotation.set(
+          fb.x + (0.12 + fi * 0.012) * grasp * swimPower,
+          fb.y + sideNum * 0.035 * Math.sin(phase + fi) * swimPower,
+          fb.z + sideNum * 0.028 * grasp * swimPower,
+        );
+      }
+    }
+    const lowerBody = this.swimmerAsset.part('submerged_lower_body');
+    if (!lowerBody.userData.baseRot) lowerBody.userData.baseRot = lowerBody.rotation.clone();
+    const lb = lowerBody.userData.baseRot as THREE.Euler;
+    lowerBody.rotation.set(lb.x + Math.sin(t * 2.2) * 0.035 * swimPower, lb.y + Math.sin(t * 2.8 + 0.7) * 0.055 * swimPower, lb.z);
+
     this.swimmerLight.visible = swimmerVisible;
     this.swimmerLight.intensity = swimmerVisible ? 0.24 : 0;
     this.swimmerLight.position.set(sx + 0.85, sy + 0.38, sz + 0.55);
@@ -669,7 +721,23 @@ export default class ThresholdZ2Playroom extends Scene {
       const trail = Math.exp(-((b.x - sx * 0.5) ** 2 + (b.z - sz + 0.8) ** 2) / 1.8) * 0.11;
       const dist = Math.sqrt(d2) + 0.001;
       const parting = Math.exp(-d2 / 1.35) * 0.16 * activeWake;
-      this.dummy.position.set(b.x + (dx / dist) * parting, b.y + bulge + trail, b.z + (dz / dist) * parting);
+      let handWakeY = 0, handWakeX = 0, handWakeZ = 0;
+      if (swimmerVisible) {
+        for (const sideNum of [-1, 1] as const) {
+          const phase = t * strokeTempo + (sideNum < 0 ? 0 : 1.38);
+          const reach = 0.52 + 0.13 * Math.sin(phase + 0.9);
+          const hx = sx + sideNum * reach * 1.22;
+          const hz = sz + 0.18 + (0.20 + 0.17 * Math.cos(phase)) * 1.22;
+          const hdx = b.x - hx, hdz = b.z - hz;
+          const hd2 = hdx * hdx + hdz * hdz;
+          const wake = Math.exp(-hd2 / 0.16) * (0.45 + 0.55 * Math.max(0, Math.sin(phase + 1.1)));
+          const hd = Math.sqrt(hd2) + 0.001;
+          handWakeY -= wake * 0.055;
+          handWakeX += (hdx / hd) * wake * 0.030 * Math.sin(phase);
+          handWakeZ += (hdz / hd) * wake * 0.030 * Math.sin(phase);
+        }
+      }
+      this.dummy.position.set(b.x + (dx / dist) * parting + handWakeX, b.y + bulge + trail + handWakeY, b.z + (dz / dist) * parting + handWakeZ);
       this.dummy.rotation.set(hash(i) * 3, hash(i + 1) * 3, hash(i + 2) * 3);
       const deflate = hash(i * 9.13);
       const voidNoise = Math.sin(b.x * 1.37 + b.z * 0.71) + Math.sin(b.x * 0.53 - b.z * 1.91);
