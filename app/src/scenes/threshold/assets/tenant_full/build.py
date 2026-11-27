@@ -152,7 +152,7 @@ def tapered_tube(name, points, radii, material, sides=20, per_seg=9, patch_mater
             a = math.tau * k / sides
             # Fused matter is not an inflated tube: low-frequency asymmetrical lumps
             # break the silhouette while the underlying volume remains continuous.
-            lump = 1.0 + 0.15 * math.sin(i * 0.83 + k * 1.91) + 0.075 * math.sin(i * 0.31 - k * 3.07) + 0.050 * math.sin(i * 2.17 + k * 4.31) + 0.029 * math.sin(i * 3.71 - k * 5.13)
+            lump = 1.0 + 0.15 * math.sin(i * 0.83 + k * 1.91) + 0.075 * math.sin(i * 0.31 - k * 3.07) + 0.050 * math.sin(i * 2.17 + k * 4.31) + 0.029 * math.sin(i * 3.71 - k * 5.13) + 0.042 * math.sin(i * 7.31 + k * 5.73) + 0.024 * math.sin(i * 11.17 - k * 8.39)
             rr = radius * lump * (1.0 + 0.035 * math.sin(i * 0.47))
             v = p + (side * math.cos(a) + normal * math.sin(a)) * rr
             ring.append(len(verts))
@@ -423,6 +423,14 @@ def build_arm(side):
         if i % 6 == 2:
             add(torus(f'arm_{side}_melted_seam_{i}', radius * 0.86, 0.004, c + offset * 0.65, RUBBER,
                       rot=(math.radians(90), 0, 0), major_segments=18, minor_segments=5), parent_control, 'melted_seams')
+    for crust_i in range(48):
+        u = 0.06 + 0.84 * ((crust_i * 0.413 + (0.17 if side == 'r' else 0.0)) % 1.0)
+        c, sidev, normalv, tangentv = surface_frame(path, u)
+        angle = (crust_i * 2.173 + (0.9 if side == 'r' else 0.0)) % math.tau
+        loc = c + (sidev * math.cos(angle) + normalv * math.sin(angle)) * (path_radius(radii, u) * 0.93)
+        ob = sphere(f'arm_{side}_surface_crust_clod_{crust_i}', R.uniform(0.018, 0.046), loc, (FELT, PAPER_DARK, RUBBER, BALLS[4])[crust_i % 4],
+                    scale=(R.uniform(1.0, 1.9), R.uniform(0.30, 0.55), R.uniform(0.8, 1.45)), segments=6, rings=3)
+        add(ob, parent_control, 'crust_relief')
     # Torn paper and cracked tile plates sit partly inside the limb skin. Their irregular
     # exposed edges break the otherwise clay-smooth albedo without becoming separate armor.
     plate_mats = (PAPER_DARK, TILE, FELT, PAPER)

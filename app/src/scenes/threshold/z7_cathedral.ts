@@ -1620,15 +1620,15 @@ export default class ThresholdZ7Cathedral extends Scene {
     }
     const revealLight = smooth((t - 165.45) / 0.25) * (1 - smooth((t - 168.02) / 0.22));
     if (this.tenantRevealKey) {
-      this.tenantRevealKey.intensity = 17.5 * revealLight;
+      this.tenantRevealKey.intensity = 15.0 * revealLight;
       this.tenantRevealKey.position.set(
-        pose.pos[0] + pose.forward[0] * 1.25,
-        pose.pos[1] - 0.08,
-        pose.pos[2] + pose.forward[2] * 1.25,
+        pose.pos[0] + 2.4 + pose.forward[0] * 0.55,
+        pose.pos[1] + 0.72,
+        pose.pos[2] + pose.forward[2] * 0.55,
       );
     }
     if (this.tenantRevealFill) {
-      this.tenantRevealFill.intensity = 5.2 * revealLight;
+      this.tenantRevealFill.intensity = 2.3 * revealLight;
       this.tenantRevealFill.position.set(-0.75, 1.1, -15.25);
     }
 
