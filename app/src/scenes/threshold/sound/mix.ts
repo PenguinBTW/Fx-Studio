@@ -40,9 +40,9 @@ export default defineMix({
     { id: 'z1_fluorescent_ticks', file: 'generated/z1_fluorescent_ticks.wav', bus: 'sfx', at: 4.0, gainDb: -7.0 },
     { id: 'z1_phone_ring', file: 'generated/z1_phone_ring.wav', bus: 'sfx', at: 8.28, gainDb: 2.5 },
     { id: 'z1_receiver_breath', file: 'generated/z1_receiver_breath.wav', bus: 'sfx', at: 11.05, gainDb: -1.5 },
-    { id: 'z1_ceiling_breath', file: 'generated/z1_ceiling_breath.wav', bus: 'sfx', at: 12.75, gainDb: -1.0 },
+    { id: 'z1_ceiling_breath', file: 'generated/z1_ceiling_breath.wav', bus: 'sfx', at: 13.65, gainDb: -1.0 },
     { id: 'z1_ceiling_creaks', file: 'generated/z1_ceiling_creaks.wav', bus: 'sfx', at: 18.45, gainDb: 2.0 },
-    { id: 'z1_run_carpet', file: 'generated/z1_run_carpet.wav', bus: 'sfx', at: 19.28, gainDb: 3.2 },
+    { id: 'z1_run_carpet', file: 'generated/z1_run_carpet.wav', bus: 'sfx', at: 19.28, gainDb: 2.6 },
     { id: 'z1_door_jingle_hit', file: 'generated/z1_door_jingle_hit.wav', bus: 'sfx', at: 27.38, gainDb: 0.7 },
   ],
   buses: {

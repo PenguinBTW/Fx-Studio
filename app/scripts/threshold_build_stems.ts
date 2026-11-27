@@ -3,7 +3,7 @@
 // generated WAVs are evidence/build products and are never committed.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { impactStrike, musicBoxTine, renderBellPhone, renderConvolutionRoom, softImpact, tileClatter, type RoomOptions } from './threshold_audio_lib';
+import { coloredNoise, impactStrike, musicBoxTine, renderBellPhone, renderConvolutionRoom, slowNoise01, softImpact, tileClatter, type RoomOptions } from './threshold_audio_lib';
 
 const SR = 48000;
 const OUT = path.join(import.meta.dir, '../src/scenes/threshold/sound/generated');
@@ -58,7 +58,7 @@ const hashLike = (t: number, salt: number) => { const x = Math.sin(Math.floor(t 
 const hash01 = (n: number, salt: number) => { const x = Math.sin(n * 127.1 + salt * 311.7) * 43758.5453; return x - Math.floor(x); };
 const smoothstep = (a: number, b: number, x: number) => { const u = Math.max(0, Math.min(1, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
 
-const z1OfficeRoom: RoomOptions = { size: 0.82, decaySec: 1.05, dampingHz: 1750, predelayMs: 10, earlyDb: -16, tailDb: -10, dryDb: 0 };
+const z1OfficeRoom: RoomOptions = { size: 1.0, decaySec: 1.05, dampingHz: 2600, predelayMs: 11, earlyDb: -12, tailDb: -8, dryDb: 0 };
 const z1BedRoom: RoomOptions = { size: 0.72, decaySec: 0.65, dampingHz: 1250, predelayMs: 8, earlyDb: -38, tailDb: -34, dryDb: 0 };
 
 // Redesigned office bed: silence is the default. The fluorescent ballast is a low,
@@ -91,40 +91,48 @@ wavRoom('z1_fluorescent_ticks.wav', stem(27, (t) => {
 
 // A real twin-bell telephone: noise-driven clapper excitation through damped metal
 // resonator banks, then office reflections. No periodic oscillator or gated ring tone.
-wavRoom('z1_phone_ring.wav', renderBellPhone(2.8, SR), { ...z1OfficeRoom, decaySec: 1.25, tailDb: -8, earlyDb: -13 });
+wavRoom('z1_phone_ring.wav', renderBellPhone(2.8, SR), { ...z1OfficeRoom, decaySec: 1.75, tailDb: -3.8, earlyDb: -8.0 });
 
-// Receiver breathing: band-limited airway noise through plastic, close but not crisp.
-let z1ReceiverLp = 0, z1ReceiverLp2 = 0;
+// Receiver breathing: one uneven close airway cycle. Turbulence is heavily damped by
+// the plastic earpiece; the silence after the exhale is part of the source rather
+// than an editorial mute or gate.
+let z1ReceiverLp = 0, z1ReceiverLp2 = 0, z1ReceiverLp3 = 0;
 wavRoom('z1_receiver_breath.wav', stem(4.2, (t) => {
-  z1ReceiverLp = z1ReceiverLp * 0.968 + noise() * 0.032;
-  z1ReceiverLp2 = z1ReceiverLp2 * 0.91 + z1ReceiverLp * 0.09;
-  const cycle = (t % 2.35) / 2.35;
-  const inhale = smoothstep(0.08, 0.30, cycle) * (1 - smoothstep(0.48, 0.66, cycle));
-  const exhale = smoothstep(0.68, 0.78, cycle) * (1 - smoothstep(0.93, 1.0, cycle)) * 0.56;
-  const gate = inhale + exhale;
-  const breath = z1ReceiverLp2 * 0.115 * gate;
-  const throat = Math.sin(t * Math.PI * 2 * 74 + Math.sin(t * 1.9) * 0.4) * 0.006 * gate;
-  const receiverEnd = 1 - smoothstep(1.72, 2.12, t);
-  const v = (breath + throat) * Math.min(1, t / 0.35, (4.2 - t) / 0.55) * receiverEnd;
+  z1ReceiverLp = z1ReceiverLp * 0.948 + noise() * 0.052;
+  z1ReceiverLp2 = z1ReceiverLp2 * 0.900 + z1ReceiverLp * 0.100;
+  z1ReceiverLp3 = z1ReceiverLp3 * 0.82 + z1ReceiverLp2 * 0.18;
+  const inhale = smoothstep(0.10, 0.43, t) * (1 - smoothstep(0.70, 1.02, t));
+  const exhale = smoothstep(1.22, 1.50, t) * (1 - smoothstep(2.02, 2.48, t)) * 0.76;
+  const airway = inhale + exhale;
+  const band = z1ReceiverLp2 * 0.58 + (z1ReceiverLp2 - z1ReceiverLp3) * 0.72;
+  const organic = 0.66 + slowNoise01(t, 132.7, 2.1) * 0.24 + slowNoise01(t, 133.9, 10.7) * 0.34;
+  const v = band * 0.22 * airway * organic * Math.min(1, t / 0.18);
   return [v, v * 0.82];
-}), { ...z1OfficeRoom, earlyDb: -24, tailDb: -20, predelayMs: 5 });
+}), { ...z1OfficeRoom, earlyDb: -14, tailDb: -9, predelayMs: 5 });
 
-// Wet overhead breathing, deliberately too slow and too large.
-let wetLp = 0;
-wavRoom('z1_ceiling_breath.wav', stem(7.0, (t) => {
-  wetLp = wetLp * 0.965 + noise() * 0.035;
-  const period = 2.65;
-  const x = (t % period) / period;
-  const gate = Math.sin(Math.PI * x) ** 1.8;
-  const stop = 1 - smoothstep(2.48, 2.82, t);
-  const closeFade = Math.min(1, t / 0.45, (7 - t) / 0.8) * stop;
-  const wet = wetLp * 0.105 * gate;
-  const chest = Math.sin(t * Math.PI * 2 * 54 + Math.sin(t * 2.2) * 0.7) * 0.030 * gate;
-  const gurgle = Math.sin(t * Math.PI * 2 * (37 + Math.sin(t * 1.1) * 8)) * 0.020 * gate * (x > 0.45 ? 1 : 0.35);
-  const lip = x > 0.82 && x < 0.86 ? noise() * 0.018 : 0;
-  const v = (wet + chest + gurgle + lip) * Math.max(0, closeFade);
+// Wet overhead breathing in three uneven efforts separated by actual pauses. The
+// body is turbulent air and low chest pressure, with no tonal oscillator voice.
+let wetLp = 0, wetLp2 = 0;
+wavRoom('z1_ceiling_breath.wav', stem(5.1, (t) => {
+  wetLp = wetLp * 0.956 + noise() * 0.044;
+  wetLp2 = wetLp2 * 0.88 + wetLp * 0.12;
+  const si = Math.floor(t * SR + 0.5);
+  let v = 0;
+  for (const [j, at, dur, scale, release] of [[0, 0.20, 1.12, 1.0, 0], [1, 1.82, 0.86, 0.68, 1], [2, 3.34, 0.74, 0.42, 0]] as const) {
+    const u = t - at;
+    if (u >= 0 && u < dur) {
+      const x = u / dur;
+      const shaped = release ? Math.sin(Math.PI * x) ** 1.1 * (0.72 + 0.28 * x) : Math.sin(Math.PI * x) ** 1.45;
+      const fatigue = 1 - j * 0.055;
+      const organic = 0.62 + slowNoise01(u, 141.5 + j * 3.3, 1.65 + j * 0.17) * 0.24 + slowNoise01(u, 145.8 + j * 2.1, 9.2 + j) * 0.42;
+      const air = wetLp2 * 0.22 * shaped * fatigue * organic;
+      const chest = coloredNoise(si, 112.4 + j, 31) * 0.045 * shaped * (0.75 + slowNoise01(u, 151.2 + j, 1.1) * 0.5);
+      const seam = release && x > 0.68 && x < 0.76 ? coloredNoise(si, 118.9 + j, 11) * 0.014 * Math.sin(Math.PI * (x - 0.68) / 0.08) : 0;
+      v += (air + chest + seam) * scale;
+    }
+  }
   return [v, v * 0.78];
-}), z1OfficeRoom);
+}), { ...z1OfficeRoom, earlyDb: -13, tailDb: -9 });
 
 // Grid creaks and cracking tile: strained painted metal, then small mineral fractures.
 wavRoom('z1_ceiling_creaks.wav', stem(2.2, (t) => {
@@ -154,14 +162,14 @@ const z1StepEvents: Array<{ at: number; hz: number; amp: number; pan: number; se
   for (let i = 0; tt < 8.15; i++) {
     z1StepEvents.push({
       at: tt,
-      hz: 49 + hash01(i, 51.2) * 18,
-      amp: 0.13 + hash01(i, 52.3) * 0.085,
+      hz: 42 + hash01(i, 51.2) * 34,
+      amp: 0.072 + hash01(i, 52.3) * 0.095,
       pan: (i % 2 ? 0.22 : -0.20) + (hash01(i, 53.4) - 0.5) * 0.18,
       seed: 60.1 + i * 1.73,
-      toe: 0.026 + hash01(i, 55.6) * 0.022,
+      toe: hash01(i, 57.8) < 0.35 ? 0.16 + hash01(i, 58.9) * 0.04 : 0.052 + hash01(i, 55.6) * 0.042,
       drag: 0.45 + hash01(i, 56.7) * 0.9,
     });
-    tt += 0.295 + hash01(i, 54.5) * 0.12;
+    tt += 0.27 + hash01(i, 54.5) * 0.20;
   }
 }
 const z1SlamEvents: Array<{ at: number; hz: number; amp: number; pan: number; seed: number }> = [];
@@ -179,6 +187,7 @@ const z1SlamEvents: Array<{ at: number; hz: number; amp: number; pan: number; se
   }
 }
 const z1Colored = (si: number, seed: number) => (hash01(si, seed) * 0.46 + hash01(si - 1, seed) * 0.31 + hash01(si - 2, seed) * 0.23 - 0.5) * 2;
+let z1RunLpL = 0, z1RunLpR = 0;
 wavRoom('z1_run_carpet.wav', stem(8.4, (t) => {
   let l = 0, r = 0;
   const si = Math.floor(t * SR + 0.5);
@@ -191,11 +200,11 @@ wavRoom('z1_run_carpet.wav', stem(8.4, (t) => {
   for (const e of z1StepEvents) {
     const u = t - e.at;
     if (u >= 0 && u < 0.14) {
-      const heel = softImpact(u, e.hz, e.seed, e.amp * 0.74);
+      const heel = softImpact(u, e.hz, e.seed, e.amp * 0.86);
       const toeU = u - e.toe;
-      const toe = toeU >= 0 ? softImpact(toeU, e.hz * 1.31, e.seed + 2.4, e.amp * 0.31) : 0;
-      const sole = z1Colored(si, e.seed) * Math.exp(-u * 72) * e.amp * 0.13;
-      const carpetDrag = z1Colored(si, e.seed + 4.0) * Math.exp(-u * 12) * e.amp * 0.09 * e.drag;
+      const toe = toeU >= 0 ? softImpact(toeU, e.hz * 1.18, e.seed + 2.4, e.amp * 0.16) : 0;
+      const sole = coloredNoise(si, e.seed, 23) * Math.exp(-u * 52) * e.amp * 0.045;
+      const carpetDrag = coloredNoise(si, e.seed + 4.0, 25) * Math.exp(-u * 9) * e.amp * 0.050 * e.drag;
       add(heel + toe + sole + carpetDrag, e.pan);
     }
   }
@@ -220,8 +229,11 @@ wavRoom('z1_run_carpet.wav', stem(8.4, (t) => {
   }
 
   const fade = Math.min(1, t / 0.18, (8.4 - t) / 0.35);
-  return [l * fade, r * fade];
-}), { ...z1OfficeRoom, size: 0.95, decaySec: 0.92, tailDb: -8, earlyDb: -13 });
+  const alpha = 1 - Math.exp(-2 * Math.PI * 850 / SR);
+  z1RunLpL += alpha * (l * fade * 1.28 - z1RunLpL);
+  z1RunLpR += alpha * (r * fade * 1.28 - z1RunLpR);
+  return [z1RunLpL, z1RunLpR];
+}), { ...z1OfficeRoom, size: 1.0, decaySec: 1.05, tailDb: -7.5, earlyDb: -11 });
 
 // Broken toy mechanism behind the fire door, then a physical push-bar impact.
 // The music box is detuned metal tines with irregular wind-up spacing, muffled by the
@@ -246,7 +258,7 @@ wavRoom('z1_door_jingle_hit.wav', stem(3.0, (t) => {
   z1JingleLpL += alpha * (rawL - z1JingleLpL);
   z1JingleLpR += alpha * (rawR - z1JingleLpR);
   return [z1JingleLpL, z1JingleLpR];
-}), { ...z1OfficeRoom, size: 0.92, decaySec: 1.15, tailDb: -13 });
+}), { ...z1OfficeRoom, size: 1.05, decaySec: 1.55, tailDb: -8, earlyDb: -11 });
 
 
 

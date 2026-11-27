@@ -25,6 +25,21 @@ export interface RoomOptions {
 
 const db = (x: number) => Math.pow(10, x / 20);
 
+const hash01 = (n: number, salt: number) => {
+  const x = Math.sin(n * 127.1 + salt * 311.7) * 43758.5453;
+  return x - Math.floor(x);
+};
+
+/** Smoothly interpolated deterministic control noise, for organic slow envelope variation. */
+export function slowNoise01(t: number, seed: number, rate = 3): number {
+  const x = Math.max(0, t * rate);
+  const i = Math.floor(x);
+  const u = x - i;
+  const sm = u * u * (3 - 2 * u);
+  return hash01(i, seed) * (1 - sm) + hash01(i + 1, seed) * sm;
+}
+
+
 
 function writeWavF32(file: string, pcm: Float32Array, sampleRate: number): void {
   const n = pcm.length;
@@ -61,8 +76,10 @@ function diffuseIr(sampleRate: number, options: RoomOptions): Float32Array {
     lpL2 += alpha * (lpL1 - lpL2);
     lpR1 += alpha * (nextR() - lpR1);
     lpR2 += alpha * (lpR1 - lpR2);
-    ir[f * 2] = lpL2 * env;
-    ir[f * 2 + 1] = lpR2 * env;
+    const density = Math.min(1, Math.pow(Math.max(0, k) / 0.16, 0.72));
+    const bloom = Math.sqrt(density) * Math.min(1, k / 0.055);
+    ir[f * 2] = (hash01(f, 3.1) < density ? lpL2 : 0) * env * bloom;
+    ir[f * 2 + 1] = (hash01(f, 9.7) < density ? lpR2 : 0) * env * bloom;
   }
   // Unit-energy tail: wet gain then means what it says independent of room length.
   let eL = 1e-12, eR = 1e-12;
@@ -83,7 +100,12 @@ export function renderConvolutionRoom(input: Float32Array, sampleRate = 48000, o
   const tailGain = db(options.tailDb ?? -15);
   const dryGain = db(options.dryDb ?? 0);
   const frames = Math.floor(input.length / 2);
-  const out = new Float32Array(input.length);
+  const ir = diffuseIr(sampleRate, options);
+  const irFrames = Math.floor(ir.length / 2);
+  const outFrames = frames + irFrames;
+  const out = new Float32Array(outFrames * 2);
+  const paddedInput = new Float32Array(outFrames * 2);
+  paddedInput.set(input);
 
   const earlyTaps = [13.7, 21.9, 31.7, 47.3, 67.9].map((x) => Math.max(1, Math.round(x * size * sampleRate / 1000)));
   const earlyGains = [0.56, 0.42, 0.31, 0.22, 0.15];
@@ -111,22 +133,26 @@ export function renderConvolutionRoom(input: Float32Array, sampleRate = 48000, o
     const inWav = path.join(tmp, 'in.wav');
     const irWav = path.join(tmp, 'ir.wav');
     const rawOut = path.join(tmp, 'wet.f32');
-    writeWavF32(inWav, input, sampleRate);
-    writeWavF32(irWav, diffuseIr(sampleRate, options), sampleRate);
+    writeWavF32(inWav, paddedInput, sampleRate);
+    writeWavF32(irWav, ir, sampleRate);
     execFileSync('ffmpeg', [
       '-y', '-hide_banner', '-loglevel', 'error',
       '-i', inWav, '-i', irWav,
-      '-filter_complex', '[0:a][1:a]afir=dry=0:wet=1:gtype=none:irfmt=input[a]',
+      '-filter_complex', '[0:a][1:a]afir=dry=1:wet=1:gtype=none:irfmt=input[a]',
       '-map', '[a]', '-f', 'f32le', '-ac', '2', '-ar', String(sampleRate), rawOut,
     ], { stdio: ['ignore', 'ignore', 'pipe'] });
     const raw = readFileSync(rawOut);
     const wet = new Float32Array(raw.buffer, raw.byteOffset, Math.floor(raw.length / 4));
-    const n = Math.min(frames, Math.floor(wet.length / 2));
+    const n = Math.min(outFrames, Math.floor(wet.length / 2));
+    const hpAlpha = 1 - Math.exp(-2 * Math.PI * 105 / sampleRate);
+    let hpLpL = 0, hpLpR = 0;
     for (let f = 0; f < n; f++) {
-      // Unit-energy noise IRs lose roughly 10 dB through partitioned convolution
-      // for these short dark tails; compensate so tailDb remains perceptually meaningful.
-      out[f * 2] += wet[f * 2]! * tailGain * 3.16;
-      out[f * 2 + 1] += wet[f * 2 + 1]! * tailGain * 3.16;
+      const rawL = wet[f * 2]!;
+      const rawR = wet[f * 2 + 1]!;
+      hpLpL += hpAlpha * (rawL - hpLpL);
+      hpLpR += hpAlpha * (rawR - hpLpR);
+      out[f * 2] += (rawL - hpLpL) * tailGain;
+      out[f * 2 + 1] += (rawR - hpLpR) * tailGain;
     }
   } finally {
     rmSync(tmp, { recursive: true, force: true });
@@ -246,11 +272,6 @@ export function modalRing(u: number, modes: readonly Mode[]): number {
   return v;
 }
 
-const hash01 = (n: number, salt: number) => {
-  const x = Math.sin(n * 127.1 + salt * 311.7) * 43758.5453;
-  return x - Math.floor(x);
-};
-
 /**
  * Small metal bell strike: inharmonic damped partials plus a very short contact-noise
  * burst. The base frequency is the bell body, not a sustained electronic tone.
@@ -289,8 +310,8 @@ export function impactStrike(u: number, baseHz: number, seed: number, amp = 1): 
     { hz: baseHz * 2.61, gain: 0.10, decay: 25 },
   ];
   const si = Math.floor(u * 48000 + 0.5);
-  const contact = (hash01(si, seed) - 0.5) * 0.32 * Math.exp(-u * 260);
-  return (modalRing(u, modes) + contact) * amp * Math.min(1, u * 700);
+  const contact = (hash01(si, seed) - 0.5) * 0.16 * Math.exp(-u * 150);
+  return (modalRing(u, modes) + contact) * amp * Math.min(1, u * 190);
 }
 
 /** Broken music-box tine: detuned metallic resonance with a wound, uneven feel. */
@@ -320,7 +341,7 @@ export function renderBellPhone(durationSec: number, sampleRate = 48000): Float3
   const makeBell = (base: number, bell: number, pan: number) => {
     const ratios = [0.49, 0.996, 1.007, 1.31, 1.49, 1.526, 2.07, 2.79, 3.55];
     const gains = [0.08, 0.42, 0.34, 0.12, 0.23, 0.16, 0.11, 0.050, 0.025];
-    const decays = [24, 15, 13, 21, 18, 22, 29, 38, 48];
+    const decays = [12, 5.2, 4.8, 8.2, 6.4, 7.2, 11.5, 15, 19];
     for (let i = 0; i < ratios.length; i++) {
       const jitter = 1 + (hash01(i + bell * 20, base * 0.01) - 0.5) * 0.006;
       const hz = base * ratios[i]! * jitter;
@@ -328,18 +349,18 @@ export function renderBellPhone(durationSec: number, sampleRate = 48000): Float3
       resonators.push({ hz, r, c: 2 * r * Math.cos(2 * Math.PI * hz / sampleRate), z1: 0, z2: 0, gain: gains[i]!, pan, bell });
     }
   };
-  makeBell(842, 0, -0.18);
-  makeBell(1065, 1, 0.16);
+  makeBell(760, 0, -0.18);
+  makeBell(952, 1, 0.16);
 
   interface Hit { at: number; bell: number; amp: number; seed: number }
   const hits: Hit[] = [];
   for (const [burst, start] of [[0, 0.02], [1, 1.18]] as const) {
-    for (let k = 0; k < 19; k++) {
+    for (let k = 0; k < 15; k++) {
       const jitter = (hash01(k + burst * 19, 41.2) - 0.5) * 0.006;
       hits.push({
-        at: start + k * (0.0435 + (hash01(k, 44.2) - 0.5) * 0.002) + jitter,
+        at: start + k * (0.0495 + (hash01(k, 44.2) - 0.5) * 0.003) + jitter,
         bell: k % 2,
-        amp: 0.72 + hash01(k + burst * 31, 45.3) * 0.48,
+        amp: (k % 2 ? 0.72 : 1.0) * (0.86 + hash01(k + burst * 31, 45.3) * 0.24),
         seed: 71.3 + k * 2.17 + burst * 19.1,
       });
     }
@@ -354,16 +375,16 @@ export function renderBellPhone(durationSec: number, sampleRate = 48000): Float3
     let mech = 0;
     for (const hit of hits) {
       const u = t - hit.at;
-      if (u >= 0 && u < 0.0075) {
-        const env = Math.sin(Math.PI * u / 0.0075) ** 0.7;
+      if (u >= 0 && u < 0.0032) {
+        const env = Math.sin(Math.PI * u / 0.0032) ** 0.55;
         const colored = (hash01(f, hit.seed) * 0.46 + hash01(f - 1, hit.seed) * 0.31 + hash01(f - 2, hit.seed) * 0.23 - 0.5) * 2;
         const exc = colored * env * hit.amp;
         if (hit.bell === 0) excite0 += exc;
         else excite1 += exc;
         mech += colored * env * hit.amp * 0.22;
-      } else if (u >= 0.0075 && u < 0.027) {
+      } else if (u >= 0.0032 && u < 0.021) {
         // Armature rebound/spring noise: quieter, darker, and irregular.
-        const u2 = u - 0.0075;
+        const u2 = u - 0.0032;
         const env = Math.exp(-u2 * 150);
         mech += (hash01(f, hit.seed + 9.1) - 0.5) * env * hit.amp * 0.055;
       }
@@ -371,11 +392,11 @@ export function renderBellPhone(durationSec: number, sampleRate = 48000): Float3
     mechLp = mechLp * 0.86 + mech * 0.14;
     mechLp2 = mechLp2 * 0.94 + mechLp * 0.06;
 
-    let l = mechLp2 * 0.12;
-    let r = mechLp2 * 0.10;
+    let l = mechLp2 * 0.20;
+    let r = mechLp2 * 0.17;
     for (const rs of resonators) {
       const input = (rs.bell === 0 ? excite0 : excite1) + (rs.bell === 0 ? excite1 : excite0) * 0.08;
-      const y = input * 0.028 + rs.c * rs.z1 - rs.r * rs.r * rs.z2;
+      const y = input * 0.060 + rs.c * rs.z1 - rs.r * rs.r * rs.z2;
       rs.z2 = rs.z1;
       rs.z1 = y;
       const v = y * rs.gain;
@@ -420,15 +441,20 @@ export function coloredNoise(si: number, seed: number, taps = 9): number {
 export function softImpact(u: number, baseHz: number, seed: number, amp = 1): number {
   if (u < 0 || u > 0.42) return 0;
   const si = Math.floor(u * 48000 + 0.5);
-  const dark = coloredNoise(si, seed, 13);
-  const grain = coloredNoise(si, seed + 3.7, 5);
-  const friction = dark * (0.58 * Math.exp(-u * 72) + 0.22 * Math.exp(-u * 18)) + grain * 0.12 * Math.exp(-u * 130);
-  const body = modalRing(u, [
-    { hz: baseHz * 0.53, gain: 0.16, decay: 18 },
-    { hz: baseHz, gain: 0.20, decay: 24 },
-    { hz: baseHz * 1.83, gain: 0.055, decay: 34 },
+  // Carpet dissipates most of the impact as a short force pulse and fibrous friction.
+  // Avoid sustained sine-like floor modes here: they read as repetitive synthetic thuds.
+  const attack = Math.min(1, u / 0.012);
+  const pressure = Math.sin(Math.PI * Math.min(1, u / 0.042)) ** 2;
+  const fiber = coloredNoise(si, seed, 17);
+  const edge = coloredNoise(si, seed + 3.7, 7);
+  const friction = fiber * (0.34 * Math.exp(-u * 29) + 0.16 * Math.exp(-u * 9));
+  const textileDetail = edge * 0.075 * Math.exp(-u * 68);
+  const forcePulse = pressure * coloredNoise(si, seed + 7.1, 23) * 0.36;
+  const weakFloor = modalRing(u, [
+    { hz: baseHz * 0.52, gain: 0.045, decay: 24 },
+    { hz: baseHz, gain: 0.050, decay: 31 },
   ]);
-  return (friction + body) * amp * Math.min(1, u * 260);
+  return (forcePulse + friction + textileDetail + weakFloor) * amp * attack;
 }
 
 /** Brittle ceiling-tile/mineral impact with deterministic secondary clatter. */
@@ -442,7 +468,7 @@ export function tileClatter(u: number, baseHz: number, seed: number, amp = 1): n
     const si = Math.floor(uu * 48000 + 0.5);
     const white = (hash01(si, seed + k * 4.3) - 0.5) * 2;
     const low = coloredNoise(si, seed + k * 4.3, 10);
-    const crack = (white * 0.52 - low * 0.34) * Math.exp(-uu * (150 - k * 12));
+    const crack = (white * 0.22 - low * 0.22) * Math.exp(-uu * (150 - k * 12));
     const mineral = modalRing(uu, [
       { hz: baseHz * (1 + k * 0.13), gain: 0.23 / (k + 1), decay: 22 + k * 7 },
       { hz: baseHz * 1.71 * (1 + k * 0.07), gain: 0.09 / (k + 1), decay: 31 + k * 8 },
@@ -450,5 +476,5 @@ export function tileClatter(u: number, baseHz: number, seed: number, amp = 1): n
     ]);
     v += (crack * 0.42 + mineral) * (1 / (1 + k * 0.55));
   }
-  return v * amp;
+  return v * amp * Math.min(1, u * 170);
 }
