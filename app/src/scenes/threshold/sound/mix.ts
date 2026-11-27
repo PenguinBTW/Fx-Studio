@@ -15,7 +15,7 @@ export default defineMix({
     { id: 'z4_library_room_tone', file: 'generated/z4_library_room_tone.wav', bus: 'ambient', at: 79.4, gainDb: -11.0, automation: [{ t: 87.8, gainDb: 0 }, { t: 88.1, gainDb: -60 }, { t: 89.45, gainDb: -60 }, { t: 89.75, gainDb: 0 }, ], },
     { id: 'z5_motel_room_tone', file: 'generated/z5_motel_room_tone.wav', bus: 'ambient', at: 104.7, gainDb: -11.0, automation: [{ t: 116.7, gainDb: 0 }, { t: 117.0, gainDb: -60 }, { t: 119.9, gainDb: -60 }, { t: 120.2, gainDb: 0 }, ], },
     { id: 'z6_theatre_room_tone', file: 'generated/z6_theatre_room_tone.wav', bus: 'ambient', at: 129.4, gainDb: -11.0, automation: [{ t: 141.45, gainDb: 0 }, { t: 141.75, gainDb: -60 }, { t: 143.55, gainDb: -60 }, { t: 143.85, gainDb: 0 }, ], },
-    { id: 'z7_cathedral_room_tone', file: 'generated/z7_cathedral_room_tone.wav', bus: 'ambient', at: 149.5, gainDb: -5.5, automation: [{ t: 149.95, gainDb: 0 }, { t: 150.25, gainDb: -60 }, { t: 152.0, gainDb: -60 }, { t: 152.3, gainDb: 0 }, { t: 165.62, gainDb: 0 }, { t: 165.85, gainDb: -60 }, { t: 166.55, gainDb: -60 }, { t: 166.85, gainDb: 0 }, ], },
+    { id: 'z7_cathedral_room_tone', file: 'generated/z7_cathedral_room_tone.wav', bus: 'ambient', at: 149.5, gainDb: -11.0, automation: [{ t: 149.95, gainDb: 0 }, { t: 150.25, gainDb: -60 }, { t: 152.0, gainDb: -60 }, { t: 152.3, gainDb: 0 }, { t: 165.62, gainDb: 0 }, { t: 165.85, gainDb: -60 }, { t: 166.55, gainDb: -60 }, { t: 166.85, gainDb: 0 }, ], },
     { id: 'z8_home_room_tone', file: 'generated/z8_home_room_tone.wav', bus: 'ambient', at: 194.4, gainDb: -6.5, automation: [{ t: 198.0, gainDb: 0 }, { t: 198.3, gainDb: -60 }, { t: 199.8, gainDb: -60 }, { t: 200.1, gainDb: 0 }, { t: 214.5, gainDb: 0 }, { t: 214.8, gainDb: -60 }, { t: 217.15, gainDb: -60 }, { t: 217.35, gainDb: 0 }, ], },
     { id: 'end_office_afterimage_tone', file: 'generated/end_office_afterimage_tone.wav', bus: 'ambient', at: 225.0, gainDb: -7.0 },
     // Material/event cues localized to each spatial seam. They sit on sfx so the ambient
@@ -31,7 +31,7 @@ export default defineMix({
     { id: 't5_static_to_felt', file: 'generated/t5_static_to_felt.wav', bus: 'sfx', at: 129.40, gainDb: -1.5 },
     { id: 'z6_theatre_events', file: 'generated/z6_theatre_events.wav', bus: 'sfx', at: 129.40, gainDb: 1.5 },
     { id: 't6_felt_door_push', file: 'generated/t6_felt_door_push.wav', bus: 'sfx', at: 149.50, gainDb: 0.0 },
-    { id: 'z7_cathedral_events', file: 'generated/z7_cathedral_events.wav', bus: 'sfx', at: 149.50, gainDb: -3.3 },
+    { id: 'z7_cathedral_events', file: 'generated/z7_cathedral_events.wav', bus: 'sfx', at: 149.50, gainDb: 1.0 },
     { id: 'z7_coldopen_exact_replay', file: 'generated/coldopen_arm_replay.wav', bus: 'sfx', at: 171.30, gainDb: -1.0 },
     { id: 't7_lightfall_home', file: 'generated/t7_lightfall_home.wav', bus: 'sfx', at: 194.40, gainDb: -1.0 },
     { id: 'z0_coldopen_arm_reference', file: 'generated/coldopen_arm_replay.wav', bus: 'sfx', at: 1.20, gainDb: -1.0 },

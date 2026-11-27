@@ -3,7 +3,7 @@
 // generated WAVs are evidence/build products and are never committed.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { coloredNoise, impactStrike, musicBoxTine, plasticKnock, ceramicImpact, carpetStep, clothDrag, clockTick, crtSpeakerBurst, paperRustle, paperTear, paperSlam, woodCreak, bodyCough, waterDrop, waterDisplace, wetScrape, muffledBellStrike, renderBellPhone, renderCrtProgram, renderConvolutionRoom, slowNoise01, softImpact, tileClatter, type RoomOptions } from './threshold_audio_lib';
+import { coloredNoise, impactStrike, musicBoxTine, plasticKnock, ceramicImpact, naveMassHit, stoneStep, glassShard, carpetStep, clothDrag, clockTick, crtSpeakerBurst, paperRustle, paperTear, paperSlam, woodCreak, bodyCough, waterDrop, waterDisplace, wetScrape, muffledBellStrike, renderBellPhone, renderCrtProgram, renderConvolutionRoom, slowNoise01, softImpact, tileClatter, type RoomOptions } from './threshold_audio_lib';
 
 const SR = 48000;
 const OUT = path.join(import.meta.dir, '../src/scenes/threshold/sound/generated');
@@ -858,137 +858,162 @@ wavRoom('z6_theatre_events.wav', stem(21.2, (t) => {
 }), z6TheatreRoom);
 
 
-// Z7 vending cathedral cue pass. Stem starts at 149.5; `at` is project time.
-let z7lp=0;
-wav('z7_cathedral_events.wav', stem(45.8,(t)=>{
- const at=t+149.5; z7lp=z7lp*.91+noise()*.09; let l=0,r=0;
- const add=(v:number,pan=0)=>{const a=(pan+1)*Math.PI/4;l+=v*Math.cos(a);r+=v*Math.sin(a)};
- // vast stone/machine nave pressure, then compressor-organ wake stack
- if(at>=150&&at<176){const breath=Math.min(0.005+0.995*((1-smoothstep(150.25,150.55,at))+smoothstep(152.0,152.3,at)),0.005+0.995*((1-smoothstep(165.62,165.85,at))+smoothstep(166.55,166.85,at)));add((z7lp*.016+Math.sin(at*Math.PI*2*38)*.005)*breath,0)}
- if(at>=154&&at<173.35){const sw=smoothstep(154,158,at);const off=at<168.2?0:Math.max(0,Math.min(15,Math.floor((at-168.2)/.48)+1));const subtract=1-off*.045;const revealBreath=0.005+0.995*((1-smoothstep(165.62,165.85,at))+smoothstep(166.55,166.85,at));for(let row=0;row<8;row++){const hz=54+row*7+hash01(row,31)*3;const pan=-.52+row*.15;const rowWake=smoothstep(154+row*.28,157.2+row*.28,at);add((Math.sin(at*Math.PI*2*hz)*.010+Math.sin(at*Math.PI*2*hz*1.5)*.004)*sw*rowWake*subtract*revealBreath,pan)}}
- // sparse far coin drops with long nave echoes
- for(const hit of[151.4,154.8,156.7]){for(const [eo,m] of[[0,1],[.7,.38],[1.5,.18],[2.5,.08]] as const){const u=at-hit-eo;if(u>0&&u<.22)add((Math.sin(u*Math.PI*2*1150)*.018+noise()*.008)*Math.exp(-u*28)*m,0)}}
- // relay clunk wave sweeping row by row toward the camera
- for(let i=0;i<17;i++){const hit=154+i*.18;const u=at-hit;if(at<157&&u>0&&u<.09)add((noise()*.035+Math.sin(u*Math.PI*2*160)*.025)*Math.exp(-u*42),-.55+i*.065)}
- // close individual machine fan/compressor and product-glass buzz
- if(at>=158&&at<163)add((z7lp*.035+Math.sin(at*Math.PI*2*132)*.008+noise()*.003),-.35);
- // beige-phone ring behind vending glass
- if(at>=160&&at<163){const c=(at-160)%.68;if(c<.32){const hz=520+Math.sin(c*Math.PI*2*7)*70;add((Math.sin(c*Math.PI*2*hz)*.048+Math.sin(c*Math.PI*2*hz*2.1)*.015)*Math.sin(Math.PI*c/.32),-.42)}}
- // product-drop cascade: balls, tile, paper, felt, coils converging center
- if(at>=163&&at<165.2){const u=at-163;const cell=Math.floor(u*28);const cu=(u*28-cell)/28;if(cu<.16){const hz=260+hash01(cell,9)*1450;const pan=(hash01(cell,10)-.5)*(1-u/2.2);add((noise()*.042+Math.sin(cu*Math.PI*2*hz)*.018)*Math.exp(-cu*35),pan)}}
- // Tenant assembly: object-specific snaps, creases, knocks and extending coils.
- // Matches the visual chain sort: spine/rib/limb/head complete by 164.92, then releases before the 165.6 reveal hold.
- if(at>=163&&at<165.58){
-   const u=at-163;
-   const formation=1.9206;
-   const sort=smoothstep(.12,formation,u);
-   const release=Math.exp(-Math.max(0,u-formation)*7.5);
-   const endGate=1-smoothstep(2.28,2.58,u);
-   const envelope=(.14+.86*sort)*release*endGate;
-   const pulse=Math.max(0,Math.sin((u*2.4+.6406)*Math.PI*2));
-   add((z7lp*(.035+.07*sort)+noise()*(.012+.02*sort)+Math.sin((190*u+27.5*u*u)*Math.PI*2)*(.012+.018*sort))*pulse*envelope,0);
-   for(const [hit,pan,hz] of [[164.592,-.08,180],[164.731,.05,230],[164.852,-.03,290],[164.921,0,360]] as const){
-     const q=at-hit;
-     if(q>0&&q<.18)add((noise()*.07+Math.sin(q*Math.PI*2*hz)*.05)*Math.exp(-q*24),pan);
-   }
- }
- // huge hollow material inhalation, intermittent pressure rather than voice
- if(at>=166.5&&at<173.35){const c=(at-166.5)%2.7;if(c<1.15){const gate=Math.sin(Math.PI*c/1.15)**1.4;add((z7lp*.13+Math.sin(at*Math.PI*2*74)*.024)*gate,0)}}
- // hard stone chase steps with nave slap
- for(let i=0;i<18;i++){const hit=168+i*.44;const pan=i%2?.10:-.10;const stepVar=.82+hash01(i,20.1)*.36;for(const [eo,m] of[[0,1],[.38,.28],[.9,.12]] as const){const u=at-hit-eo;if(at<173.35&&u>0&&u<.12)add((noise()*.042+Math.sin(u*Math.PI*2*95)*.040+z7lp*.04)*Math.exp(-u*28)*m*stepVar,pan)}}
- // machines relay off behind the runner and subtract the organ bed perceptually
- for(let i=0;i<16;i++){const hit=168.2+i*.48;const u=at-hit;if(at<173.35&&u>0&&u<.16)add((Math.sin(u*Math.PI*2*88)*.055+noise()*.018)*Math.exp(-u*24),-.3+i*.04)}
- // uneven composite Tenant rattling pursuit
- for(let i=0;i<14;i++){const hit=168.15+i*.56+(hash01(i,17)-.5)*.09;const u=at-hit;if(at<173.35&&u>0&&u<.25)add((z7lp*.11+noise()*.038+Math.sin(u*Math.PI*2*(130+hash01(i,18)*180))*.025)*Math.exp(-u*16),(hash01(i,19)-.5)*.35)}
- // final dead flashlight click, Lint relight flutter/warm bloom
- for(const [hit,pan] of[[173.38,0],[173.72,0]] as const){const u=at-hit;if(u>0&&u<.055)add((noise()*.045+Math.sin(u*Math.PI*2*1500)*.016)*Math.exp(-u*60),pan)}
- if(at>=174&&at<175){const u=at-174;add(z7lp*.055*Math.abs(Math.sin(u*Math.PI*2*7))+Math.sin(u*Math.PI*2*940)*.013*Math.exp(-u*4),.12)}
- // Tenant composite recoil screech: metal, tile shriek, tearing paper
- if(at>=174.7&&at<176){const u=at-174.7;add((Math.sin((700*u+350*u*u)*Math.PI*2)*.045+noise()*.045+z7lp*.06)*Math.sin(Math.PI*u/1.3),-.1)}
- // floor rift fracture and cascading debris: subsonic stone displacement first, then granular rockfall
- if(at>=176&&at<180.8){
-   const u=at-176;
-   const fracture=(Math.sin(u*Math.PI*2*(34+u*7))*.105+Math.sin(u*Math.PI*2*(68+u*11))*.036+z7lp*.10+noise()*.018)*Math.min(1,u/.35)*(1-smoothstep(3.4,4.8,u));
-   add(fracture,0);
-   const cell=Math.floor(u*18);
-   const cu=(u*18-cell)/18;
-   if(cu<.045)add((noise()*.038+Math.sin(cu*Math.PI*2*(240+hash01(cell,22)*420))*.010)*Math.exp(-cu*55)*(1-smoothstep(3.2,4.4,u)),(hash01(cell,23)-.5)*.75);
- }
- // intermittent vending-machine topples: heavy shell/sub impact, glass spray, then long staggered nave tails
- for(const [hit,pan] of[[176.4,-.45],[178.1,.42],[180.0,-.36],[182.2,.38],[184.4,-.28]] as const){
-   const u=at-hit;
-   if(u>0&&u<3.4){
-     const attack=Math.min(1,u/.028);
-     const toppleVar=.86+hash01(Math.floor(hit*10),21.1)*.28;
-     const sub=Math.sin(u*Math.PI*2*(47-u*7))*.115*toppleVar*Math.exp(-u*2.15)*attack;
-     const shell=(noise()*.052+z7lp*.082+Math.sin(u*Math.PI*2*(82-u*13))*.046)*Math.exp(-u*2.8)*attack;
-     add(sub+shell,pan);
-     for(const [eo,m,spread] of[[.34,.42,.18],[.78,.24,-.24],[1.38,.13,.31],[2.15,.07,-.18]] as const){
-       const q=u-eo;
-       if(q>0&&q<.72)add((z7lp*.075+Math.sin(q*Math.PI*2*(64-q*5))*.024+noise()*.012)*Math.exp(-q*4.4)*m,pan+spread);
-     }
-     const glassCell=Math.floor(u*34);
-     const gu=(u*34-glassCell)/34;
-     if(u<1.45&&gu<.022&&hash01(glassCell+hit,24)<.72){
-       const hz=1450+hash01(glassCell,25)*2900;
-       add((noise()*.032+Math.sin(gu*Math.PI*2*hz)*.010)*Math.exp(-gu*95),pan+(hash01(glassCell,26)-.5)*.62);
-     }
-   }
- }
- // overwhelming machine/glass/stone roar as rift widens, with slower pressure motion rather than a flat noise shelf
- if(at>=180&&at<186){const u=at-180,k=u/6;add((noise()*(.040+k*.060)+z7lp*(.065+k*.045)+Math.sin((31*u+.75*u*u)*Math.PI*2)*(.012+k*.020))*(.58+.42*Math.sin(at*2.1)),0)}
- // abrupt fall wind narrowing into warmer descent
- if(at>=186&&at<192){
-   const u=at-186;const narrow=smoothstep(1.2,5,u);
-   const rollAngle=u*Math.PI*2/6;
-   const rotatingPan=Math.sin(rollAngle)*.72;
-   const wind=noise()*(.006-narrow*.004)+z7lp*(.022+narrow*.016);
-   add(wind,rotatingPan);
-   // Decorrelated air edges rotate once with the 360° camera roll, widening the fall
-   // without adding new event density or breaking the mono-compatible wind core.
-   const sampleIndex=Math.floor(at*SR);
-   const airA=(hash01(sampleIndex,22.1)*2-1)*(.014+narrow*.009);
-   const airB=(hash01(sampleIndex,22.9)*2-1)*(.014+narrow*.009);
-   const curl=Math.cos(rollAngle);
-   l+=airA*(.62+.38*curl)+airB*(.18-.18*Math.sin(rollAngle));
-   r+=airB*(.62-.38*curl)+airA*(.18+.18*Math.sin(rollAngle));
- }
- // dense physical impact cascade: separate bottles, cans, glass and stone chips
-for(let k=0;k<30;k++){
-  const st=186.08+k*.185+(hash01(k,30.1)-.5)*.055;
-  const u=at-st;
-  if(u>0&&u<.30){
-    const metalHz=170+hash01(k,30.2)*390;
-    const glassHz=1450+hash01(k,30.3)*1500;
-    const pan=(hash01(k,30.4)-.5)*1.35+Math.sin((at-186)*Math.PI*2/6)*.25;
-    const attack=Math.min(1,u/.006);
-    const impact=noise()*.105*Math.exp(-u*48)+Math.sin(u*Math.PI*2*metalHz)*.066*Math.exp(-u*21)+Math.sin(u*Math.PI*2*metalHz*.51)*.040*Math.exp(-u*15);
-    const glass=Math.sin(u*Math.PI*2*glassHz)*.018*Math.exp(-u*58)+noise()*.038*Math.exp(-u*86);
-    add((impact+glass)*attack,Math.max(-.92,Math.min(.92,pan)));
+// Z7 vending-cathedral redesign: monumental mass through sparse physical events and
+// long stone convolution tails. No compressor-organ drone, noise-wall chase, electronic
+// phone, tonal fall sweep, or white-noise wind bed. Exact replay remains in its own stem.
+const z7NaveRoom: RoomOptions = { size: 2.35, decaySec: 3.4, dampingHz: 1250, predelayMs: 22, earlyDb: -9, tailDb: -12, dryDb: -1 };
+wavRoom('z7_cathedral_events.wav', stem(45.8, (t) => {
+  const at = t + 149.5;
+  const si = Math.floor(t * SR + 0.5);
+  let l = 0, r = 0;
+  const add = (v: number, pan = 0) => {
+    const a = (pan + 1) * Math.PI / 4;
+    l += v * Math.cos(a);
+    r += v * Math.sin(a);
+  };
+
+  // Vast nave pressure as rare structural contacts; silence remains the default.
+  for (const [j, hit] of [150.4,156.8,162.4,166.9].entries()) {
+    add(naveMassHit(at - hit, 54 + j * 4, 450.2 + j, 0.055), 0);
   }
-}
-// physical debris cascade: metal mass, glass spray and stone clatter passing upward
-for(const st of[186.18,186.55,186.92,187.35,187.72,188.18,188.62,189.05,189.48,189.92,190.35,190.82,191.25,191.62]){
-  const u=at-st;
-  if(u>0&&u<.48){
-    const seed=Math.floor(st*100);
-    const metalHz=210+hash01(seed,31)*260;
-    const glassHz=1250+hash01(seed,32)*900;
-    const pan=(hash01(seed,33)-.5)*1.2+Math.sin((at-186)*Math.PI*2/6)*.28;
-    const mass=(Math.sin(u*Math.PI*2*metalHz)*.048+Math.sin(u*Math.PI*2*(metalHz*.49))*.032+z7lp*.042)*Math.exp(-u*17);
-    const clatter=(noise()*.040+Math.sin(u*Math.PI*2*glassHz)*.014)*Math.exp(-u*28);
-    add((mass+clatter)*Math.min(1,u/.025),Math.max(-.9,Math.min(.9,pan)));
+
+  // Far coin drops: small metal physical impacts whose length comes from the nave.
+  for (const [j, hit] of [151.4,154.8,156.7].entries()) {
+    add(glassShard(at - hit, 920 + j * 90, 454.2 + j, 0.11), -0.18 + j * 0.11);
   }
-}
-// upward-passing machine/glass streaks during fall
- for(const st of[186.4,187.2,188.1,189.0,190.1,191.2]){const u=at-st;if(u>0&&u<.32){const chasePan=Math.sin((at-186)*Math.PI*2/6)*.48+(hash01(Math.floor(st*10),21)-.5)*.42;add((noise()*.024+Math.sin((900*u+250*u*u)*Math.PI*2)*.018)*Math.exp(-u*8),Math.max(-.92,Math.min(.92,chasePan)))}}
- // calm descending tonal pressure: temperature shift, not score
- if(at>=188&&at<194.4){const u=at-188;add((Math.sin((160*u-6.5*u*u)*Math.PI*2)*.006+Math.sin((80*u-3.25*u*u)*Math.PI*2)*.004)*smoothstep(0,2,u),0)}
- // warm carpet landing and first domestic precues
- if(at>=192&&at<193.2){const u=at-192;add((z7lp*.13+Math.sin(u*Math.PI*2*70)*.065+noise()*.024)*Math.exp(-u*5),0)}
- if(at>=192.5&&at<195){const u=(at-192.5)%1;if(u<.035)add((noise()*.018+Math.sin(u*Math.PI*2*1300)*.006)*Math.exp(-u*80),.28)}
- return[l,r]
-}));
+
+  // Machine wake as a row-by-row relay wave. Each relay has a short compressor-pressure
+  // swell that decays instead of joining a constant organ bed.
+  for (let i = 0; i < 17; i++) {
+    const hit = 154 + i * 0.18;
+    const pan = -0.55 + i * 0.065;
+    add(naveMassHit(at - hit, 105 + i * 4, 458.2 + i, 0.075), pan);
+  }
+
+  // Close machine detail: sparse shell contact and product-glass ticks.
+  for (const [j, hit] of [158.2,159.4,160.9,162.1].entries()) {
+    add(naveMassHit(at - hit, 115 + j * 7, 464.2 + j, 0.035), -0.35);
+    add(glassShard(at - hit - 0.18, 1250 + j * 110, 465.3 + j, 0.020), -0.32);
+  }
+
+  // Beige phone muffled behind vending glass: mechanical bell strikes, boxy and distant.
+  for (let k = 0; k < 18; k++) {
+    const hit = 160.12 + k * 0.052 + (hash01(k, 468.2) - 0.5) * 0.006;
+    add(muffledBellStrike(at - hit, k % 2 ? 470 : 392, 469.3 + k, 0.030), -0.42);
+  }
+
+  // Product drop cascade converging center: sparse discrete balls, tile, paper, felt, coils.
+  const productTimes = [163.05,163.22,163.48,163.70,163.91,164.08,164.25,164.43,164.62,164.82,165.03,165.22];
+  for (const [j, hit] of productTimes.entries()) {
+    const pan = (hash01(j, 472.2) - 0.5) * (0.9 - j * 0.045);
+    const kind = j % 4;
+    if (kind === 0) add(plasticKnock(at - hit, 185 + hash01(j, 473.2) * 90, 474.3 + j, 0.070), pan);
+    else if (kind === 1) add(naveMassHit(at - hit, 180 + hash01(j, 475.2) * 80, 476.3 + j, 0.060), pan);
+    else if (kind === 2) add(paperRustle(at - hit, 0.10, 477.3 + j, 0.13), pan);
+    else add(naveMassHit(at - hit, 150 + hash01(j, 478.2) * 80, 479.3 + j, 0.050), pan);
+  }
+
+  // Tenant assembly: material snaps and coil extension. Sharp enough to read as construction,
+  // but never a screech/noise burst.
+  for (const [j, hit, pan] of [[0,163.35,-0.18],[1,163.78,0.12],[2,164.20,-0.08],[3,164.59,0.05],[4,164.92,0]] as const) {
+    add(plasticKnock(at - hit, 160 + j * 28, 482.2 + j, 0.085), pan);
+    if (j > 1) add(naveMassHit(at - hit - 0.04, 150 + j * 30, 483.3 + j, 0.065), pan);
+  }
+  add(paperTear(at - 164.35, 0.45, 486.2, 0.16), 0);
+  add(woodCreak(at - 164.72, 0.42, 487.3, 0.20), 0);
+
+  // Huge hollow material inhalation: intermittent pressure/material resonance, not voice.
+  for (const [j, hit] of [166.55,168.85,171.15].entries()) {
+    const u = at - hit;
+    if (u > 0 && u < 1.05) {
+      const e = Math.sin(Math.PI * u / 1.05) ** 1.35;
+      add((coloredNoise(si, 490.2 + j, 61) * 0.010) * e, 0);
+    }
+  }
+
+  // Chase: close stone running steps, heavy machine-off relays behind, and uneven composite
+  // Tenant contacts. Dense at the peak, but every sound is a discrete physical event.
+  for (let i = 0; i < 18; i++) {
+    const hit = 168 + i * 0.38 + (hash01(i, 493.2) - 0.5) * 0.045;
+    if (hit < 173.35) add(stoneStep(at - hit, 494.2 + i, 0.085 + hash01(i, 495.3) * 0.035), i % 2 ? 0.10 : -0.10);
+  }
+  for (let i = 0; i < 11; i++) {
+    const hit = 168.2 + i * 0.48;
+    add(naveMassHit(at - hit, 82 + i * 2, 498.2 + i, 0.070), -0.30 + i * 0.055);
+  }
+  for (let i = 0; i < 14; i++) {
+    const hit = 168.15 + i * 0.50 + (hash01(i, 501.2) - 0.5) * 0.08;
+    const pan = (hash01(i, 502.3) - 0.5) * 0.34;
+    if (i % 3 === 0) add(plasticKnock(at - hit, 180 + hash01(i, 503.4) * 90, 504.5 + i, 0.060), pan);
+    else if (i % 3 === 1) add(naveMassHit(at - hit, 175 + hash01(i, 505.4) * 70, 506.5 + i, 0.050), pan);
+    else add(paperRustle(at - hit, 0.12, 507.5 + i, 0.14), pan);
+  }
+
+  // Dead flashlight switch clicks, then Lint's small soft relight flutter.
+  for (const [j, hit] of [173.38,173.72].entries()) add(clockTick(at - hit, 510.2 + j, 0.070), 0);
+  add(clothDrag(at - 174.05, 0.45, 512.2, 0.16), 0.12);
+  if (at >= 174.35 && at < 174.95) {
+    const u = at - 174.35;
+    add(Math.sin(u * Math.PI * 2 * 118) * 0.005 * Math.sin(Math.PI * u / 0.60) ** 2, 0.12);
+  }
+
+  // Tenant recoil: grounded material recoil/scrape, not a tonal shriek or noise blast.
+  add(wetScrape(at - 174.72, 0.68, 515.2, 0.18), -0.10);
+  add(paperTear(at - 174.92, 0.52, 516.3, 0.16), -0.08);
+
+  // Floor rift fracture: low stone displacement and discrete granular rock impacts.
+  for (const [j, hit] of [176.0,176.45,177.1,178.0,179.2].entries()) {
+    add(naveMassHit(at - hit, 58 + j * 5, 519.2 + j, 0.16 + j * 0.018), -0.15 + j * 0.08);
+    add(naveMassHit(at - hit - 0.08, 165 + j * 15, 520.3 + j, 0.07), -0.2 + j * 0.1);
+  }
+  for (let i = 0; i < 6; i++) {
+    const hit = 176.25 + i * 0.23 + hash01(i, 523.2) * 0.05;
+    add(naveMassHit(at - hit, 190 + hash01(i, 524.3) * 120, 525.4 + i, 0.022), (hash01(i, 526.5) - 0.5) * 0.8);
+  }
+
+  // Vending-machine topples: separated shell impacts, glass shards, long nave tails.
+  for (const [j, hit, pan] of [[0,176.4,-0.45],[1,178.1,0.42],[2,180.0,-0.36],[3,182.2,0.38],[4,184.4,-0.28]] as const) {
+    add(naveMassHit(at - hit, 72 + j * 4, 529.2 + j, 0.26), pan);
+    add(plasticKnock(at - hit - 0.05, 120 + j * 12, 530.3 + j, 0.13), pan);
+    for (let k = 0; k < 2; k++) add(glassShard(at - hit - 0.10 - k * 0.055, 1050 + hash01(k + j * 7, 531.4) * 900, 532.5 + j * 5 + k, 0.045), pan + (hash01(k, 533.6) - 0.5) * 0.5);
+  }
+
+  // Rift widening: additional massed mechanical/stone events instead of a flat roar shelf.
+  for (let i = 0; i < 6; i++) {
+    const hit = 180.15 + i * 0.34 + (hash01(i, 536.2) - 0.5) * 0.07;
+    const pan = (hash01(i, 537.3) - 0.5) * 0.85;
+    add(i % 2 ? naveMassHit(at - hit, 150 + hash01(i, 538.4) * 90, 539.5 + i, 0.048) : naveMassHit(at - hit, 85 + hash01(i, 540.4) * 35, 541.5 + i, 0.060), pan);
+  }
+
+  // Fall: short separated dark air swells, never a continuous white-noise wall.
+  for (const [j, hit] of [186.0,186.9,188.1,189.4,190.7].entries()) {
+    const u = at - hit;
+    if (u > 0 && u < 0.62) {
+      const envf = Math.sin(Math.PI * u / 0.62) ** 1.8;
+      const air = coloredNoise(si, 545.2 + j, 127) * envf * 0.011;
+      add(air, Math.sin((hit - 186) * 1.3) * 0.42);
+    }
+  }
+  for (let i = 0; i < 8; i++) {
+    const hit = 186.12 + i * 0.25 + (hash01(i, 548.2) - 0.5) * 0.08;
+    const pan = (hash01(i, 549.3) - 0.5) * 1.1 + Math.sin((at - 186) * Math.PI * 2 / 6) * 0.20;
+    if (i % 3 === 0) add(naveMassHit(at - hit, 135 + hash01(i, 550.4) * 90, 551.5 + i, 0.070), pan);
+    else if (i % 3 === 1) add(glassShard(at - hit, 950 + hash01(i, 552.4) * 850, 553.5 + i, 0.050), pan);
+    else add(naveMassHit(at - hit, 170 + hash01(i, 554.4) * 100, 555.5 + i, 0.050), pan);
+  }
+
+  // Descending warmth as separated pressure swells, not a musical falling tone.
+  for (const [j, hit] of [188.2,189.6,190.8].entries()) {
+    const u = at - hit;
+    if (u > 0 && u < 0.72) add((coloredNoise(si, 558.2 + j, 79) * 0.008) * Math.sin(Math.PI * u / 0.72) ** 2, 0);
+  }
+
+  // Warm carpet landing and first domestic clock precue; no bird chirps.
+  add(carpetStep(at - 192.02, 561.2, 0.22), 0);
+  add(clothDrag(at - 192.12, 0.52, 562.3, 0.16), 0);
+
+  return [l, r];
+}), z7NaveRoom);
 
 
 // Z8 home and end-office cue pass. Stems start at 194.4 and 225.0.
@@ -1239,19 +1264,14 @@ bed('z6_theatre_room_tone.wav', 21.1, 0.95, 0.9, (t, lp) => {
 });
 
 bed('z7_cathedral_room_tone.wav', 46.1, 0.8, 1.1, (t, lp) => {
-  const fans = lp() * 0.045;
-  const hum = Math.sin(t * Math.PI * 2 * 59) * 0.015 + Math.sin(t * Math.PI * 2 * 177) * 0.004;
-  let relay = 0;
-  for (const at of [6.2, 13.5, 22.8, 34.1, 41.3]) {
+  // Monumental air pressure in sparse wandering swells; no continuous fan/hum drone.
+  const deep = lp() * 0.0022;
+  let swell = 0;
+  for (const [j, at] of [5.8, 18.4, 31.2, 40.6].entries()) {
     const u = t - at;
-    if (u > 0 && u < 0.08) relay += noise() * 0.07 * Math.exp(-u * 40);
+    if (u > 0 && u < 1.25) swell += (Math.sin(u * Math.PI * 2 * (34 + j * 3)) * 0.0035 + lp() * 0.003) * Math.sin(Math.PI * u / 1.25) ** 2;
   }
-  let coin = 0;
-  for (const at of [18.2, 31.7]) {
-    const u = t - at;
-    if (u > 0 && u < 0.38) coin += (Math.sin(u * Math.PI * 2 * 1730) + Math.sin(u * Math.PI * 2 * 2410) * 0.4) * 0.018 * Math.exp(-u * 12);
-  }
-  const v = fans + hum + relay + coin;
+  const v = deep + swell;
   return [v, v * 0.88];
 });
 

@@ -539,6 +539,46 @@ export function bodyCough(u: number, seed: number, amp = 1): number {
   return (burst + chest) * amp * attack;
 }
 
+
+
+/** Short heavy mass contact for large stone/machine spaces. The source is impulse-like;
+ * the convolution room supplies the long resonant tail, avoiding stacked synth-like rings. */
+export function naveMassHit(u: number, baseHz: number, seed: number, amp = 1): number {
+  if (u < 0 || u > 0.42) return 0;
+  const si = Math.floor(u * 48000 + 0.5);
+  const contact = coloredNoise(si, seed, 35) * 0.24 * Math.exp(-u * 58);
+  const body = modalRing(u, [
+    { hz: baseHz * 0.52, gain: 0.055, decay: 34 },
+    { hz: baseHz, gain: 0.030, decay: 44 },
+  ]);
+  return (contact + body) * amp * Math.min(1, u * 240);
+}
+
+/** Hard running footstep on polished stone: mineral contact and dense low body. */
+export function stoneStep(u: number, seed: number, amp = 1): number {
+  if (u < 0 || u > 0.30) return 0;
+  const si = Math.floor(u * 48000 + 0.5);
+  const attack = Math.min(1, u / 0.007);
+  const contact = coloredNoise(si, seed, 13) * 0.18 * Math.exp(-u * 90);
+  const body = modalRing(u, [
+    { hz: 72 + hash01(seed, 2.1) * 20, gain: 0.14, decay: 36 },
+    { hz: 138 + hash01(seed, 3.1) * 28, gain: 0.045, decay: 48 },
+  ]);
+  return (contact + body) * amp * attack;
+}
+
+/** Small glass shard impact: short brittle inharmonic modes with tightly rationed noise. */
+export function glassShard(u: number, baseHz: number, seed: number, amp = 1): number {
+  if (u < 0 || u > 0.24) return 0;
+  const si = Math.floor(u * 48000 + 0.5);
+  const contact = coloredNoise(si, seed, 15) * 0.095 * Math.exp(-u * 190);
+  const glass = modalRing(u, [
+    { hz: baseHz * (0.93 + hash01(seed, 2.2) * 0.12), gain: 0.030, decay: 38 },
+    { hz: baseHz * (1.61 + hash01(seed, 3.2) * 0.22), gain: 0.009, decay: 52 },
+  ]);
+  return (contact + glass) * amp * Math.min(1, u * 800);
+}
+
 /** Water-damped ceramic contact: hard mineral attack without a sustained metallic ring. */
 export function ceramicImpact(u: number, baseHz: number, seed: number, amp = 1): number {
   if (u < 0 || u > 0.48) return 0;
