@@ -471,7 +471,7 @@ const z3ViewerSteps: number[] = [];
 }
 const z3MirrorlingSteps = [72.50, 73.40, 74.30];
 const z3Drips = [56.20, 64.15, 67.15, 69.75, 76.20];
-wavRoom('z3_pool_events.wav', stem(25.8, (t) => {
+wavRoom('z3_pool_events.wav', stem(26.8, (t) => {
   const at = t + 54.6;
   const si = Math.floor(t * SR + 0.5);
   let l = 0, r = 0;
@@ -527,15 +527,15 @@ wavRoom('z3_pool_events.wav', stem(25.8, (t) => {
   }
 
   // Heel catches the submerged step; cloth and water rise before the fall.
-  add(ceramicImpact(at - 78.02, 190, 231.2, 0.060), 0.08);
-  add(waterDisplace(at - 78.10, 232.5, 0.080, 112), 0.08);
+  add(ceramicImpact(at - 78.95, 190, 231.2, 0.060), 0.08);
+  add(waterDisplace(at - 79.03, 232.5, 0.080, 112), 0.08);
 
   // Frame-filling splash, then immediate underwater pressure. The impact is loud but brief;
   // no sustained broadband roar is allowed to become static.
-  add(waterDisplace(at - 78.42, 235.8, 0.22, 72), 0);
-  if (at >= 78.72 && at < 79.55) {
-    const u = at - 78.72;
-    const pressure = Math.sin(Math.PI * Math.min(1, u / 0.72)) ** 1.4;
+  add(waterDisplace(at - 79.60, 235.8, 0.22, 72), 0);
+  if (at >= 79.76 && at < 80.92) {
+    const u = at - 79.76;
+    const pressure = Math.sin(Math.PI * Math.min(1, u / 1.02)) ** 1.4;
     add((Math.sin(u * Math.PI * 2 * 43) * 0.026 + coloredNoise(si, 236.5, 35) * 0.028) * pressure, 0);
   }
 
