@@ -634,7 +634,7 @@ export default class ThresholdZ2Playroom extends Scene {
     const strokeRampA = 47.55, strokeRampB = 48.35;
     const strokeU = clamp((t - strokeRampA) / (strokeRampB - strokeRampA));
     const strokeRampIntegral = t <= strokeRampA ? 0 : t >= strokeRampB
-      ? 0.5 * (strokeRampB - strokeRampA)
+      ? 0.5 * (strokeRampB - strokeRampA) + (t - strokeRampB)
       : (strokeRampB - strokeRampA) * (strokeU ** 3 - 0.5 * strokeU ** 4);
     const strokePhaseBase = 2.65 * t + 1.55 * strokeRampIntegral;
     const handWakeSources: { hand: THREE.Object3D; phase: number }[] = [];
@@ -690,7 +690,16 @@ export default class ThresholdZ2Playroom extends Scene {
     this.swimmerAsset.root.updateMatrixWorld(true);
     const evaluatedHandWakes = handWakeSources.map(({ hand, phase }) => {
       const p = new THREE.Vector3();
-      hand.getWorldPosition(p);
+      const mesh = hand as THREE.Mesh;
+      if (mesh.isMesh) {
+        if (!mesh.userData.wakeLocalCenter) {
+          mesh.geometry.computeBoundingBox();
+          mesh.userData.wakeLocalCenter = mesh.geometry.boundingBox!.getCenter(new THREE.Vector3());
+        }
+        p.copy(mesh.userData.wakeLocalCenter as THREE.Vector3).applyMatrix4(mesh.matrixWorld);
+      } else {
+        hand.getWorldPosition(p);
+      }
       return { x: p.x, z: p.z, phase };
     });
 
