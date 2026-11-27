@@ -284,17 +284,26 @@ const z2HeartTimes: number[] = [];
 
 const z2MusicEvents: Array<{ at: number; hz: number; amp: number; seed: number }> = [];
 {
-  const melody = [523.25, 659.25, 783.99, 659.25, 587.33, 0, 659.25, 493.88];
-  for (let cycle = 0; cycle < 2; cycle++) {
-    const start = cycle === 0 ? 30.25 : 36.15;
-    const spacing = cycle === 0 ? 0.62 : 0.72;
-    for (let i = 0; i < melody.length; i++) {
-      const hz = melody[i]!;
-      // Note six physically fails after 36s: the mechanism skips rather than playing a digital gap.
-      if (!hz || (cycle === 1 && i !== 0 && i !== 1)) continue;
-      const at = start + i * spacing + (hash01(i + cycle * 8, 63.1) - 0.5) * 0.055;
-      if (at < 40.35) z2MusicEvents.push({ at, hz: hz * (1 + (hash01(i, 64.2 + cycle) - 0.5) * 0.025), amp: cycle === 0 ? 0.025 : 0.018, seed: 90.1 + i * 1.37 + cycle * 11 });
-    }
+  // Not a melody: the cylinder is damaged and keeps catching on isolated teeth.
+  // Wide irregular gaps, octave-sagged tines, and 90-260 cent detuning make the
+  // mechanism physically wrong before any performance embellishment.
+  const fragments = [
+    [30.25, 523.25, -35, 1.0, 0.017],
+    [31.72, 783.99, -88, 1.0, 0.015],
+    [33.38, 523.25, -122, 0.5, 0.014],
+    [35.08, 587.33, -176, 0.5, 0.012],
+    [36.72, 659.25, -214, 1.0, 0.010],
+    [38.18, 783.99, -260, 0.5, 0.008],
+    [39.56, 493.88, -190, 0.5, 0.007],
+  ] as const;
+  for (const [i, spec] of fragments.entries()) {
+    const [at, hz, cents, octave, amp] = spec;
+    z2MusicEvents.push({
+      at: at + (hash01(i, 63.1) - 0.5) * 0.09,
+      hz: hz * Math.pow(2, cents / 1200) * octave,
+      amp,
+      seed: 90.1 + i * 1.37,
+    });
   }
 }
 

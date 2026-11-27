@@ -332,14 +332,16 @@ export function impactStrike(u: number, baseHz: number, seed: number, amp = 1): 
 /** Broken music-box tine: detuned metallic resonance with a wound, uneven feel. */
 export function musicBoxTine(u: number, hz: number, seed: number, amp = 1): number {
   if (u < 0 || u > 1.4) return 0;
-  const wobble = 1 + (hash01(Math.floor(u * 48000), seed) - 0.5) * 0.0008;
+  // Real tines sag very slightly as the spring energy dies; no sample-rate pitch noise.
+  const wobble = 1 - 0.0016 * (1 - Math.exp(-u * 2.4));
   const modes: Mode[] = [
-    { hz: hz * wobble, gain: 0.60, decay: 4.6 },
-    { hz: hz * 2.017, gain: 0.16, decay: 8.5 },
-    { hz: hz * 3.31, gain: 0.016, decay: 18.5 },
+    { hz: hz * wobble, gain: 0.42, decay: 5.8 },
+    // Tine-to-tine inharmonicity: damaged mechanisms do not form clean harmonic pitch.
+    { hz: hz * (1.91 + hash01(seed, 12.4) * 0.23), gain: 0.29, decay: 8.5 },
+    { hz: hz * (2.86 + hash01(seed, 13.8) * 0.72), gain: 0.055, decay: 18.5 },
   ];
   const si = Math.floor(u * 48000 + 0.5);
-  const pluck = (hash01(si, seed + 4.1) - 0.5) * 0.09 * Math.exp(-u * 310);
+  const pluck = (hash01(si, seed + 4.1) - 0.5) * 0.14 * Math.exp(-u * 310);
   return (modalRing(u, modes) + pluck) * amp * Math.min(1, u * 550);
 }
 
