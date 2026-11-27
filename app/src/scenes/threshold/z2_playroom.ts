@@ -629,14 +629,21 @@ export default class ThresholdZ2Playroom extends Scene {
     // Closed-form breaststroke/pulling motion. The emergence root path and timing stay fixed;
     // only the continuous limb rig articulates around its Blender bind pivots.
     const swimPower = smooth(44.55, 45.15, t) * (1 - smooth(48.85, 49.18, t));
-    const chaseDrive = smooth(47.55, 48.35, t);
-    const strokeTempo = 2.65 + chaseDrive * 1.55;
+    // Integrate the stroke-speed ramp in closed form. Multiplying elapsed time by a
+    // changing speed injects a spurious acceleration during the chase ramp.
+    const strokeRampA = 47.55, strokeRampB = 48.35;
+    const strokeU = clamp((t - strokeRampA) / (strokeRampB - strokeRampA));
+    const strokeRampIntegral = t <= strokeRampA ? 0 : t >= strokeRampB
+      ? 0.5 * (strokeRampB - strokeRampA)
+      : (strokeRampB - strokeRampA) * (strokeU ** 3 - 0.5 * strokeU ** 4);
+    const strokePhaseBase = 2.65 * t + 1.55 * strokeRampIntegral;
+    const handWakeSources: { hand: THREE.Object3D; phase: number }[] = [];
     for (const sideNum of [-1, 1] as const) {
       const key = sideNum < 0 ? '-1' : '1';
       const shoulder = this.swimmerAsset.part(`arm_${key}_shoulder`);
       const elbow = this.swimmerAsset.part(`arm_${key}_elbow`);
       const wrist = this.swimmerAsset.part(`arm_${key}_wrist`);
-      const phase = t * strokeTempo + (sideNum < 0 ? 0 : 1.38);
+      const phase = strokePhaseBase + (sideNum < 0 ? 0 : 1.38);
       const pull = Math.sin(phase);
       const lift = Math.cos(phase);
       for (const control of [shoulder, elbow, wrist]) {
@@ -671,11 +678,21 @@ export default class ThresholdZ2Playroom extends Scene {
           fb.z + sideNum * 0.028 * grasp * swimPower,
         );
       }
+      handWakeSources.push({ hand: this.swimmerAsset.part(`hand_${key}`), phase });
     }
     const lowerBody = this.swimmerAsset.part('submerged_lower_body');
     if (!lowerBody.userData.baseRot) lowerBody.userData.baseRot = lowerBody.rotation.clone();
     const lb = lowerBody.userData.baseRot as THREE.Euler;
     lowerBody.rotation.set(lb.x + Math.sin(t * 2.2) * 0.035 * swimPower, lb.y + Math.sin(t * 2.8 + 0.7) * 0.055 * swimPower, lb.z);
+
+    // Ball interaction derives from the actual articulated hand transforms, including
+    // the chase turn, rather than estimated unrotated offsets.
+    this.swimmerAsset.root.updateMatrixWorld(true);
+    const evaluatedHandWakes = handWakeSources.map(({ hand, phase }) => {
+      const p = new THREE.Vector3();
+      hand.getWorldPosition(p);
+      return { x: p.x, z: p.z, phase };
+    });
 
     this.swimmerLight.visible = swimmerVisible;
     this.swimmerLight.intensity = swimmerVisible ? 0.24 : 0;
@@ -723,18 +740,14 @@ export default class ThresholdZ2Playroom extends Scene {
       const parting = Math.exp(-d2 / 1.35) * 0.16 * activeWake;
       let handWakeY = 0, handWakeX = 0, handWakeZ = 0;
       if (swimmerVisible) {
-        for (const sideNum of [-1, 1] as const) {
-          const phase = t * strokeTempo + (sideNum < 0 ? 0 : 1.38);
-          const reach = 0.52 + 0.13 * Math.sin(phase + 0.9);
-          const hx = sx + sideNum * reach * 1.22;
-          const hz = sz + 0.18 + (0.20 + 0.17 * Math.cos(phase)) * 1.22;
-          const hdx = b.x - hx, hdz = b.z - hz;
+        for (const hw of evaluatedHandWakes) {
+          const hdx = b.x - hw.x, hdz = b.z - hw.z;
           const hd2 = hdx * hdx + hdz * hdz;
-          const wake = Math.exp(-hd2 / 0.16) * (0.45 + 0.55 * Math.max(0, Math.sin(phase + 1.1)));
+          const wake = Math.exp(-hd2 / 0.16) * (0.45 + 0.55 * Math.max(0, Math.sin(hw.phase + 1.1)));
           const hd = Math.sqrt(hd2) + 0.001;
           handWakeY -= wake * 0.055;
-          handWakeX += (hdx / hd) * wake * 0.030 * Math.sin(phase);
-          handWakeZ += (hdz / hd) * wake * 0.030 * Math.sin(phase);
+          handWakeX += (hdx / hd) * wake * 0.030 * Math.sin(hw.phase);
+          handWakeZ += (hdz / hd) * wake * 0.030 * Math.sin(hw.phase);
         }
       }
       this.dummy.position.set(b.x + (dx / dist) * parting + handWakeX, b.y + bulge + trail + handWakeY, b.z + (dz / dist) * parting + handWakeZ);

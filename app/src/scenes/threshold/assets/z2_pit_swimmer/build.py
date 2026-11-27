@@ -4,10 +4,19 @@ from mathutils import Vector, Matrix
 HERE=os.path.dirname(os.path.abspath(__file__))
 
 def reset(): bpy.ops.object.select_all(action='SELECT'); bpy.ops.object.delete(use_global=False)
-def material(name,color,rough=.78,coat=0,spec=.5):
+def material(name,color,rough=.78,coat=0,spec=.5,use_vcolor=False):
  m=bpy.data.materials.new(name); m.diffuse_color=(*color,1); m.use_nodes=True
- bs=m.node_tree.nodes.get('Principled BSDF')
- bs.inputs['Base Color'].default_value=(*color,1); bs.inputs['Roughness'].default_value=rough
+ nt=m.node_tree; bs=nt.nodes.get('Principled BSDF')
+ if use_vcolor:
+  # glTF exporter recognizes factor * color-attribute in the node graph and binds
+  # the mesh attribute as COLOR_0 instead of emitting a dummy white COLOR_0.
+  vc=nt.nodes.new('ShaderNodeVertexColor'); vc.layer_name='Color'
+  mix=nt.nodes.new('ShaderNodeMix'); mix.data_type='RGBA'; mix.blend_type='MULTIPLY'; mix.inputs[0].default_value=1
+  mix.inputs[6].default_value=(*color,1)
+  nt.links.new(vc.outputs['Color'],mix.inputs[7]); nt.links.new(mix.outputs[2],bs.inputs['Base Color'])
+ else:
+  bs.inputs['Base Color'].default_value=(*color,1)
+ bs.inputs['Roughness'].default_value=rough
  if bs.inputs.get('Coat Weight'): bs.inputs['Coat Weight'].default_value=coat
  if bs.inputs.get('Coat Roughness'): bs.inputs['Coat Roughness'].default_value=.18
  if bs.inputs.get('Specular IOR Level'): bs.inputs['Specular IOR Level'].default_value=spec
@@ -154,7 +163,7 @@ def torso_mesh(mat):
     return make_mesh('torso_continuous_skin',verts,faces,mat,.018)
 
 reset()
-clay=material('swimmer_corpse_pale_flesh',(0.385,0.325,0.345),.55,coat=.14,spec=.40)
+clay=material('swimmer_corpse_pale_flesh',(0.385,0.325,0.345),.55,coat=.14,spec=.40,use_vcolor=True)
 dark=material('swimmer_wet_deep_cavity',(0.018,0.010,0.012),.24,coat=.35,spec=.55)
 bruise=material('swimmer_bruise_necrosis',(0.26,0.105,0.115),.70,coat=.12,spec=.35)
 veinmat=material('swimmer_vein_bluegrey',(0.055,0.075,0.095),.43,coat=.18,spec=.42)
@@ -209,19 +218,19 @@ def arm(side):
  el=empty(f'arm_{side}_elbow',elbow); bindparent(el,sh,shoulder)
  wr=empty(f'arm_{side}_wrist',wrist); bindparent(wr,el,elbow)
  # upper arm begins buried in torso/shoulder and narrows toward elbow
- pts=bez((side*.13,-.01,.61),(side*.34,-.03,.68),elbow,13)
+ pts=bez((side*.045,-.005,.61),(side*.23,-.025,.675),elbow,13)
  ua=tube(f'upper_arm_{side}',pts,[.048,.046,.040,.034,.028,.023,.019],clay,rxz=(1,1),sides=12,deform=.032); bindparent(ua,sh,shoulder)
  pts2=bez(elbow,((elbow[0]+wrist[0])*.5,(elbow[1]+wrist[1])*.5-.03,(elbow[2]+wrist[2])*.5+.02),wrist,13)
  fa=tube(f'forearm_{side}',pts2,[.022,.020,.018,.016,.013,.010,.008],clay,sides=11,deform=.034); bindparent(fa,el,elbow)
  # hand is a continuous tapered palm mass flowing from wrist
  handpts=bez(wrist,(wrist[0]+side*.01,wrist[1]-.07,wrist[2]-.02),(wrist[0]+side*.015,wrist[1]-.13,wrist[2]-.035),4)
- hand=tube(f'hand_{side}',handpts,[.040,.047,.038,.022],clay,rxz=(1.35,.55),sides=10,deform=.032); bindparent(hand,wr,wrist)
+ hand=tube(f'hand_{side}',handpts,[.040,.047,.038,.022],clay,rxz=(1.48,.55),sides=10,deform=.032); bindparent(hand,wr,wrist)
  # fingers: continuous tapered multi-joint tubes with knuckle swelling in radius profile
  for f in range(5):
   spread=(f-2)*.027
   lf=(.78,.94,1.12,.98,.72)[f]
   fan=(f-2)*.018
-  base=(wrist[0]+spread,wrist[1]-.12,wrist[2]-.025+(abs(f-2)-1)*.006)
+  base=(wrist[0]+spread*.82,wrist[1]-.086,wrist[2]-.020+(abs(f-2)-1)*.005)
   mid1=(base[0]+spread*.42+fan,base[1]-.105*lf,base[2]-.018-(2-abs(f-2))*.008)
   mid2=(mid1[0]+spread*.30+fan*.65,mid1[1]-.092*lf,mid1[2]-.028-(f%2)*.010)
   tip=(mid2[0]+spread*.20+fan*.35,mid2[1]-.070*lf,mid2[2]-.023-(2-abs(f-2))*.007)
@@ -255,7 +264,7 @@ for nm,pts,rad in [
  tube(nm,pts,[rad,rad*.85,rad*.55],veinmat,sides=6,deform=.010).parent=root
 # hips/lower body trail as one continuous submerged form rather than segmented tail beads
 lower=tube('submerged_lower_body',[(0,.24,.02),(0,.55,-.01),(.04,.95,-.04),(-.03,1.35,-.07),(0,1.80,-.10)],[.16,.15,.12,.085,.035],clay,rxz=(1,.75),sides=14,deform=.035); lower.parent=root
-uv('tail_cap',(0,1.82,-.10),(.04,.08,.025),clay,seg=10,rings=5,deform=.015).parent=root
+tailcap=uv('tail_cap',(0,1.82,-.10),(.04,.08,.025),clay,seg=10,rings=5,deform=.015); bindparent(tailcap,lower,(0,.24,.02))
 # tiny compatibility eye center
 uv('face_eye_necrotic_center',(.060,-.204,.948),(.004,.001,.003),dark,seg=8,rings=4,deform=0).parent=root
 
