@@ -11,30 +11,30 @@ R = random.Random(91731)
 
 # Source-true but dust-muted materials. The continuous body carries the silhouette;
 # ball-pit plastic, glazed pool tile, paper, felt, chrome and glass are surface evidence.
-BODY = mat('TenantFusedBody', (0.012, 0.0048, 0.0032), 0.99, metal=0.0)
-BODY_ALT = mat('TenantFusedBodyWarm', (0.018, 0.0065, 0.0044), 1.0, metal=0.0)
+BODY = mat('TenantFusedBody', (0.0045, 0.0022, 0.0016), 1.0, metal=0.0)
+BODY_ALT = mat('TenantFusedBodyWarm', (0.0065, 0.0028, 0.0020), 1.0, metal=0.0)
 TILE = mat('TenantPoolTile', (0.018, 0.066, 0.062), 0.68, metal=0.01)
-SKULL = mat('TenantSkullTile', (0.024, 0.031, 0.027), 0.97, metal=0.0)
+SKULL = mat('TenantSkullTile', (0.010, 0.014, 0.012), 1.0, metal=0.0)
 GROUT = mat('TenantTileGrout', (0.018, 0.028, 0.028), 0.82)
 PAPER = mat('TenantPaper', (0.105, 0.070, 0.026), 0.97)
 PAPER_DARK = mat('TenantPaperEdge', (0.055, 0.028, 0.012), 0.96)
 FELT = mat('TenantFelt', (0.035, 0.004, 0.003), 0.99)
 CHROME = mat('TenantChrome', (0.34, 0.39, 0.43), 0.2, metal=0.88)
 DARK_METAL = mat('TenantVendingMetal', (0.018, 0.028, 0.034), 0.42, metal=0.72)
-GLASS = mat('TenantRibcageGlass', (0.012, 0.040, 0.050), 0.54, metal=0.02)
+GLASS = mat('TenantRibcageGlass', (0.004, 0.012, 0.015), 0.84, metal=0.0)
 try:
     GLASS.diffuse_color = (0.025, 0.085, 0.105, 0.46)
-    GLASS.node_tree.nodes['Principled BSDF'].inputs['Alpha'].default_value = 0.12
+    GLASS.node_tree.nodes['Principled BSDF'].inputs['Alpha'].default_value = 0.045
     GLASS.surface_render_method = 'DITHERED'
 except Exception:
     pass
 BLACK = mat('TenantFaceSlot', (0.0015, 0.002, 0.002), 0.94)
 RUBBER = mat('TenantDarkRubber', (0.012, 0.009, 0.008), 0.86)
 BALLS = [
-    mat('TenantBallRed', (0.018, 0.0025, 0.002), 0.99),
-    mat('TenantBallBlue', (0.0015, 0.004, 0.010), 0.99),
-    mat('TenantBallYellow', (0.022, 0.009, 0.001), 0.99),
-    mat('TenantBallGreen', (0.0015, 0.010, 0.005), 0.99),
+    mat('TenantBallRed', (0.0035, 0.0022, 0.0020), 0.99),
+    mat('TenantBallBlue', (0.0020, 0.0025, 0.0030), 0.99),
+    mat('TenantBallYellow', (0.0035, 0.0028, 0.0020), 0.99),
+    mat('TenantBallGreen', (0.0018, 0.0030, 0.0024), 0.99),
     mat('TenantBallDark', (0.018, 0.009, 0.008), 0.91),
 ]
 
@@ -415,10 +415,10 @@ def build_arm(side):
         angle = R.random() * math.tau
         radial = path_radius(radii, u) * (0.44 + 0.18 * R.random())
         offset = mathutils.Vector((math.cos(angle) * radial, math.sin(angle) * radial * 0.9, (R.random() - 0.5) * 0.035))
-        radius = (0.072 + 0.052 * (1 - u)) * R.uniform(0.72, 1.34)
-        ball_mat = BALLS[4] if i % 5 in (0, 2, 3) else BALLS[int(R.random() * 4)]
+        radius = (0.060 + 0.043 * (1 - u)) * R.uniform(0.72, 1.22)
+        ball_mat = BALLS[4] if i % 5 != 4 else BALLS[int(R.random() * 4)]
         ob = sphere(f'arm_{side}_embedded_ball_{i}', radius, c + offset, ball_mat,
-                    scale=(1.10, 0.58 + 0.08 * (i % 2), 0.90), segments=16, rings=8)
+                    scale=(1.22, 0.42 + 0.07 * (i % 2), 0.82), segments=16, rings=8)
         add(ob, parent_control, 'ball_pit_shell')
         if i % 6 == 2:
             add(torus(f'arm_{side}_melted_seam_{i}', radius * 0.86, 0.004, c + offset * 0.65, RUBBER,
