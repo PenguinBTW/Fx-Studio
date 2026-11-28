@@ -61,3 +61,7 @@ proxy/keys.txt
 # Local sync scripts
 sync_nightly.*
 scripts/sync_nightly.*
+/.fx
+# Local scratch work and font sources (the runtime fonts + licences are tracked)
+scratch/
+app/public/fonts/src/

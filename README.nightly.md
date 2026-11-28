@@ -79,4 +79,5 @@ The complete documentation suite is under [**`docs/`**](./docs/README.md):
 - [**In-World Typography**](./docs/engine/text-lighting.md)
 - [**Multi-Track Mixdown**](./docs/audio/mixdown.md)
 - [**Autonomous Review & Feedback**](./docs/feedback/claude_fx_studio_review.md)
+- [**v0.8.0 Release Record**](./docs/changelog/v0.8.0-release-record.md)
 - [**v0.7.0 Release Record**](./docs/changelog/v0.7.0-release-record.md)

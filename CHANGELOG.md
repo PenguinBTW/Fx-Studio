@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [[v0.8.0]](docs/changelog/v0.8.0-release-record.md) - 2026-10-31
+## [[v0.8.0]](docs/changelog/v0.8.0-release-record.md) - 2026-11-28
 
 ### Added
 - **Unified Audiovisual Production Engine**:
@@ -32,6 +32,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Documentation & Agent Skills Overhaul**:
   - Comprehensive documentation updates: `docs/architecture/v0.8.0-unified-audiovisual-production.md`, `docs/audio/mixdown.md`, `docs/cli/render-cli-reference.md`.
   - Upgraded agent skills for v0.8.0: `design-around-audio`, `fx-engine`, `fx-scenes`, `sound-design-and-foley`, `video-assembly-and-finishing`.
+- **Project-Scoped Blender Asset Layer (#5, #12)**:
+  - Per-project `scenes/<project>/assets/<id>/build.py` → `model.glb` pipeline (headless Blender), named animatable parts via the `fx_part` custom property (also on instanced parts), importer animation API, asset manifests and `bun scripts/assets_check.ts <project>`.
+- **Delivery & Audio Configuration**:
+  - `project.json` declares a project's soundtrack and mix; `render.ts` uses them by default (#17).
+  - Native 9:16 vertical output (`--vertical` / `--shorts`, 1080×1920) for Shorts, Reels and TikTok (#25).
+- **Bundled Runtime Fonts (#20)**: Archivo, Cormorant Garamond and IBM Plex Mono instances (with OFL licences) ship in `app/public/fonts/`, so fresh clones render the intended faces.
+- **Example Projects & Films**:
+  - `bird_odyssey` and `dimension_flight`: a swallow's flight through five dimensions with Blender-built worlds, GPU embers, depth of field and per-world look-dev (#6–#10).
+  - `fx_promo`: a 3:34 f(x) Studio promo film (in-world type, dolly-zoom, GPU ash, raymarched KIFS Prism cathedral, infinite-zoom climax) (#14–#18).
+  - `agent_promo` / `agent_v2`: agent promo film with logo, fire, dragon, forge and origami desk sequences and scene-aware transitions (#21–#24).
+  - Vertical shorts: `agent_teaser` (#25), `freefall` (38 s looping orbit → quark → your screen, #26), `spill` (29 s mixed-style world, #28–#30).
+  - `threshold`: a first-person horror film (#194).
+- **Documentation & Skills**:
+  - Security model for nightly (#3); `fx-feedback-gui` human-review workflow and the fx-notes loop in skills (#13).
+  - Skills/docs audit: loosened over-restrictive style rules, documented headless Blender and render resolution presets, fixed dead links (#31).
+
+### Fixed
+- Engine audit of "possibly unintended" behaviour plus a Blender/engine roadmap (#2, #4).
+- Renders now fail on scene errors instead of writing black frames; no orphaned Vite servers after a render; display-stage grade, DoF depth and island defaults corrected; transition docs (#11).
+- Font loader no longer caches missing or rejected font files (#19).
+- Bird odyssey god-ray ghosting (#7); SPILL seam leftovers, camera jump, shader undefined behaviour and hose determinism (#30).
 
 ---
 

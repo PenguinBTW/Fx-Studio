@@ -80,4 +80,5 @@ The complete documentation suite is under [**`docs/`**](./docs/README.md):
 - [**Multi-Track Mixdown**](./docs/audio/mixdown.md)
 - [**Human Review GUI (fx-feedback-gui)**](./docs/feedback/review-gui.md): the recommended companion tool for reviewing renders and leaving notes for agents
 - [**Autonomous Review & Feedback**](./docs/feedback/claude_fx_studio_review.md)
+- [**v0.8.0 Release Record**](./docs/changelog/v0.8.0-release-record.md)
 - [**v0.7.0 Release Record**](./docs/changelog/v0.7.0-release-record.md)

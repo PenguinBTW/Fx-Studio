@@ -1,4 +1,4 @@
-# f(x) Studio Documentation Hub (v0.7.0)
+# f(x) Studio Documentation Hub (v0.8.0)
 
 Welcome to the central documentation hub for **f(x) Studio** (also referred to as the **Agentic Motion Design Toolset**).
 
@@ -11,6 +11,7 @@ This library provides comprehensive architectural specifications, developer auth
 ```
 docs/
 ├── changelog/                        # Release records & stability bug fix reports
+│   ├── v0.8.0-release-record.md      # v0.8.0 unified audiovisual production & asset layer release record
 │   ├── v0.7.0-release-record.md      # v0.7.0 engine overhaul & physical optics release record
 │   ├── v0.6.1-bug-fix-report.md      # v0.6.1 stability & engine audit report (24 fixes)
 │   └── v0.6.0-release-record.md      # v0.6.0 execution record (Materials, 3D Text, Optics)
@@ -133,6 +134,7 @@ docs/
 * [**Multi-Project Workspace & Manifest Architecture**](projects/project-system.md): Multi-project directory structure, `active.json` pointer, `project.json` manifest specification, scene entries, transition declarations, hot module reloading (HMR) isolation, interactive preview player hotkeys, and step-by-step project creation tutorial.
 
 ### H. Changelog & Releases
+* [**v0.8.0 Release Record: Unified Audiovisual Production Engine, Blender Asset Layer & Delivery**](changelog/v0.8.0-release-record.md): Modular audio subsystem, defineMix, spatial audio and mastering, two-tier transitions, project-scoped Blender assets, 9:16 output, bundled fonts, and the November example films.
 * [**v0.7.0 Release Record: Physical Optics, Volumetrics, Engine Modernization & Architectural Overhaul**](changelog/v0.7.0-release-record.md): Major engine release delivering physical optics (Cauchy dispersion, Descartes caustics, Wyman-Sloan spectrum), Bishop RMF ribbons, divergence-free curl noise, 500k GPU particles, multi-track audio mixdown (-14 LUFS / -1 dBTP), in-world kinetic typography, automated seam continuity, zero-allocation lazy subsystem architecture, engine file modularization, and strict type restoration.
 * [**v0.6.1 Bug Fix & Engine Audit Report**](changelog/v0.6.1-bug-fix-report.md): Complete architectural audit and stability report detailing 24 bug fixes across core rendering loops, WebGL state cache isolation, alpha premultiplication, GLTF caching, ODE springs, and FFmpeg pipeline mapping.
 * [**v0.6.0 Execution Record & Release Notes**](changelog/v0.6.0-release-record.md): Complete release notes for engine v0.6.0 (Procedural Materials, 3D Kinetic Typography, Optical DoF & Volumetrics).
