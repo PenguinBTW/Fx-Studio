@@ -117,6 +117,14 @@ export interface PostParams {
   // Cinematic Color Grading
   /** Enum look (legacy), or a per-frame lift/gamma/gain/saturation/tint grade (values, or `(t) => values`). */
   grade?: GradeEnum | GradeParams | ((t: number) => GradeParams);
+  /**
+   * Where a lift/gamma/gain grade runs. 'scene' (default): HDR linear light before the tone map, so
+   * tints on values above 1 are compressed back toward white. 'display': after the tone map, on 0..1
+   * values, so tints on bright skies and clouds survive.
+   */
+  gradeStage?: 'scene' | 'display';
+  /** 0..1 debug overlay: magenta zebra stripes on pixels whose pre-tone-map value exceeds 1 (what ACES/AgX flatten). */
+  clipView?: number;
   colorTint?: [number, number, number]; // [r, g, b] global color bias
 
   /** Output black level in display (sRGB-encoded) units: out = max(out - blackPoint, 0) / (1 - blackPoint), after grain. Default 0 (off). */
@@ -136,7 +144,7 @@ type V3 = [number, number, number];
 export interface GradeParams {
   /** Linear-light offset added after gain (scalar or [r,g,b]); default 0. */
   lift?: number | V3;
-  /** Power: out = in^(1/gamma) in linear light; default 1. */
+  /** Power: out = in^(1/gamma); default 1. Lift/gamma/gain convention: gamma > 1 brightens mid-tones, < 1 darkens them. */
   gamma?: number | V3;
   /** Linear multiplier; default 1. */
   gain?: number | V3;
@@ -288,7 +296,7 @@ ${SCALE === 1 ? `        c += texture(src, vUv + texel * vec2(-1, -1)).rgb; c +=
       uniform float volumetric, volumetricDecay;
       uniform vec2 volumetricLightPos;
       uniform int volSteps; uniform float rayStep, rayNorm, volJitter;
-      uniform int grade;
+      uniform int grade; uniform int gradeStage; uniform float clipView;
       uniform vec3 colorTint;
       uniform vec3 gradeLift, gradeGain, gradeInvGamma, gradeTint; uniform float gradeSat;
       uniform int toneMap; uniform float toneMapHue;
@@ -296,6 +304,11 @@ ${SCALE === 1 ? `        c += texture(src, vUv + texel * vec2(-1, -1)).rgb; c +=
       uniform sampler2D opticsTex; uniform vec3 opticsGain; uniform bool opticsOn;
       ${SHOULDER_GLSL}
       ${TONEMAP_GLSL}
+      vec3 liftGammaGain(vec3 col) {
+        col = mix(vec3(luma(col)), col, gradeSat);
+        col = col * gradeGain + gradeLift;
+        return pow(max(col, vec3(0.0)), gradeInvGamma) * gradeTint;
+      }
       void main() {
         vec2 uv = (vUv - 0.5) / max(zoom, 1e-4) + 0.5 - shake / res;
         vec2 dc = uv - 0.5;
@@ -370,21 +383,29 @@ ${SCALE === 1 ? `        c += texture(src, vUv + texel * vec2(-1, -1)).rgb; c +=
         } else if (grade == 4) { // infrared
           float lVal = sat(luma(col));
           col = mix(vec3(0.0, 0.05, 0.2), vec3(1.0, 0.18, 0.1), lVal);
-        } else if (grade == 5) { // per-frame lift / gamma / gain / saturation / tint (linear light)
-          col = mix(vec3(luma(col)), col, gradeSat);
-          col = col * gradeGain + gradeLift;
-          col = pow(max(col, vec3(0.0)), gradeInvGamma) * gradeTint;
+        } else if (grade == 5 && gradeStage == 0) { // per-frame lift / gamma / gain / saturation / tint (linear light)
+          col = liftGammaGain(col);
         }
         col *= colorTint;
+        vec3 hdrCol = col;
         // HUD is composited in linear space before the shoulder so it gets grain & vignette too
         vec4 h = texture(hudTex, vUv);
         if (toneMap == 0) {
-          col = mix(col, h.rgb / max(h.a, 1e-4), h.a * hud);
-          col = shoulder(col);
+          if (grade == 5 && gradeStage == 1) { // display grade before the HUD, as on the aces/agx path
+            col = mix(liftGammaGain(shoulder(col)), h.rgb / max(h.a, 1e-4), h.a * hud);
+          } else {
+            col = mix(col, h.rgb / max(h.a, 1e-4), h.a * hud);
+            col = shoulder(col);
+          }
         } else {
           // aces/agx are not identity below 1, so the HUD goes on after them (display-linear, unshifted)
           col = toneMapAlt(col, toneMap, toneMapHue);
+          if (grade == 5 && gradeStage == 1) col = liftGammaGain(col);
           col = mix(col, h.rgb / max(h.a, 1e-4), h.a * hud);
+        }
+        if (clipView > 0.0 && max(hdrCol.r, max(hdrCol.g, hdrCol.b)) > 1.0) {
+          float zebra = step(0.5, fract((gl_FragCoord.x + gl_FragCoord.y) / 16.0));
+          col = mix(col, vec3(1.0, 0.0, 1.0) * zebra, clamp(clipView, 0.0, 1.0));
         }
         col = mix(col, vec3(0.8515) - col * 0.84, invert); // ink<->bone in linear-ish space
         col += C_BONE * flash;
@@ -433,7 +454,7 @@ ${SCALE === 1 ? `        float g1 = hash12(gl_FragCoord.xy + fract(time * 13.37)
       zoom: { value: 1 }, invert: { value: 0 }, transparent: { value: false }, shake: { value: new THREE.Vector2() }, res: { value: new THREE.Vector2(W, H) },
       dof: { value: 0 }, focusDist: { value: 0.5 }, focalRange: { value: 0.15 }, dofRadius: { value: 4.0 },
       volumetric: { value: 0 }, volumetricDecay: { value: 0.94 }, volumetricLightPos: { value: new THREE.Vector2(0.5, 0.2) },
-      grade: { value: 0 }, colorTint: { value: new THREE.Vector3(1, 1, 1) },
+      grade: { value: 0 }, gradeStage: { value: 0 }, clipView: { value: 0 }, colorTint: { value: new THREE.Vector3(1, 1, 1) },
       volSteps: { value: 10 }, rayStep: { value: 0.1 }, rayNorm: { value: 1 }, volJitter: { value: 0 },
       gradeLift: { value: new THREE.Vector3() }, gradeGain: { value: new THREE.Vector3(1, 1, 1) }, gradeInvGamma: { value: new THREE.Vector3(1, 1, 1) },
       gradeTint: { value: new THREE.Vector3(1, 1, 1) }, gradeSat: { value: 1 },
@@ -548,6 +569,8 @@ ${SCALE === 1 ? `        float g1 = hash12(gl_FragCoord.xy + fract(time * 13.37)
       f.gradeSat!.value = gp.saturation ?? 1;
     }
     f.grade!.value = gradeIdx;
+    f.gradeStage!.value = p.gradeStage === 'display' ? 1 : 0;
+    f.clipView!.value = p.clipView ?? 0;
     f.toneMap!.value = p.toneMap === 'aces' ? 1 : p.toneMap === 'agx' ? 2 : 0;
     f.toneMapHue!.value = p.toneMapHue ?? 0;
     f.blackPoint!.value = Math.min(0.99, Math.max(0, p.blackPoint ?? 0));

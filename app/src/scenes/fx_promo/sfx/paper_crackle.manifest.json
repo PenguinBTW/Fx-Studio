@@ -1,0 +1,18 @@
+{
+  "id": "paper_crackle",
+  "eventId": null,
+  "recipe": "tick",
+  "seed": 455,
+  "file": "paper_crackle.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 0.35,
+  "hitOffsetSec": 0,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.03015642621929731,
+  "rmsDb": -30.412402543314304,
+  "eventTime": null,
+  "startTime": null
+}

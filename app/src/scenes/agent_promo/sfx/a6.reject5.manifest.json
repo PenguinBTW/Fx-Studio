@@ -1,0 +1,18 @@
+{
+  "id": "a6.reject5",
+  "eventId": null,
+  "recipe": "thrum",
+  "seed": 1191,
+  "file": "a6.reject5.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 0.22,
+  "hitOffsetSec": 0,
+  "peak": 0.6309573444801932,
+  "peakDb": -4,
+  "rms": 0.12936374690010277,
+  "rmsDb": -17.76374827970895,
+  "eventTime": null,
+  "startTime": null
+}

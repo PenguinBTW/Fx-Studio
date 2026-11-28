@@ -1,0 +1,18 @@
+{
+  "id": "t.flare",
+  "eventId": null,
+  "recipe": "reverseReverb",
+  "seed": 192,
+  "file": "t.flare.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 2.1199791666666665,
+  "hitOffsetSec": 0.9999791666666666,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.059925327607908606,
+  "rmsDb": -24.447791660556835,
+  "eventTime": null,
+  "startTime": null
+}

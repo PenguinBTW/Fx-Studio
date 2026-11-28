@@ -14,6 +14,7 @@ Diagnostic standards, visual inspection tooling, Kinematic Telemetry Engine prot
 - Running automated 60 fps kinematic telemetry to detect collisions, clipping, or performance spikes.
 - Logging justified creative waivers in `findings.json`.
 - Running headless CLI export and capture commands (`scripts/render.ts`) with GPU hardware acceleration.
+- Filing renders for human review and resolving reviewer notes from fx-feedback-gui (§6.3).
 
 ---
 
@@ -81,7 +82,7 @@ The telemetry engine downsamples frames via a fast $4 \times 4$ box filter to **
 - **Rec.709 Luma & Contrast:** $Y = 0.2126 R + 0.7152 G + 0.0722 B$.
 - **Motion Energy $E$ & Burst $E_{p95}$:** Frame-to-frame absolute luma difference, with 95th percentile local patch tracking.
 - **2D FFT Optical Flow $(u, v)$:** Phase correlation via Cooley-Tukey FFT isolating bulk camera velocity.
-- **CIE $L^*a^*b^*$ Gamut Conformity ($\Delta E_{76}$):** Color distance against approved project palette tokens.
+- **CIE $L^*a^*b^*$ Gamut Conformity ($\Delta E_{76}$):** Color distance against the `--palette` swatches (fixed defaults if omitted).
 - **Edge Shimmer Index:** Second-order temporal derivative of Sobel edge pixels detecting aliasing or sub-pixel chatter.
 
 ---
@@ -153,10 +154,14 @@ Run commands through Bun and Playwright to generate test assets or production ex
 
 ```bash
 # Capture individual still frames for inspection
-bun scripts/render.ts stills --project <name> --t 1.5,8.0,14.2 --out out/stills/
+bun scripts/render.ts stills --project <name> --t 1.5,8.0,14.2 --out .fx/captures/<name>/<run>/
 
 # Generate a 24-frame contact sheet grid across a scene or timeline
 bun scripts/render.ts sheet --project <name> --from 0 --to 30 --n 24 --cols 6 --out out/sheet.png
+
+# Seam sheet: 4 frames around every scene start. --cuts replaces --times, so render
+# transition-window ends in a separate sheet: --times <end1>,<end2>,...
+bun scripts/render.ts sheet --project <name> --cuts --out out/seams.png
 
 # Run 60 fps kinematic telemetry pass
 bun scripts/render.ts motion --project <name> --from 0 --to 30 --out out/telemetry/
@@ -178,6 +183,14 @@ bun scripts/render.ts video --project <name> --from 0 --to 30 --fps 60 --gpu --s
 - When running automated renders or test sheets, always bind to an explicit isolated port (`--url http://localhost:53xx`).
 - Avoid defaulting to port `:5173` without checking; if another development project is running on `:5173`, Playwright will silently render the wrong project's canvas.
 
+### 6.3 Human Review Loop (fx-feedback-gui) [RULE]
+Humans review in [fx-feedback-gui](https://github.com/PenguinBTW/fx-feedback-gui), a companion repo cloned next to this one. Full guide: [`docs/feedback/review-gui.md`](../../../docs/feedback/review-gui.md).
+- **File every still you inspect** under `.fx/captures/<project>/<run>/`, keeping the `f_<t>.png` names. Anything in `out/` is shown to the reviewer as *Unfiled*, with no project.
+- **Before finishing, check notes:** run `bun ../fx-feedback-gui/bin/fx-notes.ts list --status open` from the repo root, then `show <id>` for each. A note has a time range, markers with a frame, box or lasso, world point and entity, crops, and a re-render command.
+- **Resolve a note:** fix it, re-render with the note's command, then run `fx-notes fix <id> -m "what changed"`. Never mark a note accepted; only the human does. Use `reply` for questions.
+- **Approved captures:** `fx-notes captures` and `.fx/notes/NOTES.md` list them. Treat them as the look to keep.
+- **Name what you build:** set `mesh.name` and `userData.fx_entity` on scene-built meshes (instanced asset parts, procedural props) so reviewer picks name them.
+
 ---
 
 ## 7. Quality Assurance Verification Checklist
@@ -190,3 +203,4 @@ Before approving any scene, transition, or video export:
 - [ ] **Kinetic Easing:** Evaluated `onion_motion.png` to confirm smooth ghost spacing without erratic acceleration hitches.
 - [ ] **Seam Continuity:** Evaluated `onion_seam.png` and `strip_seam.png` across transition cuts to confirm zero horizon tilt pop.
 - [ ] **Contact Sheet Review:** Inspected multi-frame sheet (`sheet.png`) for visual rhythm and narrative balance.
+- [ ] **Human Notes:** No open or reopened fx-feedback-gui notes are left unaddressed (`fx-notes list --status open`), and every inspected still is filed under `.fx/captures/<project>/`.

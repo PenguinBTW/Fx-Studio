@@ -7,6 +7,7 @@
 import type { TimelineEntry } from './engine/engine';
 import type { SceneClass } from './engine/scene';
 import { validateTransition, type TransitionClass, type TransitionEntry } from './engine/transition';
+import { createTransitionResolver, setTransitionRegistry } from './engine/transitions/registry';
 import {
   buildTimelineEntries,
   buildTransitionEntries,
@@ -22,6 +23,7 @@ import activePointer from './scenes/active.json';
 // Recursive glob: scenes/<project>/<scene>.ts (and legacy root scenes/<scene>.ts).
 const sceneModules = import.meta.glob<{ default: SceneClass }>('./scenes/**/*.ts');
 const transitionModules = import.meta.glob<{ default: TransitionClass }>('./transitions/*.ts');
+const localTransitionModules = import.meta.glob<{ default: TransitionClass }>('./scenes/*/transitions/*.ts');
 const manifestFiles = import.meta.glob<ProjectManifest>('./scenes/{*,_prereq_demos/*}/project.json', {
   eager: true,
   import: 'default',
@@ -43,7 +45,16 @@ const transition = (name: string) => () => {
   return m ? m() : Promise.reject(new Error(`transition module not found: transitions/${name}.ts`));
 };
 
-function loadManifest(project?: string | null): ProjectManifest {
+/** Project name the timeline will load (URL param, then `scenes/active.json`, then default). */
+export function activeProjectName(project?: string | null): string {
+  return resolveProjectName({
+    urlProject: project,
+    pointer: (activePointer as { project?: string } | null)?.project ?? null,
+    available: Object.keys(manifests),
+  });
+}
+
+export function loadManifest(project?: string | null): ProjectManifest {
   const available = Object.keys(manifests);
   const want = resolveProjectName({
     urlProject: project,
@@ -64,7 +75,12 @@ export function makeTimeline(
 
 export function makeTransitions(project?: string | null): TransitionEntry[] {
   const manifest = loadManifest(project);
-  const trs = buildTransitionEntries(manifest, transition);
+  setTransitionRegistry({
+    local: localTransitionModules as any,
+    global: transitionModules as any,
+  });
+  const trResolver = createTransitionResolver(manifest.project);
+  const trs = buildTransitionEntries(manifest, trResolver);
   const entries = buildTimelineEntries(manifest, scene);
   for (const tr of trs) {
     const errs = validateTransition(tr, entries);

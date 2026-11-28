@@ -62,6 +62,7 @@ renderer.resetState();
 ### 2.2 Closed-Form Temporal Evaluation: $\text{Frame} = f(t)$
 - All state throughout the engine must be evaluated as a stateless, closed-form function of time $t$.
 - **Zero Simulation Accumulators:** Never introduce frame-by-frame accumulators (`state += delta * dt`).
+- **No Previous-Frame Reads:** Never read a value that this frame sets later (e.g. `cam.position` before the camera is placed). Stills, seeks and sub-samples render out of order, so it gives different results in stills and video.
 - **Why:** During offline export, the engine performs adaptive ternary supersampling (up to 324 spp within $[t - \frac{\text{shutter}}{2}, t + \frac{\text{shutter}}{2}]$) and supports arbitrary scrubbing. State accumulation breaks random-access seeking and causes particle and spring simulations to diverge.
 
 ### 2.3 HalfFloat HDR Linear Target Allocation

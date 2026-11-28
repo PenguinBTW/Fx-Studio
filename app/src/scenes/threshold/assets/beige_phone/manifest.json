@@ -1,0 +1,17 @@
+{
+  "id": "beige_phone",
+  "version": 1,
+  "source": "build.py",
+  "budgets": { "tris": 15000, "textureMB": 0 },
+  "scale": 1,
+  "parts": {
+    "root": "beige_phone_root",
+    "base": "base_shell",
+    "receiver": "receiver",
+    "keypad": "key_0",
+    "cord": "coiled_cord",
+    "bell": "bell_-1",
+    "hooks": "hook_-1"
+  },
+  "notes": "THRESHOLD recurring beige phone core. Real scale 1 unit = 1 m; desk phone approximately 0.24 m wide. Zone material variants preserve this silhouette and part logic."
+}

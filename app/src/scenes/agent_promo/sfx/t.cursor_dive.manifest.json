@@ -1,0 +1,18 @@
+{
+  "id": "t.cursor_dive",
+  "eventId": null,
+  "recipe": "whoosh",
+  "seed": 81,
+  "file": "t.cursor_dive.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 0.7,
+  "hitOffsetSec": 0.42,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.08472957737958683,
+  "rmsDb": -21.43929919587299,
+  "eventTime": null,
+  "startTime": null
+}

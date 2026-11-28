@@ -1,0 +1,18 @@
+{
+  "id": "vortex_air",
+  "eventId": null,
+  "recipe": "windRise",
+  "seed": 788,
+  "file": "vortex_air.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 3.89,
+  "hitOffsetSec": 0,
+  "peak": 0.3981071705534972,
+  "peakDb": -8.000000000000002,
+  "rms": 0.05473013997147678,
+  "rmsDb": -25.235468823094624,
+  "eventTime": null,
+  "startTime": null
+}

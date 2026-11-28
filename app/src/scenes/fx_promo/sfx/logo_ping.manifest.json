@@ -1,0 +1,18 @@
+{
+  "id": "logo_ping",
+  "eventId": null,
+  "recipe": "glassPing",
+  "seed": 825,
+  "file": "logo_ping.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 11.299979166666667,
+  "hitOffsetSec": 0.7999791666666667,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.03601402647919475,
+  "rmsDb": -28.870566409042855,
+  "eventTime": null,
+  "startTime": null
+}

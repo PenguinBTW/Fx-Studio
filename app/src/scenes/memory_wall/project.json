@@ -1,0 +1,38 @@
+{
+  "project": "memory_wall",
+  "meta": {
+    "title": "The Memory Wall: The Physical Limits of Computation",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 20.0
+  },
+  "audio": {
+    "soundtrack": "audio/soundtrack_22s.wav",
+    "bpm": 110.51
+  },
+  "mix": "audio/mix.ts",
+  "entries": [
+    {
+      "scene": "memory_wall/scene_core",
+      "id": "core_crucible",
+      "start": 0.0,
+      "end": 11.8
+    },
+    {
+      "scene": "memory_wall/scene_chasm",
+      "id": "interconnect_chasm",
+      "start": 10.8,
+      "end": 20.5
+    }
+  ],
+  "transitions": [
+    {
+      "id": "T1",
+      "transition": "aperture_push",
+      "from": "core_crucible",
+      "to": "interconnect_chasm",
+      "at": 10.8,
+      "dur": 1.0
+    }
+  ]
+}

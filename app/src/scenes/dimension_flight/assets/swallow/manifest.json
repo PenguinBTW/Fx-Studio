@@ -1,0 +1,9 @@
+{
+  "id": "swallow",
+  "version": 1,
+  "source": "build.py",
+  "materials": { "Plumage": "plumage" },
+  "clips": { "Flap": { "loop": true }, "Glide": { "loop": true }, "Tuck": { "loop": true } },
+  "budgets": { "tris": 40000, "textureMB": 1 },
+  "load": { "castShadow": true }
+}

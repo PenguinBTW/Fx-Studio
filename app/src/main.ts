@@ -1,8 +1,8 @@
 // Entry: preview player (default) or export mode (?export=1, driven by scripts/render.ts).
 import { Engine, type AdaptiveSampling } from './engine/engine';
-import { PW, PH, SCALE } from './engine/gl';
-import { BRIDGE_VERSION, type EngineBridge, type TextProbeRecord } from './engine/bridge';
-import { makeTimeline, makeTransitions } from './timeline';
+import { PW, PH, SCALE, W, H } from './engine/gl';
+import { BRIDGE_VERSION, textureCanvases, type EngineBridge, type TextProbeRecord } from './engine/bridge';
+import { makeTimeline, makeTransitions, activeProjectName, loadManifest } from './timeline';
 import { installFxStats, exposeFxStats } from './engine/fxstats';
 
 const params = new URLSearchParams(location.search);
@@ -12,10 +12,22 @@ const ONLY = params.get('only'); // comma-separated scene ids to load (faster st
 const PROJECT = params.get('project'); // project folder in scenes/ (falls back to active.json pointer)
 const FROM = params.get('t') ? parseFloat(params.get('t')!) : (params.get('from') ? parseFloat(params.get('from')!) : null);
 
+// The logical size is fixed at module load, so a project with its own "size" reloads with ?size= set.
+// An explicit ?size= (render.ts --size) wins; an unknown project falls through to the boot error handler.
+const MANIFEST = (() => { try { return loadManifest(PROJECT); } catch { return null; } })();
+const WANT_SIZE = MANIFEST?.size;
+if (WANT_SIZE && !params.has('size') && (WANT_SIZE[0] !== W || WANT_SIZE[1] !== H)) {
+  params.set('size', `${WANT_SIZE[0]}x${WANT_SIZE[1]}`);
+  location.replace(`${location.pathname}?${params}`);
+}
+const AUDIO_OFFSET = MANIFEST?.audioOffset ?? 0;
+
 const canvas = document.getElementById('c') as HTMLCanvasElement;
-// physical size: 1920x1080 times ?scale= (the page CSS keeps showing it at 1920x1080)
+// physical size: the logical W x H times ?scale= (the page CSS keeps showing it at W x H)
 canvas.width = PW;
 canvas.height = PH;
+canvas.style.aspectRatio = `${W} / ${H}`;
+if (EXPORT) { canvas.style.width = `${W}px`; canvas.style.height = `${H}px`; }
 
 const engine = new Engine(canvas, (ly, au, driver) => makeTimeline(ly, au, driver, PROJECT));
 
@@ -23,7 +35,9 @@ let TIMELINE: typeof engine.timeline = [];
 
 async function boot() {
   const onlySet = ONLY ? new Set(ONLY.split(',')) : null;
+  engine.project = activeProjectName(PROJECT);
   engine.transitions = makeTransitions(PROJECT);
+  engine.trimToTimeline = Boolean(loadManifest(PROJECT).trimToTimeline);
   await engine.init(onlySet ? (e) => onlySet.has(e.id) || (Boolean(e.file) && onlySet.has(e.file!)) : undefined);
   TIMELINE = engine.timeline;
   if (EXPORT) { exposeFxStats(engine.renderer); setupExport(); }
@@ -38,7 +52,7 @@ function installTextProbeHook() {
 
   function recordCall(ctx: CanvasRenderingContext2D, text: any, x: number, y: number, isStroke: boolean) {
     const P = window.__motion ?? window.__pdoom;
-    if (!P?.probe || P.recordText === false) return;
+    if (!P?.probe || P.recordText === false || textureCanvases.has(ctx.canvas)) return;
     const str = String(text ?? '');
     if (!str || !str.trim()) return;
 
@@ -120,7 +134,7 @@ function setupExport() {
     engine,
     duration: engine.duration,
     errors: engine.errors,
-    /** Output size in px (1920x1080 times scale); stream() sends frames of width*height*4 bytes. */
+    /** Output size in px (W x H times scale); stream() sends frames of width*height*4 bytes. */
     scale: SCALE,
     width: PW,
     height: PH,
@@ -277,7 +291,7 @@ function setupPlayer() {
   const seek = (x: number) => {
     t = Math.max(0, Math.min(engine.duration - 0.001, x));
     lastPerf = performance.now();
-    if (audio && audioAvailable && !audio.error) audio.currentTime = t;
+    if (audio && audioAvailable && !audio.error) audio.currentTime = t + AUDIO_OFFSET;
   };
   seek(t);
 
@@ -286,7 +300,7 @@ function setupPlayer() {
     lastPerf = performance.now();
     if (playing) {
       if (audio && audioAvailable && !audio.error) {
-        audio.currentTime = t;
+        audio.currentTime = t + AUDIO_OFFSET;
         audio.play().catch(() => { audioAvailable = false; });
       }
     } else {
@@ -316,8 +330,11 @@ function setupPlayer() {
       const now = performance.now();
       if (audio && audioAvailable && !audio.error && !audio.paused) {
         if (audio.currentTime !== lastAudioT) { lastAudioT = audio.currentTime; lastPerf = now; }
-        t = lastAudioT + (now - lastPerf) / 1000;
-        if (audio.ended) playing = false;
+        t = lastAudioT - AUDIO_OFFSET + (now - lastPerf) / 1000;
+        if (audio.ended || t >= engine.duration) {
+          if (loop) seek(loop[0]);
+          else { audio.pause(); t = Math.min(t, engine.duration); playing = false; }
+        }
       } else {
         const dt = (now - lastPerf) / 1000;
         lastPerf = now;

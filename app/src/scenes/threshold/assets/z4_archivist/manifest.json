@@ -1,0 +1,12 @@
+{
+  "model": "model.glb",
+  "parts": {
+    "root": "archivist_root",
+    "spine": "spine_control",
+    "face": "blank_face_page",
+    "mouth": "mouth_crease_main",
+    "arm_l": "arm_l_root",
+    "arm_r": "arm_r_root"
+  },
+  "budgets": { "tris": 100000, "textureMB": 0 }
+}

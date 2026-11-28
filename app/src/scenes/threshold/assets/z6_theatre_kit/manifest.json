@@ -1,0 +1,20 @@
+{
+  "id": "z6_theatre_kit",
+  "version": 1,
+  "source": "build.py",
+  "budgets": { "tris": 140000, "textureMB": 0 },
+  "scale": 1,
+  "parts": {
+    "root": "z6_theatre_kit_root",
+    "seat_module": "theatre_seat_root",
+    "flashlight_puppet": "flashlight_puppet_root",
+    "tenant_puppet": "tenant_puppet_root",
+    "office_recap": "office_recap_root",
+    "ballpit_recap": "ballpit_recap_root",
+    "pool_recap": "pool_recap_root",
+    "book_recap": "book_recap_root",
+    "house_tableau": "house_tableau_root",
+    "backstage_props": "backstage_props_root"
+  },
+  "notes": "THRESHOLD Z6 modular felt theatre kit. Modules are spatially separated for review; clone named module nodes and reset their position when integrating. Real scale 1 unit = 1 m."
+}

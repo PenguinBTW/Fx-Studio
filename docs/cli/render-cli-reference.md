@@ -1,6 +1,6 @@
 # Headless Render CLI Reference (`bun scripts/render.ts`)
 
-The master offline rendering utility in **f(x) Studio** is invoked via `bun scripts/render.ts` (or the direct wrapper scripts in the root `scripts/` directory).
+The master offline rendering utility in **f(x) Studio** is invoked via `bun scripts/render.ts` from `app/`. For a guided render, run the interactive wizard at the repo root: `./render` (bash) or `render.bat` / `render.ps1` (Windows). It lists projects and asks for options; any arguments are passed straight to `render.ts video`.
 
 It controls a headless Playwright Chrome session in deterministic export mode (`?export=1`), driving frame evaluation, image analysis, visual diagnostics, and video encoding.
 
@@ -41,6 +41,9 @@ bun scripts/render.ts sheet --from 0 --to 30 --n 24 --cols 6 --out out/sheet.png
 # Export high-fidelity video with audio & AMD AMF hardware encoding
 bun scripts/render.ts video --from 0 --to 125 --fps 60 --gpu --samples 8 --out out/final.mp4
 
+# Export audio only (sample-exact mixdown & mastering without rendering video frames)
+bun scripts/render.ts audio --from 0 --to 125 --out out/master.wav --mp3
+
 # Benchmark render turnaround and GPU memory
 bun scripts/render.ts perf --from 10 --to 20 --samples 1
 
@@ -61,7 +64,10 @@ bun scripts/render.ts compare --active-scene act2 --ref-scene benchmark
 | Flag | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `--project <name>` | string | Active pointer (`active.json`) | Target project directory in `app/src/scenes/` (e.g. `--project brand_campaign` or `--project product_reveal`). Overrides `active.json` without modifying disk. |
-| `--scale <n>` | integer ($1 \dots 4$) | `1` | Render scale multiplier. `--scale 1` = $1920 \times 1080$; `--scale 2` = $3840 \times 2160$ (4K UHD). |
+| `--size <WxH>` | string | project.json `size`, else `1920x1080` | Logical canvas, e.g. `1080x1920` for vertical. |
+| `--720p` / `--1080p` / `--4k` | flag | None | Resolution presets that keep the project orientation. `--4k` is `--scale 2` on whatever canvas is selected (3840x2160 only from a 1920x1080 canvas). Same as `--res 720p`. |
+| `--vertical` (`--shorts`, `--portrait`) / `--horizontal` (`--landscape`) | flag | None | Force 9:16 or 16:9 when the project is the other way round. |
+| `--scale <n>` | integer ($1 \dots 4$) | `1` | Multiplies the logical canvas: `--scale 2` on 1920x1080 = $3840 \times 2160$ (4K UHD). |
 | `--samples <n\|auto>` | integer / `auto` | Mode dependent | Number of sub-frames averaged per output frame over the shutter window. Defaults to `1` for `motion`, `1` or `8` for `video`. `--samples auto` enables adaptive supersampling ($4 \dots 324$ spp). |
 | `--shutter <ratio>` | float ($0.0 \dots 1.0$) | Mode dependent | Shutter angle fraction of frame duration. Defaults to `0` (sharp) for `motion`; `0.5` ($180^\circ$ cinema shutter) for `video` and `stills`. |
 | `--only <ids>` | string | None | Comma-separated scene IDs to isolate. All other entries are skipped. |
@@ -134,7 +140,30 @@ bun scripts/render.ts video --from 0 --to 125 --fps 60 --crf 16 --gpu --out out/
 
 ---
 
-### 3.4 `perf` (Turnaround & Memory Profiling)
+### 3.4 `audio` (Master Mixdown & Soundtrack Audio Export)
+Renders the complete mastered audio track without rendering or encoding video frames. Resolves project timeline and scene-local events, processes multi-stem NLE soundtracks (`defineMix`), executes 3D object-bound spatial audio from visual telemetry streams (`events.jsonl`), applies split-band ducking and vocal sanctuary dynamic EQ via `mixdown.ts`, and outputs an EBU R128 mastered WAV file (and optional 320 kbps MP3).
+
+```bash
+# Render master audio mix from TypeScript mix manifest:
+bun scripts/render.ts audio --project spacecraft_docking --mix scenes/spacecraft_docking/audio/mix.ts --from 0 --to 45 --out out/audio.wav --mp3
+
+# Render with explicit telemetry stream and secondary foley guide output:
+bun scripts/render.ts audio --mix mix.ts --events out/events.jsonl --from 0 --to 125 --out out/audio.wav --foley-out out/foley_guide.wav
+```
+
+| Flag | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `--mix <path>` | file path | Auto-detected | Multi-stem mix manifest (`mix.ts` or `mix.json`). |
+| `--from <seconds>` | float | `0.0` | Start of audio timeline. |
+| `--to <seconds>` | float | Duration | End of audio timeline. |
+| `--out <path>` | file path | project.json `audio`, else `../out/audio.wav` | Master destination (`.mp3` is encoded from the mixdown WAV). |
+| `--foley-out <path>`| file path | None | Auxiliary foley guide stem destination. |
+| `--events-out <path>`| file path | Auto-detected | Destination for resolved event timestamp table or `events.jsonl`. |
+| `--mp3` | flag | `false` | Also encodes a 320 kbps MP3 alongside the master WAV. |
+
+---
+
+### 3.5 `perf` (Turnaround & Memory Profiling)
 Measures per-frame render turnaround time, GPU synchronization latency, and memory stability.
 
 ```bash
@@ -145,7 +174,7 @@ bun scripts/render.ts perf --from 0 --to 10 --samples 1
 
 ---
 
-### 3.5 `motion` (Visual Telemetry & Kinematics)
+### 3.6 `motion` (Visual Telemetry & Kinematics)
 Runs the full 60fps telemetry suite, evaluating rules F01–F16 and generating `report.md`, `findings.json`, and timeseries plots.
 
 ```bash
@@ -156,7 +185,7 @@ bun scripts/render.ts motion --from 0 --to 30 --out out/motion_audit/
 
 ---
 
-### 3.6 Diagnostic Visual Instruments (`godview`, `onion`, `stitch`, `compare`)
+### 3.7 Diagnostic Visual Instruments (`godview`, `onion`, `stitch`, `compare`)
 - `godview`: Orthographic 3D camera flight blueprint.
 - `onion`: Multi-exposure chromatic motion trail composite.
 - `stitch`: Transition boundary false-color overlay & filmstrip.

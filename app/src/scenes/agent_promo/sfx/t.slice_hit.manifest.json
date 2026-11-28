@@ -1,0 +1,18 @@
+{
+  "id": "t.slice_hit",
+  "eventId": null,
+  "recipe": "subHit",
+  "seed": 303,
+  "file": "t.slice_hit.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 1.4,
+  "hitOffsetSec": 0,
+  "peak": 0.8912509381337456,
+  "peakDb": -0.9999999999999997,
+  "rms": 0.2213629984640779,
+  "rmsDb": -13.097899422157447,
+  "eventTime": null,
+  "startTime": null
+}

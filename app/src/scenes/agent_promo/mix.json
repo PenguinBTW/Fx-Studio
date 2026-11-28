@@ -1,0 +1,431 @@
+{
+  "sampleRate": 48000,
+  "buses": {
+    "music": {
+      "gainDb": 0
+    },
+    "sfx": {
+      "gainDb": -2
+    },
+    "sub": {
+      "gainDb": -3
+    }
+  },
+  "stems": [
+    {
+      "id": "soundtrack",
+      "file": "../../../public/audio/agent_cut.mp3",
+      "bus": "music",
+      "at": 0,
+      "gainDb": 0
+    },
+    {
+      "id": "a0.type",
+      "file": "sfx/a0.type.wav",
+      "bus": "sfx",
+      "at": 0.45,
+      "gainDb": -22,
+      "pan": 0
+    },
+    {
+      "id": "t.cursor_dive",
+      "file": "sfx/t.cursor_dive.wav",
+      "bus": "sfx",
+      "at": 5.2,
+      "gainDb": -24,
+      "pan": 0
+    },
+    {
+      "id": "a1.punch",
+      "file": "sfx/a1.punch.wav",
+      "bus": "sfx",
+      "at": 7.457,
+      "gainDb": -21,
+      "pan": 0
+    },
+    {
+      "id": "t.tape_lift",
+      "file": "sfx/t.tape_lift.wav",
+      "bus": "sfx",
+      "at": 16.35,
+      "gainDb": -22,
+      "pan": 0
+    },
+    {
+      "id": "t.flare",
+      "file": "sfx/t.flare.wav",
+      "bus": "sfx",
+      "at": 27.02,
+      "gainDb": -24,
+      "pan": 0
+    },
+    {
+      "id": "a3.rotors",
+      "file": "sfx/a3.rotors.wav",
+      "bus": "sfx",
+      "at": 28.2,
+      "gainDb": -28,
+      "pan": 0
+    },
+    {
+      "id": "t.slice",
+      "file": "sfx/t.slice.wav",
+      "bus": "sfx",
+      "at": 37.0,
+      "gainDb": -20,
+      "pan": 0
+    },
+    {
+      "id": "t.slice_hit",
+      "file": "sfx/t.slice_hit.wav",
+      "bus": "sub",
+      "at": 37.35,
+      "gainDb": -20,
+      "pan": 0
+    },
+    {
+      "id": "a4.verbs",
+      "file": "sfx/a4.verbs.wav",
+      "bus": "sfx",
+      "at": 37.42,
+      "gainDb": -22,
+      "pan": 0
+    },
+    {
+      "id": "t.shutter",
+      "file": "sfx/t.shutter.wav",
+      "bus": "sfx",
+      "at": 57.95,
+      "gainDb": -16,
+      "pan": 0
+    },
+    {
+      "id": "t.shutter_ping",
+      "file": "sfx/t.shutter_ping.wav",
+      "bus": "sfx",
+      "at": 57.3,
+      "gainDb": -26,
+      "pan": 0
+    },
+    {
+      "id": "a5.print0",
+      "file": "sfx/a5.print0.wav",
+      "bus": "sfx",
+      "at": 58.085,
+      "gainDb": -26,
+      "pan": -0.3
+    },
+    {
+      "id": "a5.print1",
+      "file": "sfx/a5.print1.wav",
+      "bus": "sfx",
+      "at": 61.05,
+      "gainDb": -26,
+      "pan": -0.21999999999999997
+    },
+    {
+      "id": "a5.print2",
+      "file": "sfx/a5.print2.wav",
+      "bus": "sfx",
+      "at": 63.05,
+      "gainDb": -26,
+      "pan": -0.13999999999999999
+    },
+    {
+      "id": "a5.print3",
+      "file": "sfx/a5.print3.wav",
+      "bus": "sfx",
+      "at": 64.98,
+      "gainDb": -26,
+      "pan": -0.06
+    },
+    {
+      "id": "a5.print4",
+      "file": "sfx/a5.print4.wav",
+      "bus": "sfx",
+      "at": 66.82,
+      "gainDb": -26,
+      "pan": 0.020000000000000018
+    },
+    {
+      "id": "a5.print5",
+      "file": "sfx/a5.print5.wav",
+      "bus": "sfx",
+      "at": 67.82,
+      "gainDb": -26,
+      "pan": 0.10000000000000003
+    },
+    {
+      "id": "a5.print6",
+      "file": "sfx/a5.print6.wav",
+      "bus": "sfx",
+      "at": 68.287,
+      "gainDb": -26,
+      "pan": 0.18
+    },
+    {
+      "id": "a5.print7",
+      "file": "sfx/a5.print7.wav",
+      "bus": "sfx",
+      "at": 68.755,
+      "gainDb": -26,
+      "pan": 0.26000000000000006
+    },
+    {
+      "id": "t.drop",
+      "file": "sfx/t.drop.wav",
+      "bus": "sub",
+      "at": 69.15,
+      "gainDb": -18,
+      "pan": 0
+    },
+    {
+      "id": "a6.mark0",
+      "file": "sfx/a6.mark0.wav",
+      "bus": "sfx",
+      "at": 72.892,
+      "gainDb": -27,
+      "pan": 0
+    },
+    {
+      "id": "a6.reject0",
+      "file": "sfx/a6.reject0.wav",
+      "bus": "sub",
+      "at": 73.792,
+      "gainDb": -24,
+      "pan": 0
+    },
+    {
+      "id": "a6.mark1",
+      "file": "sfx/a6.mark1.wav",
+      "bus": "sfx",
+      "at": 75.696,
+      "gainDb": -27,
+      "pan": 0
+    },
+    {
+      "id": "a6.reject1",
+      "file": "sfx/a6.reject1.wav",
+      "bus": "sub",
+      "at": 76.596,
+      "gainDb": -24,
+      "pan": 0
+    },
+    {
+      "id": "a6.mark2",
+      "file": "sfx/a6.mark2.wav",
+      "bus": "sfx",
+      "at": 78.5,
+      "gainDb": -27,
+      "pan": 0
+    },
+    {
+      "id": "a6.reject2",
+      "file": "sfx/a6.reject2.wav",
+      "bus": "sub",
+      "at": 79.4,
+      "gainDb": -24,
+      "pan": 0
+    },
+    {
+      "id": "a6.mark3",
+      "file": "sfx/a6.mark3.wav",
+      "bus": "sfx",
+      "at": 81.305,
+      "gainDb": -27,
+      "pan": 0
+    },
+    {
+      "id": "a6.reject3",
+      "file": "sfx/a6.reject3.wav",
+      "bus": "sub",
+      "at": 82.205,
+      "gainDb": -24,
+      "pan": 0
+    },
+    {
+      "id": "a6.mark4",
+      "file": "sfx/a6.mark4.wav",
+      "bus": "sfx",
+      "at": 84.109,
+      "gainDb": -27,
+      "pan": 0
+    },
+    {
+      "id": "a6.reject4",
+      "file": "sfx/a6.reject4.wav",
+      "bus": "sub",
+      "at": 85.009,
+      "gainDb": -24,
+      "pan": 0
+    },
+    {
+      "id": "a6.mark5",
+      "file": "sfx/a6.mark5.wav",
+      "bus": "sfx",
+      "at": 86.913,
+      "gainDb": -27,
+      "pan": 0
+    },
+    {
+      "id": "a6.reject5",
+      "file": "sfx/a6.reject5.wav",
+      "bus": "sub",
+      "at": 87.813,
+      "gainDb": -24,
+      "pan": 0
+    },
+    {
+      "id": "a6.mark6",
+      "file": "sfx/a6.mark6.wav",
+      "bus": "sfx",
+      "at": 89.718,
+      "gainDb": -27,
+      "pan": 0
+    },
+    {
+      "id": "a6.reject6",
+      "file": "sfx/a6.reject6.wav",
+      "bus": "sub",
+      "at": 90.618,
+      "gainDb": -24,
+      "pan": 0
+    },
+    {
+      "id": "a6.accept",
+      "file": "sfx/a6.accept.wav",
+      "bus": "sfx",
+      "at": 77.417,
+      "gainDb": -24,
+      "pan": 0
+    },
+    {
+      "id": "t.rewind",
+      "file": "sfx/t.rewind.wav",
+      "bus": "sfx",
+      "at": 98.2,
+      "gainDb": -22,
+      "pan": 0
+    },
+    {
+      "id": "a7.back",
+      "file": "sfx/a7.back.wav",
+      "bus": "sfx",
+      "at": 105.609,
+      "gainDb": -22,
+      "pan": 0
+    },
+    {
+      "id": "a7.rewrite",
+      "file": "sfx/a7.rewrite.wav",
+      "bus": "sfx",
+      "at": 106.594,
+      "gainDb": -26,
+      "pan": 0
+    },
+    {
+      "id": "a7.rebuild",
+      "file": "sfx/a7.rebuild.wav",
+      "bus": "sub",
+      "at": 108.194,
+      "gainDb": -20,
+      "pan": 0
+    },
+    {
+      "id": "a7.split",
+      "file": "sfx/a7.split.wav",
+      "bus": "sfx",
+      "at": 119.631,
+      "gainDb": -18,
+      "pan": 0
+    },
+    {
+      "id": "t.pullout",
+      "file": "sfx/t.pullout.wav",
+      "bus": "sfx",
+      "at": 128.6,
+      "gainDb": -24,
+      "pan": 0
+    },
+    {
+      "id": "a8.seek",
+      "file": "sfx/a8.seek.wav",
+      "bus": "sfx",
+      "at": 136.457,
+      "gainDb": -22,
+      "pan": 0
+    },
+    {
+      "id": "a8.same",
+      "file": "sfx/a8.same.wav",
+      "bus": "sfx",
+      "at": 139.296,
+      "gainDb": -24,
+      "pan": 0
+    },
+    {
+      "id": "a9.cuts0",
+      "file": "sfx/a9.cuts0.wav",
+      "bus": "sfx",
+      "at": 151.414,
+      "gainDb": -22,
+      "pan": 0
+    },
+    {
+      "id": "a9.cuts1",
+      "file": "sfx/a9.cuts1.wav",
+      "bus": "sfx",
+      "at": 158.892,
+      "gainDb": -22,
+      "pan": 0
+    },
+    {
+      "id": "a9.cuts2",
+      "file": "sfx/a9.cuts2.wav",
+      "bus": "sfx",
+      "at": 166.37,
+      "gainDb": -22,
+      "pan": 0
+    },
+    {
+      "id": "a9.cuts3",
+      "file": "sfx/a9.cuts3.wav",
+      "bus": "sfx",
+      "at": 170.109,
+      "gainDb": -22,
+      "pan": 0
+    },
+    {
+      "id": "a9.rise",
+      "file": "sfx/a9.rise.wav",
+      "bus": "sfx",
+      "at": 158.892,
+      "gainDb": -30,
+      "pan": 0
+    },
+    {
+      "id": "t.collapse",
+      "file": "sfx/t.collapse.wav",
+      "bus": "sfx",
+      "at": 173.6,
+      "gainDb": -26,
+      "pan": 0
+    },
+    {
+      "id": "t.vortex",
+      "file": "sfx/t.vortex.wav",
+      "bus": "sfx",
+      "at": 188.4,
+      "gainDb": -24,
+      "pan": 0
+    },
+    {
+      "id": "a11.lock",
+      "file": "sfx/a11.lock.wav",
+      "bus": "sub",
+      "at": 190.675,
+      "gainDb": -18,
+      "pan": 0
+    }
+  ]
+}

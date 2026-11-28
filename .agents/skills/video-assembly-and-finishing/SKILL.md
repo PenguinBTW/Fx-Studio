@@ -23,6 +23,7 @@ Production standards, timeline manifest engineering, FFmpeg audio multiplexing p
 - **`fx-diagnostics` & `fx-telemetry-remediation`**: Verify that all scenes pass telemetry audits with zero blocking Tier A flags before final assembly.
 - **`sound-design-and-foley`**: Provides the structural cue sheet (`sound_design_guide.md`) for SFX placement.
 - **`design-around-narration`**: Provides line timestamps and breathing zones (`narration_guide.md`).
+- **`fx-audio`**: Authors declarative mix manifests (`defineMix`), executes native multi-stem NLE mixdowns (`app/scripts/mixdown.ts`), and applies EBU R128 broadcast mastering.
 
 ---
 
@@ -84,6 +85,17 @@ bun scripts/render.ts video \
   --out out/renders/child_lock_video.mp4
 ```
 
+```bash
+# Standalone Master Audio Render (resolves downbeats & mixdown without rendering video frames)
+bun scripts/render.ts audio \
+  --project child_lock \
+  --mix mix.json \
+  --from 0.0 \
+  --to 58.0 \
+  --out out/renders/child_lock_audio.wav \
+  --mp3
+```
+
 ### Critical CLI Flags:
 - `--scale 2`: Renders at native **4K UHD ($3840 \times 2160$)** from canonical $1920 \times 1080$ coordinates.
 - `--samples 8`: Evaluates 8 sub-frame samples per frame with adaptive ternary supersampling, producing true cinematic optical motion blur.
@@ -92,39 +104,38 @@ bun scripts/render.ts video \
 
 ---
 
-## 4. Multi-Track Audio Multiplexing via FFmpeg [RULE]
+## 4. Multi-Track Audio Multiplexing & Unified Pipeline [v0.8.0] [RULE]
 
-Headless WebGL canvas capture records video frames without audio. Final video assembly multiplexes **three independent audio streams** into the master file:
+In f(x) Studio v0.8.0, audio is mixed down in Pass 3 directly via pure Bun/TypeScript Float32 PCM (`mixdown.ts`), handling multi-stem NLE assembly, 3D object spatialization from `events.jsonl`, split-band ducking, vocal sanctuary notch filtering, and EBU R128 loudness normalization.
 
 ```
-[AUDIO MULTIPLEXING ARCHITECTURE]
+[UNIFIED AUDIOVISUAL PRODUCTION PIPELINE]
 
-  1. Master Video Stream (Rendered WebGL Frames @ 60 fps)
-  2. Master Voiceover Track (Level: -16 LUFS integrated / -1.0 dB true peak)
-  3. Ambient Musical Score (Ducked by -4 dB during active dialogue)
-  4. Foley & SFX Track (Tactile clicks, whooshes, impacts per sound_design_guide.md)
+  Pass 1: Acoustic Analysis (scripts/analyze_song.py --audit) -> data/audio.json
+  Pass 2: WebGL Scene Execution -> Rendered Video Frames + out/events.jsonl
+  Pass 3: Pure Float32 PCM Mixdown (app/scripts/mixdown.ts) -> out/master.wav
           │
-          └───► FFmpeg Complex Filter Graph (amix + sidechain ducking + loudness norm)
+          └───► Final Lossless FFmpeg Multiplex
                     │
                     ▼
           Broadcast Master MP4 / ProRes (Stereo 48 kHz 24-bit AAC / LPCM)
 ```
 
-### Complete FFmpeg Audio Muxing Script
+### Step 1: Render Master Audio via mixdown
+```bash
+bun scripts/render.ts audio \
+  --project child_lock \
+  --mix scenes/child_lock/audio/mix.ts \
+  --events out/events.jsonl \
+  --from 0.0 --to 58.0 \
+  --out out/master.wav --mp3
+```
+
+### Step 2: Lossless Multiplex
 ```bash
 ffmpeg -y \
   -i out/renders/child_lock_video.mp4 \
-  -i app/public/audio/narration_final.wav \
-  -i app/public/audio/soundtrack.mp3 \
-  -i out/audio/sfx_mix.wav \
-  -filter_complex "
-    [2:a]volume=0.35,asplit=2[sc_in][bg_music];
-    [1:a]asplit=2[vo_main][vo_sidechain];
-    [bg_music][vo_sidechain]sidechaincompress=threshold=0.08:ratio=4:attack=15:release=250[ducked_music];
-    [vo_main][ducked_music][3:a]amix=inputs=3:duration=first:dropout_transition=2[a_mix];
-    [a_mix]loudnorm=I=-16:TP=-1.5:LRA=11[a_out]
-  " \
-  -map 0:v -map "[a_out]" \
+  -i out/master.wav \
   -c:v copy \
   -c:a aac -b:a 320k -ar 48000 \
   out/delivery/child_lock_master.mp4

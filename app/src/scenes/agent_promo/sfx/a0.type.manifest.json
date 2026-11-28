@@ -1,0 +1,18 @@
+{
+  "id": "a0.type",
+  "eventId": null,
+  "recipe": "tick",
+  "seed": 44,
+  "file": "a0.type.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 2.9235208333333333,
+  "hitOffsetSec": 0,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.02804382120854247,
+  "rmsDb": -31.043256207319736,
+  "eventTime": null,
+  "startTime": null
+}

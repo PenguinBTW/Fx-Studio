@@ -36,6 +36,17 @@ export interface ProjectManifest {
   events?: import('./events').EventDef[];
   /** Mix manifest path (relative to this project folder) used by `render.ts video` when --mix is not given. */
   mix?: string;
+  /** Final soundtrack (relative to this project folder, or absolute). `render.ts audio` writes a full-length export here when --out is not given
+   *  (a .mp3 target is encoded from the mixdown WAV); `render.ts video` muxes it when neither --audio nor --mix is given. */
+  audio?: string;
+  /** Seconds of soundtrack fade-out ending at the export's `to` (for films that end before their soundtrack). */
+  audioFadeOut?: number;
+  /** Film length is the timeline end even when the soundtrack runs longer. */
+  trimToTimeline?: boolean;
+  /** Logical canvas size [w, h] (default [1920, 1080]); e.g. [1080, 1920] for vertical 9:16 shorts. */
+  size?: [number, number];
+  /** Seconds into the soundtrack that project time 0 plays (for cut-downs that start mid-song). */
+  audioOffset?: number;
 }
 
 /** Selection priority: explicit (?project= / --project) > pointer file > fallback. */

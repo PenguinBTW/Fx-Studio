@@ -56,6 +56,8 @@ ${GLSL_DOF_HELPERS}
 void main() {
   vec4 centerCol = texture(colorTex, vUv);
   float centerZBuf = texture(depthTex, vUv).r;
+  // carry scene depth through so passes after DoF still see geometry depth (no-op without a depth buffer)
+  gl_FragDepth = centerZBuf;
   float centerZ = linearizeDepth(centerZBuf, near, far);
   float centerCoC = calcCoC(centerZ, focusDistance, aperture, maxRadius);
 

@@ -20,20 +20,20 @@ The central architectural index and routing guide for **f(x) Studio**, a determi
 f(x) Studio divides responsibilities into dedicated skills. **Do not load all skills simultaneously.** Inspect the user's intent and reference the specific skill required:
 
 ```
-                                      [ fx-engine ]
-                                 (Central Index & Router)
-                                            │
-        ┌───────────────────┬───────────────┴───────────────┬───────────────────┐
-        ▼                   ▼                               ▼                   ▼
-  [ fx-scenes ]     [ fx-transitions ]              [ fx-engine-dev ]   [ fx-diagnostics ]
- Scene Authoring    Bespoke Cuts                    Core Plumbing       Visual Audits
- & 3D Staging       & Seam Morphs                   & GL Shaders        & Telemetry Rules
-        │                                                   │
-  ┌─────┴──────────────────┐                                │
-  ▼                        ▼                                ▼
-[ fx-3d-assets ]    [ fx-procedural-modeling ]     [ fx-telemetry-remediation ]
-GLTF / GLB CAD      Code-Only Shaders              Directorial Self-Correction
-Models & Skinned    & Line Geometries              & F01-F16 Fixes
+                                       [ fx-engine ]
+                                  (Central Index & Router)
+                                             │
+        ┌───────────────────┬───────────────┼───────────────┬───────────────────┐
+        ▼                   ▼               ▼               ▼                   ▼
+  [ fx-scenes ]     [ fx-transitions ] [ fx-audio ]   [ fx-engine-dev ]   [ fx-diagnostics ]
+ Scene Authoring    Bespoke Cuts       Multi-Stem NLE  Core Plumbing       Visual Audits
+ & 3D Staging       & Seam Morphs      3D Spatializer  & GL Shaders        & Telemetry Rules
+        │                                  │                │
+  ┌─────┴──────────────────┐               │                │
+  ▼                        ▼               ▼                ▼
+[ fx-3d-assets ]    [ fx-procedural-modeling ] [ dsp.ts / telemetry ]  [ fx-telemetry-remediation ]
+Blender / GLTF CAD  Code-Only Shaders          1-Pole Smoothing        Directorial Self-Correction
+Models & Skinned    & Line Geometries          Vocal Sanctuary & Duck  & F01-F16 Fixes
   │
   ▼
 [ fx-kinetic-typography ]
@@ -43,11 +43,13 @@ Staggers, Hershey Fonts
 
 | Task / Intent | Required Skill | Description & Scope |
 |---|---|---|
-| **Authoring or editing scenes** in `app/src/scenes/` | **`fx-scenes`** | Raw `Scene` subclasses (common) or optional `defineScene()` DSL, 6-DOF camera choreography, 2D/3D layout nodes, kinetic typography halos, particle presets, and closed-form math $\text{Frame} = f(t)$. |
+| **Authoring or editing scenes** in `app/src/scenes/` | **`fx-scenes`** | True 3D visual staging, physical optics (DoF, blackbody/spectral lighting), CameraRig analytical choreography (`solveDollyZoom`, `orbitPosition`), and deciding between Declarative DSL (`defineScene`) vs. Raw `Scene` subclasses for multi-pass depth pipelines. |
 | **Connecting scenes or writing seams** in `app/src/transitions/` | **`fx-transitions`** | Scene-to-scene momentum continuity, carrier handoffs, `api.sampleScene(id, t)` speed ramps, and `overlayTextDuck` anti-collision text ducking. |
+| **Authoring mixes, multi-stem NLE edits, spatial audio & DSP** in `app/src/engine/audio/` | **`fx-audio`** | Declarative mix manifests (`defineMix`), Float32 PCM multi-stem timeline assembly with master transient lock (`-2.38ms`), 3D object-bound spatial telemetry (`AudioTelemetryEmitter`), 1-pole parameter smoothing, Cytomic SVF air absorption, 2-pole Linkwitz-Riley split-band ducking @ 250Hz, dynamic Vocal Sanctuary notch @ 2.2kHz, True Peak lookahead mastering limiter, and headless CLI mixdown (`mixdown.ts`). |
 | **Modifying engine source code** in `app/src/engine/` | **`fx-engine-dev`** | WebGL state cache restoration (`resetState()`), HalfFloat HDR render target allocation, custom GLSL fullscreen passes, and static GPU buffer memory rules. |
 | **Visual QA, debugging, telemetry, or export** | **`fx-diagnostics`** | Running the 4 visual instruments (`godview`, `onion`, `stitch`, `compare`), evaluating Tier A/B/C telemetry rules (`F01–F16`), waiver logging, and CLI rendering. |
-| **Importing or animating 3D CAD/GLTF models** in `app/public/models/` | **`fx-3d-assets`** | Asynchronous GLTF/GLB caching, Draco decompression, skeletal normalization (`fitToBox`, `center`), screen-bounds projection, and `model.setTime(t)`. |
+| **Human review notes & capture verdicts** (`.fx/notes`, `.fx/captures`) | **`fx-diagnostics`** §6.3 | Filing renders where the reviewer sees them, reading and fixing notes from [fx-feedback-gui](https://github.com/PenguinBTW/fx-feedback-gui) with `fx-notes`, and proving fixes by re-rendering. |
+| **Blender / GLTF assets** in `app/src/scenes/<project>/assets/` | **`fx-3d-assets`** | Project asset folders + manifests, material libraries, named parts, `setTime`/`setClips` clip playback and blending, shape keys, `assets:check` preflight, normalization and screen bounds. |
 | **Code-only procedural shaders & wireframe geometry** | **`fx-procedural-modeling`** | Minimalist-3D wireframes (`LineBatch`), anisotropic normal noise (brushed metals), procedural displacement, raymarched SDFs, and recursive zoom fractals. |
 | **Kinetic typography, word staggers & Hershey fonts** | **`fx-kinetic-typography`** | Stagger reveals, numeric rollers, variable font axes, Hershey vector single-stroke plotter fonts (`stroke.ts`), and knockout understroke halos (`text.ts`). |
 | **Remediating telemetry flags & auto-healing** | **`fx-telemetry-remediation`** | Actionable remediation patterns for `F01–F16` flags, resolving CI export blockers, and registering machine-actionable repair directives via `heal.ts`. |
@@ -58,7 +60,7 @@ f(x) Studio projects adhere to global Viopls production rules:
 - **`video-design`**: Universal standards (Zero HUD, diegetic 3D text, continuous camera momentum, minimum stylized 2.5D, safe zones).
 - **`design-around-audio`**: Stem deconstruction, beat-grid alignment, transient hits ($V_{\text{hit}}$), and frequency mapping.
 - **`design-around-narration`**: Script staging, elastic visual buffers, and `narration_guide.md` generation.
-- **`viopls-art-direction`**: Aesthetic cohesion, anti-slop blacklist, 60/30/10 palette rule, and core engine tokens (`--void`, `--bone`, `--ash`, `--signal`).
+- **`viopls-art-direction`**: Aesthetic cohesion, anti-slop blacklist, and typography guidance.
 - **`visual-metaphors-and-abstraction`**: Mandatory pre-production conceptual planning gate (`visual_plan.md`).
 - **`storyboarding-and-blocking`**: Shot-scale hierarchy, 180° spatial axis, and saccadic gaze anchoring (`storyboard.md`).
 - **`sound-design-and-foley`**: Tactile sound effects, spectral budgeting (Vocal Sanctuary Rule), and `sound_design_guide.md`.
@@ -74,8 +76,24 @@ f(x) Studio projects are isolated inside `app/src/scenes/<project_name>/`:
 app/
 ├── src/
 │   ├── engine/             # Core Engine Plumbing (Managed via fx-engine-dev)
+│   │   ├── audio/          # Dedicated Engine Audio Subsystem (v0.8.0)
+│   │   │   ├── manifest.ts    # defineMix() DSL, validation & types
+│   │   │   ├── telemetry.ts   # emitAudioTelemetry, screen projection
+│   │   │   ├── smoother.ts    # 1-pole de-zippering k-to-a rate bridge
+│   │   │   ├── spatializer.ts # Vector pan, Cytomic SVF LPF & occlusion
+│   │   │   ├── stem_nle.ts    # Multi-stem timeline, transientLock & spillover
+│   │   │   ├── dsp.ts         # Vocal sanctuary notch, split-band ducking, limiter
+│   │   │   └── index.ts       # Unified subsystem exports
+│   │   ├── transitions/
+│   │   │   └── registry.ts    # Two-tier transition cascade resolver
 │   │   ├── dsl.ts          # Declarative scene authoring DSL (defineScene)
-│   │   ├── rig.ts          # 6-DOF Camera Rig (Centripetal splines, Bishop frames)
+│   │   ├── rig.ts          # 6-DOF Camera Rig (solveDollyZoom, orbitPosition, focusDistance, Bishop splines)
+│   │   ├── dof.ts          # Physical thin-lens Circle-of-Confusion DoF (bilateral gather, bokeh)
+│   │   ├── spectrum.ts     # Spectral colour science (Planckian blackbody, CIE 1931, emission lines)
+│   │   ├── refract.ts      # Cauchy dispersion, Fresnel reflection, Descartes caustics
+│   │   ├── text_lighting.ts# In-world 3D PBR extruded typography & particle deflection
+│   │   ├── particles_large.ts # 500k stateless GPU instanced particles with 3D curl noise
+│   │   ├── ribbon.ts       # Twist-free dynamic ribbon geometry via Bishop parallel transport
 │   │   ├── transform.ts    # TransformNode & responsive LayoutNode
 │   │   ├── text.ts         # Kinetic typography engine with knockout halos
 │   │   ├── sdf.ts          # Instanced GPU Signed Distance Fields (cards, rings)
@@ -93,9 +111,11 @@ app/
 │   │   ├── active.json     # Active project pointer
 │   │   └── <project_name>/
 │   │       ├── project.json  # Timeline manifest (scenes, cuts, audio, BPM)
+│   │       ├── transitions/  # Project-local bespoke transitions (Tier 1 Cascade)
+│   │       ├── audio/        # Scoped mix manifests (mix.ts) & local SFX
 │   │       └── *.ts          # Scene definitions
-│   └── transitions/        # Seam Logic (Managed via fx-transitions)
-│       └── *.ts            # Bespoke transition classes
+│   └── transitions/        # Global Seam Logic (Tier 2 Cascade)
+│       └── *.ts            # Global platform transition classes
 ├── public/                 # Static Assets (audio, models, extracted data)
 └── scripts/                # CLI & Diagnostic Tools (Managed via fx-diagnostics)
     ├── render.ts           # Offline export CLI (stills, sheets, video, telemetry)

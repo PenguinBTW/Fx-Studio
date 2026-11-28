@@ -1,0 +1,18 @@
+{
+  "_note": "Every number the film says about itself. Filled from the real build; see REVIEW.md for sources.",
+  "bars": 119,
+  "bytes": 48,
+  "reviewRounds": 2,
+  "notes": 35,
+  "fixed": 35,
+  "stills": 120,
+  "blenderAssets": 11,
+  "transitions": 11,
+  "scenes": 12,
+  "sceneLines": 1833,
+  "frame": 9000,
+  "subAgents": 1,
+  "frameHash": "3ddee955841e74b7cc2cce313414ca588f47199c73d5f6beafcb3f245ec1d95d",
+  "v1Notes": 7,
+  "v1Passed": 1
+}

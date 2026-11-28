@@ -2,12 +2,12 @@
 // a texture compositor and Canvas2D layers uploaded as textures.
 import * as THREE from 'three';
 import { GLSL_COMMON } from './glsl/common';
-import { SCALE } from './scale';
+import { SCALE, LOGICAL_W, LOGICAL_H } from './scale';
 
 export { SCALE };
-/** Logical canvas: scenes lay out in these px at every output scale. */
-export const W = 1920;
-export const H = 1080;
+/** Logical canvas: scenes lay out in these px at every output scale (1920x1080 unless the project sets "size"). */
+export const W = LOGICAL_W;
+export const H = LOGICAL_H;
 /** Physical (output) size: the logical canvas times SCALE (`?scale=2` → 3840x2160). */
 export const PW = W * SCALE;
 export const PH = H * SCALE;
@@ -247,6 +247,7 @@ export class Layer2D {
     else c.clearRect(0, 0, this.w, this.h);
   }
   upload() { this.texture.needsUpdate = true; return this.texture; }
+  dispose() { this.texture.dispose(); }
 }
 
 const _scratchClearColorPrev = new THREE.Color();

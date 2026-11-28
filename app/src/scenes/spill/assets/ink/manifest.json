@@ -1,0 +1,1 @@
+{ "id": "ink", "version": 1, "source": "build.py", "budgets": { "tris": 60000, "textureMB": 1 } }

@@ -1,0 +1,38 @@
+{
+  "project": "deep_field",
+  "meta": {
+    "title": "Deep Field: The First Light at Lagrange Point L2",
+    "aspectRatio": "16:9",
+    "fps": 60,
+    "duration": 26.4
+  },
+  "audio": {
+    "soundtrack": "audio/soundtrack.wav",
+    "bpm": 100.16
+  },
+  "mix": "audio/mix.ts",
+  "entries": [
+    {
+      "scene": "deep_field/scene_optic",
+      "id": "scene_optic",
+      "start": 0.0,
+      "end": 11.8
+    },
+    {
+      "scene": "deep_field/scene_lagrange",
+      "id": "scene_lagrange",
+      "start": 10.5,
+      "end": 26.8
+    }
+  ],
+  "transitions": [
+    {
+      "id": "T_OPTIC",
+      "transition": "optical_singularity",
+      "from": "scene_optic",
+      "to": "scene_lagrange",
+      "at": 10.5,
+      "dur": 1.3
+    }
+  ]
+}

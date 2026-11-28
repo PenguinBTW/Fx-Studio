@@ -1,4 +1,4 @@
-# f(x) Studio Documentation Hub (v0.7.0)
+# f(x) Studio Documentation Hub (v0.8.0)
 
 Welcome to the central documentation hub for **f(x) Studio** (also referred to as the **Agentic Motion Design Toolset**).
 
@@ -11,6 +11,7 @@ This library provides comprehensive architectural specifications, developer auth
 ```
 docs/
 ├── changelog/                        # Release records & stability bug fix reports
+│   ├── v0.8.0-release-record.md      # v0.8.0 unified audiovisual production & asset layer release record
 │   ├── v0.7.0-release-record.md      # v0.7.0 engine overhaul & physical optics release record
 │   ├── v0.6.1-bug-fix-report.md      # v0.6.1 stability & engine audit report (24 fixes)
 │   └── v0.6.0-release-record.md      # v0.6.0 execution record (Materials, 3D Text, Optics)
@@ -36,6 +37,7 @@ docs/
 │
 ├── authoring/                        # Developer & agent authoring guides
 │   ├── scene-authoring-guide.md      # Declarative DSL (defineScene) vs Raw Scene subclassing
+│   ├── blender-assets.md             # Project asset layer: Blender export, manifests, parts, materials
 │   ├── gltf-assets.md                # GLTF/GLB loading, instancing & deterministic animation (setTime)
 │   ├── custom-components.md          # Authoring custom passes, runtime invariants, telemetry gates
 │   ├── kinetic-typography.md         # KineticText, LyricRig, knockout halos, Hershey vector fonts
@@ -46,6 +48,9 @@ docs/
 │   ├── render-cli-reference.md       # Master CLI reference for bun scripts/render.ts (all modes)
 │   ├── video-export-pipeline.md      # Headless export, WebSocket frame streaming, GPU acceleration
 │   └── testing-and-verification.md   # Automated milestone regression suites & CI testing protocol
+│
+├── feedback/                         # Human review & agent feedback
+│   └── review-gui.md                 # fx-feedback-gui: player, notes, capture verdicts, agent rules
 │
 ├── projects/                         # Project manifests & workspace architecture
 │   └── project-system.md             # Multi-project workspace, active.json, project.json manifests
@@ -96,6 +101,7 @@ docs/
 * [**02. Multi-Exposure Motion Onion**](diagnostics/02-multi-exposure-motion-onion.md): Single composite still blending consecutive frames with a chromatic time-decay gradient (cyan $\to$ natural $\to$ amber) to diagnose easing, springs, and micro-tremors.
 * [**03. Visual A/B Reference Anchor**](diagnostics/03-visual-ab-reference-anchor.md): Automated side-by-side and $45^\circ$ diagonal split-wipe contact plates benchmarking active scenes against Figma artboards and design tokens.
 * [**04. Transition Seam Stitch Inspector**](diagnostics/04-transition-seam-stitch-inspector.md): Split-wipe onion overlay (green outgoing, magenta incoming) and 10-frame filmstrip across transition cut boundaries ($\pm 250\text{ms}$).
+* [**Human Review GUI (fx-feedback-gui)**](feedback/review-gui.md): Recommended companion repo. A live export-path player, range notes with 2D/3D markers, and Good/Needs-work verdicts on agent captures, all handed to agents as files plus the `fx-notes` CLI. Includes the `.fx/captures/<project>/<run>/` filing rule.
 
 ### C. Motion Telemetry & Automated Verification
 * [**60fps Motion Telemetry Engine**](telemetry/telemetry-engine.md): 60fps sampling architecture, 4 engine hooks, 4x4 box downscaling pipeline, Rec.709 luma, 2D FFT Cooley-Tukey optical flow, Sobel edge density, and CIE Lab $\Delta E_{76}$.
@@ -105,6 +111,7 @@ docs/
 
 ### D. Authoring & Scene Development
 * [**Scene Authoring Guide: DSL & Raw Scenes**](authoring/scene-authoring-guide.md): Comprehensive guide to declarative DSL (`defineScene`, `SceneContext`) vs raw `Scene` subclassing, lifecycle (`init`, `render`, `dispose`), and closed-form determinism.
+* [**Blender & Imported Assets: Project Asset Layer**](authoring/blender-assets.md): Per-project asset folders and manifests, Blender export settings, named parts (`fx_part`), material libraries, clip blending, shape keys, and `assets:check` preflight.
 * [**GLTF & GLB 3D Asset Loading, Instancing & Deterministic Animation**](authoring/gltf-assets.md): Loading external 3D CAD models, preloading race condition elimination, `SkeletonUtils.clone` instancing, `fitToBox`/`center` normalization, 2D screen bounding box projection, and deterministic closed-form animation evaluation (`model.setTime(t)`).
 * [**Authoring Custom Components & Render Passes**](authoring/custom-components.md): Normative guide to engine invariants (target ownership, WebGL state cache, transitions ducking, sub-frame motion blur, memory disposal) and telemetry emission gates.
 * [**Kinetic Typography & Lyric Synchronization**](authoring/kinetic-typography.md): `KineticText`, `LyricRig`, high-contrast knockout understroke halos, single-stroke Hershey plotter fonts (`stroke.ts`), dynamic word reveals, and telemetry interception.
@@ -127,6 +134,7 @@ docs/
 * [**Multi-Project Workspace & Manifest Architecture**](projects/project-system.md): Multi-project directory structure, `active.json` pointer, `project.json` manifest specification, scene entries, transition declarations, hot module reloading (HMR) isolation, interactive preview player hotkeys, and step-by-step project creation tutorial.
 
 ### H. Changelog & Releases
+* [**v0.8.0 Release Record: Unified Audiovisual Production Engine, Blender Asset Layer & Delivery**](changelog/v0.8.0-release-record.md): Modular audio subsystem, defineMix, spatial audio and mastering, two-tier transitions, project-scoped Blender assets, 9:16 output, bundled fonts, and the November example films.
 * [**v0.7.0 Release Record: Physical Optics, Volumetrics, Engine Modernization & Architectural Overhaul**](changelog/v0.7.0-release-record.md): Major engine release delivering physical optics (Cauchy dispersion, Descartes caustics, Wyman-Sloan spectrum), Bishop RMF ribbons, divergence-free curl noise, 500k GPU particles, multi-track audio mixdown (-14 LUFS / -1 dBTP), in-world kinetic typography, automated seam continuity, zero-allocation lazy subsystem architecture, engine file modularization, and strict type restoration.
 * [**v0.6.1 Bug Fix & Engine Audit Report**](changelog/v0.6.1-bug-fix-report.md): Complete architectural audit and stability report detailing 24 bug fixes across core rendering loops, WebGL state cache isolation, alpha premultiplication, GLTF caching, ODE springs, and FFmpeg pipeline mapping.
 * [**v0.6.0 Execution Record & Release Notes**](changelog/v0.6.0-release-record.md): Complete release notes for engine v0.6.0 (Procedural Materials, 3D Kinetic Typography, Optical DoF & Volumetrics).

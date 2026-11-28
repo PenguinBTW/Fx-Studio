@@ -57,6 +57,10 @@ export interface StreamOptions {
   inflight?: number;
 }
 
+/** Canvases painted as 3D textures: their text is not in screen space, so the 2D text probe skips them. */
+export const textureCanvases = new WeakSet<object>();
+export function markTextureCanvas<T extends object>(cv: T): T { textureCanvases.add(cv); return cv; }
+
 export interface EngineBridge {
   version: string;
   engine: Engine;

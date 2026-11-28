@@ -1,0 +1,18 @@
+{
+  "id": "ink_bleed",
+  "eventId": null,
+  "recipe": "whoosh",
+  "seed": 159,
+  "file": "ink_bleed.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 1.1,
+  "hitOffsetSec": 0.49500000000000005,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.08487496362191688,
+  "rmsDb": -21.424407977069286,
+  "eventTime": null,
+  "startTime": null
+}

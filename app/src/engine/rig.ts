@@ -82,6 +82,14 @@ export function orbitPosition(targetPos: V3, radius: number, pitchRad: number, y
   ];
 }
 
+/** Arc-length fraction of each knot (knot i sits at curve parameter i/(n-1)). */
+function knotArcFractions(curve: THREE.CatmullRomCurve3, n: number): number[] {
+  const div = 64 * Math.max(1, n - 1);
+  const lengths = curve.getLengths(div);
+  const total = lengths[div] ?? 0;
+  return Array.from({ length: n }, (_, i) => (total > 0 ? lengths[Math.round((i / (n - 1)) * div)]! / total : i / (n - 1)));
+}
+
 export class CameraRig {
   mode: CameraMode = 'perspective';
 
@@ -130,6 +138,11 @@ export class CameraRig {
   position: V3 = [0, 1.8, -8.0];
   target: V3 = [0, 0, 0];
   roll = 0;
+  /** 'uniform' (default): constant arc-length speed. 'keyed': waypoint i is reached at its `t`. */
+  pathTiming: 'keyed' | 'uniform' = 'uniform';
+  private keyArcPos: number[] = [];
+  private keyArcTarget: number[] = [];
+  private keyFocalMm: number[] = [];
   focalLengthMm = 50.0;                // 35mm equivalent focal length
   focalLengthPx = 50.0 * (H / 24.0);   // Synchronized pixel equivalent (1080/24 = 45 px/mm)
   isoScale = 6.0;                      // World units across screen for isometric mode
@@ -225,12 +238,30 @@ export class CameraRig {
       const targetPoints = this.waypoints.map((w) => new THREE.Vector3(w.target[0], w.target[1], w.target[2]));
       this.splinePos = new THREE.CatmullRomCurve3(posPoints, false, 'centripetal', 0.5);
       this.splineTarget = new THREE.CatmullRomCurve3(targetPoints, false, 'centripetal', 0.5);
+      this.keyArcPos = knotArcFractions(this.splinePos, this.waypoints.length);
+      this.keyArcTarget = knotArcFractions(this.splineTarget, this.waypoints.length);
+      // Missing focal keys hold the last explicit key (or the lens at setPath time); mm and px keys normalised to mm.
+      let cur = this.focalLengthMm;
+      this.keyFocalMm = this.waypoints.map((w) => (cur = w.focalLength === undefined ? cur : w.focalLength < 300 ? w.focalLength : w.focalLength / (H / 24.0)));
     }
     return this;
   }
 
+  /** Map path progress u to an arc-length fraction so waypoint i is reached at its own `t` (constant speed within each segment). */
+  private keyedArc(u: number, knots: number[]): number {
+    const w = this.waypoints;
+    const n = w.length;
+    if (u <= w[0]!.t) return 0;
+    if (u >= w[n - 1]!.t) return 1;
+    let i = 0;
+    while (i + 2 < n && u > w[i + 1]!.t) i++;
+    const k = clamp((u - w[i]!.t) / Math.max(1e-6, w[i + 1]!.t - w[i]!.t), 0, 1);
+    return knots[i]! + (knots[i + 1]! - knots[i]!) * k;
+  }
+
   /**
-   * Sample camera trajectory along normalized arc length u in [0, 1]
+   * Sample camera trajectory at path progress u in [0, 1].
+   * 'keyed' (default): each waypoint is reached at its `t`. 'uniform': constant arc-length speed, waypoint `t` only drives roll/focal.
    */
   evalPath(u: number): this {
     const p = clamp(u, 0, 1);
@@ -246,8 +277,9 @@ export class CameraRig {
       return this;
     }
     if (this.splinePos && this.splineTarget) {
-      const pos = this.splinePos.getPointAt(p);
-      const tgt = this.splineTarget.getPointAt(p);
+      const keyed = this.pathTiming === 'keyed';
+      const pos = this.splinePos.getPointAt(keyed ? this.keyedArc(p, this.keyArcPos) : p);
+      const tgt = this.splineTarget.getPointAt(keyed ? this.keyedArc(p, this.keyArcTarget) : p);
       this.position = [pos.x, pos.y, pos.z];
       this.target = [tgt.x, tgt.y, tgt.z];
 
@@ -260,13 +292,11 @@ export class CameraRig {
         const k = clamp((p - w0.t) / span, 0, 1);
         this.roll = (w0.roll ?? 0) * (1 - k) + (w1.roll ?? 0) * k;
 
-        const fl0 = w0.focalLength ?? this.focalLengthMm;
-        const fl1 = w1.focalLength ?? fl0;
-        const fl = fl0 * (1 - k) + fl1 * k;
-
-        // Convention: < 300 is millimeters, >= 300 is screen pixels
-        if (fl < 300) this.setLensMm(fl);
-        else this.setFocalLengthPx(fl);
+        // Convention: < 300 is millimeters, >= 300 is screen pixels; blend in mm so mixed units stay valid
+        const j = Math.min(i + 1, this.waypoints.length - 1);
+        const fl0 = this.keyFocalMm[i] ?? this.focalLengthMm;
+        const fl1 = this.keyFocalMm[j] ?? fl0;
+        this.setLensMm(fl0 * (1 - k) + fl1 * k);
       }
     }
     return this;

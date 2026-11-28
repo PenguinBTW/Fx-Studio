@@ -1,0 +1,18 @@
+{
+  "id": "t.shutter_ping",
+  "eventId": null,
+  "recipe": "glassPing",
+  "seed": 414,
+  "file": "t.shutter_ping.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 7.399979166666666,
+  "hitOffsetSec": 0.8999791666666667,
+  "peak": 0.5011872336272722,
+  "peakDb": -6.000000000000001,
+  "rms": 0.036666543614325045,
+  "rmsDb": -28.71460054088836,
+  "eventTime": null,
+  "startTime": null
+}

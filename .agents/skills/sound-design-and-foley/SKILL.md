@@ -22,6 +22,7 @@ Standards, spectral budgeting principles, tactile micro-sync workflows, and spat
 - **`design-around-audio`:** Governs the soundtrack, stems, beat grids, and musical downbeats. SFX must complement, not clash with, musical stems.
 - **`design-around-narration`:** Establishes the vocal track. Sound design must never compromise voiceover intelligibility.
 - **`video-design` / `fx-transitions`:** Defines visual momentum, match cuts, and kinetic typography reveals that require tactile audio reinforcement.
+- **`fx-audio`:** Governs the native f(x) Studio audio engine (`app/src/engine/audio/`), 3D object-bound vector spatializer, Cytomic SVF air absorption, 1-pole parameter smoothing, and split-band ducking DSP.
 
 ---
 
@@ -86,28 +87,45 @@ Sound effects must never compete with human speech or musical fundamentals. Carv
   └─────────────┴──────────────────┴───────────────────┴─────────────────┴────────────┴──────────┘
 ```
 
-### 4.1 The Vocal Sanctuary Rule [RULE]
+### 4.1 The Vocal Sanctuary Rule & DSP Notch (`applyVocalSanctuary`) [v0.8.0]
 - The primary frequency band for human speech intelligibility is **$1.0\text{ kHz} \dots 3.5\text{ kHz}$**.
-- **Mandatory EQ Cut:** Apply a dynamic notch or wide parametric bell cut ($-3\text{ dB}$ to $-6\text{ dB}$) in the $1\text{–}3.5\text{ kHz}$ band across all kinetic whooshes, synths, and heavy sound effects playing during spoken dialogue.
-- Sound effects may only use the $1\text{–}3.5\text{ kHz}$ band during intentional vocal pauses or title cards.
+- **Engine Implementation:** In f(x) Studio v0.8.0, `applyVocalSanctuary` automatically carves a surgical parametric Cytomic SVF notch centered at $2.2\text{ kHz}$ ($Q = 1.2$, $-3.5\text{ dB}$) in music and SFX stems dynamically modulated by voiceover activity.
+- Sound effects and heavy synths may only occupy the $1\text{–}3.5\text{ kHz}$ band during intentional vocal pauses or title cards.
 
-### 4.2 Sub-Bass Decoupling
+### 4.2 Sub-Bass Decoupling & Split-Band Ducking (`applySplitBandDuck`) [v0.8.0]
 - Never stack a sound effect sub-drop on the exact same frame as a heavy 808 kick or bass drop from the musical soundtrack.
-- If the music drops on Beat 1, let the musical stem supply the low-end energy. Do not double-trigger a sub-bass SFX, which causes phase cancellation and muddies the master limiter.
+- **Engine Implementation:** In f(x) Studio v0.8.0, `applySplitBandDuck` decouples frequencies using a 2-pole Linkwitz-Riley crossover at $250\text{ Hz}$. Low frequencies ($<250\text{ Hz}$) remain at $0\text{ dB}$ unity gain, preserving physical low-end punch while ducking mid/high frequencies around dialogue and SFX.
+- **Pre-Drop Silence Vacuum (`applyPreDropVacuum`):** Creates $40\text{--}120\text{ ms}$ of digital silence immediately preceding major impacts with an anti-click cosine fade.
 
 ---
 
-## 5. Spatial Panning & Vector Alignment [GUIDANCE]
+## 5. Spatial Panning & Object-Bound 3D Audio (`spatialSources`) [v0.8.0]
 
-Sound effects must respect screen-space camera motion and object travel:
+Sound effects respect screen-space camera motion and 3D object travel through the engine's offline spatializer:
 
-### 5.1 Horizontal Vector Panning
-- When a 3D object travels from screen-left to screen-right, pan the corresponding whoosh/foley across the stereo field from **$L40 \to R40$**.
-- Avoid hard $100\%$ left/right pans on headphones; keep spatial panning within $70\%$ width to maintain natural listening comfort.
+### 5.1 Declarative Object Binding & Vector Panning
+- Attach 3D audio directly to visual entities in `mix.ts`:
+  ```typescript
+  spatialSources: [
+    {
+      id: 'thruster_sfx',
+      file: 'sfx/thruster.wav',
+      bus: 'sfx',
+      bindTo: 'cargo_ship',
+      spatial: {
+        mode: 'screen_vector',
+        maxPan: 0.65, // Clamped to [-0.65, +0.65] to avoid headphone disassociation
+        distanceAttenDb: 14.0,
+        distanceLpfHz: [20000, 2500],
+        occlusionNotchDb: 6.0,
+      },
+    },
+  ]
+  ```
 
-### 5.2 Distance & Low-Pass Filtering
-- As an object retreats into the background ($+Z$ camera distance), roll off high frequencies with a gentle low-pass filter ($6\text{–}8\text{ kHz}$) and increase wet reverb mix ($15\text{–}25\%$).
-- Close-up macro shots require dry, zero-reverb, unfiltered sound to emphasize proximity.
+### 5.2 Atmospheric Distance Filtering & Parameter Smoothing
+- **Cytomic SVF Air Absorption:** High frequencies roll off exponentially ($20\text{ kHz} \to 2.5\text{ kHz}$) as distance increases.
+- **1-Pole De-zippering:** Panning, attenuation, and filter cutoffs are smoothed at audio rate (48 kHz) from 60 Hz visual telemetry via recursive 1-pole IIR filters, preventing zipper noise during fast camera pans.
 
 ---
 

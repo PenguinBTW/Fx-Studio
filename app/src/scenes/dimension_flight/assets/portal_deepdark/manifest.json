@@ -1,0 +1,1 @@
+{ "id": "portal_deepdark", "version": 1, "source": "build.py", "budgets": { "tris": 20000, "textureMB": 1 }, "load": { "castShadow": true, "receiveShadow": true } }

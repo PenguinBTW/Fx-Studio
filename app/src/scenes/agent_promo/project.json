@@ -1,0 +1,169 @@
+{
+  "project": "agent_promo",
+  "mix": "mix.json",
+  "audio": "master/agent_promo_mix.mp3",
+  "entries": [
+    {
+      "scene": "agent_promo/a0_cursor",
+      "id": "a0_cursor",
+      "start": 0,
+      "end": 5.9
+    },
+    {
+      "scene": "agent_promo/a1_tape",
+      "id": "a1_tape",
+      "start": 5.3,
+      "end": 17.0
+    },
+    {
+      "scene": "agent_promo/a2_plan",
+      "id": "a2_plan",
+      "start": 16.6,
+      "end": 28.3
+    },
+    {
+      "scene": "agent_promo/a3_swarm",
+      "id": "a3_swarm",
+      "start": 27.8,
+      "end": 37.6
+    },
+    {
+      "scene": "agent_promo/a4_build",
+      "id": "a4_build",
+      "start": 37.1,
+      "end": 58.2
+    },
+    {
+      "scene": "agent_promo/a5_print",
+      "id": "a5_print",
+      "start": 57.6,
+      "end": 69.4
+    },
+    {
+      "scene": "agent_promo/a6_critique",
+      "id": "a6_critique",
+      "start": 68.9,
+      "end": 99.5
+    },
+    {
+      "scene": "agent_promo/a7_rewrite",
+      "id": "a7_rewrite",
+      "start": 98.7,
+      "end": 129.3
+    },
+    {
+      "scene": "agent_promo/a8_meta",
+      "id": "a8_meta",
+      "start": 128.7,
+      "end": 173.7
+    },
+    {
+      "scene": "agent_promo/a9_rush",
+      "id": "a9_rush",
+      "start": 151.1,
+      "end": 174.2
+    },
+    {
+      "scene": "agent_promo/a10_quiet",
+      "id": "a10_quiet",
+      "start": 173.6,
+      "end": 189.2
+    },
+    {
+      "scene": "agent_promo/a11_mark",
+      "id": "a11_mark",
+      "start": 188.5,
+      "end": 224.436
+    }
+  ],
+  "transitions": [
+    {
+      "id": "t-cursor_dive",
+      "transition": "agp_cursor_dive",
+      "from": "a0_cursor",
+      "to": "a1_tape",
+      "at": 5.33,
+      "dur": 0.5
+    },
+    {
+      "id": "t-tape_lift",
+      "transition": "agp_tape_lift",
+      "from": "a1_tape",
+      "to": "a2_plan",
+      "at": 16.6,
+      "dur": 0.4
+    },
+    {
+      "id": "t-flare",
+      "transition": "agp_flare",
+      "from": "a2_plan",
+      "to": "a3_swarm",
+      "at": 27.82,
+      "dur": 0.4
+    },
+    {
+      "id": "t-slice",
+      "transition": "agp_slice",
+      "from": "a3_swarm",
+      "to": "a4_build",
+      "at": 37.17,
+      "dur": 0.35
+    },
+    {
+      "id": "t-shutter",
+      "transition": "agp_shutter",
+      "from": "a4_build",
+      "to": "a5_print",
+      "at": 57.7,
+      "dur": 0.5
+    },
+    {
+      "id": "t-drop",
+      "transition": "agp_drop",
+      "from": "a5_print",
+      "to": "a6_critique",
+      "at": 68.95,
+      "dur": 0.4
+    },
+    {
+      "id": "t-rewind",
+      "transition": "agp_rewind",
+      "from": "a6_critique",
+      "to": "a7_rewrite",
+      "at": 98.8,
+      "dur": 0.6
+    },
+    {
+      "id": "t-pullout",
+      "transition": "agp_pullout",
+      "from": "a7_rewrite",
+      "to": "a8_meta",
+      "at": 128.75,
+      "dur": 0.5
+    },
+    {
+      "id": "t-rush",
+      "transition": "agp_rush",
+      "from": "a8_meta",
+      "to": "a9_rush",
+      "at": 151.2,
+      "dur": 22.4
+    },
+    {
+      "id": "t-collapse",
+      "transition": "agp_collapse",
+      "from": "a9_rush",
+      "to": "a10_quiet",
+      "at": 173.6,
+      "dur": 0.5
+    },
+    {
+      "id": "t-vortex",
+      "transition": "agp_vortex",
+      "from": "a10_quiet",
+      "to": "a11_mark",
+      "at": 188.55,
+      "dur": 0.6
+    }
+  ]
+}

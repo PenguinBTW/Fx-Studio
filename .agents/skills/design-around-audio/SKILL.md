@@ -14,6 +14,7 @@ Standards, technical workflows, mathematical foundations, and visual-musical map
 - Syncing particle systems, light flashes, UI pulses, and 3D object motion to rhythm.
 - Designing build-ups, structural drops, tension ramps, and quiet narrative breathing zones.
 - Auditing a visual sequence for rhythmic coherence, downbeat phase alignment, and optical sync.
+- For engine-level multi-stem NLE timeline assembly, 3D spatial audio, parameter smoothing, and cinematic DSP in f(x) Studio, see **`fx-audio`**.
 
 ---
 
@@ -141,9 +142,90 @@ Visual cuts and scene changes must follow musical sections, but sections must ne
 
 ---
 
-## 3. Kinetic Mapping Rules
+## 3. Track Re-Engineering, Stem Splicing & Seamless Stitching [RULE]
 
-### 3.1 Avoid the "Beat-Cut Trap" [RULE]
+When production requires shortening, restructuring, or re-timing a musical track (e.g., cutting a 2:21 track down to ~1:50 for tighter motion pacing), never execute crude master fades or mid-phrase razor cuts. Use the **Stem-Level Mathematical Splice Architecture**:
+
+### 3.1 Auditory Structure Audit: Excising Weak-Beat Zones
+Identify and excise passages that weaken visual cutting cadence:
+- **Mushy / Beatless Interludes:** Passages lacking crisp kick/snare transients or clear 4/4 meter make editing camera cuts feel arbitrary and sluggish.
+- **Extended Redundant Loops:** Secondary verses or repeated bridge sections that bloat duration without introducing new thematic musical tokens.
+- **Unquantized / Rubato Fades:** Drifting intro/outro passages where beat grid fitting exhibits high timing variance ($\sigma > 25\text{ ms}$).
+
+### 3.2 Splicing Strictly on Bar-Phase Downbeats
+1. **Integer Measure Multiples [RULE]:** Excised sections must span an exact integer multiple of musical bars (e.g., cutting exactly 8, 16, or 32 measures). Cutting odd bars (e.g., 7 or 13 bars) inverts harmonic cadence and breaks viewer expectation.
+2. **Zero-Crossing Downbeat Points:** Splice points must lock to exact downbeat timestamps from `audio.json`:
+   $$\text{Cut Point} = \text{downbeats}[K], \quad \text{Resume Point} = \text{downbeats}[K + N]$$
+3. **Phase Invariant:** The splice must maintain continuous bar phase so the following measure begins firmly on Beat 1.
+
+### 3.3 Declarative Multi-Stem NLE & Seam Physics (f(x) Studio v0.8.0) [RULE]
+Never cut all stems simultaneously on the same frame. In v0.8.0, use the `defineMix()` declarative DSL with `excise` and physical seam primitives:
+
+```typescript
+import { defineMix } from '@/engine/audio';
+
+export default defineMix({
+  soundtracks: [
+    {
+      id: 'score',
+      stems: {
+        drums: 'stems/drums.wav',
+        bass: 'stems/bass.wav',
+        vocals: 'stems/vocals.wav',
+        other: 'stems/other.wav',
+      },
+      edits: {
+        quantize: 'bars',
+        excise: [
+          {
+            fromBar: 4,
+            toBar: 12,
+            stems: {
+              drums: { transientLock: true, lagBars: 2 },
+              vocals: { breathGate: true },
+              other: { tailSpillover: { spillSec: 2.0, tauSec: 0.7 } },
+            },
+          },
+        ],
+      },
+    },
+  ],
+});
+```
+
+1. **Master Transient Lock (`transientLock`)**:
+   Offsets the incoming cut across all stems together by the kick drum's pre-attack zero crossing ($-2.38\,\text{ms}$) with an asymmetric crossfade ($3\,\text{ms}$ cosine out, $0\,\text{ms}$ hard in). Applying this offset collectively preserves absolute phase alignment across all stems, eliminating phase smearing from Demucs stem bleed.
+2. **Harmonic Tail Spillover (`tailSpillover`)**:
+   Harmonic instruments (`other`, synths, guitars, strings) do not cut abruptly at the seam. An exponential decay envelope $\text{Decay}(t) = \exp(-t/\tau)$ overlays the outgoing tail across the incoming scene for $1.5\text{--}2.5\,\text{s}$.
+3. **Vocal Breath Gating (`breathGate`)**:
+   Snaps vocal cuts to detected silence gaps ($\ge 120\,\text{ms}$), suppressing orphan breath gasps and zero-filling the edit window.
+4. **Sub-Bass Decoupling**:
+   SFX sub-drops and musical 808 kicks must never land on the exact same downbeat frame. Split-band ducking (`splitBandDuck`) decouples mid/high ducking from sub frequencies below $250\,\text{Hz}$ via a 2-pole Linkwitz-Riley crossover, keeping physical weight rock-solid.
+
+### 3.4 Acoustic Candidate Cut Auditing (`analyze_song.py --audit`)
+Before executing excisions, run the acoustic audit tool to discover mathematically optimal cut points:
+```bash
+python scripts/analyze_song.py --audio song/track.mp3 --stems stems/htdemucs/ --audit --audit-out data/audit.json
+```
+The audit computes:
+- Bar-by-bar chroma cosine similarity ($\ge 0.85$ matches key and harmony)
+- Bass fundamental root matching ($\ge 0.80$)
+- Vocal silence gap verification ($\ge 0.12\,\text{s}$)
+- Kick pre-attack zero crossing offset (target $-2.38\,\text{ms}$)
+- Overall cut reliability score ($0.0 \dots 1.0$)
+
+### 3.5 Broadcast Master Mixdown (`mixdown.ts` / `render.ts audio`)
+Assemble the re-edited stems into `mix.ts`, declare bus routing, and compile via the engine CLI:
+```bash
+bun scripts/render.ts audio --project <project> --mix audio/mix.ts --from 0.0 --to <dur> --out out/master.wav --mp3
+```
+This applies two-pass EBU R128 loudness normalization ($-14.0\text{ LUFS}$ / $-1.5\text{ dBTP}$), lookahead peak limiting ($1.5\,\text{ms}$ lookahead), and sample-exact digital silence gating.
+
+---
+
+## 4. Kinetic Mapping Rules
+
+### 4.1 Avoid the "Beat-Cut Trap" [RULE]
 - **Do NOT cut the camera on every single beat.** Cutting on every quarter note or snare hit destroys spatial continuity, disorients the viewer, and looks amateur.
 - Use the **Hierarchy of Visual Reaction**:
   - **Downbeat / Measure Start (Beat 1):** Ideal for camera cuts, perspective shifts, focal length changes, or scene wipes.
@@ -158,7 +240,7 @@ Beat:  | 1 (Cut) | 2 (Cut) | 3 (Cut) | 4 (Cut) |  <-- Jarring & Disorienting
 Beat:  | 1 (Scene Cut / Downbeat) | 2 (Camera Accel) | 3 (Subtle Pan) | 4 (Light Pulse / Snare) |
 ```
 
-### 3.2 Visual Weight by Frequency Range [GUIDANCE]
+### 4.2 Visual Weight by Frequency Range [GUIDANCE]
 Map frequency bands to physical visual characteristics:
 
 | Frequency Band | Musical Elements | Visual Translation |
@@ -168,12 +250,12 @@ Map frequency bands to physical visual characteristics:
 | **Midrange (250Hz–4kHz)** | Lead synth, brass, vocals, chords | Subject transformation, core kinetic animation, spatial text reveals. |
 | **Highs (>4kHz)** | Hi-hats, cymbals, air, glitched foley | Specular glints, HUD/data element flickers, sparks, chromatic aberration pulses. |
 
-### 3.3 Dynamic Breathing & Deceleration [RULE]
+### 4.3 Dynamic Breathing & Deceleration [RULE]
 - If the audio track strips away percussion or transitions into an ambient pad/drone, **instantly kill fast kinetic cutting**.
 - Replace rapid motion with long, sweeping camera drifts, macro close-ups, and slow environmental parallax.
 - Respect the audio's decay: let camera momentum smoothly glide to a halt as long reverb tails wash out.
 
-### 3.4 Non-Lyric, Ambient & Voiceover-Led Audio Scoring [RULE]
+### 4.4 Non-Lyric, Ambient & Voiceover-Led Audio Scoring [RULE]
 Many Viopls productions are spoken video essays accompanied by non-percussive ambient scores, drone beds, or fluid orchestral arrangements without a constant 4/4 drum grid.
 
 #### 1. The Narration Spine vs. Musical Bed
@@ -202,7 +284,7 @@ python scripts/analyze_song.py --audio app/public/audio/score.mp3 --out app/publ
 
 ---
 
-## 4. The Drop & Buildup Formula [RULE]
+## 5. The Drop & Buildup Formula [RULE]
 
 When scoring high-energy moments (risers into drops):
 
@@ -225,7 +307,7 @@ Depth of field narrows                   Lighting explodes / Environmental shock
 
 ---
 
-## 5. Spatial Audio & Panning Alignment [GUIDANCE]
+## 6. Spatial Audio & Panning Alignment [GUIDANCE]
 
 - If the audio track or sound design has distinct stereo/binaural panning:
   - An element sweeping hard left-to-right across the stereo field should match a left-to-right visual velocity vector on screen.
@@ -233,11 +315,11 @@ Depth of field narrows                   Lighting explodes / Environmental shock
 
 ---
 
-## 6. Runtime Engine Integration: Audio-Driven Scene Architecture [RULE]
+## 7. Runtime Engine Integration: Audio-Driven Scene Architecture [RULE]
 
 In the render engine, scenes consume precomputed audio data via an `AudioData` interface. All audio lookups must be $O(1)$ or $O(\log N)$ binary searches, operating purely on continuous song time $t$.
 
-### 6.1 Continuous Audio API Contract
+### 7.1 Continuous Audio API Contract
 Scenes must interface with audio through these mathematical primitives:
 
 ```typescript
@@ -253,7 +335,7 @@ const beat = au.beatAt(t);   // Continuous fractional beat (e.g., 14.25)
 const bar = au.barAt(t);     // Continuous fractional measure
 ```
 
-### 6.2 Transient Impulse & Decay (The `hit` Function)
+### 7.2 Transient Impulse & Decay (The `hit` Function)
 Do not trigger instant on/off booleans for beats. Instead, model transients as decaying physical impulses with calibrated half-lives:
 
 $$V_{\text{hit}}(t, \text{kind}) = \max_{i} \left( s_i \cdot 0.5^{(t - t_i) / \tau} \right)$$
@@ -285,16 +367,16 @@ hit(kind: string, t: number, halfLife = 0.11): number {
 }
 ```
 
-### 6.3 Peak-Hold Windows for Visual Anticipation
+### 7.3 Peak-Hold Windows for Visual Anticipation
 Human visual perception requires 40–80 ms to register visual changes. Use `envPeak(name, t, w = 0.08)` to evaluate the maximum envelope power over a rolling historical window $[t - w, t]$ to prevent instantaneous envelope troughs from dropping visual brightness between samples.
 
 ---
 
-## 7. QA Validation, Spectrogram Auditing & Motion Telemetry Gate [RULE]
+## 8. QA Validation, Spectrogram Auditing & Motion Telemetry Gate [RULE]
 
 Never ship a render without verifying audio analysis integrity and motion telemetry against automated gates.
 
-### 7.1 Hard-Fail Data Validation (`validate_data.py`)
+### 8.1 Hard-Fail Data Validation (`validate_data.py`)
 Run before building or rendering:
 - **Duration & Monotonicity:** `beats` and `downbeats` strictly increasing within $[0, \text{duration}]$.
 - **Section Coverage:** Sections contiguous, sorted, starting at $0.000\text{s}$ and covering exactly to track end.
@@ -302,14 +384,14 @@ Run before building or rendering:
 - **Semantic Text Drift:** Aligned lyric lines must match authoritative text character-for-character.
 - **Manifest Scene Resolution:** Every scene and cut in `project.json` must resolve to valid scene files and timestamps.
 
-### 7.2 Spectrogram QA Auditing (`qa_plot.py`)
+### 8.2 Spectrogram QA Auditing (`qa_plot.py`)
 Inspect the generated spectrogram overview plots (`qa/audio_overview.png` and window strips):
 - **Kick Red Triangles:** Align to the bottom sub-bass bursts ($<120\text{ Hz}$) on the drums spectrogram.
 - **Snare White Triangles:** Align to broadband noise bursts ($1.5 \dots 5\text{ kHz}$) with evident resonance tails.
 - **Downbeat Cyan/Black Lines:** Fall on musical bar starts with heavy bass onset clustering.
 - **Red Section Flags:** Coincide exactly with the downbeat preceding the first sung word.
 
-### 7.3 Motion Telemetry Profiling (`scripts/render.ts motion`)
+### 8.3 Motion Telemetry Profiling (`scripts/render.ts motion`)
 Profile the rendered scene in headless Chrome:
 - **Temporal Cadence (FFT):** Verifies that visual velocity peaks match the musical tempo and measure frequency, rather than erratic stuttering.
 - **Optical Flow & Luma Delta:** Ensures energy ramps match audio build-ups without static frozen stretches.
@@ -317,7 +399,7 @@ Profile the rendered scene in headless Chrome:
 
 ---
 
-## 8. Pre-Render Audio Sync Checklist
+## 9. Pre-Render Audio Sync Checklist
 
 Before locking down an edit, camera pass, or motion graphics render:
 

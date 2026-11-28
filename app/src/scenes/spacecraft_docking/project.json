@@ -1,0 +1,27 @@
+{
+  "project": "spacecraft_docking",
+  "entries": [
+    {
+      "scene": "spacecraft_docking/scene_approach",
+      "id": "scene_approach",
+      "start": 0.0,
+      "end": 12.0
+    },
+    {
+      "scene": "spacecraft_docking/scene_docking",
+      "id": "scene_docking",
+      "start": 10.0,
+      "end": 20.0
+    }
+  ],
+  "transitions": [
+    {
+      "id": "t1-airlock",
+      "transition": "hangar_airlock",
+      "from": "scene_approach",
+      "to": "scene_docking",
+      "at": 10.0,
+      "dur": 2.0
+    }
+  ]
+}

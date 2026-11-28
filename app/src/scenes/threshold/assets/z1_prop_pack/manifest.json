@@ -1,0 +1,17 @@
+{
+  "id": "z1_prop_pack",
+  "version": 1,
+  "source": "build.py",
+  "budgets": {
+    "tris": 120000,
+    "textureMB": 0
+  },
+  "scale": 1,
+  "parts": {
+    "desk": "desk_root",
+    "chair": "chair_upright_root",
+    "crt": "crt_root",
+    "keyboard": "keyboard_root"
+  },
+  "notes": "Z1 modular office prop pack"
+}

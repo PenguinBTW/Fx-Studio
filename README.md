@@ -1,11 +1,12 @@
-# f(x) Studio (v0.7.0 Stable)
+# f(x) Studio (v0.8.0 Stable)
 
 **This project is licensed under the PolyForm Small Business License 1.0.0 ([`LICENSE.md`](./LICENSE.MD)). This grants non-commercial parties full use of the software and allows small businesses under the defined revenue and employee thresholds to use it under the same terms.**
 
 **For commercial licensing beyond these thresholds, email *vio@penguinbtw.com***
 
-> ### 🚀 Latest Release: v0.7.0
-> * **[v0.7.0 Release Record](./docs/changelog/v0.7.0-release-record.md)**: Major engine overhaul delivering physical optics (Wyman-Sloan CIE 1931 spectrum, Cauchy dispersion, Descartes rainbow caustics), thin-lens Circle-of-Confusion DoF, 500k GPU instanced particles, Bishop RMF twist-free ribbons, divergence-free curl noise, streamline untangling, in-world 3D PBR typography with particle deflection, EBU R128 audio mastering pipeline (-14.8 LUFS / -1.5 dBTP), zero-allocation lazy subsystem architecture, engine file splitting, and strict type restoration.
+> ### 🚀 Latest Release: v0.8.0
+> * **[v0.8.0 Release Record](./docs/changelog/v0.8.0-release-record.md)**: Unified audiovisual production engine (modular audio subsystem, defineMix DSL, 3D spatial audio, broadcast mastering), two-tier transition registry, project-scoped Blender asset layer, native 9:16 output, bundled fonts, and new example films.
+> * **[v0.7.0 Release Record](./docs/changelog/v0.7.0-release-record.md)**: Physical optics, thin-lens DoF, 500k GPU particles, Bishop ribbons, curl noise and in-world 3D typography.
 > * **[Root Changelog](./CHANGELOG.md)**: Full version history across all releases.
 
 ---

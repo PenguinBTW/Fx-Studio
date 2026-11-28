@@ -1,0 +1,18 @@
+{
+  "id": "tunnel_drop",
+  "eventId": null,
+  "recipe": "subHit",
+  "seed": 381,
+  "file": "tunnel_drop.wav",
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "durationSec": 2,
+  "hitOffsetSec": 0,
+  "peak": 0.8912509381337455,
+  "peakDb": -1.0000000000000007,
+  "rms": 0.1835132090363987,
+  "rmsDb": -14.726653406967271,
+  "eventTime": null,
+  "startTime": null
+}

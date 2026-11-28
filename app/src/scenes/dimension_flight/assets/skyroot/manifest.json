@@ -1,0 +1,1 @@
+{ "id": "skyroot", "version": 1, "source": "build.py", "budgets": { "tris": 40000, "textureMB": 1 } }

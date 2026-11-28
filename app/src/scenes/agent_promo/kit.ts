@@ -1,0 +1,302 @@
+// Shared kit for the agent_promo film: palette, the song's bar grid, Blender asset loading/instancing,
+// a studio environment for chrome, and Canvas2D kinetic-type helpers (spring slam + knockout halo).
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import type { Layer2D } from '../../engine/gl';
+import { F, font } from '../../engine/type';
+import { clamp, springStep, ease } from '../../engine/util';
+import { GLTFManager, type GLTFInstance } from '../../engine/gltf';
+import { resolveAsset } from '../../engine/assets';
+import { DepthDoFPass } from '../../engine/dof';
+import type { SceneCtx } from '../../engine/scene';
+
+export const C = { void: '#07070A', bone: '#EDE6D6', signal: '#FF5A1F', ice: '#9CC9E8', ash: '#6B6A66', red: '#D9262B', ok: '#2FBF71', cream: '#EFE8DA', ink: '#1B1A18' } as const;
+export const HALO = 'rgba(5,5,6,0.88)';
+
+/** Song grid (Technologic cut, 128.37 BPM). Bars are 1-based to match storyboard.md. */
+export const BAR = 1.86957;
+export const BEAT = BAR / 4;
+export const B0 = 1.848;
+export const bar = (k: number) => B0 + (k - 1) * BAR;
+export const beatAt = (k: number, b = 0) => bar(k) + b * BEAT;
+
+/** Scene time: song time, optionally shifted so recap entries replay a scene's choreography. */
+export const sceneTime = (ctx: SceneCtx, t: number) => t + (Number(ctx.params?.shift) || 0);
+
+/** Instances share the cached GLTF's materials; clone them so one scene's grade never leaks into another (seek determinism). */
+
+/** Free what a scene allocated (geometry, materials, shadow maps), like DSL scenes do on dispose. */
+export function release(root: THREE.Object3D) {
+  root.traverse((o) => {
+    const m = o as THREE.Mesh;
+    m.geometry?.dispose();
+    if (m.material) for (const x of ([] as THREE.Material[]).concat(m.material)) x.dispose();
+    (o as unknown as { shadow?: { dispose(): void } }).shadow?.dispose();
+  });
+}
+
+export async function model(ctx: SceneCtx, id: string): Promise<GLTFInstance> {
+  const inst = await GLTFManager.instantiate(resolveAsset(id, ctx.project ?? 'agent_promo').url, {});
+  const own = new Map<THREE.Material, THREE.Material>();
+  const mine = (x: THREE.Material) => { let c = own.get(x); if (!c) own.set(x, (c = x.clone())); return c; };
+  inst.root.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (m.isMesh) m.material = Array.isArray(m.material) ? m.material.map(mine) : mine(m.material);
+  });
+  return inst;
+}
+
+/** Song loudness at t (0..1), from the baked rms.json. */
+export function rmsAt(t: number) {
+  const x = Math.max(0, t) * RMS.fps, i = Math.floor(x), a = RMS.rms[i] ?? 0, b = RMS.rms[i + 1] ?? a;
+  return a + (b - a) * (x - i);
+}
+
+/** Bake each mesh of a Blender asset into an InstancedMesh sharing one set of matrices. */
+export class Instanced {
+  readonly group = new THREE.Group();
+  readonly meshes: THREE.InstancedMesh[] = [];
+  private m = new THREE.Matrix4();
+  constructor(inst: GLTFInstance, readonly count: number, materialFor?: (name: string, m: THREE.Material) => THREE.Material, only?: (meshName: string) => boolean) {
+    inst.root.updateMatrixWorld(true);
+    inst.root.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      if (only && !only(mesh.name) && !only(mesh.parent?.name ?? '')) return;
+      const g = mesh.geometry.clone().applyMatrix4(mesh.matrixWorld);
+      const src = mesh.material as THREE.Material;
+      const mat = materialFor ? materialFor(src.name || mesh.name, src) : src;
+      const im = new THREE.InstancedMesh(g, mat, count);
+      im.name = mesh.name;
+      im.frustumCulled = false;
+      this.meshes.push(im);
+      this.group.add(im);
+    });
+  }
+  set(i: number, p: THREE.Vector3, q: THREE.Quaternion, s: THREE.Vector3) {
+    this.m.compose(p, q, s);
+    for (const im of this.meshes) im.setMatrixAt(i, this.m);
+  }
+  color(i: number, c: THREE.Color, only?: string) {
+    for (const im of this.meshes) if (!only || im.name.includes(only)) im.setColorAt(i, c);
+  }
+  commit(n = this.count) {
+    for (const im of this.meshes) {
+      im.count = n;
+      im.instanceMatrix.needsUpdate = true;
+      if (im.instanceColor) im.instanceColor.needsUpdate = true;
+    }
+  }
+}
+
+const envCache = new WeakMap<THREE.WebGLRenderer, THREE.Texture>();
+export function studioEnv(renderer: THREE.WebGLRenderer): THREE.Texture {
+  let tex = envCache.get(renderer);
+  if (!tex) {
+    const pm = new THREE.PMREMGenerator(renderer);
+    tex = pm.fromScene(new RoomEnvironment(), 0.04).texture;
+    pm.dispose();
+    renderer.resetState();
+    envCache.set(renderer, tex);
+  }
+  return tex;
+}
+
+/** Render a three.js scene into `out` and lay the 2D layer over it. */
+/** Lets a transition sample a scene's 3D world without its 2D overlay type (the multiverse wall). */
+export const overlay = { on: true };
+
+export function present(ctx: SceneCtx, out: THREE.WebGLRenderTarget, scene: THREE.Scene, cam: THREE.Camera, layer?: Layer2D, extra?: () => void, clear = 0x07070a, layerOpacity = 1) {
+  const r = ctx.renderer;
+  r.setRenderTarget(out);
+  r.setClearColor(clear, 1);
+  r.clear();
+  r.render(scene, cam);
+  if (extra) { extra(); r.setRenderTarget(out); }
+  if (layer && layerOpacity > 0.001 && overlay.on) ctx.comp.draw(r, layer.upload(), out, { mode: 'normal', opacity: layerOpacity });
+  r.resetState();
+}
+
+export interface SlamOpts {
+  t0: number;
+  t1?: number;
+  family?: string;
+  size: number;
+  color?: string;
+  halo?: string;
+  haloW?: number;
+  align?: CanvasTextAlign;
+  tracking?: number;
+  /** Seconds of snap-out after t1 (vertical collapse + horizontal stretch). */
+  out?: number;
+  shake?: number;
+  /** Starting scale of the slam (mass falling toward the lens). */
+  from?: number;
+  rot?: number;
+}
+
+/** Spring slam: the word falls from `from`x scale onto the glass with an under-damped settle and a decaying shake. */
+export function slam(c: CanvasRenderingContext2D, text: string, x: number, y: number, t: number, o: SlamOpts): number {
+  if (t < o.t0) return 0;
+  const t1 = o.t1 ?? Infinity;
+  const out = o.out ?? 0.1;
+  if (t > t1 + out) return 0;
+  const lt = t - o.t0;
+  const s = springStep(lt, 3.4, 0.45);
+  const from = o.from ?? 1.7;
+  const scale = from + (1 - from) * s;
+  const ex = t > t1 ? clamp((t - t1) / out) : 0;
+  const sy = 1 - ease.inCubic(ex);
+  const sx = 1 + ex * 0.5;
+  const a = clamp(lt / 0.04) * (1 - ex * 0.5);
+  const sh = (o.shake ?? 6) * Math.exp(-lt * 12);
+  c.save();
+  c.translate(x + Math.sin(lt * 91) * sh, y + Math.cos(lt * 77) * sh);
+  if (o.rot) c.rotate(o.rot * (1 - s));
+  c.scale(scale * sx, scale * sy);
+  c.font = font(o.family ?? F.archivo(100, 900), o.size);
+  c.textAlign = o.align ?? 'center';
+  c.textBaseline = 'middle';
+  (c as any).letterSpacing = `${o.tracking ?? 0}px`;
+  c.globalAlpha = a;
+  c.lineJoin = 'round';
+  c.strokeStyle = o.halo ?? HALO;
+  c.lineWidth = o.haloW ?? Math.max(6, o.size * 0.1);
+  c.strokeText(text, 0, 0);
+  c.fillStyle = o.color ?? C.bone;
+  c.fillText(text, 0, 0);
+  c.restore();
+  return a;
+}
+
+export interface Cue { text: string; t: number; color?: string; size?: number; family?: string }
+
+/** A train of words: each one holds until the next cue, then snaps out. */
+export function train(c: CanvasRenderingContext2D, cues: Cue[], t: number, x: number, y: number, base: Omit<SlamOpts, 't0' | 't1'>, end = Infinity) {
+  for (let i = 0; i < cues.length; i++) {
+    const q = cues[i]!;
+    const t1 = i + 1 < cues.length ? cues[i + 1]!.t - (base.out ?? 0.08) : end;
+    if (t < q.t || t > t1 + (base.out ?? 0.08)) continue;
+    slam(c, q.text, x, y, t, { ...base, t0: q.t, t1, color: q.color ?? base.color, size: q.size ?? base.size, family: q.family ?? base.family });
+  }
+}
+
+/** Mono typewriter line with a block cursor; returns the drawn width. */
+export function typeLine(c: CanvasRenderingContext2D, text: string, x: number, y: number, t: number, t0: number, o: { size?: number; cps?: number; color?: string; align?: CanvasTextAlign; t1?: number; cursor?: boolean; family?: string; plate?: boolean } = {}) {
+  if (t < t0) return 0;
+  const size = o.size ?? 30;
+  const n = Math.min(text.length, Math.floor((t - t0) * (o.cps ?? 28)));
+  const fade = o.t1 !== undefined ? 1 - clamp((t - o.t1) / 0.15) : 1;
+  if (fade <= 0) return 0;
+  c.save();
+  c.font = font(o.family ?? F.mono(400), size);
+  c.textBaseline = 'middle';
+  const full = c.measureText(text).width;
+  const x0 = o.align === 'center' ? x - full / 2 : o.align === 'right' ? x - full : x;
+  const shown = text.slice(0, n);
+  c.textAlign = 'left';
+  c.globalAlpha = fade;
+  if (o.plate) { c.fillStyle = 'rgba(7,7,10,0.78)'; c.fillRect(x0 - size * 0.5, y - size * 0.8, c.measureText(shown).width + size * 1.4, size * 1.6); }
+  c.lineWidth = size * 0.3;
+  c.strokeStyle = HALO;
+  c.strokeText(shown, x0, y);
+  c.fillStyle = o.color ?? C.bone;
+  c.fillText(shown, x0, y);
+  if (o.cursor !== false && (n < text.length || Math.floor(t * 2.06) % 2 === 0)) {
+    const w = c.measureText(shown).width;
+    c.fillStyle = C.signal;
+    c.fillRect(x0 + w + 4, y - size * 0.45, size * 0.55, size * 0.9);
+  }
+  c.restore();
+  return full;
+}
+
+export type V3 = [number, number, number];
+export interface CamKey { pos: V3; tgt: V3; fov: number; roll?: number }
+const mix3 = (a: V3, b: V3, k: number): V3 => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+export const mixKey = (a: CamKey, b: CamKey, k: number): CamKey => ({ pos: mix3(a.pos, b.pos, k), tgt: mix3(a.tgt, b.tgt, k), fov: a.fov + (b.fov - a.fov) * k, roll: (a.roll ?? 0) + ((b.roll ?? 0) - (a.roll ?? 0)) * k });
+/** Apply a camera key; `kick` adds a small FOV punch and downward nod. */
+export function applyCam(cam: THREE.PerspectiveCamera, k: CamKey, kick = 0) {
+  cam.position.set(k.pos[0], k.pos[1] - kick * 0.04, k.pos[2]);
+  cam.up.set(Math.sin(k.roll ?? 0), Math.cos(k.roll ?? 0), 0);
+  cam.lookAt(k.tgt[0], k.tgt[1], k.tgt[2]);
+  cam.fov = k.fov * (1 - kick * 0.035);
+  cam.updateProjectionMatrix();
+  cam.updateMatrixWorld(true);
+}
+/** Linear-space RGB for LineBatch colours. */
+export function lin(hex: string, k = 1): [number, number, number] {
+  const c = new THREE.Color(hex);
+  return [c.r * k, c.g * k, c.b * k];
+}
+
+export interface DoFKey { focus: number; aperture: number; maxRadius?: number }
+
+/** present() with the engine's physical thin-lens DoF: scene (+ extra passes) into a depth RT, DepthDoFPass into out, 2D layer on top. */
+export class DoFPresenter {
+  private rt: THREE.WebGLRenderTarget | null = null;
+  private pass = new DepthDoFPass();
+  render(ctx: SceneCtx, out: THREE.WebGLRenderTarget, scene: THREE.Scene, cam: THREE.PerspectiveCamera, dof: DoFKey, layer?: Layer2D, extra?: (t: THREE.WebGLRenderTarget) => void, clear = 0x07070a, layerOpacity = 1) {
+    const r = ctx.renderer;
+    if (!this.rt || this.rt.width !== out.width || this.rt.height !== out.height) {
+      this.rt?.dispose();
+      this.rt = new THREE.WebGLRenderTarget(out.width, out.height, { type: THREE.HalfFloatType, depthTexture: new THREE.DepthTexture(out.width, out.height) });
+    }
+    r.setRenderTarget(this.rt);
+    r.setClearColor(clear, 1);
+    r.clear();
+    r.render(scene, cam);
+    if (extra) extra(this.rt);
+    this.pass.render(r, this.rt.texture, this.rt.depthTexture!, { enabled: dof.aperture > 0.01, focusDistance: dof.focus, aperture: dof.aperture, maxRadius: dof.maxRadius ?? 16, near: cam.near, far: cam.far, samples: 24 }, out);
+    r.setRenderTarget(out);
+    if (layer && layerOpacity > 0.001 && overlay.on) ctx.comp.draw(r, layer.upload(), out, { mode: 'normal', opacity: layerOpacity });
+    r.resetState();
+  }
+  dispose() { this.rt?.dispose(); this.pass.dispose(); }
+}
+
+
+// ---- agent_promo additions ----
+import FACTS_JSON from './facts.json';
+import RMS from './rms.json';
+export const FACTS = FACTS_JSON as Record<string, number | string>;
+/** The closing words of the user's request, verbatim (REVIEW.md, 'Sources'); A1 punches their real ASCII bytes. */
+export const PROMPT = 'should use fx studio + blender its your project.';
+/** Fractional bar number at time T (bar 1 = first downbeat). */
+export const barOf = (T: number) => (T - B0) / BAR + 1;
+/** Find a named node of a Blender asset. */
+export function part(inst: GLTFInstance, name: string): THREE.Object3D {
+  const o = inst.root.getObjectByName(name);
+  if (!o) throw new Error(`[agent_promo] asset part '${name}' missing`);
+  return o;
+}
+export function shadows(o: THREE.Object3D, cast = true, receive = true) {
+  o.traverse((n) => { const m = n as THREE.Mesh; if (m.isMesh) { m.castShadow = cast; m.receiveShadow = receive; } });
+}
+/** Warm key + cool rim + soft hemi fill; key casts PCF soft shadows. */
+export function heroLights(scene: THREE.Scene, key = 0xffd7a0, rim = 0x9cc9e8, keyI = 3, rimI = 2.2, hemiI = 0.25) {
+  const k = new THREE.DirectionalLight(key, keyI); k.castShadow = true; k.shadow.mapSize.set(2048, 2048); k.shadow.bias = -0.0004; k.shadow.normalBias = 0.02;
+  const r = new THREE.DirectionalLight(rim, rimI);
+  const h = new THREE.HemisphereLight(0x8a96a8, 0x0b0b0e, hemiI);
+  scene.add(k, k.target, r, r.target, h);
+  return { key: k, rim: r, hemi: h };
+}
+export function enableShadows(ctx: SceneCtx) { ctx.renderer.shadowMap.enabled = true; ctx.renderer.shadowMap.type = THREE.PCFShadowMap; }
+/** Piecewise camera path keyed by bar number with inOutCubic easing between keys. */
+export function camPath(keys: [number, CamKey][], b: number): CamKey {
+  if (b <= keys[0]![0]) return keys[0]![1];
+  for (let i = 0; i < keys.length - 1; i++) {
+    const [b0, A] = keys[i]!, [b1, B] = keys[i + 1]!;
+    if (b <= b1) return mixKey(A, B, ease.inOutCubic((b - b0) / (b1 - b0)));
+  }
+  return keys[keys.length - 1]![1];
+}
+export const h1 = (i: number, s = 0) => { const x = Math.sin(i * 127.1 + s * 311.7) * 43758.5453; return x - Math.floor(x); };
+/** Spin a glTF node about its local axis from a stored base orientation (glTF cylinders: local +Y). */
+const _q = new THREE.Quaternion();
+export function spin(o: THREE.Object3D, base: THREE.Quaternion, a: number, axis = new THREE.Vector3(0, 1, 0)) {
+  o.quaternion.copy(base).multiply(_q.setFromAxisAngle(axis, a));
+}
+/** Act index (0..11) for a bar number, matching storyboard.md. */
+export const ACT_BARS = [0, 3, 9, 15, 20, 31, 37, 53, 69, 81, 93, 101, 120];
+export const actOfBar = (b: number) => { let i = 0; while (i < ACT_BARS.length - 2 && b >= ACT_BARS[i + 1]!) i++; return i; };

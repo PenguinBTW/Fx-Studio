@@ -1,33 +1,64 @@
 # Multi-Track Audio Mixdown & Broadcast Mastering Pipeline
 
-**Platform Version**: v0.7.0  
+**Platform Version**: f(x) Studio v0.8.0 (Unified Audiovisual Production Engine)  
 **Implementation Script**: [`app/scripts/mixdown.ts`](../../app/scripts/mixdown.ts)  
+**Audio Subsystem**: [`app/src/engine/audio/`](../../app/src/engine/audio/)  
 **Verification Script**: [`scripts/verify_audio.py`](../../scripts/verify_audio.py)  
-**Unit Test Suite**: [`app/scripts/test_mixdown.ts`](../../app/scripts/test_mixdown.ts)  
-**Output Target**: 48 kHz / 24-bit stereo mastered WAV  
+**Unit Test Suites**:
+- NLE Engine: `bun test:nle` ([`app/scripts/test_stem_nle.ts`](../../app/scripts/test_stem_nle.ts))
+- 3D Spatializer: `bun test:spatial` ([`app/scripts/test_spatializer.ts`](../../app/scripts/test_spatializer.ts))
+- Cinematic DSP: `bun test:dsp` ([`app/scripts/test_dsp.ts`](../../app/scripts/test_dsp.ts))
+- Transition Cascade: `bun test:transitions` ([`app/scripts/test_transitions_registry.ts`](../../app/scripts/test_transitions_registry.ts))
+- Full Mixdown & Verification: `bun app/scripts/test_mixdown.ts`  
+**Output Target**: 48 kHz / 24-bit stereo mastered broadcast WAV  
 
 ---
 
 ## 1. Overview
 
-The **f(x) Studio Mixdown Engine** is an automated multi-track audio assembler and broadcast mastering pipeline. It reads stem manifests (`mix.json`), routes stems through 4 isolated mixing buses, applies dynamic sidechain ducking, performs two-pass EBU R128 loudness normalization, and enforces bit-exact digital silence across narrative blackout intervals.
+The **f(x) Studio Mixdown Engine** is an automated multi-stem NLE assembler, 3D object-bound spatializer, and broadcast mastering pipeline. It reads declarative mix manifests (`mix.ts` or `mix.json`), routes signals through 6 isolated mixing buses, executes offline Float32 PCM multi-stem excision, spatializes 3D objects from visual telemetry streams (`events.jsonl`), applies spectral ducking and vocal sanctuary filtering, performs two-pass EBU R128 loudness normalization with lookahead true-peak limiting, and enforces bit-exact digital silence across narrative blackout intervals.
 
 ```mermaid
 flowchart TD
-    Stems["Audio Stems\n(music, sfx, sub, foley)"] --> Buses["4 Stem Buses\n(music, sfx, sub, foley_guide)"]
-    Events["events.json"] -.->|Event Time Placement| Buses
+    subgraph Stems["Input Stems & Spatial Sources"]
+        MultiStems["Separated Stems (Drums, Bass, Vocals, Other)"]
+        SpatialAudio["3D SFX (Thrusters, Impacts, Engines)"]
+        VOAudio["Voiceover / Narration"]
+    end
+
+    subgraph TelemetryStream["Pass 2 Telemetry Stream"]
+        EventsJSONL["out/events.jsonl\n(Object World/Screen Transforms, Camera Velocity)"]
+    end
+
+    subgraph AudioEngine["Pass 3: Pure Bun/TS Float32 PCM Engine"]
+        StemNLE["Multi-Stem NLE Assembler\n(Transient Lock -2.38ms, Tail Spillover, Breath Gate)"]
+        Spatializer["3D Stereo Spatializer\n(Vector Pan, Distance Atten, Cytomic SVF LPF, Occlusion)"]
+        Buses["6 Bus Architecture\n(music, sfx, sub, vo, foley_guide, ambient)"]
+        
+        SBDuck["Split-Band Spectral Ducking\n(LR-2 Crossover @ 250 Hz: Decouples Sub-Bass)"]
+        Sanctuary["Vocal Sanctuary Dynamic Notch\n(2.2 kHz SVF Bell Filter modulated by VO)"]
+        PreDrop["Pre-Drop Silence Vacuum\n(40-120ms gap with 2ms anti-click fade)"]
+    end
+
+    subgraph Mastering["Broadcast Delivery Pipeline"]
+        Summing["Float32 Master Bus Summing"]
+        Gate1["Pre-Loudnorm Void Gate"]
+        Loudnorm["Two-Pass EBU R128 (-14.0 LUFS, -1.5 dBTP)"]
+        Limiter["Lookahead True Peak Limiter (1.5ms lookahead)"]
+        Gate2["Post-Loudnorm Hard Gate (Zeroes Dither)"]
+        MasterWAV["Master Output (48kHz / 24-bit WAV)"]
+    end
+
+    MultiStems --> StemNLE --> Buses
+    SpatialAudio & EventsJSONL --> Spatializer --> Buses
+    VOAudio --> Buses
+
+    Buses --> SBDuck
+    Buses --> Sanctuary
+    Buses --> PreDrop
     
-    Buses --> Duck["Lookahead Sidechain Ducking\n(Attenuates music prior to SFX hits)"]
-    Duck --> PrePCM["Pre-Master PCM (Float32Array)"]
-    
-    Gate1["Pre-Loudnorm Gate\n(applyGate: zeroes void regions)"] --> PrePCM
-    PrePCM --> FFmpeg["FFmpeg Two-Pass loudnorm\nI = -14.0 LUFS, TP = -1.5 dBTP"]
-    
-    FFmpeg --> Decode["Decode Normalized PCM (Float32Array)"]
-    Decode --> Gate2["Post-Loudnorm Hard Gate\n(applyGate: eliminates dither/filter ringing)"]
-    Gate2 --> MasterWAV["Master Output (48kHz / 24-bit WAV)"]
-    
-    MasterWAV --> Verify["scripts/verify_audio.py\n(Asserts LUFS, True Peak, & Exact Digital Silence)"]
+    SBDuck & Sanctuary & PreDrop --> Summing
+    Summing --> Gate1 --> Loudnorm --> Limiter --> Gate2 --> MasterWAV
 ```
 
 ---
@@ -35,37 +66,43 @@ flowchart TD
 ## 2. CLI Usage & Commands
 
 ```bash
-# Standalone mixdown execution:
-bun scripts/mixdown.ts --mix path/to/mix.json --out out/mix.wav
+# Standalone mixdown using TypeScript DSL or JSON manifest:
+bun scripts/mixdown.ts --mix scenes/spacecraft_docking/audio/mix.ts --out out/mix.wav --to 45.0
 
 # Mixdown with event synchronization and secondary foley guide output:
 bun scripts/mixdown.ts \
-  --mix path/to/mix.json \
-  --events out/events.json \
+  --mix path/to/mix.ts \
+  --events out/events.jsonl \
   --from 0.0 \
   --to 125.0 \
   --out out/mix.wav \
   --foley-out out/foley_guide.wav
 
 # Run automated CI regression tests:
-bun scripts/test_mixdown.ts
+bun app/scripts/test_mixdown.ts
+bun test:nle
+bun test:spatial
+bun test:dsp
+bun test:transitions
 
 # Verify broadcast compliance:
-python scripts/verify_audio.py --audio out/mix.wav --events out/events.json
+python scripts/verify_audio.py out/mix.wav --target-lufs -14.0 --max-tp -1.5
 ```
 
 ---
 
-## 3. Bus Architecture & Manifest Schema (`mix.json`)
+## 3. Bus Architecture & Manifest DSL (`defineMix`)
 
-Stems are assigned to one of four dedicated mixing buses:
+In f(x) Studio v0.8.0, mixing configurations are authored in type-safe TypeScript via `defineMix()`:
 
 | Bus | Primary Function | Typical Content |
 | :--- | :--- | :--- |
-| **`music`** | Musical soundtrack & background beds. | Soundtrack stems, ambient drones. Target of sidechain ducking. |
-| **`sfx`** | Mid & high frequency sound effects. | Procedural synthesis cues, granular clicks, whooshes, impacts. |
-| **`sub`** | Sub-bass impacts & low-frequency energy. | 808 sub drops, seismic rumbles ($< 80\,\text{Hz}$). |
-| **`foley_guide`** | Timing clicks & foley references. | Separate auxiliary stems rendered strictly for sound designers. |
+| **`music`** | Musical soundtrack & background beds. | Separated stems (drums, bass, vocals, other). Target of split-band ducking and vocal sanctuary notch. |
+| **`sfx`** | Mid & high frequency sound effects. | Procedural synthesis cues, UI clicks, spatial whooshes, mechanical impacts. |
+| **`sub`** | Sub-bass impacts & low-frequency energy. | 808 sub drops, seismic rumbles ($< 80\,\text{Hz}$). Decoupled from musical kick. |
+| **`vo`** | Voiceover & narration dialogue. | Dry speech recordings. Triggers dynamic vocal sanctuary notch on `music` bus. |
+| **`ambient`** | Environmental room tones & beds. | Pressurized room drones, space station hums, planetary winds. |
+| **`foley_guide`** | Timing clicks & foley references. | Auxiliary guide stems rendered strictly for sound designers. |
 
 ### Manifest Schema (`mix.json`)
 ```json
@@ -110,58 +147,125 @@ Stems are assigned to one of four dedicated mixing buses:
   "master": {
     "normalize": true,
     "lufs": -14.0,
-    "truePeak": -1.5
+    "truePeak": -1.5,
+    "fadeOut": { "at": 211.4, "dur": 3.1 }
   }
 }
 ```
 
----
+`master.fadeOut` applies a linear fade over `[at, at + dur]` (project seconds) after loudness normalization.
 
-## 4. Lookahead Sidechain Ducking
-
-When loud procedural impacts or vocal dialogue occur, background music must duck smoothly to preserve clarity and prevent master limiter clipping.
-
-* **Lookahead Attack**: Ducking begins `attack` seconds *before* the transient strike.
-* **Smooth Easing**: Gain attenuation follows an exponential curve:
-  $$G(t) = \text{amountDb} \cdot (1 - e^{-t / \text{attack}})$$
-* **Hold & Release**: Gain remains attenuated across `hold` before recovering to unity across `release`.
-
----
-
-## 5. The Two-Tier Hard-Mute Gate (The Void Cut Solution)
-
-### The Digital Silence Problem
-In cinematic productions, narrative blackouts or "Void Cuts" demand absolute, pure digital silence ($\text{sample} \equiv 0.0$).
-However, standard DAW export and FFmpeg's `loudnorm` filter pass audio through polyphase sinc interpolation filters and dither noise algorithms. Even when the input stems are completely muted, these filters introduce low-level ringing and dither noise (typically around $-80\,\text{dBFS}$ to $-72\,\text{dBFS}$).
-
-### The Two-Tier Solution
-`mixdown.ts` eliminates filter ringing by applying a **two-tier gate**:
-
+### Mix Manifest Example (`mix.ts`)
 ```typescript
-// 1. First Gate: Zero samples in pre-master buffer before loudnorm
-applyGate(preMasterF32, muteRegions);
+import { defineMix } from '@/engine/audio';
 
-// 2. Pass pre-master to FFmpeg for two-pass EBU R128 loudness normalization
-const normalizedF32 = await runFFmpegLoudnorm(preMasterF32);
-
-// 3. Second Gate: Re-zero the exact sample regions on decoded PCM
-applyGate(normalizedF32, muteRegions);
-
-// 4. Encode directly to 24-bit PCM WAV
+export default defineMix({
+  sampleRate: 48000,
+  soundtracks: [
+    {
+      id: 'main_theme',
+      bus: 'music',
+      gainDb: 0.0,
+      stems: {
+        drums: 'stems/drums.wav',
+        bass: 'stems/bass.wav',
+        vocals: 'stems/vocals.wav',
+        other: 'stems/other.wav',
+      },
+      edits: {
+        quantize: 'bars',
+        excise: [
+          {
+            fromBar: 4,
+            toBar: 8,
+            stems: {
+              drums: { leadBars: 0, lagBars: 2, transientLock: true },
+              vocals: { breathGate: true },
+              other: { tailSpillover: { spillSec: 2.0, tauSec: 0.7 } },
+            },
+          },
+        ],
+      },
+    },
+  ],
+  spatialSources: [
+    {
+      id: 'ship_thruster',
+      file: 'sfx/thruster.wav',
+      bus: 'sfx',
+      bindTo: 'cargo_ship',
+      spatial: {
+        mode: 'screen_vector',
+        maxPan: 0.65,
+        distanceAttenDb: 14.0,
+        distanceLpfHz: [20000, 2500],
+        occlusionNotchDb: 6.0,
+      },
+    },
+  ],
+  duck: {
+    bus: 'music',
+    cues: ['docking_clamp_hit'],
+    amountDb: 5.0,
+    attack: 0.02,
+    release: 0.35,
+    splitBand: true,
+    splitHz: 250,
+  },
+  vocalSanctuary: {
+    centerHz: 2200,
+    q: 1.2,
+    cutDb: -3.5,
+  },
+  master: {
+    lufs: -14.0,
+    truePeak: -1.5,
+    limiterLookaheadMs: 1.5,
+  },
+});
 ```
 
-### Verification Rule:
-`scripts/verify_audio.py` asserts that within all declared mute regions:
-$$\min |x| \equiv 0.0 \quad \text{and} \quad \max |x| \equiv 0.0$$
-If even a single non-zero dither bit ($10^{-7}$) leaks into a void window, verification fails with exit code `1`.
+---
+
+## 4. Multi-Stem NLE Assembly & Seam Physics
+
+1. **Master Transient Lock (`transientLock`)**:
+   Offsets the incoming cut across all stems together by the kick drum's pre-attack zero crossing ($-2.38\,\text{ms}$) with an asymmetric crossfade ($3\,\text{ms}$ cosine out, $0\,\text{ms}$ hard in). Applying this offset collectively preserves absolute phase alignment across all stems, eliminating phase smearing from Demucs stem bleed.
+2. **Harmonic Tail Spillover (`tailSpillover`)**:
+   Harmonic instruments (`other`, synths, guitars, strings) do not cut abruptly at the seam. An exponential decay envelope $\text{Decay}(t) = \exp(-t/\tau)$ overlays the outgoing tail across the incoming scene for $1.5\text{--}2.5\,\text{s}$.
+3. **Vocal Breath Gating (`breathGate`)**:
+   Snaps vocal cuts to detected silence gaps ($\ge 120\,\text{ms}$), suppressing orphan breath gasps and zero-filling the edit window.
 
 ---
 
-## 6. Broadcast Standards & Verification (`verify_audio.py`)
+## 5. 3D Object-Bound Spatial Audio
 
-All mastered audio is audited against EBU R128 and ATSC A/85 delivery specifications:
+1. **Screen-Vector Panning**:
+   Projects 3D world coordinates through the camera's view and projection matrices into screen NDC $[-1, +1]$, mapping directly to stereo pan $[-0.65, +0.65]$ for natural headphone/speaker imaging.
+2. **Clamped Distance Attenuation**:
+   Inverse-square physical rolloff clamped to a $-18\,\text{dB}$ ambient floor so sounds never disappear completely.
+3. **Cytomic SVF Air Absorption Filter**:
+   Simulates atmospheric high-frequency dissipation by rolling off high frequencies ($20\,\text{kHz} \to 2.5\,\text{kHz}$) as distance increases using a zero-delay feedback Cytomic SVF filter.
+4. **1-Pole Parameter Smoothing**:
+   All spatial parameters (pan, distance, cutoff) are interpolated from 60 Hz visual frame rate to 48 kHz audio rate via recursive 1-pole lowpass IIR filters, completely eliminating zipper noise.
 
-* **Integrated Loudness ($I$)**: Target $-14.0\,\text{LUFS} \pm 1.0\,\text{LUFS}$ (achieved $-14.80\,\text{LUFS}$).
-* **Maximum True Peak ($\text{TP}$)**: $\le -1.0\,\text{dBTP}$ (achieved $-1.50\,\text{dBTP}$).
-* **Loudness Range ($\text{LRA}$)**: Calibrated for cinematic dynamics without excessive compression.
-* **Transient Cue Timing**: Verifies that SFX impacts align to picture events within $\pm 1\,\text{frame}$ ($16.7\,\text{ms}$).
+---
+
+## 6. Cinematic Blending Suite
+
+1. **Split-Band Spectral Ducking (`applySplitBandDuck`)**:
+   Splits the music bus using a 2-pole Linkwitz-Riley crossover at $250\,\text{Hz}$. Sub-bass ($< 250\,\text{Hz}$) remains at $0\,\text{dB}$ unity gain, preserving low-end kick and bass punch, while mid/high frequencies ($> 250\,\text{Hz}$) duck around speech or SFX impacts.
+2. **Vocal Sanctuary Dynamic Notch (`applyVocalSanctuary`)**:
+   Dynamically carves a $-3.5\,\text{dB}$ parametric notch centered at $2.2\,\text{kHz}$ ($Q = 1.2$) in the music bus whenever voiceover activity is detected, opening acoustic space for speech without muddying the mix.
+3. **Pre-Drop Silence Vacuum (`applyPreDropVacuum`)**:
+   Creates $40\text{--}120\,\text{ms}$ of digital silence immediately preceding major visual impacts or musical downbeats, with a $2\,\text{ms}$ cosine anti-click fade-down at gap entry.
+4. **Lookahead True Peak Limiter (`applyLookaheadLimiter`)**:
+   Mastering peak limiter with $1.5\,\text{ms}$ lookahead window (72 samples @ 48kHz) and $50\,\text{ms}$ smooth exponential release, guaranteeing that inter-sample true peaks strictly comply with $\le -1.5\,\text{dBTP}$.
+
+---
+
+## 7. The Two-Tier Hard-Mute Gate (Void Cut Rule)
+
+1. **Pre-Loudnorm Gate**: Zeros samples in the pre-master buffer prior to EBU R128 loudness processing.
+2. **Post-Loudnorm Gate**: Re-zeros exact sample regions on decoded PCM output, eliminating filter ringing, sinc interpolation overshoot, and dither noise from FFmpeg.
+3. **Verification**: `python scripts/verify_audio.py` asserts that $\min |x| \equiv 0.0$ and $\max |x| \equiv 0.0$ across all declared void intervals.

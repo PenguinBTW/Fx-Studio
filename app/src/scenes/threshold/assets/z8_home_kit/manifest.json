@@ -1,0 +1,25 @@
+{
+  "id": "z8_home_kit",
+  "version": 1,
+  "source": "build.py",
+  "budgets": { "tris": 35000, "textureMB": 0 },
+  "scale": 1,
+  "parts": {
+    "root": "z8_home_kit_root",
+    "photo_office": "photo_office_root",
+    "photo_ballpit": "photo_ballpit_root",
+    "photo_pool": "photo_pool_root",
+    "photo_library": "photo_library_root",
+    "photo_motel": "photo_motel_root",
+    "photo_theatre": "photo_theatre_root",
+    "photo_cathedral": "photo_cathedral_root",
+    "wall_phone_mount": "wall_phone_mount_root",
+    "entryway_props": "entryway_props_root",
+    "hall_table": "hall_table_root",
+    "mirror_calendar": "mirror_calendar_root",
+    "radiator": "radiator_root",
+    "stair_toys": "stair_toys_root",
+    "kitchen_kettle": "kitchen_kettle_root"
+  },
+  "notes": "THRESHOLD Z8 home dressing modules. Real scale 1 unit = 1 m. Modules are spatially separated; clone/reset positions when integrating. Storyboard beats 8.1-8.8: family-zone photos, wall phone plate, entryway clutter, hall table, mirror/calendar/radiator, stair toys and kitchen kettle."
+}
