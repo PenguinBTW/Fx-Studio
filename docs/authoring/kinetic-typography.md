@@ -4,6 +4,9 @@ This guide covers the typographic systems in **f(x) Studio**, detailing how to b
 
 ---
 
+
+> **Fonts:** Archivo, Cormorant Garamond and IBM Plex Mono are bundled in `app/public/fonts/` (licences in `app/public/fonts/licenses/`), so they render identically on every machine. Any other family must be added there before a scene uses it; the engine refuses to render with a missing face.
+
 ## 1. The Kinetic Typography Architecture
 
 f(x) Studio provides three primary mechanisms for rendering text:

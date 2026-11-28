@@ -163,3 +163,19 @@ Agentic motion design toolset/
 ├── out/                        # Rendered video & diagnostic image artifacts
 └── calibration/                # Empirical benchmark reference distributions
 ```
+
+---
+
+## 5. v0.8.0 Subsystems
+
+v0.8.0 adds four subsystems on top of the core invariants above. Each keeps the $	ext{Frame} = f(t)$ contract.
+
+| Subsystem | Where | What it does | Docs |
+|---|---|---|---|
+| **Audio engine** | `app/src/engine/audio/` (`manifest.ts`, `stem_nle.ts`, `spatializer.ts`, `smoother.ts`, `telemetry.ts`, `dsp.ts`) | Declarative `defineMix()` manifests, offline multi-stem assembly, 3D object-bound spatial audio, de-zippered parameter smoothing, scene telemetry and broadcast mastering (≤ −1.5 dBTP). | [v0.8.0 architecture](./v0.8.0-unified-audiovisual-production.md), [Mixdown](../audio/mixdown.md) |
+| **Transition registry** | `app/src/engine/transitions/registry.ts` | Project-local transitions in `scenes/<project>/transitions/` win over engine transitions; works in the browser (Vite glob) and headless (`setTransitionRegistry`). | [Transitions System](./transitions-system.md) |
+| **Blender asset layer** | `app/src/engine/assets.ts`, `app/src/engine/gltf.ts` | Per-project `assets/<id>/build.py` → `model.glb`, built headlessly in Blender; named animatable parts through the `fx_part` custom property (including instanced parts); `bun scripts/assets_check.ts <project>` validates them. | [Blender Assets](../authoring/blender-assets.md), [glTF Assets](../authoring/gltf-assets.md) |
+| **Delivery** | `project.json`, `app/scripts/render.ts` | A project declares its soundtrack (`audio`) and mix (`mix`), which `render.ts video` uses by default; native 9:16 output (`--vertical`); `--4k` and other resolution presets. | [Project System](../projects/project-system.md), [Render CLI](../cli/render-cli-reference.md) |
+
+The runtime fonts (Archivo, Cormorant Garamond, IBM Plex Mono) ship in `app/public/fonts/` with their OFL licences in `app/public/fonts/licenses/`, so the strict font loading gate (§2.5) passes on a fresh clone.
+

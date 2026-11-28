@@ -17,6 +17,7 @@ docs/
 │   └── v0.6.0-release-record.md      # v0.6.0 execution record (Materials, 3D Text, Optics)
 │
 ├── architecture/                     # Core engine runtime & low-level GL pipeline
+│   ├── v0.8.0-unified-audiovisual-production.md  # v0.8.0 audio subsystem, transition registry & pipeline
 │   ├── engine-overview.md            # High-level architecture, dataflow & execution lifecycle
 │   ├── modules-reference.md          # Complete API reference & buffer layouts for universal engine modules (v0.7.0)
 │   ├── gl-compositor-pipeline.md     # HalfFloat HDR targets, resetState(), FSPass, post-processing
@@ -77,6 +78,7 @@ docs/
 ## 2. Master Document Index
 
 ### A. Engine Architecture
+* [**v0.8.0 Unified Audiovisual Production Architecture**](architecture/v0.8.0-unified-audiovisual-production.md): The modular audio subsystem (`engine/audio/`: `defineMix` manifest, stem NLE, spatializer, smoother, telemetry, mastering DSP), the two-tier transition registry and the strict 3-pass production pipeline.
 * [**Engine Overview & Core Invariants**](architecture/engine-overview.md): System architecture, Mermaid dataflow diagram, core invariants ($f(t)$, WebGL state cache, HalfFloat HDR linear targets, zero-allocation render loop), and execution lifecycle stages.
 * [**Modules Reference & API Signatures**](architecture/modules-reference.md): Full TypeScript signatures, buffer layouts, and usage examples for all universal engine modules (v0.7.0) (`rig.ts`, `transform.ts`, `text.ts`, `sdf.ts`, `motion.ts`, `particles.ts`, `graph.ts`, `scenegraph.ts`, `export.ts`, `tokens.ts`, `heal.ts`, `dsl.ts`, and `lines.ts`).
 * [**GL Compositor & Post-Processing Pipeline**](architecture/gl-compositor-pipeline.md): HalfFloat HDR linear render targets (`makeRT`), WebGL state cache preservation (`renderer.resetState()`), full-screen passes (`FSPass`), and optical post-processing (`post.ts`: bloom, halation, chromatic aberration, grain, trauma shake).
@@ -138,3 +140,5 @@ docs/
 * [**v0.7.0 Release Record: Physical Optics, Volumetrics, Engine Modernization & Architectural Overhaul**](changelog/v0.7.0-release-record.md): Major engine release delivering physical optics (Cauchy dispersion, Descartes caustics, Wyman-Sloan spectrum), Bishop RMF ribbons, divergence-free curl noise, 500k GPU particles, multi-track audio mixdown (-14 LUFS / -1 dBTP), in-world kinetic typography, automated seam continuity, zero-allocation lazy subsystem architecture, engine file modularization, and strict type restoration.
 * [**v0.6.1 Bug Fix & Engine Audit Report**](changelog/v0.6.1-bug-fix-report.md): Complete architectural audit and stability report detailing 24 bug fixes across core rendering loops, WebGL state cache isolation, alpha premultiplication, GLTF caching, ODE springs, and FFmpeg pipeline mapping.
 * [**v0.6.0 Execution Record & Release Notes**](changelog/v0.6.0-release-record.md): Complete release notes for engine v0.6.0 (Procedural Materials, 3D Kinetic Typography, Optical DoF & Volumetrics).
+
+* [**Codebase Review (2026-11-02)**](codebase-review-2026-11-02.md): Whole-codebase review notes from the v0.8.0 cycle.
