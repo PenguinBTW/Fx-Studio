@@ -9,8 +9,8 @@ export { SCALE };
 export const W = LOGICAL_W;
 export const H = LOGICAL_H;
 /** Physical (output) size: the logical canvas times SCALE (`?scale=2` → 3840x2160). */
-export const PW = W * SCALE;
-export const PH = H * SCALE;
+export const PW = Math.round(W * SCALE);
+export const PH = Math.round(H * SCALE);
 
 /**
  * Supersampling shared across motion-blur sub-frames. Shaders that supersample internally with the

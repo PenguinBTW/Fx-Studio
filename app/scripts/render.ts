@@ -25,7 +25,7 @@
 // Relative --out paths resolve from the repo root (not app/). Scene errors at boot abort the run unless --allow-scene-errors.
 // Uses the Vite dev server at --url (default http://localhost:5173); starts a private one if unreachable.
 import { chromium, type Page } from 'playwright-core';
-import { mkdirSync, existsSync } from 'node:fs';
+import { mkdirSync, existsSync, rmSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { ExportPipeline, type ExportFormat, type ExportVideoOptions } from '../src/engine/export';
 import { CONFIG, loadCalibrationData, type FrameMetrics, type AudioEvent } from './motion/config';
@@ -107,8 +107,11 @@ const [LW, LH]: [number, number] = (SIZE_OPT && /^\d+x\d+$/.test(SIZE_OPT) ? SIZ
     : (forceHorizontal && defaultSize[1] > defaultSize[0]) ? [1920, 1080]
     : defaultSize);
 
-const SCALE = is4k ? 2 : Math.max(1, Math.round(numOpt('scale', 1, 1, 4)));
-const OW = LW * SCALE, OH = LH * SCALE; // output size
+// --draft: half resolution, fast encode, one sample (for checking motion and timing, not for delivery)
+const isDraft = flag('draft');
+const scaleOpt = numOpt('scale', isDraft ? 0.5 : 1, 0.5, 4);
+const SCALE = is4k ? 2 : scaleOpt < 1 ? 0.5 : Math.round(scaleOpt);
+const OW = Math.round(LW * SCALE), OH = Math.round(LH * SCALE); // output size
 // --samples N (fixed) or --samples auto [--min-samples 4] [--max-samples 324] [--tol 3] (adaptive, see Engine.render)
 const SAMPLES = opt('samples', '1') === 'auto'
   ? { min: numOpt('min-samples', 4, 1, 324), max: numOpt('max-samples', 324, 1, 972), tol: numOpt('tol', 3, 0.1, 50) }
@@ -146,15 +149,24 @@ async function ensureServer(): Promise<{ url: string; stop: () => void }> {
   const viteBin = path.join(APP, 'node_modules/vite/bin/vite.js');
   const node = Bun.which('node');
   const cmd = node && existsSync(viteBin) ? [node, viteBin] : [process.execPath, 'x', 'vite'];
-  const proc = Bun.spawn([...cmd, '--port', String(port), '--strictPort'], { cwd: APP, stdout: 'ignore', stderr: 'ignore', env: { ...process.env, MOTION_NO_HMR: '1', PDOOM_NO_HMR: '1' } });
+  // each render server gets its own Vite dependency cache, so a second render starting (and optimizing deps) can't
+  // invalidate the modules a running render is serving from the shared node_modules/.vite
+  const cacheRoot = path.join(APP, 'node_modules', '.vite-render'), cacheDir = path.join(cacheRoot, String(port));
+  // sweep caches left by earlier renders (on Windows a dying Vite can still hold its files when we try to delete them)
+  try { for (const d of readdirSync(cacheRoot)) { const f = path.join(cacheRoot, d); if (Date.now() - statSync(f).mtimeMs > 12 * 3600e3) rmSync(f, { recursive: true, force: true }); } } catch {}
+  const proc = Bun.spawn([...cmd, '--port', String(port), '--strictPort'], { cwd: APP, stdout: 'ignore', stderr: 'pipe', env: { ...process.env, MOTION_NO_HMR: '1', PDOOM_NO_HMR: '1', FX_VITE_CACHE: cacheDir } });
+  let stderrText = '';
+  (async () => { try { for await (const chunk of proc.stderr as any) stderrText = (stderrText + new TextDecoder().decode(chunk)).slice(-4000); } catch {} })();
   let stopped = false;
-  const stop = () => { if (!stopped) { stopped = true; killTree(proc); } };
+  const stop = () => { if (!stopped) { stopped = true; killTree(proc); try { rmSync(cacheDir, { recursive: true, force: true }); } catch {} } };
   exitHooks.push(stop);
   const u = `http://localhost:${port}`;
-  for (let i = 0; i < 100 && !(await reachable(u)); i++) await Bun.sleep(100);
+  // a machine busy with another render can take well over 10 s to bring Vite up: wait up to 60 s
+  for (let i = 0; i < 600 && !(await reachable(u)) && proc.exitCode === null; i++) await Bun.sleep(100);
   if (!(await reachable(u))) {
+    const why = proc.exitCode !== null ? `vite exited with code ${proc.exitCode}` : 'no response after 60 s';
     stop();
-    throw new Error(`[server] Vite failed to start at ${u} (port busy or missing dep) — killed proc`);
+    throw new Error(`[server] Vite failed to start at ${u} (${why})${stderrText.trim() ? `:\n${stderrText.trim()}` : ''}`);
   }
   return { url: u, stop };
 }
@@ -447,7 +459,7 @@ async function video(page: Page, from: number, to: number, fps: number, out: str
     gpu: gpuEncode,
     gpuEncoder: chosenGpuEncoder as any,
     crf: crfVal,
-    preset: opt('preset', 'slow'),
+    preset: opt('preset', isDraft ? 'veryfast' : 'slow'),
     x264Params: opt('x264', 'aq-mode=3'),
   };
   const validation = ExportPipeline.validate(exportOpts);
