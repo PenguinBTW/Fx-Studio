@@ -1,6 +1,6 @@
 {
   "name": "app",
-  "version": "0.8.0-r2",
+  "version": "0.8.0-r3",
   "module": "index.ts",
   "type": "module",
   "private": true,

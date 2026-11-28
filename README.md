@@ -1,69 +1,90 @@
-# f(x) Studio (v0.8.0-r2 Stable)
+# f(x) Studio
 
-**This project is licensed under the PolyForm Small Business License 1.0.0 ([`LICENSE.md`](./LICENSE.MD)). This grants non-commercial parties full use of the software and allows small businesses under the defined revenue and employee thresholds to use it under the same terms.**
+**A deterministic motion-design engine built for AI agents.** You describe a film; an agent writes it as code (scenes,
+cameras, 3D assets, sound), reviews its own renders, and exports it at up to 4K. Every frame is a pure function of time, so
+what you review is exactly what ships.
 
-**For commercial licensing beyond these thresholds, email *vio@penguinbtw.com***
+| | | |
+|---|---|---|
+| [![lull: the soft play](https://raw.githubusercontent.com/PenguinBTW/fxstudio-demos/main/scenes/lull/samples/01_playroom.jpg)](https://github.com/PenguinBTW/fxstudio-demos/tree/main/scenes/lull) | [![lull: the library](https://raw.githubusercontent.com/PenguinBTW/fxstudio-demos/main/scenes/lull/samples/02_library.jpg)](https://github.com/PenguinBTW/fxstudio-demos/tree/main/scenes/lull) | [![lull: the pool](https://raw.githubusercontent.com/PenguinBTW/fxstudio-demos/main/scenes/lull/samples/03_pool.jpg)](https://github.com/PenguinBTW/fxstudio-demos/tree/main/scenes/lull) |
 
-> ### 🚀 Latest Release: v0.8.0 (r2: documentation refresh)
-> * **[v0.8.0 Release Record](./docs/changelog/v0.8.0-release-record.md)**: Unified audiovisual production engine (modular audio subsystem, defineMix DSL, 3D spatial audio, broadcast mastering), two-tier transition registry, project-scoped Blender asset layer, native 9:16 output, bundled fonts, and new example films.
-> * **[v0.7.0 Release Record](./docs/changelog/v0.7.0-release-record.md)**: Physical optics, thin-lens DoF, 500k GPU particles, Bishop ribbons, curl noise and in-world 3D typography.
-> * **[Root Changelog](./CHANGELOG.md)**: Full version history across all releases.
+<sub>*lull*: a 3:11 first-person horror film written, modelled, animated and sound-designed end to end by an AI agent in f(x) Studio. Scene code in [**fxstudio-demos**](https://github.com/PenguinBTW/fxstudio-demos).</sub>
 
----
-
-A production-grade, agent-accessible toolkit for procedural 60 fps WebGL/Canvas2D motion design across **any domain**—scientific narrative films, commercial product reveals, UI/UX interaction showcases, kinetic typography sequences, procedural data visualizations, brand identity resolves, and audiovisual productions.
-
----
-
-## 1. Core Architectural Pillars
-
-1. **Mathematical Determinism ($f(t)$)**:
-   Every frame is a pure, closed-form function of timeline timestamp $t$. Forward playback, reverse scrubbing, and sub-frame supersampling (1 to 324 spp) evaluate bit-identically with zero Euler drift.
-2. **Physical Optics & Spectrum**:
-   Built-in Wyman-Sloan CIE 1931 colour matching, Planckian blackbody locus, Cauchy dispersion $n(\lambda) = A + B/\lambda^2$, dielectric Fresnel equations, and Descartes spherical caustics.
-3. **High-Capacity Procedural Volumetrics**:
-   Up to 500,000 GPU-instanced particles with analytical trail history $t - k\Delta t$, twist-free Bishop rotation-minimizing frame ribbons, and real-time volumetric raymarching.
-4. **Kinetic Typography & In-World Lighting**:
-   Rolling mechanical odometer with continuous multi-digit carries, stroke-revealed single-stroke Hershey glyphs, and in-world 3D extruded text participating directly in scene depth buffers and physical DoF.
-5. **Integrated Broadcast Audio Mixdown**:
-   Automated multi-track mixdown pipeline mastering to EBU R128 standards with certified sample-exact digital zero intervals and transient-aware sidechain ducking.
+> ### 🚀 Latest Release: v0.8.0 (r3)
+> * **[v0.8.0 Release Record](./docs/changelog/v0.8.0-release-record.md)**: unified audiovisual production engine (modular audio, `defineMix`, 3D spatial audio, mastering), two-tier transition registry, project-scoped Blender asset layer, native 9:16 output, bundled fonts, and new example films.
+> * **[Root Changelog](./CHANGELOG.md)**: full version history.
 
 ---
 
-## 2. Quickstart
+## 1. What It's Been Used To Make
+
+| Project | What it is |
+|---|---|
+| [**lull**](https://github.com/PenguinBTW/fxstudio-demos/tree/main/scenes/lull) | 3:11 first-person horror film: one continuous take through comfortable places that turn wrong, Blender-built creatures, fully code-generated sound |
+| [**fx_promo**](./app/src/scenes/fx_promo) | 3:34 f(x) Studio promo film: in-world type, dolly-zooms, a raymarched glass cathedral, an infinite-zoom climax |
+| [**dimension_flight**](./app/src/scenes/dimension_flight) / [**bird_odyssey**](./app/src/scenes/bird_odyssey) | A swallow's flight through five dimensions with Blender-built worlds, GPU embers and per-world grading |
+| [**agent_promo**](./app/src/scenes/agent_promo) / [**agent_v2**](./app/src/scenes/agent_v2) | Agent promo film: logo, fire, dragon, forge and an origami desk sequence |
+| [**spill**](./app/src/scenes/spill), [**freefall**](./app/src/scenes/freefall), [**agent_teaser**](./app/src/scenes/agent_teaser) | Native 9:16 vertical shorts |
+| [**threshold**](./app/src/scenes/threshold) | First-person horror film |
+| [**spacecraft_docking**](./app/src/scenes/spacecraft_docking) | Audio benchmark: multi-stem excision and 3D object-bound thruster audio |
+
+---
+
+## 2. Why f(x) Studio
+
+1. **Built for agents.** Project skills in `.agents/skills/` (a router plus specialised `fx-*` skills for scenes, 3D assets,
+   transitions, audio and diagnostics) give an agent the engine's rules and workflows. Visual diagnostics (god-view camera
+   blueprint, motion onion, A/B reference, seam inspector) and motion telemetry flags with repair directives let it check its
+   own work instead of guessing.
+2. **Deterministic by construction ($f(t)$).** Every frame is a closed-form function of time: scrubbing, supersampling and
+   re-renders are bit-identical, and picture and sound can share one clock.
+3. **Real 3D, no ceiling.** Full Three.js with custom shaders, physical optics (CIE spectrum, dispersion, caustics, thin-lens
+   DoF), 500k GPU particles, twist-free ribbons, raymarching, and in-world 3D typography that takes the scene's light.
+4. **Blender in the loop.** Each project builds its own assets headlessly (`assets/<id>/build.py` → `model.glb`), with named
+   parts the code can animate.
+5. **A full audio engine.** `defineMix()` manifests, multi-stem assembly, 3D object-bound spatial audio, and broadcast mastering
+   to EBU R128 at ≤ −1.5 dBTP.
+6. **Headless delivery.** One CLI renders stills, contact sheets and video: 720p to 4K, native 9:16, GPU encoding, the
+   project's soundtrack muxed in.
+
+---
+
+## 3. Quickstart
 
 ### Prerequisites
-- [Bun](https://bun.sh/) runtime installed.
-- [FFmpeg](https://ffmpeg.org/) (for video export).
+- [Bun](https://bun.sh/), [FFmpeg](https://ffmpeg.org/) on your `PATH`, and Chromium for headless rendering (installed below).
+- Optional: [Blender](https://www.blender.org/) 5.x to rebuild a project's 3D assets.
 
 ### Installation
 ```bash
-# Clone the repository
-git clone https://github.com/PenguinBTW/Agentic-motion-design-toolset.git
-cd Agentic-motion-design-toolset/app
-
-# Install dependencies
+git clone https://github.com/PenguinBTW/Fx-Studio.git
+cd Fx-Studio/app
 bun install
+bun x playwright install chromium
 ```
 
-### Launch Interactive Preview Player
+### Preview a project live
 ```bash
 bun run dev
 ```
-Open [http://localhost:5173](http://localhost:5173) in your browser. Use the timeline scrubber or spacebar to play and inspect active scenes in real-time.
+Open <http://localhost:5173/?project=fx_promo> (any folder in `app/src/scenes/`), then scrub the timeline or press space.
 
-### Headless Video Export
+### Render headlessly
 ```bash
-# Export 1080p60 video with multi-track mixdown
-bun scripts/render.ts video --from 0 --to 30 --fps 60 --mix path/to/mix.json --out ../out/render.mp4
+# stills and a contact sheet
+bun scripts/render.ts stills --project fx_promo --t 2,10,30 --out "/abs/path/stills"
+bun scripts/render.ts sheet --project fx_promo --from 0 --to 30 --n 16 --cols 4 --out "/abs/path/sheet.png"
 
-# Hardware accelerated encoding (AMD AMF / NVIDIA NVENC)
-bun scripts/render.ts video --gpu --gpu-encoder h264_amf --out ../out/render.mp4
+# 1080p60 video with the project's soundtrack; add --4k for 3840x2160 or --vertical for 9:16
+bun scripts/render.ts video --project fx_promo --from 0 --to 30 --fps 60 --out "/abs/path/render.mp4"
+
+# hardware encoding (AMD AMF / NVIDIA NVENC)
+bun scripts/render.ts video --project fx_promo --gpu --gpu-encoder h264_amf --out "/abs/path/render.mp4"
 ```
 
 ---
 
-## 3. Documentation Index
+## 4. Documentation Index
 
 The complete documentation suite for **f(x) Studio** is organized under [**`docs/`**](./docs/README.md):
 
@@ -79,3 +100,11 @@ The complete documentation suite for **f(x) Studio** is organized under [**`docs
 | [**Telemetry**](./docs/telemetry/telemetry-engine.md) | Automated motion telemetry, flags and calibrated reports. | • [Telemetry Engine](./docs/telemetry/telemetry-engine.md)<br>• [Rules & Flags](./docs/telemetry/rules-and-flags.md)<br>• [Report Spec](./docs/telemetry/report-spec.md)<br>• [Calibration Guide](./docs/telemetry/calibration-guide.md) |
 | [**CLI & Export**](./docs/cli/render-cli-reference.md) | Headless rendering CLI reference, video export, and chunked rendering. | • [Render CLI Reference](./docs/cli/render-cli-reference.md)<br>• [Video Export Pipeline](./docs/cli/video-export-pipeline.md)<br>• [Long-Timeline Rendering](./docs/cli/long-timeline.md)<br>• [Testing & Verification](./docs/cli/testing-and-verification.md) |
 | [**Changelog**](./CHANGELOG.md) | Version history, release records, and architectural audit reports. | • [Root Changelog](./CHANGELOG.md)<br>• [v0.8.0 Release Record](./docs/changelog/v0.8.0-release-record.md)<br>• [v0.7.0 Release Record](./docs/changelog/v0.7.0-release-record.md)<br>• [v0.6.1 Bug Fix Report](./docs/changelog/v0.6.1-bug-fix-report.md) |
+
+---
+
+## License
+
+**PolyForm Small Business License 1.0.0** ([`LICENSE.md`](./LICENSE.MD)). Non-commercial parties have full use of the
+software, and small businesses under the defined revenue and employee thresholds may use it under the same terms. For
+commercial licensing beyond these thresholds, email *vio@penguinbtw.com*.

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.8.0-r3] - 2026-11-28
+
+### Documentation
+- Main README rewritten: a plain one-line pitch and a gallery up front, a showcase of what has been made with f(x) Studio
+  (lull, fx_promo, dimension_flight, agent_promo, vertical shorts, threshold, spacecraft_docking), a "Why f(x) Studio" section
+  covering the agent skills, determinism, 3D, Blender, audio and delivery, a refreshed quickstart (project selection, stills,
+  sheets, 4K and 9:16), and the licence moved to the end.
+- Nightly README gains the same pitch, gallery and showcase, plus an agent-workflow post-mortem from lull (`docs/feedback/`).
+
+---
+
 ## [v0.8.0-r2] - 2026-11-28
 
 ### Documentation
