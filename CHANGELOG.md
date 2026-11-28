@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+- `render.ts --draft`: half-resolution (`--scale 0.5`), fast-encode (`--preset veryfast`), single-sample preview renders
+  for checking motion and timing. `--scale` now also accepts `0.5`.
+
+### Changed
+- Video export overlaps GPU readback of frame n with rendering frame n + 1 (two pixel buffers) instead of waiting for each
+  readback before starting the next frame.
+- Each headless render server uses its own Vite dependency cache, waits up to 60 s to start on a busy machine, and reports
+  Vite's own error when it fails, so several renders can run at once.
+
+---
+
 ## [v0.8.0-r3] - 2026-11-28
 
 ### Documentation

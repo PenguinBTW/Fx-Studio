@@ -67,7 +67,8 @@ bun scripts/render.ts compare --active-scene act2 --ref-scene benchmark
 | `--size <WxH>` | string | project.json `size`, else `1920x1080` | Logical canvas, e.g. `1080x1920` for vertical. |
 | `--720p` / `--1080p` / `--4k` | flag | None | Resolution presets that keep the project orientation. `--4k` is `--scale 2` on whatever canvas is selected (3840x2160 only from a 1920x1080 canvas). Same as `--res 720p`. |
 | `--vertical` (`--shorts`, `--portrait`) / `--horizontal` (`--landscape`) | flag | None | Force 9:16 or 16:9 when the project is the other way round. |
-| `--scale <n>` | integer ($1 \dots 4$) | `1` | Multiplies the logical canvas: `--scale 2` on 1920x1080 = $3840 \times 2160$ (4K UHD). |
+| `--scale <n>` | `0.5` or integer ($1 \dots 4$) | `1` | Multiplies the logical canvas: `--scale 2` on 1920x1080 = $3840 \times 2160$ (4K UHD). `--scale 0.5` renders a half-resolution draft (960x540) with the same layout. |
+| `--draft` | flag | None | Fast preview for checking motion and timing: `--scale 0.5`, x264 `--preset veryfast`, one sample per frame. Any of those can still be overridden (e.g. `--draft --samples 4`). Not for delivery. |
 | `--samples <n\|auto>` | integer / `auto` | Mode dependent | Number of sub-frames averaged per output frame over the shutter window. Defaults to `1` for `motion`, `1` or `8` for `video`. `--samples auto` enables adaptive supersampling ($4 \dots 324$ spp). |
 | `--shutter <ratio>` | float ($0.0 \dots 1.0$) | Mode dependent | Shutter angle fraction of frame duration. Defaults to `0` (sharp) for `motion`; `0.5` ($180^\circ$ cinema shutter) for `video` and `stills`. |
 | `--only <ids>` | string | None | Comma-separated scene IDs to isolate. All other entries are skipped. |
@@ -133,6 +134,7 @@ bun scripts/render.ts video --from 0 --to 125 --fps 60 --crf 16 --gpu --out out/
 | `--fps <n>` | integer | `60` | Frame rate. |
 | `--crf <n>` | integer | `16` | Constant Rate Factor (lower = higher quality; $14\text{–}18$ recommended). |
 | `--gpu` | flag | `false` | Enables GPU hardware encoding (AMD AMF, NVENC). |
+| `--preset <name>` | string | `slow` (`veryfast` with `--draft`) | x264 preset for software encoding. `slow` is for delivery; `veryfast` or `ultrafast` encode several times faster when the encoder is the bottleneck. |
 | `--gpu-encoder <enc>`| string | `h264_amf` | Specific GPU encoder (`h264_amf`, `hevc_amf`, `h264_nvenc`). |
 | `--alpha` | flag | `false` | Exports transparent video (ProRes 4444 or WebM VP9). |
 | `--noaudio` | flag | `false` | Suppresses audio track muxing. |
@@ -192,3 +194,18 @@ bun scripts/render.ts motion --from 0 --to 30 --out out/motion_audit/
 - `compare`: 50/50 diagonal split-wipe benchmark anchor.
 
 *See [Visual Diagnostics Overview](../diagnostics/overview.md) for full instrument specifications.*
+
+---
+
+## Render Speed & Running Renders in Parallel
+
+- **Where the time goes.** At 1080p the default software encode (`--preset slow`) is often the bottleneck: on a desktop
+  GPU, `fx_promo` renders at ~12 fps with `slow` and ~16 fps with `--preset ultrafast` or `--gpu`. Use `--gpu` (or a faster
+  preset) when you don't need x264 `slow` quality, and `--draft` when you only need to watch motion and timing.
+- **Overlapped readback.** Video export reads frame *n* back from the GPU while frame *n + 1* renders (two pixel buffers),
+  so scene work on the CPU and rendering on the GPU overlap instead of taking turns.
+- **Parallel renders.** Each render the CLI starts gets its own Vite server on a random port **and its own dependency
+  cache** (`node_modules/.vite-render/<port>`, removed when the render ends), so a second render starting up can't
+  invalidate the modules a running render is serving. The CLI waits up to 60 s for a server on a busy machine and, if
+  Vite does fail, prints why (its exit code and error output) instead of a generic "port busy". Parallel renders still
+  share one GPU, so each runs slower than it would alone.

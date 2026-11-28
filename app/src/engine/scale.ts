@@ -3,11 +3,14 @@
 // Kept in its own module so glsl/common.ts can use it without an import cycle through gl.ts.
 function readScale() {
   if (typeof location === 'undefined') return 1;
-  const s = Math.round(Number(new URLSearchParams(location.search).get('scale') ?? '1'));
-  return Number.isFinite(s) && s >= 1 ? Math.min(s, 4) : 1;
+  const v = Number(new URLSearchParams(location.search).get('scale') ?? '1');
+  if (!Number.isFinite(v)) return 1;
+  // below 1 there is a single draft step: 0.5 (half-resolution previews, e.g. 960x540 from a 1920x1080 canvas)
+  if (v < 1) return v > 0 ? 0.5 : 1;
+  return Math.min(Math.round(v), 4);
 }
 
-/** Physical pixels per logical pixel of the output (integer 1..4, default 1). */
+/** Physical pixels per logical pixel of the output: 0.5 (draft) or an integer 1..4 (default 1). */
 export const SCALE = readScale();
 
 /** Parses a `WxH` size (e.g. `1080x1920`); null when absent or out of range (16..4096 per side). */

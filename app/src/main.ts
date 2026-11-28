@@ -183,7 +183,8 @@ function setupExport() {
       await new Promise<void>((res, rej) => { ws.onopen = () => res(); ws.onerror = (e) => rej(e); });
       const dt = 1 / opts.fps;
       const n0 = Math.round(opts.from * opts.fps), n1 = Math.round(opts.to * opts.fps);
-      const buf = new Uint8Array(PW * PH * 4);
+      // two buffers: frame n's pixels come back (PBO + fence) while frame n+1 renders, so CPU and GPU overlap
+      const bufs = [new Uint8Array(PW * PH * 4), new Uint8Array(PW * PH * 4)];
       // warm-up: render one frame before the range so the first frame is sequential for stateful scenes
       const S = opts.samples ?? 1, SH = opts.shutter ?? 0.5;
       if (n0 > 0) engine.render((n0 - 1) * dt, dt, false, typeof S === 'number' ? S : 1, SH);
@@ -191,6 +192,14 @@ function setupExport() {
         bridge.probe = true;
         bridge.textProbes = [];
       }
+      let sent = 0, pending: Promise<Uint8Array> | null = null;
+      const send = async (p: Promise<Uint8Array>) => {
+        const px = await p;
+        if (opts.inflight) while (sent - acked >= opts.inflight) await new Promise((r) => setTimeout(r, 2));
+        while (ws.bufferedAmount > 64 * 1024 * 1024) await new Promise((r) => setTimeout(r, 2));
+        ws.send(px as Uint8Array<ArrayBuffer>); // the socket copies the bytes, so the buffer can be refilled two frames later
+        sent++;
+      };
       const used: Record<number, number> = {}; // sub-frames per frame -> frames
       const frameMeta: any[] = [];
       for (let n = n0; n < n1; n++) {
@@ -201,7 +210,10 @@ function setupExport() {
         const a = performance.now();
         const k = engine.render(curT, dt, false, S, SH);
         used[k] = (used[k] ?? 0) + 1;
-        await engine.readPixelsAsync(buf);
+        // readPixelsAsync issues the GPU copy synchronously; only its fence wait is deferred
+        const readback = engine.readPixelsAsync(bufs[frameIdx & 1]);
+        if (pending) await send(pending);
+        pending = readback;
         const ms = performance.now() - a;
         if (opts.probe) {
           frameMeta.push({
@@ -213,11 +225,9 @@ function setupExport() {
             sceneProbe: (engine as any).lastSceneProbe ?? null,
           });
         }
-        if (opts.inflight) while (n - n0 - acked >= opts.inflight) await new Promise((r) => setTimeout(r, 2));
-        while (ws.bufferedAmount > 64 * 1024 * 1024) await new Promise((r) => setTimeout(r, 2));
-        ws.send(buf);
         if (n % 30 === 0) await new Promise((r) => setTimeout(r, 0)); // let the socket flush
       }
+      if (pending) await send(pending);
       while (ws.bufferedAmount > 0) await new Promise((r) => setTimeout(r, 5));
       ws.close();
       if (opts.probe) {
