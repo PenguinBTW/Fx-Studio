@@ -273,15 +273,9 @@ export default class ThresholdZ1Office extends Scene {
     this.phoneAsset.root.scale.setScalar(1.2);
     this.s.add(this.phoneAsset.root);
     this.glbReceiver = this.phoneAsset.part('receiver') ?? undefined;
-    // W1's shared phone mesh is deliberately detailed but undersized through the base; widen only the base-side parts
-    // in this zone assembly so the cradle/keypad silhouette reads as a desk telephone at close range.
-    this.phoneAsset.root.traverse((o) => {
-      if (/^(base_|bell_|cradle_|front_lip|hook_|key_|vent_|wear_nick_)/.test(o.name)) {
-        o.scale.x = 1.55;
-        o.scale.z = 1.22;
-      }
-      if (/^key_(mark_)?/.test(o.name)) { o.position.y -= 0.012; o.position.z -= 0.018; }
-    });
+    // Keep the authored Blender phone as one coherent assembly. Scaling individual child
+    // meshes distorts the cradle/keypad alignment at close range; the root scale above is
+    // already the intended world size.
     const kitResolved = resolveAsset('threshold/z1_office_kit');
     const packResolved = resolveAsset('threshold/z1_prop_pack');
     this.officeKit = await GLTFManager.instantiate(kitResolved.url, { ...kitResolved.manifest.load, castShadow: true, receiveShadow: true });
@@ -704,7 +698,7 @@ export default class ThresholdZ1Office extends Scene {
     }
     for (let i = 0; i < 6; i++) {
       const z = 1.8 + i * 2.0;
-      const m = box(this.s, `z1_chase_drop_tile_${i}`, [1.1, 0.065, 1.1], [i % 2 ? 2.8 : 0.2, 2.68, z], ceiling);
+      const m = box(this.s, `z1_chase_drop_tile_${i}`, [1.1, 0.065, 1.1], [i % 2 ? 2.8 : -0.85, 2.68, z], ceiling);
       // Dark fracture lines are parented to the falling panel so the piece reads as damaged ceiling tile, not a clean card.
       for (let c = 0; c < 3; c++) {
         const cx = (hash(i + c) - 0.5) * 0.48, cz = (hash(i * 3 + c) - 0.5) * 0.48, cw = 0.18 + hash(i * 5 + c) * 0.20, ca = hash(i * 9 + c) * Math.PI;
@@ -860,7 +854,7 @@ export default class ThresholdZ1Office extends Scene {
 
     return {
       ...thresholdPost(t, { darkness: 0.58, stress: t > 19.3 && t < 30 ? 0.7 : 0.12, fade: 1 - smooth(4.0, 5.0, t) }),
-      flash: smooth(29.35, 29.72, t) * 1.8 * (1 - smooth(29.72, 30.02, t)),
+      flash: 0,
       shake: t > 19.3 && t < 30 ? [1.2 * Math.sin(t * 37), 1.0 * Math.cos(t * 31)] : [0, 0],
     };
   }

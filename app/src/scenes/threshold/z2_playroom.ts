@@ -111,7 +111,7 @@ export default class ThresholdZ2Playroom extends Scene {
     this.flash = addFlashlight(this.s);
     this.s.add(new THREE.HemisphereLight(0xd8e2e6, 0x1d2428, 0.38));
     this.sun = new THREE.DirectionalLight(0xfff0d2, 1.35); this.sun.position.set(-4, 9, 2); this.s.add(this.sun);
-    this.swimmerLight = new THREE.PointLight(0xffe0a8, 0, 4.2, 1.8); this.s.add(this.swimmerLight);
+    this.swimmerLight = new THREE.PointLight(0xb8c0a0, 0, 4.2, 1.8); this.s.add(this.swimmerLight);
 
     const foam = mat(0xf1efe8, 0.55);
     const floorFoam = mat(0x554f46, 0.92);
@@ -265,8 +265,8 @@ export default class ThresholdZ2Playroom extends Scene {
     // as a manufactured tunnel throat rather than a void.
     box(this.s, 'z2_tunnel_service_fixture', [0.34, 0.09, 0.16], [-4.35, 1.72, 5.48], mat(0x1d2020, 0.62));
     box(this.s, 'z2_tunnel_service_lens', [0.24, 0.025, 0.10], [-4.35, 1.66, 5.48], mat(0xffb26b, 0.24, 0, 0xff9d45, 1.7));
-    const tunnelService = new THREE.PointLight(0xffad62, 4.8, 8.5, 1.15); tunnelService.position.set(-4.55, 1.55, 6.1); this.s.add(tunnelService);
-    const tunnelThroat = new THREE.PointLight(0x78c9ff, 5.2, 8.0, 1.05); tunnelThroat.position.set(-5.0, 1.05, 8.4); this.s.add(tunnelThroat);
+    const tunnelService = new THREE.PointLight(0xffad62, 2.0, 8.5, 1.15); tunnelService.position.set(-4.55, 1.55, 6.1); this.s.add(tunnelService);
+    const tunnelThroat = new THREE.PointLight(0x78c9ff, 1.35, 8.0, 1.05); tunnelThroat.position.set(-5.0, 1.05, 8.4); this.s.add(tunnelThroat);
     for (const [side, z] of [[-1, -10.34], [1, 10.34]] as const) {
       for (let i = 0; i < 5; i++) {
         const x = -10 + i * 5.0;
@@ -350,7 +350,7 @@ export default class ThresholdZ2Playroom extends Scene {
     }
     for (let i = 0; i < 7; i++) box(this.s, `z2_step_block_${i}`, [0.7, 0.25, 0.7], [3.1 + (i % 2) * 0.8, 0.13 + i * 0.11, 3.8 - i * 0.55], mats[i % mats.length]!);
     // tube tunnel ribs along z
-    const shellMat = mat(0x244d68, 0.50); shellMat.side = THREE.BackSide;
+    const shellMat = mat(0x18364a, 0.58); shellMat.side = THREE.BackSide;
     const shell = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.44, 6.4, 32, 1, true), shellMat);
     shell.position.set(-5, 0.82, 8.35); shell.rotation.x = Math.PI / 2; shell.name = 'z2_tunnel_shell'; shell.userData.fx_entity = shell.name; this.s.add(shell);
     // thick padded tunnel mouth, panel fasteners and grime; the opening is a manufactured tube, not a color portal
@@ -625,18 +625,103 @@ export default class ThresholdZ2Playroom extends Scene {
     this.swimmerAsset.root.scale.setScalar(1.22);
     this.swimmerAsset.root.position.set(sx, sy, sz + 0.2);
     this.swimmerAsset.root.rotation.y = smooth(47.6, 48.4, t) * 0.7;
+
+    // Closed-form breaststroke/pulling motion. The emergence root path and timing stay fixed;
+    // only the continuous limb rig articulates around its Blender bind pivots.
+    const swimPower = smooth(44.55, 45.15, t) * (1 - smooth(48.85, 49.18, t));
+    // Integrate the stroke-speed ramp in closed form. Multiplying elapsed time by a
+    // changing speed injects a spurious acceleration during the chase ramp.
+    const strokeRampA = 47.55, strokeRampB = 48.35;
+    const strokeU = clamp((t - strokeRampA) / (strokeRampB - strokeRampA));
+    const strokeRampIntegral = t <= strokeRampA ? 0 : t >= strokeRampB
+      ? 0.5 * (strokeRampB - strokeRampA) + (t - strokeRampB)
+      : (strokeRampB - strokeRampA) * (strokeU ** 3 - 0.5 * strokeU ** 4);
+    const strokePhaseBase = 2.65 * t + 1.55 * strokeRampIntegral;
+    const handWakeSources: { hand: THREE.Object3D; phase: number }[] = [];
+    for (const sideNum of [-1, 1] as const) {
+      const key = sideNum < 0 ? '-1' : '1';
+      const shoulder = this.swimmerAsset.part(`arm_${key}_shoulder`);
+      const elbow = this.swimmerAsset.part(`arm_${key}_elbow`);
+      const wrist = this.swimmerAsset.part(`arm_${key}_wrist`);
+      const phase = strokePhaseBase + (sideNum < 0 ? 0 : 1.38);
+      const pull = Math.sin(phase);
+      const lift = Math.cos(phase);
+      for (const control of [shoulder, elbow, wrist]) {
+        if (!control.userData.baseRot) control.userData.baseRot = control.rotation.clone();
+      }
+      const shBase = shoulder.userData.baseRot as THREE.Euler;
+      const elBase = elbow.userData.baseRot as THREE.Euler;
+      const wrBase = wrist.userData.baseRot as THREE.Euler;
+      shoulder.rotation.set(
+        shBase.x + (0.10 * lift + 0.06 * pull) * swimPower,
+        shBase.y + sideNum * (0.30 * pull + 0.08) * swimPower,
+        shBase.z + sideNum * (0.20 * lift - 0.10 * pull) * swimPower,
+      );
+      elbow.rotation.set(
+        elBase.x + 0.08 * pull * swimPower,
+        elBase.y + sideNum * 0.15 * Math.sin(phase + 0.7) * swimPower,
+        elBase.z + sideNum * (0.24 + 0.25 * Math.sin(phase + 0.9)) * swimPower,
+      );
+      wrist.rotation.set(
+        wrBase.x + 0.22 * Math.sin(phase + 1.15) * swimPower,
+        wrBase.y + sideNum * 0.16 * Math.cos(phase + 0.4) * swimPower,
+        wrBase.z + sideNum * 0.10 * Math.sin(phase + 0.2) * swimPower,
+      );
+      for (let fi = 1; fi <= 5; fi++) {
+        const finger = this.swimmerAsset.part(`finger_${key}_${fi}_continuous`);
+        if (!finger.userData.baseRot) finger.userData.baseRot = finger.rotation.clone();
+        const fb = finger.userData.baseRot as THREE.Euler;
+        const grasp = Math.sin(phase + 1.45 + fi * 0.18);
+        finger.rotation.set(
+          fb.x + (0.12 + fi * 0.012) * grasp * swimPower,
+          fb.y + sideNum * 0.035 * Math.sin(phase + fi) * swimPower,
+          fb.z + sideNum * 0.028 * grasp * swimPower,
+        );
+      }
+      handWakeSources.push({ hand: this.swimmerAsset.part(`hand_${key}`), phase });
+    }
+    const lowerBody = this.swimmerAsset.part('submerged_lower_body');
+    if (!lowerBody.userData.baseRot) lowerBody.userData.baseRot = lowerBody.rotation.clone();
+    const lb = lowerBody.userData.baseRot as THREE.Euler;
+    lowerBody.rotation.set(lb.x + Math.sin(t * 2.2) * 0.035 * swimPower, lb.y + Math.sin(t * 2.8 + 0.7) * 0.055 * swimPower, lb.z);
+
+    // Ball interaction derives from the actual articulated hand transforms, including
+    // the chase turn, rather than estimated unrotated offsets.
+    this.swimmerAsset.root.updateMatrixWorld(true);
+    const evaluatedHandWakes = handWakeSources.map(({ hand, phase }) => {
+      const p = new THREE.Vector3();
+      const mesh = hand as THREE.Mesh;
+      if (mesh.isMesh) {
+        if (!mesh.userData.wakeLocalCenter) {
+          mesh.geometry.computeBoundingBox();
+          mesh.userData.wakeLocalCenter = mesh.geometry.boundingBox!.getCenter(new THREE.Vector3());
+        }
+        p.copy(mesh.userData.wakeLocalCenter as THREE.Vector3).applyMatrix4(mesh.matrixWorld);
+      } else {
+        hand.getWorldPosition(p);
+      }
+      return { x: p.x, z: p.z, phase };
+    });
+
     this.swimmerLight.visible = swimmerVisible;
-    this.swimmerLight.intensity = swimmerVisible ? 0.95 : 0;
-    this.swimmerLight.position.set(sx + 0.25, sy + 0.55, sz + 1.15);
+    this.swimmerLight.intensity = swimmerVisible ? 0.24 : 0;
+    this.swimmerLight.position.set(sx + 0.85, sy + 0.38, sz + 0.55);
+    const scan = smooth(44.8, 45.6, t) * (1 - smooth(48.7, 49.2, t));
     for (const side of ['l', 'r'] as const) {
       const pupil = this.swimmerAsset.part(`eye_pupil_${side}`);
       if (pupil) {
         if (!pupil.userData.basePos) pupil.userData.basePos = pupil.position.clone();
         const bp = pupil.userData.basePos as THREE.Vector3;
-        const scan = smooth(44.8, 45.6, t) * (1 - smooth(48.7, 49.2, t));
         pupil.position.x = bp.x + Math.sin(t * 0.82 + (side === 'l' ? 0 : 0.9)) * 0.014 * scan;
         pupil.position.y = bp.y + Math.cos(t * 0.67 + (side === 'l' ? 0.4 : 1.1)) * 0.009 * scan;
       }
+    }
+    const heroEyeCenter = this.swimmerAsset.part('face_eye_necrotic_center');
+    if (heroEyeCenter) {
+      if (!heroEyeCenter.userData.basePos) heroEyeCenter.userData.basePos = heroEyeCenter.position.clone();
+      const bp = heroEyeCenter.userData.basePos as THREE.Vector3;
+      heroEyeCenter.position.x = bp.x + Math.sin(t * 0.82 + 0.45) * 0.006 * scan;
+      heroEyeCenter.position.y = bp.y + Math.cos(t * 0.67 + 0.85) * 0.004 * scan;
     }
     const upperJaw = this.swimmerAsset.part('slide_mouth_upper_root');
     const lowerJaw = this.swimmerAsset.part('slide_mouth_lower_root');
@@ -662,7 +747,19 @@ export default class ThresholdZ2Playroom extends Scene {
       const trail = Math.exp(-((b.x - sx * 0.5) ** 2 + (b.z - sz + 0.8) ** 2) / 1.8) * 0.11;
       const dist = Math.sqrt(d2) + 0.001;
       const parting = Math.exp(-d2 / 1.35) * 0.16 * activeWake;
-      this.dummy.position.set(b.x + (dx / dist) * parting, b.y + bulge + trail, b.z + (dz / dist) * parting);
+      let handWakeY = 0, handWakeX = 0, handWakeZ = 0;
+      if (swimmerVisible) {
+        for (const hw of evaluatedHandWakes) {
+          const hdx = b.x - hw.x, hdz = b.z - hw.z;
+          const hd2 = hdx * hdx + hdz * hdz;
+          const wake = Math.exp(-hd2 / 0.16) * (0.45 + 0.55 * Math.max(0, Math.sin(hw.phase + 1.1)));
+          const hd = Math.sqrt(hd2) + 0.001;
+          handWakeY -= wake * 0.055;
+          handWakeX += (hdx / hd) * wake * 0.030 * Math.sin(hw.phase);
+          handWakeZ += (hdz / hd) * wake * 0.030 * Math.sin(hw.phase);
+        }
+      }
+      this.dummy.position.set(b.x + (dx / dist) * parting + handWakeX, b.y + bulge + trail + handWakeY, b.z + (dz / dist) * parting + handWakeZ);
       this.dummy.rotation.set(hash(i) * 3, hash(i + 1) * 3, hash(i + 2) * 3);
       const deflate = hash(i * 9.13);
       const voidNoise = Math.sin(b.x * 1.37 + b.z * 0.71) + Math.sin(b.x * 0.53 - b.z * 1.91);
@@ -685,7 +782,7 @@ export default class ThresholdZ2Playroom extends Scene {
     const wet = smooth(53.4, 55, t);
     this.tunnelRibs.forEach((r, i) => {
       const m = r.material as THREE.MeshStandardMaterial;
-      m.color.setHex(i / this.tunnelRibs.length < wet ? (i % 3 ? 0x7aa99e : 0x5a9bad) : (i % 3 ? 0xb8922e : 0xa82d25));
+      m.color.setHex(i / this.tunnelRibs.length < wet ? (i % 3 ? 0x426f68 : 0x315b70) : (i % 3 ? 0x6d5525 : 0x65251f));
       m.color.multiplyScalar(1 - i / this.tunnelRibs.length * 0.35);
       m.roughness = 0.25 + wet * 0.2;
     });
@@ -696,7 +793,7 @@ export default class ThresholdZ2Playroom extends Scene {
     const gl = this.ctx.renderer;
     gl.setRenderTarget(out); gl.setClearColor(0x394448, 1); gl.clear(true, true, true); gl.render(this.s, this.cam); gl.resetState();
     return {
-      ...thresholdPost(t, { darkness: 0.12, exposure: 0.95, stress: t > 40.5 && t < 49.5 ? 0.22 : 0.02 }),
+      ...thresholdPost(t, { darkness: 0.28, exposure: 0.78, stress: t > 40.5 && t < 49.5 ? 0.22 : 0.02 }),
       // T1 now owns the eye-adaptation bridge. Do not re-impose a zone-local whiteout
       // after the seam or the exposure decay reverses when transition post is unsuppressed.
       flash: 0,

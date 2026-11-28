@@ -116,6 +116,8 @@ export interface MasterConfig {
   normalize?: boolean;
   limiter?: boolean;
   limiterLookaheadMs?: number;
+  /** Whether post-limiter loudness makeup may force the mix back to target. Disable for sparse high-dynamic-range mixes. */
+  loudnessMakeup?: boolean;
   /** Optional pre-limiter reconstruction-control low-pass frequency in Hz. */
   reconstructionLowpassHz?: number;
   fadeOut?: { at: number; dur: number };
