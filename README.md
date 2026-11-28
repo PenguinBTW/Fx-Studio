@@ -1,5 +1,15 @@
 # f(x) Studio (Nightly Development)
 
+**A deterministic motion-design engine built for AI agents.** You describe a film; an agent writes it as code (scenes,
+cameras, 3D assets, sound), reviews its own renders, and exports it at up to 4K. Every frame is a pure function of time, so
+what you review is exactly what ships.
+
+| | | |
+|---|---|---|
+| [![lull: the soft play](https://raw.githubusercontent.com/PenguinBTW/fxstudio-demos/main/scenes/lull/samples/01_playroom.jpg)](https://github.com/PenguinBTW/fxstudio-demos/tree/main/scenes/lull) | [![lull: the library](https://raw.githubusercontent.com/PenguinBTW/fxstudio-demos/main/scenes/lull/samples/02_library.jpg)](https://github.com/PenguinBTW/fxstudio-demos/tree/main/scenes/lull) | [![lull: the pool](https://raw.githubusercontent.com/PenguinBTW/fxstudio-demos/main/scenes/lull/samples/03_pool.jpg)](https://github.com/PenguinBTW/fxstudio-demos/tree/main/scenes/lull) |
+
+<sub>*lull*: a 3:11 first-person horror film written, modelled, animated and sound-designed end to end by an AI agent in f(x) Studio. Scene code in [**fxstudio-demos**](https://github.com/PenguinBTW/fxstudio-demos).</sub>
+
 > [!IMPORTANT]
 > **Active Development Branch: `nightly`**  
 > This branch contains cutting-edge engine features, complete diagnostic test suites, procedural scene benchmarks, and the production workspace for ***First Light***. For the stable release, visit the [`main`](https://github.com/PenguinBTW/Agentic-motion-design-toolset/tree/main) branch.
@@ -62,11 +72,20 @@ bun run release:promote
 
 ---
 
-## 3. Active Production: *First Light*
+## 3. Showcase & Productions
 
-- **Project Root**: `app/src/scenes/first_light/`
-- **Photon State Contract**: [`app/src/scenes/first_light/photon.ts`](./app/src/scenes/first_light/photon.ts) (precomputed 1001-step Brownian core walk, camera binding, and screen projection).
-- **Seam Checker**: [`app/scripts/check_seams.ts`](./app/scripts/check_seams.ts) (automates $C^0$ and $C^1$ continuity checks across acts 0 through 5).
+| Project | What it is |
+|---|---|
+| [**lull**](https://github.com/PenguinBTW/fxstudio-demos/tree/main/scenes/lull) | 3:11 first-person horror film: one continuous take through comfortable places that turn wrong, Blender-built creatures, fully code-generated sound |
+| [**fx_promo**](./app/src/scenes/fx_promo) | 3:34 f(x) Studio promo film: in-world type, dolly-zooms, a raymarched glass cathedral, an infinite-zoom climax |
+| [**dimension_flight**](./app/src/scenes/dimension_flight) / [**bird_odyssey**](./app/src/scenes/bird_odyssey) | A swallow's flight through five dimensions with Blender-built worlds, GPU embers and per-world grading |
+| [**agent_promo**](./app/src/scenes/agent_promo) / [**agent_v2**](./app/src/scenes/agent_v2) | Agent promo film: logo, fire, dragon, forge and an origami desk sequence |
+| [**spill**](./app/src/scenes/spill), [**freefall**](./app/src/scenes/freefall), [**agent_teaser**](./app/src/scenes/agent_teaser) | Native 9:16 vertical shorts |
+| [**threshold**](./app/src/scenes/threshold) | First-person horror film |
+| [**spacecraft_docking**](./app/src/scenes/spacecraft_docking) | Audio benchmark: multi-stem excision and 3D object-bound thruster audio |
+
+Production notes from agent-made films (what worked, where the engine slowed the agent down) live in
+[`docs/feedback/`](./docs/feedback/), starting with [the lull post-mortem](./docs/feedback/lull-agent-workflow-feedback.md).
 
 ---
 
