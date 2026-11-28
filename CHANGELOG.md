@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.8.0-r2] - 2026-11-28
+
+### Documentation
+- Main README: the documentation index links the v0.8.0 release record and architecture doc, and gains Authoring (Blender and glTF assets, camera, typography, music sync), Projects and Telemetry rows.
+- Docs hub links the v0.8.0 architecture doc and the November codebase review.
+- Engine overview gains a v0.8.0 subsystems section (audio engine, transition registry, Blender asset layer, delivery) and documents the bundled fonts; kinetic typography notes where the fonts live.
+
+---
+
 ## [[v0.8.0]](docs/changelog/v0.8.0-release-record.md) - 2026-11-28
 
 ### Added
